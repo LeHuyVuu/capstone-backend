@@ -58,6 +58,13 @@ jobs:
             # Pull latest image
             docker pull ${{ env.DOCKER_IMAGE }}:latest
             
+            # Dọn dẹp container cũ không có suffix (từ deploy cũ)
+            if docker ps -aq --filter "name=^capstone-backend$" | grep -q .; then
+              echo "🧹 Cleaning up old non-suffixed container..."
+              docker stop capstone-backend 2>/dev/null || true
+              docker rm capstone-backend 2>/dev/null || true
+            fi
+            
             # Kiểm tra container nào đang chạy (blue hay green)
             CURRENT_COLOR=$(docker ps --filter "name=capstone-backend-" --format "{{.Names}}" | head -n1)
             
@@ -76,6 +83,10 @@ jobs:
             echo "🔵🟢 Blue-Green Deployment"
             echo "Current: capstone-backend-$OLD_COLOR (port $OLD_PORT)"
             echo "Deploying: capstone-backend-$NEW_COLOR (port $NEW_PORT)"
+            
+            # Xóa container cũ cùng tên nếu tồn tại (cleanup)
+            docker stop capstone-backend-$NEW_COLOR 2>/dev/null || true
+            docker rm capstone-backend-$NEW_COLOR 2>/dev/null || true
             
             # Chạy container mới (NEW_COLOR)
             docker run -d \
