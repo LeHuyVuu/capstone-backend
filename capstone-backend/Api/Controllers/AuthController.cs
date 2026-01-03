@@ -8,7 +8,7 @@ using System.Security.Claims;
 
 namespace capstone_backend.Api.Controllers;
 
-[Route("api/[controller]")]
+[Route("api/v1/[controller]")]
 public class AuthController : BaseController
 {
     private readonly IUserService _userService;
