@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>capstone_backend</RootNamespace>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <!-- Enable XML documentation for Swagger -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);1591</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Swagger/OpenAPI -->
+        <PackageReference Include="Scalar.AspNetCore" Version="2.11.10" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+        <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="6.6.2" />
+        
+        <!-- Entity Framework Core + PostgreSQL -->
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.11" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+          <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
+        
+        <!-- FluentValidation -->
+        <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.9.0" />
+        
+        <!-- BCrypt for password hashing -->
+        <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+        
+        <!-- Authentication -->
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.2.0" />
+        
+        <!-- Load .env files -->
+        <PackageReference Include="DotNetEnv" Version="3.1.1" />
+        <PackageReference Include="Swashbuckle.AspNetCore.ReDoc" Version="10.1.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,107 @@
+# .NET Build outputs
+bin/
+obj/
+out/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+*.userprefs
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.DotSettings.user
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Environment variables - QUAN TRỌNG!
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+.env.test
+!.env.example
+
+# appsettings - CHỈ commit file gốc
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# NuGet packages
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+project.lock.json
+project.fragment.lock.json
+
+# Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+*.coverage
+*.coveragexml
+
+# NCrunch
+_NCrunch_*
+.*crunch*.local.xml
+nCrunchTemp_*
+
+# ReSharper
+_ReSharper*/
+*.ReSharper
+*.dotCover
+
+# Azure / Deployment
+*.pubxml
+*.publishproj
+*.azurePubxml
+PublishScripts/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.swp
+*~
+
+# EF Core Migrations (tùy chọn - bỏ comment nếu không muốn commit migrations)
+# **/Migrations/
+
+# wwwroot/lib (nếu dùng LibMan)
+wwwroot/lib/

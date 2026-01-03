@@ -1,0 +1,40 @@
+/* Custom Swagger UI Styling */
+
+.swagger-ui .topbar {
+    background-color: #2c3e50;
+}
+
+.swagger-ui .topbar-wrapper img {
+    content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='40'%3E%3Ctext x='10' y='30' font-family='Arial' font-size='24' fill='white'%3ECapstone API%3C/text%3E%3C/svg%3E");
+}
+
+.swagger-ui .info .title {
+    color: #2c3e50;
+    font-size: 36px;
+}
+
+.swagger-ui .scheme-container {
+    background-color: #ecf0f1;
+    box-shadow: 0 1px 2px 0 rgba(0,0,0,.15);
+}
+
+/* Highlight authenticated endpoints */
+.swagger-ui .opblock.opblock-post {
+    background: rgba(73, 204, 144, .1);
+    border-color: #49cc90;
+}
+
+.swagger-ui .opblock.opblock-get {
+    background: rgba(97, 175, 254, .1);
+    border-color: #61affe;
+}
+
+.swagger-ui .opblock.opblock-put {
+    background: rgba(252, 161, 48, .1);
+    border-color: #fca130;
+}
+
+.swagger-ui .opblock.opblock-delete {
+    background: rgba(249, 62, 62, .1);
+    border-color: #f93e3e;
+}
