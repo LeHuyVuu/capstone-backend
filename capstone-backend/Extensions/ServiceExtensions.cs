@@ -48,9 +48,25 @@ public static class ServiceExtensions
     /// Đăng ký tất cả Business Services
     /// Mỗi khi thêm service mới, thêm vào đây
     /// </summary>
-    public static IServiceCollection AddBusinessServices(this IServiceCollection services)
+    public static IServiceCollection AddBusinessServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IUserService, UserService>();
+        
+        // Đăng ký OpenAI Recommendation Service - chỉ đọc từ environment variables
+        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "";
+        var assistantId = Environment.GetEnvironmentVariable("ASSISTANT_ID") ?? "";
+        
+        // Debug logging
+        Console.WriteLine($"🔑 API Key: {(string.IsNullOrEmpty(apiKey) ? "[EMPTY]" : apiKey.Substring(0, Math.Min(15, apiKey.Length)) + "...")}");
+        Console.WriteLine($"🤖 Assistant ID: {assistantId}");
+        
+        services.Configure<OpenAISettings>(options =>
+        {
+            options.ApiKey = apiKey;
+            options.AssistantId = assistantId;
+        });
+        
+        services.AddHttpClient<IRecommendationService, RecommendationService>();
         
         // Thêm services khác ở đây khi cần
         // services.AddScoped<IProductService, ProductService>();
