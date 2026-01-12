@@ -13,7 +13,10 @@
 
     <ItemGroup>
         <!-- Swagger/OpenAPI -->
+        <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.19" />
+        <PackageReference Include="AWSSDK.Rekognition" Version="4.0.3.10" />
         <PackageReference Include="Scalar.AspNetCore" Version="2.11.10" />
+        <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
         <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="6.6.2" />
         

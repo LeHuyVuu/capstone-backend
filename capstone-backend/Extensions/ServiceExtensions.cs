@@ -1,3 +1,5 @@
+using Amazon.Rekognition;
+using Amazon.Runtime;
 using capstone_backend.Api.Filters;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Services;
@@ -68,8 +70,46 @@ public static class ServiceExtensions
         
         services.AddHttpClient<IRecommendationService, RecommendationService>();
         
+        // Đăng ký AWS Rekognition Service để phân tích cảm xúc khuôn mặt
+        services.AddAwsRekognitionService();
+        
         // Thêm services khác ở đây khi cần
         // services.AddScoped<IProductService, ProductService>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Đăng ký AWS Rekognition Service
+    /// Đọc credentials từ environment variables
+    /// </summary>
+    public static IServiceCollection AddAwsRekognitionService(this IServiceCollection services)
+    {
+        // Đọc AWS credentials từ environment variables
+        var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY");
+        var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_KEY");
+        var awsRegion = Environment.GetEnvironmentVariable("AWS_REGION") ?? "us-east-1";
+
+        // Debug logging
+        Console.WriteLine($"🌍 AWS Region: {awsRegion}");
+        Console.WriteLine($"🔑 AWS Access Key: {(string.IsNullOrEmpty(awsAccessKey) ? "[EMPTY]" : awsAccessKey.Substring(0, Math.Min(10, awsAccessKey.Length)) + "...")}");
+
+        // Tạo AWS credentials từ environment variables
+        var awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
+        
+        // Cấu hình AWS Rekognition client
+        var rekognitionConfig = new AmazonRekognitionConfig
+        {
+            RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(awsRegion)
+        };
+
+        // Đăng ký AWS Rekognition client vào DI container
+        services.AddSingleton<IAmazonRekognition>(
+            new AmazonRekognitionClient(awsCredentials, rekognitionConfig)
+        );
+
+        // Đăng ký FaceEmotionService
+        services.AddScoped<FaceEmotionService>();
 
         return services;
     }
