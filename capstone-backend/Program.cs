@@ -3,8 +3,17 @@ using capstone_backend.Extensions;
 using DotNetEnv;
 using Scalar.AspNetCore;
 
-// Load environment variables from .env file (if exists)
-Env.Load();
+// Load environment variables from .env file
+var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+if (File.Exists(envPath))
+{
+    Env.Load(envPath);
+    Console.WriteLine($"✅ Loaded .env from: {envPath}");
+}
+else
+{
+    Console.WriteLine($"⚠️ .env file not found at: {envPath}");
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +28,7 @@ builder.Services.AddDatabaseContext(builder.Configuration);
 builder.Services.AddRepositories();
 
 // 3. Business Services
-builder.Services.AddBusinessServices();
+builder.Services.AddBusinessServices(builder.Configuration);
 
 // 4. FluentValidation (works with DataAnnotations)
 builder.Services.AddFluentValidationConfiguration();

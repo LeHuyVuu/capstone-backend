@@ -1,5 +1,6 @@
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.ReDoc;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Reflection;
 
 namespace capstone_backend.Extensions;
@@ -72,6 +73,9 @@ public static class SwaggerExtensions
 
             // Custom operation filters for better documentation
             options.EnableAnnotations();
+            
+            // Hỗ trợ file upload - inline filter
+            options.OperationFilter<FileUploadOperationFilter>();
 
             // Schema filters for better model documentation
             options.CustomSchemaIds(type => type.FullName?.Replace("+", "."));
@@ -125,5 +129,53 @@ public static class SwaggerExtensions
         });
 
         return app;
+    }
+}
+
+/// <summary>
+/// Filter để hỗ trợ file upload trong Swagger UI
+/// </summary>
+internal class FileUploadOperationFilter : IOperationFilter
+{
+    public void Apply(OpenApiOperation operation, OperationFilterContext context)
+    {
+        // Tìm các parameter là IFormFile
+        var formFileParams = context.ApiDescription.ParameterDescriptions
+            .Where(p => p.ModelMetadata?.ModelType == typeof(IFormFile))
+            .ToList();
+
+        if (!formFileParams.Any())
+            return;
+
+        // Xóa các parameter cũ
+        operation.Parameters?.Clear();
+
+        // Thiết lập request body là multipart/form-data
+        operation.RequestBody = new OpenApiRequestBody
+        {
+            Content = new Dictionary<string, OpenApiMediaType>
+            {
+                ["multipart/form-data"] = new OpenApiMediaType
+                {
+                    Schema = new OpenApiSchema
+                    {
+                        Type = "object",
+                        Properties = formFileParams.ToDictionary(
+                            p => p.Name,
+                            p => new OpenApiSchema
+                            {
+                                Type = "string",
+                                Format = "binary",
+                                Description = p.ModelMetadata?.Description ?? "File to upload"
+                            }
+                        ),
+                        Required = formFileParams
+                            .Where(p => p.IsRequired)
+                            .Select(p => p.Name)
+                            .ToHashSet()
+                    }
+                }
+            }
+        };
     }
 }
