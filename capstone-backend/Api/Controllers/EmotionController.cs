@@ -9,7 +9,7 @@ namespace capstone_backend.Api.Controllers;
 /// API để phân tích cảm xúc khuôn mặt sử dụng AWS Rekognition
 /// </summary>
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v2/[controller]")]
 public class EmotionController : BaseController
 {
     private readonly FaceEmotionService _emotionService;
