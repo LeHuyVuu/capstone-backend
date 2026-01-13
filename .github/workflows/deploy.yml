@@ -11,8 +11,8 @@ env:
   BLUE_PORT: 5224
   GREEN_PORT: 5225
   CONTAINER_PORT: 5224
-  UPSTREAM_FILE: /etc/nginx/snippets/capstone-upstream.conf
   ENV_DIR: /root/capstone
+  BACKEND_FILE: /etc/nginx/snippets/capstone-upstream.conf
   HEALTH_PATH: /api/health
 
 jobs:
@@ -43,7 +43,7 @@ jobs:
           cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache
           cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache,mode=max
 
-      - name: Deploy to VPS (Blue-Green switch)
+      - name: Deploy to VPS (Blue-Green)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -65,10 +65,10 @@ jobs:
             echo "📥 Pull image"
             docker pull ${{ env.DOCKER_IMAGE }}:latest
 
-            # Determine current active port by reading upstream file if exists
+            echo "🔎 Detect current backend port"
             ACTIVE_PORT=""
-            if sudo test -f "${{ env.UPSTREAM_FILE }}"; then
-              ACTIVE_PORT=$(sudo grep -Eo '127\.0\.0\.1:[0-9]+' "${{ env.UPSTREAM_FILE }}" | head -n1 | cut -d: -f2 || true)
+            if sudo test -f "${{ env.BACKEND_FILE }}"; then
+              ACTIVE_PORT=$(sudo grep -Eo '127\.0\.0\.1:[0-9]+' "${{ env.BACKEND_FILE }}" | cut -d: -f2 || true)
             fi
 
             if [[ "$ACTIVE_PORT" == "${{ env.BLUE_PORT }}" ]]; then
@@ -76,24 +76,16 @@ jobs:
               OLD_COLOR="blue"
               NEW_PORT="${{ env.GREEN_PORT }}"
               OLD_PORT="${{ env.BLUE_PORT }}"
-            elif [[ "$ACTIVE_PORT" == "${{ env.GREEN_PORT }}" ]]; then
+            else
               NEW_COLOR="blue"
               OLD_COLOR="green"
               NEW_PORT="${{ env.BLUE_PORT }}"
               OLD_PORT="${{ env.GREEN_PORT }}"
-            else
-              # First deploy (no upstream yet) -> choose green as default
-              NEW_COLOR="green"
-              OLD_COLOR="blue"
-              NEW_PORT="${{ env.GREEN_PORT }}"
-              OLD_PORT="${{ env.BLUE_PORT }}"
             fi
 
-            echo "🔵🟢 Blue-Green"
-            echo "Active port: ${ACTIVE_PORT:-none}"
-            echo "Deploying: $NEW_COLOR on port $NEW_PORT (old $OLD_COLOR on $OLD_PORT)"
+            echo "🔵🟢 Deploy $NEW_COLOR on port $NEW_PORT (old $OLD_COLOR on $OLD_PORT)"
 
-            # Clean any existing NEW_COLOR container
+            echo "🧹 Cleanup same-color container"
             docker stop ${{ env.APP_NAME }}-$NEW_COLOR 2>/dev/null || true
             docker rm   ${{ env.APP_NAME }}-$NEW_COLOR 2>/dev/null || true
 
@@ -106,38 +98,36 @@ jobs:
               --env-file ${{ env.ENV_DIR }}/.env \
               ${{ env.DOCKER_IMAGE }}:latest
 
-            echo "⏳ Health check http://127.0.0.1:$NEW_PORT${{ env.HEALTH_PATH }}"
+            echo "⏳ Health check"
             for i in {1..30}; do
               if curl -fsS "http://127.0.0.1:$NEW_PORT${{ env.HEALTH_PATH }}" >/dev/null; then
-                echo "✅ New container healthy"
+                echo "✅ Healthy"
                 break
               fi
-              echo "Attempt $i/30: not ready..."
+              echo "Attempt $i/30..."
               sleep 2
             done
 
             if ! curl -fsS "http://127.0.0.1:$NEW_PORT${{ env.HEALTH_PATH }}" >/dev/null; then
-              echo "❌ Health check failed. Rollback."
+              echo "❌ Healthcheck failed, rollback"
               docker logs --tail 200 ${{ env.APP_NAME }}-$NEW_COLOR || true
               docker stop ${{ env.APP_NAME }}-$NEW_COLOR || true
               docker rm   ${{ env.APP_NAME }}-$NEW_COLOR || true
               exit 1
             fi
 
-            echo "🔁 Switch Nginx upstream (atomic)"
+            echo "🔁 Switch Nginx backend (atomic)"
             sudo mkdir -p /etc/nginx/snippets
-            sudo tee "${{ env.UPSTREAM_FILE }}.tmp" > /dev/null <<EOF
-            upstream capstone_backend {
-                server 127.0.0.1:$NEW_PORT;
-            }
+            sudo tee "${{ env.BACKEND_FILE }}.tmp" > /dev/null <<EOF
+            set \$backend http://127.0.0.1:$NEW_PORT;
             EOF
-            sudo mv "${{ env.UPSTREAM_FILE }}.tmp" "${{ env.UPSTREAM_FILE }}"
+            sudo mv "${{ env.BACKEND_FILE }}.tmp" "${{ env.BACKEND_FILE }}"
 
             sudo nginx -t
             sudo systemctl reload nginx
             echo "✅ Nginx now points to $NEW_PORT"
 
-            echo "🧯 Stop old container after switch"
+            echo "🛑 Stop old container"
             if docker ps -q --filter "name=^${{ env.APP_NAME }}-$OLD_COLOR$" | grep -q .; then
               docker stop ${{ env.APP_NAME }}-$OLD_COLOR || true
               docker rm   ${{ env.APP_NAME }}-$OLD_COLOR || true
@@ -146,4 +136,4 @@ jobs:
             echo "🧽 Cleanup old images"
             docker image prune -af --filter "until=48h" || true
 
-            echo "🎉 Done. Active: $NEW_COLOR ($NEW_PORT)"
+            echo "🎉 Deploy completed. Active: $NEW_COLOR ($NEW_PORT)"
