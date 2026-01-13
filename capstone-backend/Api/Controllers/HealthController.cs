@@ -15,5 +15,7 @@ public class HealthController : ControllerBase
             timestamp = DateTime.UtcNow,
             version = "1.0.0"
         });
+
+        
     }
 }
