@@ -107,6 +107,7 @@ public static class ServiceExtensions
         // Register new services
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IMoodTypeService, MoodTypeService>();
+        services.AddScoped<ISearchHistoryService, SearchHistoryService>();
         services.AddScoped<ISpecialEventService, SpecialEventService>();
 
         return services;
