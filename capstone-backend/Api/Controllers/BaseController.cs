@@ -37,6 +37,9 @@ public abstract class BaseController : ControllerBase
     protected IActionResult UnauthorizedResponse(string message = "Unauthorized")
         => Unauthorized(ApiResponse<object>.Error(message, 401, GetTraceId()));
 
+    protected IActionResult ForbiddenResponse(string message = "Forbidden")
+        => StatusCode(403, ApiResponse<object>.Error(message, 403, GetTraceId()));
+
     protected IActionResult InternalServerErrorResponse(string message = "Internal server error")
         => StatusCode(500, ApiResponse<object>.Error(message, 500, GetTraceId()));
 }

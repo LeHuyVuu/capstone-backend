@@ -104,8 +104,9 @@ public static class ServiceExtensions
         // Đăng ký AWS Rekognition Service để phân tích cảm xúc khuôn mặt
         services.AddAwsRekognitionService();
         
-        // Thêm services khác ở đây khi cần
-        // services.AddScoped<IProductService, ProductService>();
+        // Register new services
+        services.AddScoped<ICollectionService, CollectionService>();
+        services.AddScoped<ISpecialEventService, SpecialEventService>();
 
         return services;
     }
