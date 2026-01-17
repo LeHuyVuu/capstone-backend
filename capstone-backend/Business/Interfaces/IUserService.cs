@@ -22,6 +22,15 @@ public interface IUserService
     Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Register new user account
+    /// Creates user account and corresponding profile (Member or VenueOwner)
+    /// </summary>
+    /// <param name="request">Registration information</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Login response with user info and JWT tokens</returns>
+    Task<LoginResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get current user information by user ID
     /// </summary>
     /// <param name="userId">User's unique identifier</param>

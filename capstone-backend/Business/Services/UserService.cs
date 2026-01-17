@@ -13,11 +13,13 @@ public class UserService : IUserService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UserService> _logger;
+    private readonly IJwtService _jwtService;
 
-    public UserService(IUnitOfWork unitOfWork, ILogger<UserService> logger)
+    public UserService(IUnitOfWork unitOfWork, ILogger<UserService> logger, IJwtService jwtService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _jwtService = jwtService;
     }
 
     public async Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
@@ -27,8 +29,10 @@ public class UserService : IUserService
         if (user == null || user.is_active != true)
             return null;
 
+        // Verify password
         // TODO: Use BCrypt.Net.BCrypt.Verify(request.Password, user.password_hash)
-        bool isPasswordValid = request.Password == "temp";
+        // For now, compare with hashed password (temporary - should use BCrypt)
+        bool isPasswordValid = user.password_hash == ("hashed_" + request.Password);
 
         if (!isPasswordValid)
             return null;
@@ -37,13 +41,103 @@ public class UserService : IUserService
         _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        // Generate JWT tokens
+        var role = user.role ?? "member";
+        var fullName = user.display_name ?? string.Empty;
+        var accessToken = _jwtService.GenerateAccessToken(user.id, user.email, role, fullName);
+        var refreshToken = _jwtService.GenerateRefreshToken();
+        var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
+
         return new LoginResponse
         {
-            UserId = user.id,
-            Email = user.email,
-            FullName = user.display_name ?? string.Empty,
-            Role = user.role ?? "User"
+          
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes)
         };
+    }
+
+    public async Task<LoginResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+    {
+        // Kiểm tra email đã tồn tại
+        if (await _unitOfWork.Users.EmailExistsAsync(request.Email, cancellationToken: cancellationToken))
+            throw new InvalidOperationException($"Email '{request.Email}' đã được sử dụng");
+
+        // Tạo user account
+        // TODO: Use BCrypt.Net.BCrypt.HashPassword(request.Password)
+        string passwordHash = "hashed_" + request.Password;
+
+        var user = new user_account
+        {
+            email = request.Email,
+            password_hash = passwordHash,
+            display_name = request.FullName,
+            phone_number = request.PhoneNumber,
+            role = "member", // Luôn là member (lowercase theo database constraint)
+            is_active = true,
+            is_verified = false,
+            is_deleted = false,
+            created_at = DateTime.UtcNow,
+            updated_at = DateTime.UtcNow,
+            last_login_at = DateTime.UtcNow
+        };
+
+        await _unitOfWork.Users.AddAsync(user, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Tạo member profile
+        await CreateMemberProfileAsync(user.id, request, cancellationToken);
+
+        // Generate JWT tokens
+        var accessToken = _jwtService.GenerateAccessToken(user.id, user.email, "member", request.FullName);
+        var refreshToken = _jwtService.GenerateRefreshToken();
+        var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
+
+        return new LoginResponse
+        {
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes)
+        };
+    }
+
+    /// <summary>
+    /// Tạo member profile cho user
+    /// </summary>
+    private async Task CreateMemberProfileAsync(int userId, RegisterRequest request, CancellationToken cancellationToken)
+    {
+        var memberProfile = new member_profile
+        {
+            user_id = userId,
+            full_name = request.FullName,
+            date_of_birth = request.DateOfBirth,
+            gender = request.Gender,
+            relationship_status = "single", // Default (lowercase)
+            created_at = DateTime.UtcNow,
+            updated_at = DateTime.UtcNow,
+            is_deleted = false
+        };
+
+        // Generate unique invite code
+        memberProfile.invite_code = GenerateInviteCode();
+
+        await _unitOfWork.Context.Set<member_profile>().AddAsync(memberProfile, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Created member profile for user {UserId} with invite code {InviteCode}", 
+            userId, memberProfile.invite_code);
+    }
+
+    /// <summary>
+    /// Generate unique 6-character invite code
+    /// </summary>
+    private string GenerateInviteCode()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var random = new Random();
+        return new string(Enumerable.Range(0, 6)
+            .Select(_ => chars[random.Next(chars.Length)])
+            .ToArray());
     }
 
     public async Task<UserResponse?> GetCurrentUserAsync(int userId, CancellationToken cancellationToken = default)
