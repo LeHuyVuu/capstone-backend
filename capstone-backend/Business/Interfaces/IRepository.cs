@@ -1,5 +1,4 @@
 using System.Linq.Expressions;
-using capstone_backend.Business.Entities.Base;
 
 namespace capstone_backend.Business.Interfaces;
 
@@ -11,7 +10,7 @@ namespace capstone_backend.Business.Interfaces;
 /// Provides common database operations: Create, Read, Update, Delete (CRUD)
 /// with support for filtering, pagination, and soft delete
 /// </remarks>
-public interface IRepository<TEntity> where TEntity : BaseEntity
+public interface IRepository<TEntity> 
 {
     /// <summary>
     /// Get entity by ID
@@ -20,7 +19,7 @@ public interface IRepository<TEntity> where TEntity : BaseEntity
     /// <param name="includeSoftDeleted">Include soft deleted entities in search</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Entity if found, null otherwise</returns>
-    Task<TEntity?> GetByIdAsync(Guid id, bool includeSoftDeleted = false, CancellationToken cancellationToken = default);
+    Task<TEntity?> GetByIdAsync(int id, bool includeSoftDeleted = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get all entities with optional filtering
@@ -108,7 +107,7 @@ public interface IRepository<TEntity> where TEntity : BaseEntity
     /// </summary>
     /// <param name="entity">Entity to soft delete</param>
     /// <param name="deletedBy">User ID who deleted the entity</param>
-    void SoftDelete(TEntity entity, Guid? deletedBy = null);
+    void SoftDelete(TEntity entity, int? deletedBy = null);
 
     /// <summary>
     /// Hard delete entity (permanently remove from database)

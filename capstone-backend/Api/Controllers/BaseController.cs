@@ -10,10 +10,10 @@ namespace capstone_backend.Api.Controllers;
 public abstract class BaseController : ControllerBase
 {
     protected string GetTraceId() => HttpContext.Items["TraceId"]?.ToString() ?? HttpContext.TraceIdentifier;
-    protected Guid? GetCurrentUserId()
+    protected int? GetCurrentUserId()
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        return Guid.TryParse(userId, out var id) ? id : null;
+        return int.TryParse(userId, out var id) ? id : null;
     }
 
     // Responses thành công

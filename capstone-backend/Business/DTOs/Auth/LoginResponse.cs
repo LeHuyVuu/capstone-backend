@@ -12,7 +12,7 @@ public class LoginResponse
     /// <summary>
     /// User's unique identifier
     /// </summary>
-    public Guid UserId { get; set; }
+    public int UserId { get; set; }
 
     /// <summary>
     /// User's email address

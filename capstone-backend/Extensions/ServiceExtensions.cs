@@ -3,7 +3,7 @@ using Amazon.Runtime;
 using capstone_backend.Api.Filters;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Services;
-using capstone_backend.Data;
+using capstone_backend.Context;
 using capstone_backend.Data.Repositories;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -21,15 +21,43 @@ public static class ServiceExtensions
     /// <summary>
     /// Đăng ký Database Context với PostgreSQL
     /// </summary>
-    public static IServiceCollection AddDatabaseContext(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddDatabaseContext(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
-        
-        services.AddDbContext<AppDbContext>(options =>
+        var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
+        var dbPort = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
+        var dbName = Environment.GetEnvironmentVariable("DB_NAME");
+        var dbUser = Environment.GetEnvironmentVariable("DB_USER");
+        var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+
+        if (string.IsNullOrEmpty(dbHost) ||
+            string.IsNullOrEmpty(dbName) ||
+            string.IsNullOrEmpty(dbUser) ||
+            string.IsNullOrEmpty(dbPassword))
+        {
+            throw new Exception("❌ Database environment variables are not fully configured");
+        }
+
+        var connectionString =
+            $"Host={dbHost};" +
+            $"Port={dbPort};" +
+            $"Database={dbName};" +
+            $"Username={dbUser};" +
+            $"Password={dbPassword};";
+
+        // Debug log (không log password)
+        Console.WriteLine($"🗄️ DB Host: {dbHost}");
+        Console.WriteLine($"🗄️ DB Name: {dbName}");
+        Console.WriteLine($"🗄️ DB User: {dbUser}");
+        Console.WriteLine($"🗄️ DB Port: {dbPort}");
+
+        services.AddDbContext<MyDbContext>(options =>
             options.UseNpgsql(connectionString));
 
         return services;
     }
+
 
     /// <summary>
     /// Đăng ký tất cả Repositories
@@ -37,10 +65,9 @@ public static class ServiceExtensions
     /// </summary>
     public static IServiceCollection AddRepositories(this IServiceCollection services)
     {
-        // Đăng ký từng repository
+      
         services.AddScoped<IUserRepository, UserRepository>();
         
-        // Đăng ký UnitOfWork
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
