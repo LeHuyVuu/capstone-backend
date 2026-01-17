@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace capstone_backend.Api.Controllers;
 
 [Route("api/[controller]")]
-[Authorize]
+// [Authorize]
 public class UsersController : BaseController
 {
     private readonly IUserService _userService;
@@ -30,16 +30,16 @@ public class UsersController : BaseController
         return OkResponse(result);
     }
 
-    // Lấy user theo ID
-    [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetUserById(Guid id)
+    // Get user by ID
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetUserById(int id)
     {
         var user = await _userService.GetUserByIdAsync(id);
         if (user == null) return NotFoundResponse();
         return OkResponse(user);
     }
 
-    // Tạo user mới (chỉ Admin)
+    // Create new user (Admin only)
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
@@ -55,22 +55,22 @@ public class UsersController : BaseController
         }
     }
 
-    // Cập nhật user
-    [HttpPut("{id:guid}")]
-    public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserRequest request)
+    // Update user
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserRequest request)
     {
         var user = await _userService.UpdateUserAsync(id, request, GetCurrentUserId());
         if (user == null) return NotFoundResponse();
         return OkResponse(user);
     }
 
-    // Xóa user (soft delete, chỉ Admin)
-    [HttpDelete("{id:guid}")]
+    // Delete user (soft delete, Admin only)
+    [HttpDelete("{id:int}")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> DeleteUser(Guid id)
+    public async Task<IActionResult> DeleteUser(int id)
     {
         var success = await _userService.DeleteUserAsync(id, GetCurrentUserId());
         if (!success) return NotFoundResponse();
-        return OkResponse<object?>(null, "Xóa thành công");
+        return OkResponse<object?>(null, "Deleted successfully");
     }
 }
