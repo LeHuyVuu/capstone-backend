@@ -18,7 +18,7 @@ public class AuthController : BaseController
         _userService = userService;
     }
 
-    // Đăng nhập bằng email và password
+    // Login with email and password
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
@@ -26,9 +26,9 @@ public class AuthController : BaseController
         var loginResponse = await _userService.LoginAsync(request);
 
         if (loginResponse == null)
-            return UnauthorizedResponse("Đăng nhập thất bại");
+            return UnauthorizedResponse("Login failed");
 
-        // Tạo claims cho user
+        // Create claims for user
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, loginResponse.UserId.ToString()),
@@ -40,7 +40,7 @@ public class AuthController : BaseController
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var principal = new ClaimsPrincipal(identity);
 
-        // Sign in với cookie
+        // Sign in with cookie
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
             new AuthenticationProperties
             {
@@ -48,19 +48,19 @@ public class AuthController : BaseController
                 ExpiresUtc = request.RememberMe ? DateTimeOffset.UtcNow.AddDays(30) : DateTimeOffset.UtcNow.AddHours(8)
             });
 
-        return OkResponse(loginResponse, "Đăng nhập thành công");
+        return OkResponse(loginResponse, "Login successful");
     }
 
-    // Đăng xuất
+    // Logout
     [HttpPost("logout")]
     [Authorize]
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        return OkResponse<object?>(null, "Đăng xuất thành công");
+        return OkResponse<object?>(null, "Logout successful");
     }
 
-    // Lấy thông tin user hiện tại
+    // Get current user information
     [HttpGet("me")]
     [Authorize]
     public async Task<IActionResult> GetMe()
