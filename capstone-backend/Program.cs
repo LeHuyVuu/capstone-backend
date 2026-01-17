@@ -33,8 +33,8 @@ builder.Services.AddBusinessServices(builder.Configuration);
 // 4. FluentValidation (works with DataAnnotations)
 builder.Services.AddFluentValidationConfiguration();
 
-// 5. Cookie-based Authentication & Authorization
-builder.Services.AddCookieAuthenticationConfiguration(builder.Configuration);
+// 5. Hybrid Authentication (Cookie for Web + JWT for Mobile)
+builder.Services.AddHybridAuthenticationConfiguration(builder.Configuration);
 
 // 6. Controllers with Validation Filter
 builder.Services.AddValidationFilter();

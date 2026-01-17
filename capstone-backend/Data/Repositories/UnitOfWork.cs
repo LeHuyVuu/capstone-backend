@@ -18,6 +18,8 @@ public class UnitOfWork : IUnitOfWork
         Users = userRepository;
     }
 
+    public MyDbContext Context => _context;
+
     public IUserRepository Users { get; }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

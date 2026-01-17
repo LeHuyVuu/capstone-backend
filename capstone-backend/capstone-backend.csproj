@@ -15,6 +15,7 @@
         <!-- Swagger/OpenAPI -->
         <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.19" />
         <PackageReference Include="AWSSDK.Rekognition" Version="4.0.3.10" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
         <PackageReference Include="Scalar.AspNetCore" Version="2.11.10" />
         <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
@@ -41,6 +42,7 @@
         <!-- Load .env files -->
         <PackageReference Include="DotNetEnv" Version="3.1.1" />
         <PackageReference Include="Swashbuckle.AspNetCore.ReDoc" Version="10.1.0" />
+        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
     </ItemGroup>
 
     <ItemGroup>

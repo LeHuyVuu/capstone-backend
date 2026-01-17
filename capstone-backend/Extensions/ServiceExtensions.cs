@@ -8,7 +8,10 @@ using capstone_backend.Data.Repositories;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace capstone_backend.Extensions;
 
@@ -80,8 +83,9 @@ public static class ServiceExtensions
     public static IServiceCollection AddBusinessServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IJwtService, JwtService>();
         
-        // Đăng ký OpenAI Recommendation Service - chỉ đọc từ environment variables
+        // Register OpenAI Recommendation Service - only read from environment variables
         var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "";
         var assistantId = Environment.GetEnvironmentVariable("ASSISTANT_ID") ?? "";
         
@@ -153,7 +157,171 @@ public static class ServiceExtensions
     }
 
     /// <summary>
-    /// Đăng ký Cookie Authentication (đăng nhập bằng cookie)
+    /// Register Authentication supporting both Cookie (Web) and JWT (Mobile)
+    /// </summary>
+    public static IServiceCollection AddHybridAuthenticationConfiguration(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") 
+                     ?? configuration["Jwt:SecretKey"] 
+                     ?? throw new InvalidOperationException("JWT Secret Key is not configured");
+
+        var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") 
+                        ?? configuration["Jwt:Issuer"] 
+                        ?? "CapstoneAPI";
+
+        var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") 
+                          ?? configuration["Jwt:Audience"] 
+                          ?? "CapstoneApp";
+
+        Console.WriteLine($"🔐 Auth: Cookie (Web) + JWT (Mobile)");
+        Console.WriteLine($"🔐 JWT Issuer: {jwtIssuer}");
+        Console.WriteLine($"🔐 JWT Audience: {jwtAudience}");
+
+        services.AddAuthentication(options =>
+        {
+            // Default scheme for Web is Cookie
+            options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        })
+        // Cookie Authentication for Web
+        .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+        {
+            options.Cookie.Name = "CapstoneAuth";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SameSite = SameSiteMode.Strict;
+            options.ExpireTimeSpan = TimeSpan.FromHours(8);
+            options.SlidingExpiration = true;
+            
+            options.Events.OnRedirectToLogin = context =>
+            {
+                context.Response.StatusCode = 401;
+                return Task.CompletedTask;
+            };
+        })
+        // JWT Authentication for Mobile
+        .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+        {
+            options.RequireHttpsMetadata = false;
+            options.SaveToken = true;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                ValidateIssuer = true,
+                ValidIssuer = jwtIssuer,
+                ValidateAudience = true,
+                ValidAudience = jwtAudience,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero
+            };
+
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var accessToken = context.Request.Query["access_token"];
+                    if (!string.IsNullOrEmpty(accessToken))
+                    {
+                        context.Token = accessToken;
+                    }
+                    return Task.CompletedTask;
+                },
+                OnAuthenticationFailed = context =>
+                {
+                    if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+                    {
+                        context.Response.Headers.Append("Token-Expired", "true");
+                    }
+                    return Task.CompletedTask;
+                }
+            };
+        });
+
+        services.AddAuthorization();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Register JWT Authentication for mobile and web (deprecated - use AddHybridAuthenticationConfiguration)
+    /// </summary>
+    public static IServiceCollection AddJwtAuthenticationConfiguration(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") 
+                     ?? configuration["Jwt:SecretKey"] 
+                     ?? throw new InvalidOperationException("JWT Secret Key is not configured");
+
+        var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") 
+                        ?? configuration["Jwt:Issuer"] 
+                        ?? "CapstoneAPI";
+
+        var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") 
+                          ?? configuration["Jwt:Audience"] 
+                          ?? "CapstoneApp";
+
+        Console.WriteLine($"🔐 JWT Issuer: {jwtIssuer}");
+        Console.WriteLine($"🔐 JWT Audience: {jwtAudience}");
+
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.RequireHttpsMetadata = false; // Set to true in production with HTTPS
+            options.SaveToken = true;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                ValidateIssuer = true,
+                ValidIssuer = jwtIssuer,
+                ValidateAudience = true,
+                ValidAudience = jwtAudience,
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero // No tolerance for expired tokens
+            };
+
+            // For handling JWT in both Authorization header and query string (optional)
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    // Allow token from query string for SignalR/WebSocket connections
+                    var accessToken = context.Request.Query["access_token"];
+                    var path = context.HttpContext.Request.Path;
+                    
+                    if (!string.IsNullOrEmpty(accessToken))
+                    {
+                        context.Token = accessToken;
+                    }
+                    
+                    return Task.CompletedTask;
+                },
+                OnAuthenticationFailed = context =>
+                {
+                    if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+                    {
+                        context.Response.Headers.Append("Token-Expired", "true");
+                    }
+                    return Task.CompletedTask;
+                }
+            };
+        });
+
+        services.AddAuthorization();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Register Cookie Authentication (legacy - for web only)
     /// </summary>
     public static IServiceCollection AddCookieAuthenticationConfiguration(
         this IServiceCollection services,
