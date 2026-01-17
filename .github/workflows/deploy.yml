@@ -26,7 +26,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
+      - name: Login to Docker Hub (runner only)
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -50,20 +50,32 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
+          timeout: 120s
+          command_timeout: 30m
           script: |
             set -euo pipefail
 
-            echo "🔐 Docker login"
-            echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-
             echo "🧾 Write env file"
-            sudo mkdir -p ${{ env.ENV_DIR }}
-            sudo tee ${{ env.ENV_DIR }}/.env > /dev/null <<'EOF'
+            sudo mkdir -p "${{ env.ENV_DIR }}"
+            sudo tee "${{ env.ENV_DIR }}/.env" > /dev/null <<'EOF'
             ${{ secrets.ENV_FILE }}
             EOF
 
-            echo "📥 Pull image"
-            docker pull ${{ env.DOCKER_IMAGE }}:latest
+            echo "📥 Pull image (retry)"
+            PULLED="0"
+            for i in {1..10}; do
+              if sudo docker pull "${{ env.DOCKER_IMAGE }}:latest"; then
+                PULLED="1"
+                break
+              fi
+              echo "Pull failed, retry $i/10..."
+              sleep 8
+            done
+
+            if [[ "$PULLED" != "1" ]]; then
+              echo "❌ Docker pull failed after retries. Stop here to keep old system untouched."
+              exit 1
+            fi
 
             echo "🔎 Detect current backend port"
             ACTIVE_PORT=""
@@ -86,17 +98,17 @@ jobs:
             echo "🔵🟢 Deploy $NEW_COLOR on port $NEW_PORT (old $OLD_COLOR on $OLD_PORT)"
 
             echo "🧹 Cleanup same-color container"
-            docker stop ${{ env.APP_NAME }}-$NEW_COLOR 2>/dev/null || true
-            docker rm   ${{ env.APP_NAME }}-$NEW_COLOR 2>/dev/null || true
+            sudo docker stop "${{ env.APP_NAME }}-$NEW_COLOR" 2>/dev/null || true
+            sudo docker rm   "${{ env.APP_NAME }}-$NEW_COLOR" 2>/dev/null || true
 
             echo "🚀 Run new container"
-            docker run -d \
-              --name ${{ env.APP_NAME }}-$NEW_COLOR \
+            sudo docker run -d \
+              --name "${{ env.APP_NAME }}-$NEW_COLOR" \
               --restart unless-stopped \
-              -p 127.0.0.1:$NEW_PORT:${{ env.CONTAINER_PORT }} \
-              -e ASPNETCORE_URLS=http://+:${{ env.CONTAINER_PORT }} \
-              --env-file ${{ env.ENV_DIR }}/.env \
-              ${{ env.DOCKER_IMAGE }}:latest
+              -p "127.0.0.1:$NEW_PORT:${{ env.CONTAINER_PORT }}" \
+              -e "ASPNETCORE_URLS=http://+:${{ env.CONTAINER_PORT }}" \
+              --env-file "${{ env.ENV_DIR }}/.env" \
+              "${{ env.DOCKER_IMAGE }}:latest"
 
             echo "⏳ Health check"
             for i in {1..30}; do
@@ -109,10 +121,10 @@ jobs:
             done
 
             if ! curl -fsS "http://127.0.0.1:$NEW_PORT${{ env.HEALTH_PATH }}" >/dev/null; then
-              echo "❌ Healthcheck failed, rollback"
-              docker logs --tail 200 ${{ env.APP_NAME }}-$NEW_COLOR || true
-              docker stop ${{ env.APP_NAME }}-$NEW_COLOR || true
-              docker rm   ${{ env.APP_NAME }}-$NEW_COLOR || true
+              echo "❌ Healthcheck failed, rollback (old system stays running)"
+              sudo docker logs --tail 200 "${{ env.APP_NAME }}-$NEW_COLOR" || true
+              sudo docker stop "${{ env.APP_NAME }}-$NEW_COLOR" || true
+              sudo docker rm   "${{ env.APP_NAME }}-$NEW_COLOR" || true
               exit 1
             fi
 
@@ -128,12 +140,12 @@ jobs:
             echo "✅ Nginx now points to $NEW_PORT"
 
             echo "🛑 Stop old container"
-            if docker ps -q --filter "name=^${{ env.APP_NAME }}-$OLD_COLOR$" | grep -q .; then
-              docker stop ${{ env.APP_NAME }}-$OLD_COLOR || true
-              docker rm   ${{ env.APP_NAME }}-$OLD_COLOR || true
+            if sudo docker ps -q --filter "name=^${{ env.APP_NAME }}-$OLD_COLOR$" | grep -q .; then
+              sudo docker stop "${{ env.APP_NAME }}-$OLD_COLOR" || true
+              sudo docker rm   "${{ env.APP_NAME }}-$OLD_COLOR" || true
             fi
 
             echo "🧽 Cleanup old images"
-            docker image prune -af --filter "until=48h" || true
+            sudo docker image prune -af --filter "until=48h" || true
 
             echo "🎉 Deploy completed. Active: $NEW_COLOR ($NEW_PORT)"
