@@ -106,6 +106,9 @@ public static class ServiceExtensions
         
         // Đăng ký AWS Rekognition Service để phân tích cảm xúc khuôn mặt
         services.AddAwsRekognitionService();
+
+        // Đăng ký AWS S3 Service để upload files
+        services.AddAwsS3Service();
         
         // Register new services
         services.AddScoped<ICollectionService, CollectionService>();
@@ -147,6 +150,42 @@ public static class ServiceExtensions
 
         // Đăng ký FaceEmotionService
         services.AddScoped<FaceEmotionService>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Đăng ký AWS S3 Service
+    /// Đọc credentials từ environment variables
+    /// </summary>
+    public static IServiceCollection AddAwsS3Service(this IServiceCollection services)
+    {
+        // Đọc AWS credentials từ environment variables
+        var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY");
+        var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_KEY");
+        var awsRegion = Environment.GetEnvironmentVariable("AWS_REGION") ?? "ap-southeast-1";
+        var s3BucketName = Environment.GetEnvironmentVariable("AWS_S3_BUCKET_NAME");
+
+        // Debug logging
+        Console.WriteLine($"🪣 S3 Bucket: {s3BucketName ?? "[NOT SET]"}");
+        Console.WriteLine($"🌍 S3 Region: {awsRegion}");
+
+        // Tạo AWS credentials từ environment variables
+        var awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
+        
+        // Cấu hình AWS S3 client
+        var s3Config = new Amazon.S3.AmazonS3Config
+        {
+            RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(awsRegion)
+        };
+
+        // Đăng ký AWS S3 client vào DI container
+        services.AddSingleton<Amazon.S3.IAmazonS3>(
+            new Amazon.S3.AmazonS3Client(awsCredentials, s3Config)
+        );
+
+        // Đăng ký S3Service
+        services.AddScoped<IS3Service, S3Service>();
 
         return services;
     }

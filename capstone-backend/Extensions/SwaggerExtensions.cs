@@ -73,9 +73,6 @@ public static class SwaggerExtensions
 
             // Custom operation filters for better documentation
             options.EnableAnnotations();
-            
-            // Hỗ trợ file upload - inline filter
-            options.OperationFilter<FileUploadOperationFilter>();
 
             // Schema filters for better model documentation
             options.CustomSchemaIds(type => type.FullName?.Replace("+", "."));
