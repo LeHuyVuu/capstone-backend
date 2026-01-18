@@ -43,6 +43,11 @@ public class UserService : IUserService
         _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        // Get member profile for gender
+        var memberProfile = user.member_profiles?.FirstOrDefault();
+        Console.Write(memberProfile);
+        var gender = memberProfile?.gender ?? string.Empty;
+
         // Generate JWT tokens
         var role = user.role ?? "member";
         var fullName = user.display_name ?? string.Empty;
@@ -67,12 +72,12 @@ public class UserService : IUserService
 
         return new LoginResponse
         {
-          
             AccessToken = accessToken,
             RefreshToken = refreshToken,
             ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes),
             CometChatUid = cometChatUid,
-            CometChatAuthToken = cometChatAuthToken
+            CometChatAuthToken = cometChatAuthToken,
+            Gender = gender
         };
     }
 
