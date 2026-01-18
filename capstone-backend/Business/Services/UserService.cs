@@ -73,7 +73,7 @@ public class UserService : IUserService
             password_hash = passwordHash,
             display_name = request.FullName,
             phone_number = request.PhoneNumber,
-            role = "member", // Luôn là member (lowercase theo database constraint)
+            role = "MEMBER", // Luôn là member (lowercase theo database constraint)
             is_active = true,
             is_verified = false,
             is_deleted = false,
