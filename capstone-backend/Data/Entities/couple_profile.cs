@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace capstone_backend.Entities;
+namespace capstone_backend.Data.Entities;
 
 [Index("member_id_1", "member_id_2", Name = "idx_couple_members")]
 [Index("member_id_1", "member_id_2", Name = "uq_couple_pair", IsUnique = true)]

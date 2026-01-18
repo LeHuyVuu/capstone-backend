@@ -2,7 +2,7 @@ using capstone_backend.Business.DTOs.Auth;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.User;
 using capstone_backend.Business.Interfaces;
-using capstone_backend.Entities;
+using capstone_backend.Data.Entities;
 
 namespace capstone_backend.Business.Services;
 
@@ -91,7 +91,7 @@ public class UserService : IUserService
         // TODO: Use BCrypt.Net.BCrypt.HashPassword(request.Password)
         string passwordHash = "hashed_" + request.Password;
 
-        var user = new user_account
+        var user = new user_account()
         {
             email = request.Email,
             password_hash = passwordHash,

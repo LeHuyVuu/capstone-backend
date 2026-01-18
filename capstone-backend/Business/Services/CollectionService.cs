@@ -1,7 +1,7 @@
 using capstone_backend.Business.DTOs.Collection;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.Interfaces;
-using capstone_backend.Entities;
+using capstone_backend.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -20,7 +20,7 @@ public class CollectionService : ICollectionService
 
     public async Task<CollectionResponse> CreateCollectionAsync(int memberId, CreateCollectionRequest request, CancellationToken cancellationToken = default)
     {
-        var collection = new collection
+        var collection = new collection()
         {
             member_id = memberId,
             collection_name = request.CollectionName,

@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace capstone_backend.Entities;
+namespace capstone_backend.Data.Entities;
 
 [Index("trans_type", "doc_no", Name = "idx_transactions_poly")]
 public partial class transaction

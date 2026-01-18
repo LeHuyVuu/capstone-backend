@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace capstone_backend.Entities;
+namespace capstone_backend.Data.Entities;
 
 [Index("code", Name = "accessories_code_key", IsUnique = true)]
 public partial class accessory

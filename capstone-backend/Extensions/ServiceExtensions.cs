@@ -3,7 +3,6 @@ using Amazon.Runtime;
 using capstone_backend.Api.Filters;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Services;
-using capstone_backend.Context;
 using capstone_backend.Data.Repositories;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -12,6 +11,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using capstone_backend.Data.Context;
 
 namespace capstone_backend.Extensions;
 

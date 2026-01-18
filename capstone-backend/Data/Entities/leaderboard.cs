@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace capstone_backend.Entities;
+namespace capstone_backend.Data.Entities;
 
 [Index("season_key", "total_points", Name = "idx_leaderboard_points", IsDescending = new[] { false, true })]
 public partial class leaderboard

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
-using capstone_backend.Entities;
+using capstone_backend.Data.Entities;
 
-namespace capstone_backend.Context;
+namespace capstone_backend.Data.Context;
 
 public partial class MyDbContext : DbContext
 {
@@ -51,6 +51,8 @@ public partial class MyDbContext : DbContext
     public virtual DbSet<device_token> device_tokens { get; set; }
 
     public virtual DbSet<leaderboard> leaderboards { get; set; }
+
+    public virtual DbSet<location_follower> location_followers { get; set; }
 
     public virtual DbSet<location_tag> location_tags { get; set; }
 
@@ -410,6 +412,25 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.couple).WithMany(p => p.leaderboards).HasConstraintName("leaderboards_couple_id_fkey");
+        });
+
+        modelBuilder.Entity<location_follower>(entity =>
+        {
+            entity.HasKey(e => e.id).HasName("location_followers_pkey");
+
+            entity.ToTable(tb => tb.HasComment("Bảng quan hệ theo dõi / chia sẻ vị trí giữa users"));
+
+            entity.Property(e => e.id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.follower_share_status).HasDefaultValueSql("'SHARING'::character varying");
+            entity.Property(e => e.follower_user_id).HasComment("User theo dõi");
+            entity.Property(e => e.is_muted).HasDefaultValue(false);
+            entity.Property(e => e.owner_share_status).HasDefaultValueSql("'SHARING'::character varying");
+            entity.Property(e => e.owner_user_id).HasComment("User trung tâm");
+            entity.Property(e => e.status)
+                .HasDefaultValueSql("'ACTIVE'::character varying")
+                .HasComment("ACTIVE, REMOVED, BLOCKED, PENDING");
+            entity.Property(e => e.updated_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 
         modelBuilder.Entity<location_tag>(entity =>

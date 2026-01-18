@@ -1,7 +1,7 @@
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.SpecialEvent;
 using capstone_backend.Business.Interfaces;
-using capstone_backend.Entities;
+using capstone_backend.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -20,7 +20,7 @@ public class SpecialEventService : ISpecialEventService
 
     public async Task<SpecialEventResponse> CreateSpecialEventAsync(CreateSpecialEventRequest request, CancellationToken cancellationToken = default)
     {
-        var specialEvent = new special_event
+        var specialEvent = new special_event()
         {
             event_name = request.EventName,
             description = request.Description,

@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace capstone_backend.Entities;
+namespace capstone_backend.Data.Entities;
 
 [Index("user_id", Name = "idx_member_user_id")]
 [Index("invite_code", Name = "member_profiles_invite_code_key", IsUnique = true)]

@@ -1,10 +1,10 @@
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.SearchHistory;
 using capstone_backend.Business.Interfaces;
-using capstone_backend.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using capstone_backend.Data.Entities;
 
 namespace capstone_backend.Business.Services;
 

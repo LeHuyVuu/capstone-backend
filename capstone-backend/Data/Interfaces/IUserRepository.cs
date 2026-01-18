@@ -1,4 +1,4 @@
-using capstone_backend.Entities;
+using capstone_backend.Data.Entities;
 
 namespace capstone_backend.Business.Interfaces;
 

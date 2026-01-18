@@ -1,5 +1,5 @@
 using capstone_backend.Business.Interfaces;
-using capstone_backend.Context;
+using capstone_backend.Data.Context;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace capstone_backend.Data.Repositories;

@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace capstone_backend.Entities;
+namespace capstone_backend.Data.Entities;
 
 [Index("rank_position", Name = "idx_top_search_rank")]
 [Index("keyword", Name = "top_searches_keyword_key", IsUnique = true)]

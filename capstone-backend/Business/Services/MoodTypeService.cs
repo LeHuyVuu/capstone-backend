@@ -1,6 +1,6 @@
 using capstone_backend.Business.DTOs.MoodType;
 using capstone_backend.Business.Interfaces;
-using capstone_backend.Entities;
+using capstone_backend.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Services;
