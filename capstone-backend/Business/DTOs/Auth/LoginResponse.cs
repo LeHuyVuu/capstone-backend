@@ -21,4 +21,14 @@ public class LoginResponse
     /// Token expiry time in UTC
     /// </summary>
     public DateTime ExpiresAt { get; set; }
+
+    /// <summary>
+    /// CometChat User ID (uid)
+    /// </summary>
+    public string CometChatUid { get; set; } = string.Empty;
+
+    /// <summary>
+    /// CometChat Auth Token for login
+    /// </summary>
+    public string CometChatAuthToken { get; set; } = string.Empty;
 }

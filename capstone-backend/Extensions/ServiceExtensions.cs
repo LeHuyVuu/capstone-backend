@@ -85,6 +85,9 @@ public static class ServiceExtensions
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IJwtService, JwtService>();
         
+        // Register CometChat Service
+        services.AddScoped<ICometChatService, CometChatService>();
+        
         // Register OpenAI Recommendation Service - only read from environment variables
         var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "";
         var assistantId = Environment.GetEnvironmentVariable("ASSISTANT_ID") ?? "";
