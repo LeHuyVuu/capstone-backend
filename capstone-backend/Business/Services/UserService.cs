@@ -31,10 +31,8 @@ public class UserService : IUserService
         if (user == null || user.is_active != true)
             return null;
 
-        // Verify password
-        // TODO: Use BCrypt.Net.BCrypt.Verify(request.Password, user.password_hash)
-        // For now, compare with hashed password (temporary - should use BCrypt)
-        bool isPasswordValid = user.password_hash == ("hashed_" + request.Password);
+        // Verify password using BCrypt
+        bool isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.password_hash);
 
         if (!isPasswordValid)
             return null;
@@ -87,9 +85,8 @@ public class UserService : IUserService
         if (await _unitOfWork.Users.EmailExistsAsync(request.Email, cancellationToken: cancellationToken))
             throw new InvalidOperationException($"Email '{request.Email}' đã được sử dụng");
 
-        // Tạo user account
-        // TODO: Use BCrypt.Net.BCrypt.HashPassword(request.Password)
-        string passwordHash = "hashed_" + request.Password;
+        // Tạo user account với BCrypt hashing
+        string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
         var user = new user_account()
         {
