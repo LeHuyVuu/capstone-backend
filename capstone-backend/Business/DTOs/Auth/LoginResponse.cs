@@ -31,4 +31,7 @@ public class LoginResponse
     /// CometChat Auth Token for login
     /// </summary>
     public string CometChatAuthToken { get; set; } = string.Empty;
+
+        public string Gender { get; set; } = string.Empty;
+
 }

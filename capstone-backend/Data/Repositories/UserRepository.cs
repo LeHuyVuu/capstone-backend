@@ -32,7 +32,9 @@ public class UserRepository : Repository<user_account>, IUserRepository
         bool includeSoftDeleted = false,
         CancellationToken cancellationToken = default)
     {
-        var query = _dbSet.AsQueryable();
+        var query = _dbSet
+            .Include(u => u.member_profiles)
+            .AsQueryable();
 
         if (!includeSoftDeleted)
             query = query.Where(u => u.is_deleted != true);
