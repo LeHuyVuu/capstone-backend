@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace capstone_backend.Api.Controllers;
 
-[Route("api/v1/[controller]")]
+[Route("api/[controller]")]
+[ApiController]
 public class SpecialEventController : BaseController
 {
     private readonly ISpecialEventService _specialEventService;

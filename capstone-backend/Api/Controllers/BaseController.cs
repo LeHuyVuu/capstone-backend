@@ -5,8 +5,7 @@ using System.Security.Claims;
 
 namespace capstone_backend.Api.Controllers;
 
-[ApiController]
-[Route("api/[controller]")]
+
 public abstract class BaseController : ControllerBase
 {
     protected string GetTraceId() => HttpContext.Items["TraceId"]?.ToString() ?? HttpContext.TraceIdentifier;

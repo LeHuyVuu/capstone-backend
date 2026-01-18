@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace capstone_backend.Api.Controllers;
 
 [Route("api/[controller]")]
+[ApiController]
 // [Authorize]
 public class UsersController : BaseController
 {

@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace capstone_backend.Api.Controllers;
 
+[Route("api/[controller]")]
+[ApiController]
 public class RecommendationController : BaseController
 {
     private readonly IRecommendationService _recommendationService;

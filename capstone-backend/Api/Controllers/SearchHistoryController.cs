@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace capstone_backend.Api.Controllers;
 
-[Route("api/v1/[controller]")]
+[Route("api/[controller]")]
+[ApiController]
 [Authorize]
 public class SearchHistoryController : BaseController
 {

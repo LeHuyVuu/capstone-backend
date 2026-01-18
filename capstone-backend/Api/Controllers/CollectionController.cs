@@ -5,8 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace capstone_backend.Api.Controllers;
 
-[Route("api/v1/[controller]")]
-[Authorize]
+[Route("api/[controller]")]
+[ApiController]
 public class CollectionController : BaseController
 {
     private readonly ICollectionService _collectionService;
