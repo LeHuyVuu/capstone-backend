@@ -37,8 +37,8 @@ public class CometChatService : ICometChatService
         try
         {
             var httpClient = _httpClientFactory.CreateClient();
-            httpClient.DefaultRequestHeaders.Add("apikey", CometChatApiKey);
-            httpClient.DefaultRequestHeaders.Add("appid", CometChatAppId);
+            httpClient.DefaultRequestHeaders.Add("apiKey", CometChatApiKey);
+            httpClient.DefaultRequestHeaders.Add("appId", CometChatAppId);
             httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             var createUserPayload = new
@@ -98,8 +98,8 @@ public class CometChatService : ICometChatService
         try
         {
             var httpClient = _httpClientFactory.CreateClient();
-            httpClient.DefaultRequestHeaders.Add("apikey", CometChatApiKey);
-            httpClient.DefaultRequestHeaders.Add("appid", CometChatAppId);
+            httpClient.DefaultRequestHeaders.Add("apiKey", CometChatApiKey);
+            httpClient.DefaultRequestHeaders.Add("appId", CometChatAppId);
             httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             var response = await httpClient.PostAsync(
