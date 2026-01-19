@@ -12,7 +12,7 @@ public partial class MyDbContext : DbContext
     {
     }
 
-    public virtual DbSet<accessory> accessories { get; set; }
+    public virtual DbSet<Accessory> Accessories { get; set; }
 
     public virtual DbSet<ads_order> ads_orders { get; set; }
 
@@ -122,15 +122,26 @@ public partial class MyDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<accessory>(entity =>
+        modelBuilder.Entity<Accessory>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("accessories_pkey");
+            entity.ToTable("accessories");
+            entity.HasKey(e => e.Id).HasName("accessories_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.is_limited).HasDefaultValue(false);
-            entity.Property(e => e.price_point).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Code).HasColumnName("code");
+            entity.Property(e => e.Name).HasColumnName("name");
+            entity.Property(e => e.Type).HasColumnName("type");
+            entity.Property(e => e.ThumbnailUrl).HasColumnName("thumbnail_url");
+            entity.Property(e => e.ResourceUrl).HasColumnName("resource_url");
+            entity.Property(e => e.AvailableQuantity).HasColumnName("available_quantity");
+            entity.Property(e => e.AvailableFrom).HasColumnName("available_from");
+            entity.Property(e => e.AvailableTo).HasColumnName("available_to");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()").HasColumnName("created_at");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false).HasColumnName("is_deleted");
+            entity.Property(e => e.IsLimited).HasDefaultValue(false).HasColumnName("is_limited");
+            entity.Property(e => e.PricePoint).HasDefaultValue(0).HasColumnName("price_point");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()").HasColumnName("updated_at");
+            entity.Property(e => e.Status).HasColumnName("status");
         });
 
         modelBuilder.Entity<ads_order>(entity =>

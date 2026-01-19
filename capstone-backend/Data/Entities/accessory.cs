@@ -6,39 +6,39 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-[Index("code", Name = "accessories_code_key", IsUnique = true)]
-public partial class accessory
+[Index("Code", Name = "accessories_code_key", IsUnique = true)]
+public partial class Accessory
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public string code { get; set; } = null!;
+    public string Code { get; set; } = null!;
 
-    public string name { get; set; } = null!;
+    public string Name { get; set; } = null!;
 
-    public string type { get; set; } = null!;
+    public string Type { get; set; } = null!;
 
-    public string? thumbnail_url { get; set; }
+    public string? ThumbnailUrl { get; set; }
 
-    public string? resource_url { get; set; }
+    public string? ResourceUrl { get; set; }
 
-    public int? price_point { get; set; }
+    public int? PricePoint { get; set; }
 
-    public bool? is_limited { get; set; }
+    public bool? IsLimited { get; set; }
 
-    public int? available_quantity { get; set; }
+    public int? AvailableQuantity { get; set; }
 
-    public DateTime? available_from { get; set; }
+    public DateTime? AvailableFrom { get; set; }
 
-    public DateTime? available_to { get; set; }
+    public DateTime? AvailableTo { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
     [InverseProperty("accessory")]
     public virtual ICollection<member_accessory> member_accessories { get; set; } = new List<member_accessory>();

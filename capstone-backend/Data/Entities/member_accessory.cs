@@ -23,7 +23,7 @@ public partial class member_accessory
 
     [ForeignKey("accessory_id")]
     [InverseProperty("member_accessories")]
-    public virtual accessory? accessory { get; set; }
+    public virtual Accessory? accessory { get; set; }
 
     [ForeignKey("member_id")]
     [InverseProperty("member_accessories")]
