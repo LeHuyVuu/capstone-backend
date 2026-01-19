@@ -97,9 +97,9 @@ app.MapControllers();
 // ========================================
 
 app.Logger.LogInformation("Application starting...");
-app.Logger.LogInformation("🚀 Scalar (recommended): http://localhost:5224/scalar");
-app.Logger.LogInformation("📘 Swagger UI: http://localhost:5224/swagger");
-app.Logger.LogInformation("📖 Redoc: http://localhost:5224/redoc");
+app.Logger.LogInformation("[INFO] Scalar (recommended): http://localhost:5224/scalar");
+app.Logger.LogInformation("[INFO] Swagger UI: http://localhost:5224/swagger");
+app.Logger.LogInformation("[INFO] Redoc: http://localhost:5224/redoc");
 app.Logger.LogInformation("API: /api");
 
 app.Run();
