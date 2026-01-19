@@ -17,6 +17,8 @@ public interface IUnitOfWork : IDisposable
     /// </summary>
     IUserRepository Users { get; }
 
+    IMemberProfileRepository MembersProfile { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>
