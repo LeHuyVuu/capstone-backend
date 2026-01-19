@@ -8,11 +8,11 @@ var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
 if (File.Exists(envPath))
 {
     Env.Load(envPath);
-    Console.WriteLine($"✅ Loaded .env from: {envPath}");
+    Console.WriteLine($"[INFO] Loaded .env from: {envPath}");
 }
 else
 {
-    Console.WriteLine($"⚠️ .env file not found at: {envPath}");
+    Console.WriteLine($"[INFO] .env file not found at: {envPath}");
 }
 
 var builder = WebApplication.CreateBuilder(args);

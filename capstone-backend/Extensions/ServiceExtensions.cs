@@ -39,7 +39,7 @@ public static class ServiceExtensions
             string.IsNullOrEmpty(dbUser) ||
             string.IsNullOrEmpty(dbPassword))
         {
-            throw new Exception("❌ Database environment variables are not fully configured");
+            throw new Exception("[ERROR] Database environment variables are not fully configured");
         }
 
         var connectionString =
@@ -50,10 +50,10 @@ public static class ServiceExtensions
             $"Password={dbPassword};";
 
         // Debug log (không log password)
-        Console.WriteLine($"🗄️ DB Host: {dbHost}");
-        Console.WriteLine($"🗄️ DB Name: {dbName}");
-        Console.WriteLine($"🗄️ DB User: {dbUser}");
-        Console.WriteLine($"🗄️ DB Port: {dbPort}");
+        Console.WriteLine($"[INFO] DB Host: {dbHost}");
+        Console.WriteLine($"[INFO] DB Name: {dbName}");
+        Console.WriteLine($"[INFO] DB User: {dbUser}");
+        Console.WriteLine($"[INFO] DB Port: {dbPort}");
 
         services.AddDbContext<MyDbContext>(options =>
             options.UseNpgsql(connectionString));
@@ -95,8 +95,8 @@ public static class ServiceExtensions
         var assistantId = Environment.GetEnvironmentVariable("ASSISTANT_ID") ?? "";
 
         // Debug logging
-        Console.WriteLine($"🔑 API Key: {(string.IsNullOrEmpty(apiKey) ? "[EMPTY]" : apiKey.Substring(0, Math.Min(15, apiKey.Length)) + "...")}");
-        Console.WriteLine($"🤖 Assistant ID: {assistantId}");
+        Console.WriteLine($"[INFO] API Key: {(string.IsNullOrEmpty(apiKey) ? "[EMPTY]" : apiKey.Substring(0, Math.Min(15, apiKey.Length)) + "...")}");
+        Console.WriteLine($"[INFO] Assistant ID: {assistantId}");
 
         services.Configure<OpenAISettings>(options =>
         {
@@ -133,8 +133,8 @@ public static class ServiceExtensions
         var awsRegion = Environment.GetEnvironmentVariable("AWS_REGION") ?? "us-east-1";
 
         // Debug logging
-        Console.WriteLine($"🌍 AWS Region: {awsRegion}");
-        Console.WriteLine($"🔑 AWS Access Key: {(string.IsNullOrEmpty(awsAccessKey) ? "[EMPTY]" : awsAccessKey.Substring(0, Math.Min(10, awsAccessKey.Length)) + "...")}");
+        Console.WriteLine($"[INFO] AWS Region: {awsRegion}");
+        Console.WriteLine($"[INFO] AWS Access Key: {(string.IsNullOrEmpty(awsAccessKey) ? "[EMPTY]" : awsAccessKey.Substring(0, Math.Min(10, awsAccessKey.Length)) + "...")}");
 
         // Tạo AWS credentials từ environment variables
         var awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
@@ -186,9 +186,9 @@ public static class ServiceExtensions
                           ?? configuration["Jwt:Audience"]
                           ?? "CapstoneApp";
 
-        Console.WriteLine($"🔐 Auth: Cookie (Web) + JWT (Mobile)");
-        Console.WriteLine($"🔐 JWT Issuer: {jwtIssuer}");
-        Console.WriteLine($"🔐 JWT Audience: {jwtAudience}");
+        Console.WriteLine($"[INFO] Auth: Cookie (Web) + JWT (Mobile)");
+        Console.WriteLine($"[INFO] JWT Issuer: {jwtIssuer}");
+        Console.WriteLine($"[INFO] JWT Audience: {jwtAudience}");
 
         services.AddAuthentication(options =>
         {
