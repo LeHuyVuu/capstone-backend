@@ -68,9 +68,9 @@ public static class ServiceExtensions
     /// </summary>
     public static IServiceCollection AddRepositories(this IServiceCollection services)
     {
-      
+
         services.AddScoped<IUserRepository, UserRepository>();
-        
+
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
@@ -84,34 +84,37 @@ public static class ServiceExtensions
     {
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IJwtService, JwtService>();
-        
+
         // Register CometChat Service
         services.AddScoped<ICometChatService, CometChatService>();
-        
+
         // Register OpenAI Recommendation Service - only read from environment variables
         var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "";
         var assistantId = Environment.GetEnvironmentVariable("ASSISTANT_ID") ?? "";
-        
+
         // Debug logging
         Console.WriteLine($"🔑 API Key: {(string.IsNullOrEmpty(apiKey) ? "[EMPTY]" : apiKey.Substring(0, Math.Min(15, apiKey.Length)) + "...")}");
         Console.WriteLine($"🤖 Assistant ID: {assistantId}");
-        
+
         services.Configure<OpenAISettings>(options =>
         {
             options.ApiKey = apiKey;
             options.AssistantId = assistantId;
         });
-        
+
         services.AddHttpClient<IRecommendationService, RecommendationService>();
-        
+
         // Đăng ký AWS Rekognition Service để phân tích cảm xúc khuôn mặt
         services.AddAwsRekognitionService();
-        
+
         // Register new services
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IMoodTypeService, MoodTypeService>();
         services.AddScoped<ISearchHistoryService, SearchHistoryService>();
         services.AddScoped<ISpecialEventService, SpecialEventService>();
+
+        // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
+        services.AddScoped<ILocationFollowerService, LocationFollowerService>();
 
         return services;
     }
@@ -133,7 +136,7 @@ public static class ServiceExtensions
 
         // Tạo AWS credentials từ environment variables
         var awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
-        
+
         // Cấu hình AWS Rekognition client
         var rekognitionConfig = new AmazonRekognitionConfig
         {
@@ -169,16 +172,16 @@ public static class ServiceExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") 
-                     ?? configuration["Jwt:SecretKey"] 
+        var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+                     ?? configuration["Jwt:SecretKey"]
                      ?? throw new InvalidOperationException("JWT Secret Key is not configured");
 
-        var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") 
-                        ?? configuration["Jwt:Issuer"] 
+        var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
+                        ?? configuration["Jwt:Issuer"]
                         ?? "CapstoneAPI";
 
-        var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") 
-                          ?? configuration["Jwt:Audience"] 
+        var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+                          ?? configuration["Jwt:Audience"]
                           ?? "CapstoneApp";
 
         Console.WriteLine($"🔐 Auth: Cookie (Web) + JWT (Mobile)");
@@ -200,7 +203,7 @@ public static class ServiceExtensions
             options.Cookie.SameSite = SameSiteMode.Strict;
             options.ExpireTimeSpan = TimeSpan.FromHours(8);
             options.SlidingExpiration = true;
-            
+
             options.Events.OnRedirectToLogin = context =>
             {
                 context.Response.StatusCode = 401;
@@ -258,16 +261,16 @@ public static class ServiceExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") 
-                     ?? configuration["Jwt:SecretKey"] 
+        var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+                     ?? configuration["Jwt:SecretKey"]
                      ?? throw new InvalidOperationException("JWT Secret Key is not configured");
 
-        var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") 
-                        ?? configuration["Jwt:Issuer"] 
+        var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
+                        ?? configuration["Jwt:Issuer"]
                         ?? "CapstoneAPI";
 
-        var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") 
-                          ?? configuration["Jwt:Audience"] 
+        var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+                          ?? configuration["Jwt:Audience"]
                           ?? "CapstoneApp";
 
         Console.WriteLine($"🔐 JWT Issuer: {jwtIssuer}");
@@ -302,12 +305,12 @@ public static class ServiceExtensions
                     // Allow token from query string for SignalR/WebSocket connections
                     var accessToken = context.Request.Query["access_token"];
                     var path = context.HttpContext.Request.Path;
-                    
+
                     if (!string.IsNullOrEmpty(accessToken))
                     {
                         context.Token = accessToken;
                     }
-                    
+
                     return Task.CompletedTask;
                 },
                 OnAuthenticationFailed = context =>
@@ -342,7 +345,7 @@ public static class ServiceExtensions
                 options.Cookie.SameSite = SameSiteMode.Strict;  // Chống CSRF
                 options.ExpireTimeSpan = TimeSpan.FromHours(8);  // Cookie hết hạn sau 8 giờ
                 options.SlidingExpiration = true;  // Tự động gia hạn khi user active
-                
+
                 // API trả về 401 thay vì redirect
                 options.Events.OnRedirectToLogin = context =>
                 {
@@ -374,22 +377,18 @@ public static class ServiceExtensions
     /// Đăng ký CORS để cho phép frontend gọi API
     /// </summary>
     public static IServiceCollection AddCorsConfiguration(
-        this IServiceCollection services, 
-        IConfiguration configuration)
+     this IServiceCollection services,
+     IConfiguration configuration)
     {
-        // Đọc danh sách origins từ appsettings.json
-        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
-                           ?? new[] { "http://localhost:3000" };
-
         services.AddCors(options =>
         {
             options.AddPolicy("AllowAll", builder =>
             {
                 builder
-                    .WithOrigins(allowedOrigins)  // Chỉ cho phép origins này
-                    .AllowAnyMethod()             // Cho phép tất cả methods (GET, POST, PUT...)
-                    .AllowAnyHeader()             // Cho phép tất cả headers
-                    .AllowCredentials();          // Cho phép gửi cookie
+                    .SetIsOriginAllowed(_ => true) // allow tất cả origin
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials();
             });
         });
 
