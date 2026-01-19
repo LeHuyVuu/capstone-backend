@@ -150,7 +150,7 @@ public class UserService : IUserService
             full_name = request.FullName,
             date_of_birth = request.DateOfBirth,
             gender = request.Gender,
-            relationship_status = "single", // Default (lowercase)
+            relationship_status = "SINGLE", // Default (uppercase)
             created_at = DateTime.UtcNow,
             updated_at = DateTime.UtcNow,
             is_deleted = false

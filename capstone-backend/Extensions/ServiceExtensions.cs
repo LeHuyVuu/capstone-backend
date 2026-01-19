@@ -70,6 +70,7 @@ public static class ServiceExtensions
     {
 
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IMemberProfileRepository, MemberProfileRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -84,6 +85,7 @@ public static class ServiceExtensions
     {
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IJwtService, JwtService>();
+        services.AddScoped<IMemberService, MemberService>();
 
         // Register CometChat Service
         services.AddScoped<ICometChatService, CometChatService>();

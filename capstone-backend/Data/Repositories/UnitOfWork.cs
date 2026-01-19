@@ -12,15 +12,18 @@ public class UnitOfWork : IUnitOfWork
     private readonly MyDbContext _context;
     private IDbContextTransaction? _transaction;
 
-    public UnitOfWork(MyDbContext context, IUserRepository userRepository)
+    public UnitOfWork(MyDbContext context, IUserRepository userRepository, IMemberProfileRepository memberProfileRepository)
     {
         _context = context;
         Users = userRepository;
+        MembersProfile = memberProfileRepository;
     }
 
     public MyDbContext Context => _context;
 
     public IUserRepository Users { get; }
+
+    public IMemberProfileRepository MembersProfile { get; }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
