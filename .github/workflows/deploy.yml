@@ -1,19 +1,24 @@
-name: Deploy to VPS
+name: Deploy to VPS (Blue-Green)
 
 on:
   push:
-    branches:
-      - main
-      - master
+    branches: [ main, master ]
   workflow_dispatch:
 
 env:
   DOCKER_IMAGE: lehuyvuuu/capstone-backend
+  APP_NAME: capstone-backend
+  BLUE_PORT: 5224
+  GREEN_PORT: 5225
+  CONTAINER_PORT: 5224
+  ENV_DIR: /root/capstone
+  BACKEND_FILE: /etc/nginx/snippets/capstone-upstream.conf
+  HEALTH_PATH: /api/health
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,7 +26,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
+      - name: Login to Docker Hub (runner only)
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -38,120 +43,109 @@ jobs:
           cache-from: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache
           cache-to: type=registry,ref=${{ env.DOCKER_IMAGE }}:buildcache,mode=max
 
-      - name: Deploy to VPS with Blue-Green
+      - name: Deploy to VPS (Blue-Green)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
+          timeout: 120s
+          command_timeout: 30m
           script: |
-            # Login to Docker Hub
-            echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-            
-            # Tạo file .env từ secret
-            mkdir -p /root/capstone
-            cat > /root/capstone/.env << 'EOF'
+            set -euo pipefail
+
+            echo "🧾 Write env file"
+            sudo mkdir -p "${{ env.ENV_DIR }}"
+            sudo tee "${{ env.ENV_DIR }}/.env" > /dev/null <<'EOF'
             ${{ secrets.ENV_FILE }}
             EOF
-            
-            # Pull latest image
-            docker pull ${{ env.DOCKER_IMAGE }}:latest
-            
-            # Dọn dẹp container cũ không có suffix (từ deploy cũ)
-            if docker ps -aq --filter "name=^capstone-backend$" | grep -q .; then
-              echo "🧹 Cleaning up old non-suffixed container..."
-              docker stop capstone-backend 2>/dev/null || true
-              docker rm capstone-backend 2>/dev/null || true
+
+            echo "📥 Pull image (retry)"
+            PULLED="0"
+            for i in {1..10}; do
+              if sudo docker pull "${{ env.DOCKER_IMAGE }}:latest"; then
+                PULLED="1"
+                break
+              fi
+              echo "Pull failed, retry $i/10..."
+              sleep 8
+            done
+
+            if [[ "$PULLED" != "1" ]]; then
+              echo "❌ Docker pull failed after retries. Stop here to keep old system untouched."
+              exit 1
             fi
-            
-            # Kiểm tra container nào đang chạy (blue hay green)
-            CURRENT_COLOR=$(docker ps --filter "name=capstone-backend-" --format "{{.Names}}" | head -n1)
-            
-            if [[ "$CURRENT_COLOR" == *"blue"* ]]; then
+
+            echo "🔎 Detect current backend port"
+            ACTIVE_PORT=""
+            if sudo test -f "${{ env.BACKEND_FILE }}"; then
+              ACTIVE_PORT=$(sudo grep -Eo '127\.0\.0\.1:[0-9]+' "${{ env.BACKEND_FILE }}" | cut -d: -f2 || true)
+            fi
+
+            if [[ "$ACTIVE_PORT" == "${{ env.BLUE_PORT }}" ]]; then
               NEW_COLOR="green"
               OLD_COLOR="blue"
-              NEW_PORT=5225
-              OLD_PORT=5224
+              NEW_PORT="${{ env.GREEN_PORT }}"
+              OLD_PORT="${{ env.BLUE_PORT }}"
             else
               NEW_COLOR="blue"
               OLD_COLOR="green"
-              NEW_PORT=5224
-              OLD_PORT=5225
+              NEW_PORT="${{ env.BLUE_PORT }}"
+              OLD_PORT="${{ env.GREEN_PORT }}"
             fi
-            
-            echo "🔵🟢 Blue-Green Deployment"
-            echo "Current: capstone-backend-$OLD_COLOR (port $OLD_PORT)"
-            echo "Deploying: capstone-backend-$NEW_COLOR (port $NEW_PORT)"
-            
-            # Xóa container cũ cùng tên nếu tồn tại (cleanup)
-            docker stop capstone-backend-$NEW_COLOR 2>/dev/null || true
-            docker rm capstone-backend-$NEW_COLOR 2>/dev/null || true
-            
-            # Chạy container mới (NEW_COLOR)
-            docker run -d \
-              --name capstone-backend-$NEW_COLOR \
+
+            echo "🔵🟢 Deploy $NEW_COLOR on port $NEW_PORT (old $OLD_COLOR on $OLD_PORT)"
+
+            echo "🧹 Cleanup same-color container"
+            sudo docker stop "${{ env.APP_NAME }}-$NEW_COLOR" 2>/dev/null || true
+            sudo docker rm   "${{ env.APP_NAME }}-$NEW_COLOR" 2>/dev/null || true
+
+            echo "🚀 Run new container"
+            sudo docker run -d \
+              --name "${{ env.APP_NAME }}-$NEW_COLOR" \
               --restart unless-stopped \
-              -p 127.0.0.1:$NEW_PORT:5224 \
-              --env-file /root/capstone/.env \
-              ${{ env.DOCKER_IMAGE }}:latest
-            
-            # Đợi container khởi động (health check)
-            echo "⏳ Waiting for new container to be healthy..."
+              -p "127.0.0.1:$NEW_PORT:${{ env.CONTAINER_PORT }}" \
+              -e "ASPNETCORE_URLS=http://+:${{ env.CONTAINER_PORT }}" \
+              --env-file "${{ env.ENV_DIR }}/.env" \
+              "${{ env.DOCKER_IMAGE }}:latest"
+
+            echo "⏳ Health check"
             for i in {1..30}; do
-              if curl -f http://localhost:$NEW_PORT/api/health > /dev/null 2>&1; then
-                echo "✅ New container is healthy!"
+              if curl -fsS "http://127.0.0.1:$NEW_PORT${{ env.HEALTH_PATH }}" >/dev/null; then
+                echo "✅ Healthy"
                 break
               fi
-              echo "Attempt $i/30: Container not ready yet..."
+              echo "Attempt $i/30..."
               sleep 2
             done
-            
-            # Kiểm tra lần cuối
-            if ! curl -f http://localhost:$NEW_PORT/api/health > /dev/null 2>&1; then
-              echo "❌ New container failed health check. Rolling back..."
-              docker stop capstone-backend-$NEW_COLOR
-              docker rm capstone-backend-$NEW_COLOR
+
+            if ! curl -fsS "http://127.0.0.1:$NEW_PORT${{ env.HEALTH_PATH }}" >/dev/null; then
+              echo "❌ Healthcheck failed, rollback (old system stays running)"
+              sudo docker logs --tail 200 "${{ env.APP_NAME }}-$NEW_COLOR" || true
+              sudo docker stop "${{ env.APP_NAME }}-$NEW_COLOR" || true
+              sudo docker rm   "${{ env.APP_NAME }}-$NEW_COLOR" || true
               exit 1
             fi
-            
-            # Cập nhật Nginx trỏ sang container mới
-            sudo tee /etc/nginx/sites-available/capstone-backend > /dev/null <<NGINX
-            upstream capstone_backend {
-                server 127.0.0.1:$NEW_PORT;
-            }
 
-            server {
-                listen 80;
-                server_name 134.209.108.208;
+            echo "🔁 Switch Nginx backend (atomic)"
+            sudo mkdir -p /etc/nginx/snippets
+            sudo tee "${{ env.BACKEND_FILE }}.tmp" > /dev/null <<EOF
+            set \$backend http://127.0.0.1:$NEW_PORT;
+            EOF
+            sudo mv "${{ env.BACKEND_FILE }}.tmp" "${{ env.BACKEND_FILE }}"
 
-                location / {
-                    proxy_pass http://capstone_backend;
-                    proxy_http_version 1.1;
-                    proxy_set_header Host \$host;
-                    proxy_set_header X-Real-IP \$remote_addr;
-                    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-                }
-            }
-            NGINX
-            
-            # Reload Nginx (smooth reload, không downtime)
-            sudo nginx -t && sudo systemctl reload nginx
-            
-            echo "✅ Nginx switched to port $NEW_PORT"
-            
-            # Đợi 5s để traffic chuyển hết
-            sleep 5
-            
-            # Tắt container cũ
-            if docker ps -q --filter "name=capstone-backend-$OLD_COLOR" | grep -q .; then
-              echo "🛑 Stopping old container: capstone-backend-$OLD_COLOR"
-              docker stop capstone-backend-$OLD_COLOR
-              docker rm capstone-backend-$OLD_COLOR
+            sudo nginx -t
+            sudo systemctl reload nginx
+            echo "✅ Nginx now points to $NEW_PORT"
+
+            echo "🛑 Stop old container"
+            if sudo docker ps -q --filter "name=^${{ env.APP_NAME }}-$OLD_COLOR$" | grep -q .; then
+              sudo docker stop "${{ env.APP_NAME }}-$OLD_COLOR" || true
+              sudo docker rm   "${{ env.APP_NAME }}-$OLD_COLOR" || true
             fi
-            
-            # Dọn dẹp images cũ (giữ 2 ngày gần nhất)
-            docker image prune -af --filter "until=48h"
-            
-            echo "🎉 Blue-Green deployment completed!"
-            echo "Active: capstone-backend-$NEW_COLOR on port $NEW_PORT"
+
+            echo "🧽 Cleanup old images"
+            sudo docker image prune -af --filter "until=48h" || true
+
+            echo "🎉 Deploy completed. Active: $NEW_COLOR ($NEW_PORT)"

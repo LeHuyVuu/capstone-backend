@@ -3,29 +3,35 @@ namespace capstone_backend.Business.DTOs.Auth;
 /// <summary>
 /// Response model after successful login
 /// </summary>
-/// <remarks>
-/// Returns user information after authentication.
-/// For cookie-based auth, session is stored in cookie, not in response body.
-/// </remarks>
 public class LoginResponse
 {
-    /// <summary>
-    /// User's unique identifier
-    /// </summary>
-    public Guid UserId { get; set; }
+  
 
     /// <summary>
-    /// User's email address
+    /// JWT Access Token (for API authorization)
     /// </summary>
-    public string Email { get; set; } = string.Empty;
+    public string AccessToken { get; set; } = string.Empty;
 
     /// <summary>
-    /// User's full name
+    /// Refresh Token (to get new access token)
     /// </summary>
-    public string FullName { get; set; } = string.Empty;
+    public string RefreshToken { get; set; } = string.Empty;
 
     /// <summary>
-    /// User's role
+    /// Token expiry time in UTC
     /// </summary>
-    public string Role { get; set; } = string.Empty;
+    public DateTime ExpiresAt { get; set; }
+
+    /// <summary>
+    /// CometChat User ID (uid)
+    /// </summary>
+    public string CometChatUid { get; set; } = string.Empty;
+
+    /// <summary>
+    /// CometChat Auth Token for login
+    /// </summary>
+    public string CometChatAuthToken { get; set; } = string.Empty;
+
+        public string Gender { get; set; } = string.Empty;
+
 }

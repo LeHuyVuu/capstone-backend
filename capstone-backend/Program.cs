@@ -24,28 +24,31 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Database Context with PostgreSQL + EF Core
 builder.Services.AddDatabaseContext(builder.Configuration);
 
-// 2. Repository Pattern + Unit of Work
+// 2. HttpClient for external API calls
+builder.Services.AddHttpClient();
+
+// 3. Repository Pattern + Unit of Work
 builder.Services.AddRepositories();
 
-// 3. Business Services
+// 4. Business Services
 builder.Services.AddBusinessServices(builder.Configuration);
 
-// 4. FluentValidation (works with DataAnnotations)
+// 5. FluentValidation (works with DataAnnotations)
 builder.Services.AddFluentValidationConfiguration();
 
-// 5. Cookie-based Authentication & Authorization
-builder.Services.AddCookieAuthenticationConfiguration(builder.Configuration);
+// 6. Hybrid Authentication (Cookie for Web + JWT for Mobile)
+builder.Services.AddHybridAuthenticationConfiguration(builder.Configuration);
 
-// 6. Controllers with Validation Filter
+// 7. Controllers with Validation Filter
 builder.Services.AddValidationFilter();
 
-// 7. CORS Configuration
+// 8. CORS Configuration
 builder.Services.AddCorsConfiguration(builder.Configuration);
 
-// 8. Swagger/OpenAPI with detailed documentation
+// 9. Swagger/OpenAPI with detailed documentation
 builder.Services.AddSwaggerConfiguration();
 
-// 9. Logging configuration
+// 10. Logging configuration
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();

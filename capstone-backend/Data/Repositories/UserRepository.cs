@@ -1,47 +1,80 @@
-using capstone_backend.Business.Entities;
 using capstone_backend.Business.Interfaces;
-using capstone_backend.Data;
+using capstone_backend.Data.Context;
+using capstone_backend.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Repositories;
 
 /// <summary>
-/// User repository implementation
+/// User repository implementation for user_account entity
 /// </summary>
-/// <remarks>
-/// Implements User-specific database operations.
-/// </remarks>
-public class UserRepository : Repository<User>, IUserRepository
+public class UserRepository : Repository<user_account>, IUserRepository
 {
-    public UserRepository(AppDbContext context) : base(context)
+    public UserRepository(MyDbContext context) : base(context)
     {
     }
 
-    /// <inheritdoc/>
-    public async Task<User?> GetByEmailAsync(
-        string email,
+    public override async Task<user_account?> GetByIdAsync(
+        int id,
         bool includeSoftDeleted = false,
         CancellationToken cancellationToken = default)
     {
         var query = _dbSet.AsQueryable();
-
+        
         if (!includeSoftDeleted)
-            query = query.Where(u => !u.IsDeleted);
+            query = query.Where(u => u.is_deleted != true);
 
-        return await query.FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
+        return await query.FirstOrDefaultAsync(u => u.id == id, cancellationToken);
     }
 
-    /// <inheritdoc/>
-    public async Task<bool> EmailExistsAsync(
+    public async Task<user_account?> GetByEmailAsync(
         string email,
-        Guid? excludeUserId = null,
+        bool includeSoftDeleted = false,
         CancellationToken cancellationToken = default)
     {
-        var query = _dbSet.Where(u => !u.IsDeleted && u.Email == email);
+        var query = _dbSet
+            .Include(u => u.member_profiles)
+            .AsQueryable();
+
+        if (!includeSoftDeleted)
+            query = query.Where(u => u.is_deleted != true);
+
+        return await query.FirstOrDefaultAsync(u => u.email == email, cancellationToken);
+    }
+
+    public async Task<bool> EmailExistsAsync(
+        string email,
+        int? excludeUserId = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbSet.Where(u => u.is_deleted != true && u.email == email);
 
         if (excludeUserId.HasValue)
-            query = query.Where(u => u.Id != excludeUserId.Value);
+            query = query.Where(u => u.id != excludeUserId.Value);
 
         return await query.AnyAsync(cancellationToken);
+    }
+
+    public async Task<user_account?> GetByIdWithProfilesAsync(
+        int id,
+        bool includeSoftDeleted = false,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbSet
+            .Include(u => u.member_profiles)
+            .Include(u => u.venue_owner_profiles)
+            .AsQueryable();
+
+        if (!includeSoftDeleted)
+            query = query.Where(u => u.is_deleted != true);
+
+        return await query.FirstOrDefaultAsync(u => u.id == id, cancellationToken);
+    }
+
+    public override void SoftDelete(user_account entity, int? deletedBy = null)
+    {
+        entity.is_deleted = true;
+        entity.updated_at = DateTime.UtcNow;
+        _dbSet.Update(entity);
     }
 }

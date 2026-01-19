@@ -12,7 +12,7 @@ public class UserResponse
     /// <summary>
     /// User's unique identifier
     /// </summary>
-    public Guid Id { get; set; }
+    public int Id { get; set; }
 
     /// <summary>
     /// User's email address
@@ -53,4 +53,14 @@ public class UserResponse
     /// Date when user was last updated
     /// </summary>
     public DateTime? UpdatedAt { get; set; }
+
+    /// <summary>
+    /// Member profile information (if user is a member)
+    /// </summary>
+    public MemberProfileResponse? MemberProfile { get; set; }
+
+    /// <summary>
+    /// Venue owner profile information (if user is a venue owner)
+    /// </summary>
+    public VenueOwnerProfileResponse? VenueOwnerProfile { get; set; }
 }
