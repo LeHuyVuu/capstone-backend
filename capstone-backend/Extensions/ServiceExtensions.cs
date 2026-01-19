@@ -113,6 +113,8 @@ public static class ServiceExtensions
         services.AddScoped<ISearchHistoryService, SearchHistoryService>();
         services.AddScoped<ISpecialEventService, SpecialEventService>();
 
+        // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
+        services.AddScoped<ILocationFollowerService, LocationFollowerService>();
 
         return services;
     }
