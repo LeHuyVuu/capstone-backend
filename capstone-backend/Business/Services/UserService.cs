@@ -162,7 +162,7 @@ public class UserService : IUserService
         await _unitOfWork.Context.Set<member_profile>().AddAsync(memberProfile, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Created member profile for user {UserId} with invite code {InviteCode}", 
+        _logger.LogInformation("Created member profile for user {UserId} with invite code {InviteCode}",
             userId, memberProfile.invite_code);
     }
 
@@ -195,16 +195,16 @@ public class UserService : IUserService
         var (users, totalCount) = await _unitOfWork.Users.GetPagedAsync(
             pageNumber,
             pageSize,
-            filter: string.IsNullOrEmpty(searchTerm) 
+            filter: string.IsNullOrEmpty(searchTerm)
                 ? u => u.is_deleted != true
                 : u => u.is_deleted != true && (u.email.Contains(searchTerm) || (u.display_name != null && u.display_name.Contains(searchTerm))),
             orderBy: query => query.OrderByDescending(u => u.created_at),
             cancellationToken: cancellationToken);
 
         return new PagedResult<UserResponse>(
-            users.Select(MapToUserResponse), 
-            pageNumber, 
-            pageSize, 
+            users.Select(MapToUserResponse),
+            pageNumber,
+            pageSize,
             totalCount);
     }
 
@@ -215,7 +215,7 @@ public class UserService : IUserService
             throw new InvalidOperationException($"Email '{request.Email}' already exists");
 
         // TODO: Use BCrypt.Net.BCrypt.HashPassword(request.Password)
-        string passwordHash = "hashed_" + request.Password;
+        string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
         var user = new user_account
         {
@@ -247,8 +247,8 @@ public class UserService : IUserService
         user.phone_number = request.PhoneNumber;
         user.is_active = request.IsActive;
         user.updated_at = DateTime.UtcNow;
-        
-        if (!string.IsNullOrEmpty(request.Role)) 
+
+        if (!string.IsNullOrEmpty(request.Role))
             user.role = request.Role;
 
         _unitOfWork.Users.Update(user);
