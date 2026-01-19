@@ -180,7 +180,8 @@ public class UserService : IUserService
 
     public async Task<UserResponse?> GetCurrentUserAsync(int userId, CancellationToken cancellationToken = default)
     {
-        return await GetUserByIdAsync(userId, cancellationToken);
+        var user = await _unitOfWork.Users.GetByIdWithProfilesAsync(userId, cancellationToken: cancellationToken);
+        return user == null ? null : MapToUserResponse(user);
     }
 
     public async Task<UserResponse?> GetUserByIdAsync(int userId, CancellationToken cancellationToken = default)
@@ -273,6 +274,9 @@ public class UserService : IUserService
     /// </summary>
     private static UserResponse MapToUserResponse(user_account user)
     {
+        var memberProfile = user.member_profiles?.FirstOrDefault(p => p.is_deleted != true);
+        var venueOwnerProfile = user.venue_owner_profiles?.FirstOrDefault(p => p.is_deleted != true);
+
         return new UserResponse
         {
             Id = user.id,
@@ -283,7 +287,31 @@ public class UserService : IUserService
             IsActive = user.is_active ?? false,
             LastLoginAt = user.last_login_at,
             CreatedAt = user.created_at ?? DateTime.MinValue,
-            UpdatedAt = user.updated_at
+            UpdatedAt = user.updated_at,
+            MemberProfile = memberProfile != null ? new MemberProfileResponse
+            {
+                Id = memberProfile.id,
+                FullName = memberProfile.full_name,
+                DateOfBirth = memberProfile.date_of_birth,
+                Gender = memberProfile.gender,
+                Bio = memberProfile.bio,
+                RelationshipStatus = memberProfile.relationship_status,
+                HomeLatitude = memberProfile.home_latitude,
+                HomeLongitude = memberProfile.home_longitude,
+                BudgetMin = memberProfile.budget_min,
+                BudgetMax = memberProfile.budget_max,
+                Interests = memberProfile.interests,
+                AvailableTime = memberProfile.available_time,
+                InviteCode = memberProfile.invite_code
+            } : null,
+            VenueOwnerProfile = venueOwnerProfile != null ? new VenueOwnerProfileResponse
+            {
+                Id = venueOwnerProfile.id,
+                BusinessName = venueOwnerProfile.business_name,
+                PhoneNumber = venueOwnerProfile.phone_number,
+                Email = venueOwnerProfile.email,
+                Address = venueOwnerProfile.address
+            } : null
         };
     }
 }

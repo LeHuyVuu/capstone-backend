@@ -55,6 +55,22 @@ public class UserRepository : Repository<user_account>, IUserRepository
         return await query.AnyAsync(cancellationToken);
     }
 
+    public async Task<user_account?> GetByIdWithProfilesAsync(
+        int id,
+        bool includeSoftDeleted = false,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbSet
+            .Include(u => u.member_profiles)
+            .Include(u => u.venue_owner_profiles)
+            .AsQueryable();
+
+        if (!includeSoftDeleted)
+            query = query.Where(u => u.is_deleted != true);
+
+        return await query.FirstOrDefaultAsync(u => u.id == id, cancellationToken);
+    }
+
     public override void SoftDelete(user_account entity, int? deletedBy = null)
     {
         entity.is_deleted = true;

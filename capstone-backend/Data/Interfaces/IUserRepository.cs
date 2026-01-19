@@ -16,4 +16,9 @@ public interface IUserRepository : IRepository<user_account>
     /// Check if email already exists
     /// </summary>
     Task<bool> EmailExistsAsync(string email, int? excludeUserId = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get user by ID with member and venue owner profiles included
+    /// </summary>
+    Task<user_account?> GetByIdWithProfilesAsync(int id, bool includeSoftDeleted = false, CancellationToken cancellationToken = default);
 }
