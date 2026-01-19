@@ -35,5 +35,5 @@ public partial class refresh_token
 
     [ForeignKey("user_id")]
     [InverseProperty("refresh_tokens")]
-    public virtual user_account user { get; set; } = null!;
+    public virtual UserAccount user { get; set; } = null!;
 }

@@ -26,7 +26,7 @@ public partial class wallet
 
     [ForeignKey("user_id")]
     [InverseProperty("wallets")]
-    public virtual user_account user { get; set; } = null!;
+    public virtual UserAccount user { get; set; } = null!;
 
     [InverseProperty("wallet")]
     public virtual ICollection<withdraw_request> withdraw_requests { get; set; } = new List<withdraw_request>();

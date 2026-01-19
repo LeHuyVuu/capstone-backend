@@ -25,5 +25,5 @@ public partial class device_token
 
     [ForeignKey("user_id")]
     [InverseProperty("device_tokens")]
-    public virtual user_account user { get; set; } = null!;
+    public virtual UserAccount user { get; set; } = null!;
 }

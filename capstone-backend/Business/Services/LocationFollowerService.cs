@@ -54,8 +54,8 @@ public class LocationFollowerService : ILocationFollowerService
                     owner_share_status = "SHARING",
                     follower_share_status = "RECEIVING",
                     is_muted = false,
-                    follower_display_name = targetUser.display_name,
-                    follower_avatar_url = targetUser.avatar_url,
+                    follower_display_name = targetUser.DisplayName,
+                    follower_avatar_url = targetUser.AvatarUrl,
                     created_at = DateTime.UtcNow,
                     updated_at = DateTime.UtcNow
                 };

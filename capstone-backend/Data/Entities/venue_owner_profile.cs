@@ -32,7 +32,7 @@ public partial class venue_owner_profile
 
     [ForeignKey("user_id")]
     [InverseProperty("venue_owner_profiles")]
-    public virtual user_account user { get; set; } = null!;
+    public virtual UserAccount user { get; set; } = null!;
 
     [InverseProperty("venue_owner")]
     public virtual ICollection<venue_location> venue_locations { get; set; } = new List<venue_location>();

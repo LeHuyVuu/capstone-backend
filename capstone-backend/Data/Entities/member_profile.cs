@@ -108,7 +108,7 @@ public partial class member_profile
 
     [ForeignKey("user_id")]
     [InverseProperty("member_profiles")]
-    public virtual user_account user { get; set; } = null!;
+    public virtual UserAccount user { get; set; } = null!;
 
     [InverseProperty("member")]
     public virtual ICollection<voucher_item_member> voucher_item_members { get; set; } = new List<voucher_item_member>();

@@ -100,7 +100,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<transaction> transactions { get; set; }
 
-    public virtual DbSet<user_account> user_accounts { get; set; }
+    public virtual DbSet<UserAccount> UserAccounts { get; set; }
 
     public virtual DbSet<venue_location> venue_locations { get; set; }
 
@@ -718,16 +718,24 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<user_account>(entity =>
+        modelBuilder.Entity<UserAccount>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("user_accounts_pkey");
+            entity.ToTable("user_accounts");
+            entity.HasKey(e => e.Id).HasName("user_accounts_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.is_verified).HasDefaultValue(false);
-            entity.Property(e => e.role).HasDefaultValueSql("'MEMBER'::text");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Email).HasColumnName("email");
+            entity.Property(e => e.PasswordHash).HasColumnName("password_hash");
+            entity.Property(e => e.DisplayName).HasColumnName("display_name");
+            entity.Property(e => e.PhoneNumber).HasColumnName("phone_number");
+            entity.Property(e => e.AvatarUrl).HasColumnName("avatar_url");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()").HasColumnName("created_at");
+            entity.Property(e => e.IsActive).HasDefaultValue(true).HasColumnName("is_active");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false).HasColumnName("is_deleted");
+            entity.Property(e => e.IsVerified).HasDefaultValue(false).HasColumnName("is_verified");
+            entity.Property(e => e.Role).HasDefaultValueSql("'MEMBER'::text").HasColumnName("role");
+            entity.Property(e => e.LastLoginAt).HasColumnName("last_login_at");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()").HasColumnName("updated_at");
         });
 
         modelBuilder.Entity<venue_location>(entity =>
