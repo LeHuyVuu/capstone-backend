@@ -68,7 +68,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<MoodType> MoodTypes { get; set; }
 
-    public virtual DbSet<notification> notifications { get; set; }
+    public virtual DbSet<Notification> Notifications { get; set; }
 
     public virtual DbSet<owner_member> owner_members { get; set; }
 
@@ -541,14 +541,14 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<notification>(entity =>
+        modelBuilder.Entity<Notification>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("notifications_pkey");
+            entity.HasKey(e => e.Id).HasName("notifications_pkey");
 
-            entity.HasIndex(e => e.user_id, "idx_noti_user_unread").HasFilter("(is_read = false)");
+            entity.HasIndex(e => e.UserId, "idx_noti_user_unread").HasFilter("(is_read = false)");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_read).HasDefaultValue(false);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsRead).HasDefaultValue(false);
 
             entity.HasOne(d => d.user).WithMany(p => p.notifications).HasConstraintName("notifications_user_id_fkey");
         });

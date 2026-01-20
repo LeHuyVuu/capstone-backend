@@ -44,7 +44,7 @@ public partial class UserAccount
     public virtual ICollection<MemberProfile> member_profiles { get; set; } = new List<MemberProfile>();
 
     [InverseProperty("user")]
-    public virtual ICollection<notification> notifications { get; set; } = new List<notification>();
+    public virtual ICollection<Notification> notifications { get; set; } = new List<Notification>();
 
     [InverseProperty("user")]
     public virtual ICollection<refresh_token> refresh_tokens { get; set; } = new List<refresh_token>();
