@@ -32,7 +32,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Comment> Comments { get; set; }
 
-    public virtual DbSet<comment_like> comment_likes { get; set; }
+    public virtual DbSet<CommentLike> CommentLikes { get; set; }
 
     public virtual DbSet<couple_mood_log> couple_mood_logs { get; set; }
 
@@ -287,11 +287,11 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("comments_member_id_fkey");
         });
 
-        modelBuilder.Entity<comment_like>(entity =>
+        modelBuilder.Entity<CommentLike>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("comment_likes_pkey");
+            entity.HasKey(e => e.Id).HasName("comment_likes_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.comment).WithMany(p => p.comment_likes)
                 .OnDelete(DeleteBehavior.Cascade)

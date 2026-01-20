@@ -67,7 +67,7 @@ public partial class member_profile
     public virtual ICollection<Collection> collections { get; set; } = new List<Collection>();
 
     [InverseProperty("member")]
-    public virtual ICollection<comment_like> comment_likes { get; set; } = new List<comment_like>();
+    public virtual ICollection<CommentLike> comment_likes { get; set; } = new List<CommentLike>();
 
     [InverseProperty("member")]
     public virtual ICollection<Comment> comments { get; set; } = new List<Comment>();

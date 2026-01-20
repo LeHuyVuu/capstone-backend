@@ -36,7 +36,7 @@ public partial class Comment
     public virtual Blog? blog { get; set; }
 
     [InverseProperty("comment")]
-    public virtual ICollection<comment_like> comment_likes { get; set; } = new List<comment_like>();
+    public virtual ICollection<CommentLike> comment_likes { get; set; } = new List<CommentLike>();
 
     [ForeignKey("member_id")]
     [InverseProperty("comments")]
