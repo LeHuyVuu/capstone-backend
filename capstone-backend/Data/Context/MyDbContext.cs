@@ -52,7 +52,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Leaderboard> Leaderboards { get; set; }
 
-    public virtual DbSet<location_follower> location_followers { get; set; }
+    public virtual DbSet<LocationFollower> LocationFollowers { get; set; }
 
     public virtual DbSet<location_tag> location_tags { get; set; }
 
@@ -427,23 +427,23 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.couple).WithMany(p => p.leaderboards).HasConstraintName("leaderboards_couple_id_fkey");
         });
 
-        modelBuilder.Entity<location_follower>(entity =>
+        modelBuilder.Entity<LocationFollower>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("location_followers_pkey");
+            entity.HasKey(e => e.Id).HasName("location_followers_pkey");
 
             entity.ToTable(tb => tb.HasComment("Bảng quan hệ theo dõi / chia sẻ vị trí giữa users"));
 
-            entity.Property(e => e.id).UseIdentityAlwaysColumn();
-            entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.follower_share_status).HasDefaultValueSql("'SHARING'::character varying");
-            entity.Property(e => e.follower_user_id).HasComment("User theo dõi");
-            entity.Property(e => e.is_muted).HasDefaultValue(false);
-            entity.Property(e => e.owner_share_status).HasDefaultValueSql("'SHARING'::character varying");
-            entity.Property(e => e.owner_user_id).HasComment("User trung tâm");
-            entity.Property(e => e.status)
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.FollowerShareStatus).HasDefaultValueSql("'SHARING'::character varying");
+            entity.Property(e => e.FollowerUserId).HasComment("User theo dõi");
+            entity.Property(e => e.IsMuted).HasDefaultValue(false);
+            entity.Property(e => e.OwnerShareStatus).HasDefaultValueSql("'SHARING'::character varying");
+            entity.Property(e => e.OwnerUserId).HasComment("User trung tâm");
+            entity.Property(e => e.Status)
                 .HasDefaultValueSql("'ACTIVE'::character varying")
                 .HasComment("ACTIVE, REMOVED, BLOCKED, PENDING");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 
         modelBuilder.Entity<location_tag>(entity =>
