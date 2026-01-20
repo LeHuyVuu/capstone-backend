@@ -86,39 +86,39 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Review> Reviews { get; set; }
 
-    public virtual DbSet<review_like> review_likes { get; set; }
+    public virtual DbSet<review_like> ReviewLikes { get; set; }
 
-    public virtual DbSet<search_history> search_histories { get; set; }
+    public virtual DbSet<search_history> SearchHistories { get; set; }
 
     public virtual DbSet<SpecialEvent> SpecialEvents { get; set; }
 
-    public virtual DbSet<subscription_package> subscription_packages { get; set; }
+    public virtual DbSet<subscription_package> SubscriptionPackages { get; set; }
 
-    public virtual DbSet<test_type> test_types { get; set; }
+    public virtual DbSet<test_type> TestTypes { get; set; }
 
-    public virtual DbSet<top_search> top_searches { get; set; }
+    public virtual DbSet<top_search> TopSearches { get; set; }
 
-    public virtual DbSet<transaction> transactions { get; set; }
+    public virtual DbSet<transaction> Transactions { get; set; }
 
     public virtual DbSet<UserAccount> UserAccounts { get; set; }
 
-    public virtual DbSet<venue_location> venue_locations { get; set; }
+    public virtual DbSet<venue_location> VenueLocations { get; set; }
 
-    public virtual DbSet<venue_location_advertisement> venue_location_advertisements { get; set; }
+    public virtual DbSet<venue_location_advertisement> VenueLocationAdvertisements { get; set; }
 
-    public virtual DbSet<venue_owner_profile> venue_owner_profiles { get; set; }
+    public virtual DbSet<venue_owner_profile> VenueOwnerProfiles { get; set; }
 
-    public virtual DbSet<venue_subscription_package> venue_subscription_packages { get; set; }
+    public virtual DbSet<venue_subscription_package> VenueSubscriptionPackages { get; set; }
 
-    public virtual DbSet<voucher> vouchers { get; set; }
+    public virtual DbSet<voucher> Vouchers { get; set; }
 
-    public virtual DbSet<voucher_item> voucher_items { get; set; }
+    public virtual DbSet<voucher_item> VoucherItems { get; set; }
 
-    public virtual DbSet<voucher_item_member> voucher_item_members { get; set; }
+    public virtual DbSet<voucher_item_member> VoucherItemMembers { get; set; }
 
-    public virtual DbSet<wallet> wallets { get; set; }
+    public virtual DbSet<wallet> Wallets { get; set; }
 
-    public virtual DbSet<withdraw_request> withdraw_requests { get; set; }
+    public virtual DbSet<withdraw_request> WithdrawRequests { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
