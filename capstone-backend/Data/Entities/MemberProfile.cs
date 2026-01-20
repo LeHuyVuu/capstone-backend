@@ -98,7 +98,7 @@ public partial class MemberProfile
     public virtual ICollection<Report> reports { get; set; } = new List<Report>();
 
     [InverseProperty("member")]
-    public virtual ICollection<review_like> review_likes { get; set; } = new List<review_like>();
+    public virtual ICollection<ReviewLike> review_likes { get; set; } = new List<ReviewLike>();
 
     [InverseProperty("member")]
     public virtual ICollection<Review> reviews { get; set; } = new List<Review>();

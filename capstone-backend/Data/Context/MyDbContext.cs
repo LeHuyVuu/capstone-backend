@@ -86,7 +86,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Review> Reviews { get; set; }
 
-    public virtual DbSet<review_like> ReviewLikes { get; set; }
+    public virtual DbSet<ReviewLike> ReviewLikes { get; set; }
 
     public virtual DbSet<search_history> SearchHistories { get; set; }
 
@@ -655,11 +655,11 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("reviews_venue_id_fkey");
         });
 
-        modelBuilder.Entity<review_like>(entity =>
+        modelBuilder.Entity<ReviewLike>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("review_likes_pkey");
+            entity.HasKey(e => e.Id).HasName("review_likes_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.member).WithMany(p => p.review_likes)
                 .OnDelete(DeleteBehavior.Cascade)
