@@ -31,5 +31,5 @@ public partial class MemberSubscriptionPackage
 
     [ForeignKey("package_id")]
     [InverseProperty("member_subscription_packages")]
-    public virtual subscription_package package { get; set; } = null!;
+    public virtual SubscriptionPackage package { get; set; } = null!;
 }

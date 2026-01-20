@@ -28,7 +28,7 @@ public partial class venue_subscription_package
 
     [ForeignKey("package_id")]
     [InverseProperty("venue_subscription_packages")]
-    public virtual subscription_package package { get; set; } = null!;
+    public virtual SubscriptionPackage package { get; set; } = null!;
 
     [ForeignKey("venue_id")]
     [InverseProperty("venue_subscription_packages")]

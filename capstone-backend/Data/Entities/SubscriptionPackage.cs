@@ -6,29 +6,29 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class subscription_package
+public partial class SubscriptionPackage
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public string? package_name { get; set; }
+    public string? PackageName { get; set; }
 
     [Precision(18, 2)]
-    public decimal? price { get; set; }
+    public decimal? Price { get; set; }
 
-    public int? duration_days { get; set; }
+    public int? DurationDays { get; set; }
 
-    public string? type { get; set; }
+    public string? Type { get; set; }
 
-    public string? description { get; set; }
+    public string? Description { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
-    public bool? is_active { get; set; }
+    public bool? IsActive { get; set; }
 
     [InverseProperty("package")]
     public virtual ICollection<MemberSubscriptionPackage> member_subscription_packages { get; set; } = new List<MemberSubscriptionPackage>();
