@@ -56,7 +56,7 @@ public static class ServiceExtensions
         Console.WriteLine($"[INFO] DB Port: {dbPort}");
 
         services.AddDbContext<MyDbContext>(options =>
-            options.UseNpgsql(connectionString));
+            options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
 
         return services;
     }
