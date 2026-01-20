@@ -4,36 +4,36 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace capstone_backend.Entities;
+namespace capstone_backend.Data.Entities;
 
-public partial class challenge
+public partial class Challenge
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public string? title { get; set; }
+    public string? Title { get; set; }
 
-    public string? description { get; set; }
+    public string? Description { get; set; }
 
-    public string challenge_type { get; set; } = null!;
+    public string ChallengeType { get; set; } = null!;
 
-    public int? reward_points { get; set; }
+    public int? RewardPoints { get; set; }
 
     [Column(TypeName = "jsonb")]
-    public string? rule_definition { get; set; }
+    public string? RuleDefinition { get; set; }
 
-    public DateTime? start_date { get; set; }
+    public DateTime? StartDate { get; set; }
 
-    public DateTime? end_date { get; set; }
+    public DateTime? EndDate { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
-    [InverseProperty("challenge")]
-    public virtual ICollection<couple_profile_challenge> couple_profile_challenges { get; set; } = new List<couple_profile_challenge>();
+    [InverseProperty("Challenge")]
+    public virtual ICollection<CoupleProfileChallenge> CoupleProfileChallenges { get; set; } = new List<CoupleProfileChallenge>();
 }

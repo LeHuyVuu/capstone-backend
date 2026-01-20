@@ -2,7 +2,7 @@ using capstone_backend.Business.DTOs.Auth;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.User;
 using capstone_backend.Business.Interfaces;
-using capstone_backend.Entities;
+using capstone_backend.Data.Entities;
 
 namespace capstone_backend.Business.Services;
 
@@ -28,25 +28,28 @@ public class UserService : IUserService
     {
         var user = await _unitOfWork.Users.GetByEmailAsync(request.Email, cancellationToken: cancellationToken);
 
-        if (user == null || user.is_active != true)
+        if (user == null || user.IsActive != true)
             return null;
 
-        // Verify password
-        // TODO: Use BCrypt.Net.BCrypt.Verify(request.Password, user.password_hash)
-        // For now, compare with hashed password (temporary - should use BCrypt)
-        bool isPasswordValid = user.password_hash == ("hashed_" + request.Password);
+        // Verify password using BCrypt
+        bool isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
 
         if (!isPasswordValid)
             return null;
 
-        user.last_login_at = DateTime.UtcNow;
+        user.LastLoginAt = DateTime.UtcNow;
         _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+        // Get member profile for gender
+        var memberProfile = user.MemberProfiles?.FirstOrDefault();
+        Console.Write(memberProfile);
+        var gender = memberProfile?.Gender ?? string.Empty;
+
         // Generate JWT tokens
-        var role = user.role ?? "member";
-        var fullName = user.display_name ?? string.Empty;
-        var accessToken = _jwtService.GenerateAccessToken(user.id, user.email, role, fullName);
+        var role = user.Role ?? "member";
+        var fullName = user.DisplayName ?? string.Empty;
+        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, role, fullName);
         var refreshToken = _jwtService.GenerateRefreshToken();
         var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
 
@@ -55,24 +58,24 @@ public class UserService : IUserService
         string cometChatAuthToken = string.Empty;
         try
         {
-            cometChatUid = await _cometChatService.EnsureCometChatUserExistsAsync(user.email, fullName, cancellationToken);
+            cometChatUid = await _cometChatService.EnsureCometChatUserExistsAsync(user.Email, fullName, cancellationToken);
             cometChatAuthToken = await _cometChatService.GenerateCometChatAuthTokenAsync(cometChatUid, cancellationToken);
-            _logger.LogInformation("CometChat integration successful for user {UserId}", user.id);
+            _logger.LogInformation("CometChat integration successful for user {UserId}", user.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "CometChat integration failed for user {UserId}. Continuing with login.", user.id);
+            _logger.LogError(ex, "CometChat integration failed for user {UserId}. Continuing with login.", user.Id);
             // Don't fail login if CometChat fails - continue without chat functionality
         }
 
         return new LoginResponse
         {
-          
             AccessToken = accessToken,
             RefreshToken = refreshToken,
             ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes),
             CometChatUid = cometChatUid,
-            CometChatAuthToken = cometChatAuthToken
+            CometChatAuthToken = cometChatAuthToken,
+            Gender = gender
         };
     }
 
@@ -82,33 +85,32 @@ public class UserService : IUserService
         if (await _unitOfWork.Users.EmailExistsAsync(request.Email, cancellationToken: cancellationToken))
             throw new InvalidOperationException($"Email '{request.Email}' đã được sử dụng");
 
-        // Tạo user account
-        // TODO: Use BCrypt.Net.BCrypt.HashPassword(request.Password)
-        string passwordHash = "hashed_" + request.Password;
+        // Tạo user account với BCrypt hashing
+        string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-        var user = new user_account
+        var user = new UserAccount()
         {
-            email = request.Email,
-            password_hash = passwordHash,
-            display_name = request.FullName,
-            phone_number = request.PhoneNumber,
-            role = "MEMBER", // Luôn là member (lowercase theo database constraint)
-            is_active = true,
-            is_verified = false,
-            is_deleted = false,
-            created_at = DateTime.UtcNow,
-            updated_at = DateTime.UtcNow,
-            last_login_at = DateTime.UtcNow
+            Email = request.Email,
+            PasswordHash = passwordHash,
+            DisplayName = request.FullName,
+            PhoneNumber = request.PhoneNumber,
+            Role = "MEMBER", // Luôn là member (lowercase theo database constraint)
+            IsActive = true,
+            IsVerified = false,
+            IsDeleted = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            LastLoginAt = DateTime.UtcNow
         };
 
         await _unitOfWork.Users.AddAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Tạo member profile
-        await CreateMemberProfileAsync(user.id, request, cancellationToken);
+        await CreateMemberProfileAsync(user.Id, request, cancellationToken);
 
         // Generate JWT tokens
-        var accessToken = _jwtService.GenerateAccessToken(user.id, user.email, "member", request.FullName);
+        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, "member", request.FullName);
         var refreshToken = _jwtService.GenerateRefreshToken();
         var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
 
@@ -117,13 +119,13 @@ public class UserService : IUserService
         string cometChatAuthToken = string.Empty;
         try
         {
-            cometChatUid = await _cometChatService.CreateCometChatUserAsync(user.email, request.FullName, cancellationToken);
+            cometChatUid = await _cometChatService.CreateCometChatUserAsync(user.Email, request.FullName, cancellationToken);
             cometChatAuthToken = await _cometChatService.GenerateCometChatAuthTokenAsync(cometChatUid, cancellationToken);
-            _logger.LogInformation("CometChat user created successfully for user {UserId}", user.id);
+            _logger.LogInformation("CometChat user created successfully for user {UserId}", user.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "CometChat user creation failed for user {UserId}. Continuing with registration.", user.id);
+            _logger.LogError(ex, "CometChat user creation failed for user {UserId}. Continuing with registration.", user.Id);
             // Don't fail registration if CometChat fails - user can still use the app
         }
 
@@ -142,26 +144,26 @@ public class UserService : IUserService
     /// </summary>
     private async Task CreateMemberProfileAsync(int userId, RegisterRequest request, CancellationToken cancellationToken)
     {
-        var memberProfile = new member_profile
+        var memberProfile = new MemberProfile
         {
-            user_id = userId,
-            full_name = request.FullName,
-            date_of_birth = request.DateOfBirth,
-            gender = request.Gender,
-            relationship_status = "single", // Default (lowercase)
-            created_at = DateTime.UtcNow,
-            updated_at = DateTime.UtcNow,
-            is_deleted = false
+            UserId = userId,
+            FullName = request.FullName,
+            DateOfBirth = request.DateOfBirth,
+            Gender = request.Gender,
+            RelationshipStatus = "SINGLE", // Default (uppercase)
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
         };
 
         // Generate unique invite code
-        memberProfile.invite_code = GenerateInviteCode();
+        memberProfile.InviteCode = GenerateInviteCode();
 
-        await _unitOfWork.Context.Set<member_profile>().AddAsync(memberProfile, cancellationToken);
+        await _unitOfWork.Context.Set<MemberProfile>().AddAsync(memberProfile, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Created member profile for user {UserId} with invite code {InviteCode}", 
-            userId, memberProfile.invite_code);
+        _logger.LogInformation("Created member profile for user {UserId} with invite code {InviteCode}",
+            userId, memberProfile.InviteCode);
     }
 
     /// <summary>
@@ -178,7 +180,8 @@ public class UserService : IUserService
 
     public async Task<UserResponse?> GetCurrentUserAsync(int userId, CancellationToken cancellationToken = default)
     {
-        return await GetUserByIdAsync(userId, cancellationToken);
+        var user = await _unitOfWork.Users.GetByIdWithProfilesAsync(userId, cancellationToken: cancellationToken);
+        return user == null ? null : MapToUserResponse(user);
     }
 
     public async Task<UserResponse?> GetUserByIdAsync(int userId, CancellationToken cancellationToken = default)
@@ -193,16 +196,16 @@ public class UserService : IUserService
         var (users, totalCount) = await _unitOfWork.Users.GetPagedAsync(
             pageNumber,
             pageSize,
-            filter: string.IsNullOrEmpty(searchTerm) 
-                ? u => u.is_deleted != true
-                : u => u.is_deleted != true && (u.email.Contains(searchTerm) || (u.display_name != null && u.display_name.Contains(searchTerm))),
-            orderBy: query => query.OrderByDescending(u => u.created_at),
+            filter: string.IsNullOrEmpty(searchTerm)
+                ? u => u.IsDeleted != true
+                : u => u.IsDeleted != true && (u.Email.Contains(searchTerm) || (u.DisplayName != null && u.DisplayName.Contains(searchTerm))),
+            orderBy: query => query.OrderByDescending(u => u.CreatedAt),
             cancellationToken: cancellationToken);
 
         return new PagedResult<UserResponse>(
-            users.Select(MapToUserResponse), 
-            pageNumber, 
-            pageSize, 
+            users.Select(MapToUserResponse),
+            pageNumber,
+            pageSize,
             totalCount);
     }
 
@@ -213,20 +216,20 @@ public class UserService : IUserService
             throw new InvalidOperationException($"Email '{request.Email}' already exists");
 
         // TODO: Use BCrypt.Net.BCrypt.HashPassword(request.Password)
-        string passwordHash = "hashed_" + request.Password;
+        string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-        var user = new user_account
+        var user = new UserAccount
         {
-            email = request.Email,
-            password_hash = passwordHash,
-            display_name = request.FullName,
-            phone_number = request.PhoneNumber,
-            role = request.Role,
-            is_active = true,
-            is_verified = false,
-            is_deleted = false,
-            created_at = DateTime.UtcNow,
-            updated_at = DateTime.UtcNow
+            Email = request.Email,
+            PasswordHash = passwordHash,
+            DisplayName = request.FullName,
+            PhoneNumber = request.PhoneNumber,
+            Role = request.Role,
+            IsActive = true,
+            IsVerified = false,
+            IsDeleted = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         await _unitOfWork.Users.AddAsync(user, cancellationToken);
@@ -241,13 +244,13 @@ public class UserService : IUserService
         var user = await _unitOfWork.Users.GetByIdAsync(userId, cancellationToken: cancellationToken);
         if (user == null) return null;
 
-        user.display_name = request.FullName;
-        user.phone_number = request.PhoneNumber;
-        user.is_active = request.IsActive;
-        user.updated_at = DateTime.UtcNow;
-        
-        if (!string.IsNullOrEmpty(request.Role)) 
-            user.role = request.Role;
+        user.DisplayName = request.FullName;
+        user.PhoneNumber = request.PhoneNumber;
+        user.IsActive = request.IsActive;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        if (!string.IsNullOrEmpty(request.Role))
+            user.Role = request.Role;
 
         _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -269,19 +272,46 @@ public class UserService : IUserService
     /// <summary>
     /// Convert user_account entity to UserResponse DTO
     /// </summary>
-    private static UserResponse MapToUserResponse(user_account user)
+    private static UserResponse MapToUserResponse(UserAccount user)
     {
+        var memberProfile = user.MemberProfiles?.FirstOrDefault(p => p.IsDeleted != true);
+        var venueOwnerProfile = user.VenueOwnerProfiles?.FirstOrDefault(p => p.IsDeleted != true);
+
         return new UserResponse
         {
-            Id = user.id,
-            Email = user.email,
-            FullName = user.display_name ?? string.Empty,
-            PhoneNumber = user.phone_number,
-            Role = user.role ?? "User",
-            IsActive = user.is_active ?? false,
-            LastLoginAt = user.last_login_at,
-            CreatedAt = user.created_at ?? DateTime.MinValue,
-            UpdatedAt = user.updated_at
+            Id = user.Id,
+            Email = user.Email,
+            FullName = user.DisplayName ?? string.Empty,
+            PhoneNumber = user.PhoneNumber,
+            Role = user.Role ?? "User",
+            IsActive = user.IsActive ?? false,
+            LastLoginAt = user.LastLoginAt,
+            CreatedAt = user.CreatedAt ?? DateTime.MinValue,
+            UpdatedAt = user.UpdatedAt,
+            MemberProfile = memberProfile != null ? new MemberProfileResponse
+            {
+                Id = memberProfile.Id,
+                FullName = memberProfile.FullName,
+                DateOfBirth = memberProfile.DateOfBirth,
+                Gender = memberProfile.Gender,
+                Bio = memberProfile.Bio,
+                RelationshipStatus = memberProfile.RelationshipStatus,
+                HomeLatitude = memberProfile.HomeLatitude,
+                HomeLongitude = memberProfile.HomeLongitude,
+                BudgetMin = memberProfile.BudgetMin,
+                BudgetMax = memberProfile.BudgetMax,
+                Interests = memberProfile.Interests,
+                AvailableTime = memberProfile.AvailableTime,
+                InviteCode = memberProfile.InviteCode
+            } : null,
+            VenueOwnerProfile = venueOwnerProfile != null ? new VenueOwnerProfileResponse
+            {
+                Id = venueOwnerProfile.Id,
+                BusinessName = venueOwnerProfile.BusinessName,
+                PhoneNumber = venueOwnerProfile.PhoneNumber,
+                Email = venueOwnerProfile.Email,
+                Address = venueOwnerProfile.Address
+            } : null
         };
     }
 }

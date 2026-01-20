@@ -1,3 +1,5 @@
+using capstone_backend.Data.Context;
+
 namespace capstone_backend.Business.Interfaces;
 
 /// <summary>
@@ -8,12 +10,14 @@ public interface IUnitOfWork : IDisposable
     /// <summary>
     /// Database context for direct access when needed
     /// </summary>
-    capstone_backend.Context.MyDbContext Context { get; }
+    MyDbContext Context { get; }
 
     /// <summary>
     /// User repository for user_account entity operations
     /// </summary>
     IUserRepository Users { get; }
+
+    IMemberProfileRepository MembersProfile { get; }
 
     /// <summary>
     /// Save all changes to database

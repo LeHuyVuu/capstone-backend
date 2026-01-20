@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
-using capstone_backend.Entities;
+using capstone_backend.Data.Entities;
 
-namespace capstone_backend.Context;
+namespace capstone_backend.Data.Context;
 
 public partial class MyDbContext : DbContext
 {
@@ -12,830 +12,880 @@ public partial class MyDbContext : DbContext
     {
     }
 
-    public virtual DbSet<accessory> accessories { get; set; }
+    public virtual DbSet<Accessory> Accessories { get; set; }
 
-    public virtual DbSet<ads_order> ads_orders { get; set; }
+    public virtual DbSet<AdsOrder> AdsOrders { get; set; }
 
-    public virtual DbSet<advertisement> advertisements { get; set; }
+    public virtual DbSet<Advertisement> Advertisements { get; set; }
 
-    public virtual DbSet<advertisement_package> advertisement_packages { get; set; }
+    public virtual DbSet<AdvertisementPackage> AdvertisementPackages { get; set; }
 
-    public virtual DbSet<blog> blogs { get; set; }
+    public virtual DbSet<Blog> Blogs { get; set; }
 
-    public virtual DbSet<blog_like> blog_likes { get; set; }
+    public virtual DbSet<BlogLike> BlogLikes { get; set; }
 
-    public virtual DbSet<challenge> challenges { get; set; }
+    public virtual DbSet<Challenge> Challenges { get; set; }
 
-    public virtual DbSet<check_in_history> check_in_histories { get; set; }
+    public virtual DbSet<CheckInHistory> CheckInHistories { get; set; }
 
-    public virtual DbSet<collection> collections { get; set; }
+    public virtual DbSet<Collection> Collections { get; set; }
 
-    public virtual DbSet<comment> comments { get; set; }
+    public virtual DbSet<CollectionVenueLocation> CollectionVenueLocations { get; set; }
 
-    public virtual DbSet<comment_like> comment_likes { get; set; }
+    public virtual DbSet<Comment> Comments { get; set; }
 
-    public virtual DbSet<couple_mood_log> couple_mood_logs { get; set; }
+    public virtual DbSet<CommentLike> CommentLikes { get; set; }
 
-    public virtual DbSet<couple_mood_type> couple_mood_types { get; set; }
+    public virtual DbSet<CoupleMoodLog> CoupleMoodLogs { get; set; }
 
-    public virtual DbSet<couple_personality_type> couple_personality_types { get; set; }
+    public virtual DbSet<CoupleMoodType> CoupleMoodTypes { get; set; }
 
-    public virtual DbSet<couple_profile> couple_profiles { get; set; }
+    public virtual DbSet<CouplePersonalityType> CouplePersonalityTypes { get; set; }
 
-    public virtual DbSet<couple_profile_challenge> couple_profile_challenges { get; set; }
+    public virtual DbSet<CoupleProfile> CoupleProfiles { get; set; }
 
-    public virtual DbSet<date_plan> date_plans { get; set; }
+    public virtual DbSet<CoupleProfileChallenge> CoupleProfileChallenges { get; set; }
 
-    public virtual DbSet<date_plan_item> date_plan_items { get; set; }
+    public virtual DbSet<DatePlan> DatePlans { get; set; }
 
-    public virtual DbSet<device_token> device_tokens { get; set; }
+    public virtual DbSet<DatePlanItem> DatePlanItems { get; set; }
 
-    public virtual DbSet<leaderboard> leaderboards { get; set; }
+    public virtual DbSet<DeviceToken> DeviceTokens { get; set; }
 
-    public virtual DbSet<location_tag> location_tags { get; set; }
+    public virtual DbSet<Leaderboard> Leaderboards { get; set; }
 
-    public virtual DbSet<medium> media { get; set; }
+    public virtual DbSet<LocationFollower> LocationFollowers { get; set; }
 
-    public virtual DbSet<member_accessory> member_accessories { get; set; }
+    public virtual DbSet<LocationTag> LocationTags { get; set; }
 
-    public virtual DbSet<member_mood_log> member_mood_logs { get; set; }
+    public virtual DbSet<Media> Media { get; set; }
 
-    public virtual DbSet<member_profile> member_profiles { get; set; }
+    public virtual DbSet<MemberAccessory> MemberAccessories { get; set; }
 
-    public virtual DbSet<member_subscription_package> member_subscription_packages { get; set; }
+    public virtual DbSet<MemberMoodLog> MemberMoodLogs { get; set; }
 
-    public virtual DbSet<mood_type> mood_types { get; set; }
+    public virtual DbSet<MemberProfile> MemberProfiles { get; set; }
 
-    public virtual DbSet<notification> notifications { get; set; }
+    public virtual DbSet<MemberSubscriptionPackage> MemberSubscriptionPackages { get; set; }
 
-    public virtual DbSet<owner_member> owner_members { get; set; }
+    public virtual DbSet<MoodType> MoodTypes { get; set; }
 
-    public virtual DbSet<personality_test> personality_tests { get; set; }
+    public virtual DbSet<Notification> Notifications { get; set; }
 
-    public virtual DbSet<question> questions { get; set; }
+    public virtual DbSet<OwnerMember> OwnerMembers { get; set; }
 
-    public virtual DbSet<question_answer> question_answers { get; set; }
+    public virtual DbSet<PersonalityTest> PersonalityTests { get; set; }
 
-    public virtual DbSet<refresh_token> refresh_tokens { get; set; }
+    public virtual DbSet<Question> Questions { get; set; }
 
-    public virtual DbSet<report> reports { get; set; }
+    public virtual DbSet<QuestionAnswer> QuestionAnswers { get; set; }
 
-    public virtual DbSet<report_type> report_types { get; set; }
+    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
-    public virtual DbSet<review> reviews { get; set; }
+    public virtual DbSet<Report> Reports { get; set; }
 
-    public virtual DbSet<review_like> review_likes { get; set; }
+    public virtual DbSet<ReportType> ReportTypes { get; set; }
 
-    public virtual DbSet<search_history> search_histories { get; set; }
+    public virtual DbSet<Review> Reviews { get; set; }
 
-    public virtual DbSet<special_event> special_events { get; set; }
+    public virtual DbSet<ReviewLike> ReviewLikes { get; set; }
 
-    public virtual DbSet<subscription_package> subscription_packages { get; set; }
+    public virtual DbSet<SearchHistory> SearchHistories { get; set; }
 
-    public virtual DbSet<test_type> test_types { get; set; }
+    public virtual DbSet<SpecialEvent> SpecialEvents { get; set; }
 
-    public virtual DbSet<top_search> top_searches { get; set; }
+    public virtual DbSet<SubscriptionPackage> SubscriptionPackages { get; set; }
 
-    public virtual DbSet<transaction> transactions { get; set; }
+    public virtual DbSet<TestType> TestTypes { get; set; }
 
-    public virtual DbSet<user_account> user_accounts { get; set; }
+    public virtual DbSet<TopSearch> TopSearches { get; set; }
 
-    public virtual DbSet<venue_location> venue_locations { get; set; }
+    public virtual DbSet<Transaction> Transactions { get; set; }
 
-    public virtual DbSet<venue_location_advertisement> venue_location_advertisements { get; set; }
+    public virtual DbSet<UserAccount> UserAccounts { get; set; }
 
-    public virtual DbSet<venue_owner_profile> venue_owner_profiles { get; set; }
+    public virtual DbSet<VenueLocation> VenueLocations { get; set; }
 
-    public virtual DbSet<venue_subscription_package> venue_subscription_packages { get; set; }
+    public virtual DbSet<VenueLocationAdvertisement> VenueLocationAdvertisements { get; set; }
 
-    public virtual DbSet<voucher> vouchers { get; set; }
+    public virtual DbSet<VenueOwnerProfile> VenueOwnerProfiles { get; set; }
 
-    public virtual DbSet<voucher_item> voucher_items { get; set; }
+    public virtual DbSet<VenueSubscriptionPackage> VenueSubscriptionPackages { get; set; }
 
-    public virtual DbSet<voucher_item_member> voucher_item_members { get; set; }
+    public virtual DbSet<Voucher> Vouchers { get; set; }
 
-    public virtual DbSet<wallet> wallets { get; set; }
+    public virtual DbSet<VoucherItem> VoucherItems { get; set; }
 
-    public virtual DbSet<withdraw_request> withdraw_requests { get; set; }
+    public virtual DbSet<VoucherItemMember> VoucherItemMembers { get; set; }
+
+    public virtual DbSet<Wallet> Wallets { get; set; }
+
+    public virtual DbSet<WithdrawRequest> WithdrawRequests { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<accessory>(entity =>
+        modelBuilder.Entity<Accessory>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("accessories_pkey");
+            entity.ToTable("accessories");
+            entity.HasKey(e => e.Id).HasName("accessories_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.is_limited).HasDefaultValue(false);
-            entity.Property(e => e.price_point).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Code).HasColumnName("code");
+            entity.Property(e => e.Name).HasColumnName("name");
+            entity.Property(e => e.Type).HasColumnName("type");
+            entity.Property(e => e.ThumbnailUrl).HasColumnName("thumbnail_url");
+            entity.Property(e => e.ResourceUrl).HasColumnName("resource_url");
+            entity.Property(e => e.AvailableQuantity).HasColumnName("available_quantity");
+            entity.Property(e => e.AvailableFrom).HasColumnName("available_from");
+            entity.Property(e => e.AvailableTo).HasColumnName("available_to");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()").HasColumnName("created_at");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false).HasColumnName("is_deleted");
+            entity.Property(e => e.IsLimited).HasDefaultValue(false).HasColumnName("is_limited");
+            entity.Property(e => e.PricePoint).HasDefaultValue(0).HasColumnName("price_point");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()").HasColumnName("updated_at");
+            entity.Property(e => e.Status).HasColumnName("status");
         });
 
-        modelBuilder.Entity<ads_order>(entity =>
+        modelBuilder.Entity<AdsOrder>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("ads_orders_pkey");
+            entity.HasKey(e => e.Id).HasName("ads_orders_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.advertisement).WithMany(p => p.ads_orders)
+            entity.HasOne(d => d.Advertisement).WithMany(p => p.AdsOrders)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("ads_orders_advertisement_id_fkey");
 
-            entity.HasOne(d => d.package).WithMany(p => p.ads_orders)
+            entity.HasOne(d => d.Package).WithMany(p => p.AdsOrders)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("ads_orders_package_id_fkey");
         });
 
-        modelBuilder.Entity<advertisement>(entity =>
+        modelBuilder.Entity<Advertisement>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("advertisements_pkey");
+            entity.HasKey(e => e.Id).HasName("advertisements_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.venue_owner).WithMany(p => p.advertisements)
+            entity.HasOne(d => d.VenueOwner).WithMany(p => p.Advertisements)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("advertisements_venue_owner_id_fkey");
         });
 
-        modelBuilder.Entity<advertisement_package>(entity =>
+        modelBuilder.Entity<AdvertisementPackage>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("advertisement_packages_pkey");
+            entity.HasKey(e => e.Id).HasName("advertisement_packages_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.priority_score).HasDefaultValue(1);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.PriorityScore).HasDefaultValue(1);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<blog>(entity =>
+        modelBuilder.Entity<Blog>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("blogs_pkey");
+            entity.HasKey(e => e.Id).HasName("blogs_pkey");
 
-            entity.Property(e => e.comment_count).HasDefaultValue(0);
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.like_count).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CommentCount).HasDefaultValue(0);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.LikeCount).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.blogs)
+            entity.HasOne(d => d.Member).WithMany(p => p.Blogs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("blogs_member_id_fkey");
         });
 
-        modelBuilder.Entity<blog_like>(entity =>
+        modelBuilder.Entity<BlogLike>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("blog_likes_pkey");
+            entity.HasKey(e => e.Id).HasName("blog_likes_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.blog).WithMany(p => p.blog_likes)
+            entity.HasOne(d => d.Blog).WithMany(p => p.BlogLikes)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("blog_likes_blog_id_fkey");
 
-            entity.HasOne(d => d.member).WithMany(p => p.blog_likes)
+            entity.HasOne(d => d.Member).WithMany(p => p.BlogLikes)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("blog_likes_member_id_fkey");
         });
 
-        modelBuilder.Entity<challenge>(entity =>
+        modelBuilder.Entity<Challenge>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("challenges_pkey");
+            entity.HasKey(e => e.Id).HasName("challenges_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.reward_points).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.RewardPoints).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<check_in_history>(entity =>
+        modelBuilder.Entity<CheckInHistory>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("check_in_histories_pkey");
+            entity.HasKey(e => e.Id).HasName("check_in_histories_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_valid).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsValid).HasDefaultValue(true);
 
-            entity.HasOne(d => d.member).WithMany(p => p.check_in_histories)
+            entity.HasOne(d => d.Member).WithMany(p => p.CheckInHistories)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("check_in_histories_member_id_fkey");
 
-            entity.HasOne(d => d.venue).WithMany(p => p.check_in_histories)
+            entity.HasOne(d => d.Venue).WithMany(p => p.CheckInHistories)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("check_in_histories_venue_id_fkey");
         });
 
-        modelBuilder.Entity<collection>(entity =>
+        modelBuilder.Entity<Collection>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("collections_pkey");
+            entity.HasKey(e => e.Id).HasName("collections_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.collections)
+            entity.HasOne(d => d.Member).WithMany(p => p.Collections)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("collections_member_id_fkey");
 
-            entity.HasMany(d => d.venues).WithMany(p => p.collections)
-                .UsingEntity<Dictionary<string, object>>(
-                    "collection_venue_location",
-                    r => r.HasOne<venue_location>().WithMany()
-                        .HasForeignKey("venue_id")
-                        .HasConstraintName("collection_venue_locations_venue_id_fkey"),
-                    l => l.HasOne<collection>().WithMany()
-                        .HasForeignKey("collection_id")
-                        .HasConstraintName("collection_venue_locations_collection_id_fkey"),
-                    j =>
-                    {
-                        j.HasKey("collection_id", "venue_id").HasName("collection_venue_locations_pkey");
-                        j.ToTable("collection_venue_locations");
-                    });
+            entity.HasMany(d => d.Venues)
+                  .WithMany(p => p.Collections)
+                  .UsingEntity<CollectionVenueLocation>();
         });
 
-        modelBuilder.Entity<comment>(entity =>
+        modelBuilder.Entity<CollectionVenueLocation>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("comments_pkey");
 
-            entity.Property(e => e.comment_count).HasDefaultValue(0);
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.like_count).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.HasKey(e => e.Id).HasName("collection_venue_locations_pkey");
 
-            entity.HasOne(d => d.blog).WithMany(p => p.comments)
+            entity.HasOne(d => d.Collection)
+                  .WithMany() 
+                  .HasForeignKey(d => d.CollectionId)
+                  .OnDelete(DeleteBehavior.ClientSetNull)
+                  .HasConstraintName("collection_venue_locations_collection_id_fkey");
+
+            entity.HasOne(d => d.Venue)
+                  .WithMany()
+                  .HasForeignKey(d => d.VenueId)
+                  .OnDelete(DeleteBehavior.ClientSetNull)
+                  .HasConstraintName("collection_venue_locations_venue_id_fkey");
+        });
+
+        modelBuilder.Entity<Comment>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("comments_pkey");
+
+            entity.Property(e => e.CommentCount).HasDefaultValue(0);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.LikeCount).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(d => d.Blog).WithMany(p => p.Comments)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("comments_blog_id_fkey");
 
-            entity.HasOne(d => d.member).WithMany(p => p.comments)
+            entity.HasOne(d => d.Member).WithMany(p => p.Comments)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("comments_member_id_fkey");
         });
 
-        modelBuilder.Entity<comment_like>(entity =>
+        modelBuilder.Entity<CommentLike>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("comment_likes_pkey");
+            entity.HasKey(e => e.Id).HasName("comment_likes_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.comment).WithMany(p => p.comment_likes)
+            entity.HasOne(d => d.Comment).WithMany(p => p.CommentLikes)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("comment_likes_comment_id_fkey");
 
-            entity.HasOne(d => d.member).WithMany(p => p.comment_likes)
+            entity.HasOne(d => d.Member).WithMany(p => p.CommentLikes)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("comment_likes_member_id_fkey");
         });
 
-        modelBuilder.Entity<couple_mood_log>(entity =>
+        modelBuilder.Entity<CoupleMoodLog>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("couple_mood_logs_pkey");
+            entity.HasKey(e => e.Id).HasName("couple_mood_logs_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.couple).WithMany(p => p.couple_mood_logs).HasConstraintName("couple_mood_logs_couple_id_fkey");
+            entity.HasOne(d => d.Couple).WithMany(p => p.CoupleMoodLogs).HasConstraintName("couple_mood_logs_couple_id_fkey");
 
-            entity.HasOne(d => d.couple_mood_type).WithMany(p => p.couple_mood_logs)
+            entity.HasOne(d => d.CoupleMoodType).WithMany(p => p.CoupleMoodLogs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("couple_mood_logs_couple_mood_type_id_fkey");
         });
 
-        modelBuilder.Entity<couple_mood_type>(entity =>
+        modelBuilder.Entity<CoupleMoodType>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("couple_mood_types_pkey");
+            entity.HasKey(e => e.Id).HasName("couple_mood_types_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<couple_personality_type>(entity =>
+        modelBuilder.Entity<CouplePersonalityType>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("couple_personality_types_pkey");
+            entity.HasKey(e => e.Id).HasName("couple_personality_types_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<couple_profile>(entity =>
+        modelBuilder.Entity<CoupleProfile>(entity =>
         {
             entity.HasKey(e => e.id).HasName("couple_profiles_pkey");
 
-            entity.Property(e => e.budget_min).HasDefaultValueSql("0");
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.interaction_points).HasDefaultValue(0);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.total_points).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.MemberId1).HasColumnName("member_id_1");
+            entity.Property(e => e.MemberId2).HasColumnName("member_id_2");
+            entity.Property(e => e.BudgetMin).HasDefaultValueSql("0");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.InteractionPoints).HasDefaultValue(0);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.TotalPoints).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.couple_mood_type).WithMany(p => p.couple_profiles).HasConstraintName("couple_profiles_couple_mood_type_id_fkey");
+            entity.HasOne(d => d.CoupleMoodType).WithMany(p => p.CoupleProfiles).HasConstraintName("couple_profiles_couple_mood_type_id_fkey");
 
-            entity.HasOne(d => d.couple_personality_type).WithMany(p => p.couple_profiles).HasConstraintName("couple_profiles_couple_personality_type_id_fkey");
+            entity.HasOne(d => d.CouplePersonalityType).WithMany(p => p.CoupleProfiles).HasConstraintName("couple_profiles_couple_personality_type_id_fkey");
 
-            entity.HasOne(d => d.member_id_1Navigation).WithMany(p => p.couple_profilemember_id_1Navigations)
+            entity.HasOne(d => d.MemberId1Navigation).WithMany(p => p.CoupleProfilememberId1Navigations)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("couple_profiles_member_id_1_fkey");
 
-            entity.HasOne(d => d.member_id_2Navigation).WithMany(p => p.couple_profilemember_id_2Navigations)
+            entity.HasOne(d => d.MemberId2Navigation).WithMany(p => p.CoupleProfilememberId2Navigations)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("couple_profiles_member_id_2_fkey");
         });
 
-        modelBuilder.Entity<couple_profile_challenge>(entity =>
+        modelBuilder.Entity<CoupleProfileChallenge>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("couple_profile_challenges_pkey");
+            entity.HasKey(e => e.Id).HasName("couple_profile_challenges_pkey");
 
-            entity.Property(e => e.completed_member_ids).HasDefaultValueSql("'[]'::jsonb");
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.current_progress).HasDefaultValue(0);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CompletedMemberIds).HasDefaultValueSql("'[]'::jsonb");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.CurrentProgress).HasDefaultValue(0);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.challenge).WithMany(p => p.couple_profile_challenges).HasConstraintName("couple_profile_challenges_challenge_id_fkey");
+            entity.HasOne(d => d.Challenge).WithMany(p => p.CoupleProfileChallenges).HasConstraintName("couple_profile_challenges_challenge_id_fkey");
 
-            entity.HasOne(d => d.couple).WithMany(p => p.couple_profile_challenges).HasConstraintName("couple_profile_challenges_couple_id_fkey");
+            entity.HasOne(d => d.Couple).WithMany(p => p.CoupleProfileChallenges).HasConstraintName("couple_profile_challenges_couple_id_fkey");
         });
 
-        modelBuilder.Entity<date_plan>(entity =>
+        modelBuilder.Entity<DatePlan>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("date_plans_pkey");
+            entity.HasKey(e => e.Id).HasName("date_plans_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.estimated_budget).HasDefaultValueSql("0");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.EstimatedBudget).HasDefaultValueSql("0");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.couple).WithMany(p => p.date_plans).HasConstraintName("date_plans_couple_id_fkey");
+            entity.HasOne(d => d.Couple).WithMany(p => p.DatePlans).HasConstraintName("date_plans_couple_id_fkey");
         });
 
-        modelBuilder.Entity<date_plan_item>(entity =>
+        modelBuilder.Entity<DatePlanItem>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("date_plan_items_pkey");
+            entity.HasKey(e => e.Id).HasName("date_plan_items_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.order_index).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.OrderIndex).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.date_plan).WithMany(p => p.date_plan_items).HasConstraintName("date_plan_items_date_plan_id_fkey");
+            entity.HasOne(d => d.DatePlan).WithMany(p => p.DatePlanItems).HasConstraintName("date_plan_items_date_plan_id_fkey");
 
-            entity.HasOne(d => d.venue_location).WithMany(p => p.date_plan_items)
+            entity.HasOne(d => d.VenueLocation).WithMany(p => p.DatePlanItems)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("date_plan_items_venue_location_id_fkey");
         });
 
-        modelBuilder.Entity<device_token>(entity =>
+        modelBuilder.Entity<DeviceToken>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("device_tokens_pkey");
+            entity.HasKey(e => e.Id).HasName("device_tokens_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.user).WithMany(p => p.device_tokens).HasConstraintName("device_tokens_user_id_fkey");
+            entity.HasOne(d => d.User).WithMany(p => p.DeviceTokens).HasConstraintName("device_tokens_user_id_fkey");
         });
 
-        modelBuilder.Entity<leaderboard>(entity =>
+        modelBuilder.Entity<Leaderboard>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("leaderboards_pkey");
+            entity.HasKey(e => e.Id).HasName("leaderboards_pkey");
 
-            entity.Property(e => e.total_points).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.TotalPoints).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.couple).WithMany(p => p.leaderboards).HasConstraintName("leaderboards_couple_id_fkey");
+            entity.HasOne(d => d.Couple).WithMany(p => p.Leaderboards).HasConstraintName("leaderboards_couple_id_fkey");
         });
 
-        modelBuilder.Entity<location_tag>(entity =>
+        modelBuilder.Entity<LocationFollower>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("location_tags_pkey");
+            entity.HasKey(e => e.Id).HasName("location_followers_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.ToTable(tb => tb.HasComment("Bảng quan hệ theo dõi / chia sẻ vị trí giữa users"));
 
-            entity.HasOne(d => d.couple_mood_type).WithMany(p => p.location_tags).HasConstraintName("location_tags_couple_mood_type_id_fkey");
-
-            entity.HasOne(d => d.couple_personality_type).WithMany(p => p.location_tags).HasConstraintName("location_tags_couple_personality_type_id_fkey");
+            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.FollowerShareStatus).HasDefaultValueSql("'SHARING'::character varying");
+            entity.Property(e => e.FollowerUserId).HasComment("User theo dõi");
+            entity.Property(e => e.IsMuted).HasDefaultValue(false);
+            entity.Property(e => e.OwnerShareStatus).HasDefaultValueSql("'SHARING'::character varying");
+            entity.Property(e => e.OwnerUserId).HasComment("User trung tâm");
+            entity.Property(e => e.Status)
+                .HasDefaultValueSql("'ACTIVE'::character varying")
+                .HasComment("ACTIVE, REMOVED, BLOCKED, PENDING");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 
-        modelBuilder.Entity<medium>(entity =>
+        modelBuilder.Entity<LocationTag>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("media_pkey");
+            entity.HasKey(e => e.Id).HasName("location_tags_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(d => d.CoupleMoodType).WithMany(p => p.LocationTags).HasConstraintName("location_tags_couple_mood_type_id_fkey");
+
+            entity.HasOne(d => d.CouplePersonalityType).WithMany(p => p.LocationTags).HasConstraintName("location_tags_couple_personality_type_id_fkey");
         });
 
-        modelBuilder.Entity<member_accessory>(entity =>
+        modelBuilder.Entity<Media>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("member_accessories_pkey");
+            entity.HasKey(e => e.Id).HasName("media_pkey");
 
-            entity.Property(e => e.acquired_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_equipped).HasDefaultValue(false);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+        });
 
-            entity.HasOne(d => d.accessory).WithMany(p => p.member_accessories)
+        modelBuilder.Entity<MemberAccessory>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("member_accessories_pkey");
+
+            entity.Property(e => e.AcquiredAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsEquipped).HasDefaultValue(false);
+
+            entity.HasOne(d => d.Accessory).WithMany(p => p.MemberAccessories)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("member_accessories_accessory_id_fkey");
 
-            entity.HasOne(d => d.member).WithMany(p => p.member_accessories)
+            entity.HasOne(d => d.Member).WithMany(p => p.MemberAccessories)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("member_accessories_member_id_fkey");
         });
 
-        modelBuilder.Entity<member_mood_log>(entity =>
+        modelBuilder.Entity<MemberMoodLog>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("member_mood_logs_pkey");
+            entity.HasKey(e => e.Id).HasName("member_mood_logs_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.is_private).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.IsPrivate).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.member_mood_logs).HasConstraintName("member_mood_logs_member_id_fkey");
+            entity.HasOne(d => d.Member).WithMany(p => p.MemberMoodLogs).HasConstraintName("member_mood_logs_member_id_fkey");
 
-            entity.HasOne(d => d.mood_type).WithMany(p => p.member_mood_logs)
+            entity.HasOne(d => d.MoodType).WithMany(p => p.MemberMoodLogs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("member_mood_logs_mood_type_id_fkey");
         });
 
-        modelBuilder.Entity<member_profile>(entity =>
+        modelBuilder.Entity<MemberProfile>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("member_profiles_pkey");
+            entity.HasKey(e => e.Id).HasName("member_profiles_pkey");
 
-            entity.Property(e => e.budget_min).HasDefaultValueSql("0");
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.relationship_status).HasDefaultValueSql("'SINGLE'::text");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.BudgetMin).HasDefaultValueSql("0");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.RelationshipStatus).HasDefaultValueSql("'SINGLE'::text");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.mood_types).WithMany(p => p.member_profiles).HasConstraintName("member_profiles_mood_types_id_fkey");
+            entity.HasOne(d => d.MoodTypes).WithMany(p => p.MemberProfiles).HasConstraintName("member_profiles_mood_types_id_fkey");
 
-            entity.HasOne(d => d.user).WithMany(p => p.member_profiles).HasConstraintName("member_profiles_user_id_fkey");
+            entity.HasOne(d => d.User).WithMany(p => p.MemberProfiles).HasConstraintName("member_profiles_user_id_fkey");
         });
 
-        modelBuilder.Entity<member_subscription_package>(entity =>
+        modelBuilder.Entity<MemberSubscriptionPackage>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("member_subscription_packages_pkey");
+            entity.HasKey(e => e.Id).HasName("member_subscription_packages_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.member_subscription_packages)
+            entity.HasOne(d => d.Member).WithMany(p => p.MemberSubscriptionPackages)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("member_subscription_packages_member_id_fkey");
 
-            entity.HasOne(d => d.package).WithMany(p => p.member_subscription_packages)
+            entity.HasOne(d => d.Package).WithMany(p => p.MemberSubscriptionPackages)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("member_subscription_packages_package_id_fkey");
         });
 
-        modelBuilder.Entity<mood_type>(entity =>
+        modelBuilder.Entity<MoodType>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("mood_types_pkey");
+            entity.HasKey(e => e.Id).HasName("mood_types_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<notification>(entity =>
+        modelBuilder.Entity<Notification>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("notifications_pkey");
+            entity.HasKey(e => e.Id).HasName("notifications_pkey");
 
-            entity.HasIndex(e => e.user_id, "idx_noti_user_unread").HasFilter("(is_read = false)");
+            entity.HasIndex(e => e.UserId, "idx_noti_user_unread").HasFilter("(is_read = false)");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_read).HasDefaultValue(false);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsRead).HasDefaultValue(false);
 
-            entity.HasOne(d => d.user).WithMany(p => p.notifications).HasConstraintName("notifications_user_id_fkey");
+            entity.HasOne(d => d.User).WithMany(p => p.Notifications).HasConstraintName("notifications_user_id_fkey");
         });
 
-        modelBuilder.Entity<owner_member>(entity =>
+        modelBuilder.Entity<OwnerMember>(entity =>
         {
-            entity.HasKey(e => new { e.owner_user_id, e.member_user_id }).HasName("owner_members_pkey");
+            entity.HasKey(e => new { e.OwnerUserId, e.MemberUserId }).HasName("owner_members_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.status).HasDefaultValueSql("'ACTIVE'::character varying");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.Status).HasDefaultValueSql("'ACTIVE'::character varying");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 
-        modelBuilder.Entity<personality_test>(entity =>
+        modelBuilder.Entity<PersonalityTest>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("personality_tests_pkey");
+            entity.HasKey(e => e.Id).HasName("personality_tests_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.personality_tests).HasConstraintName("personality_tests_member_id_fkey");
+            entity.HasOne(d => d.Member).WithMany(p => p.PersonalityTests).HasConstraintName("personality_tests_member_id_fkey");
 
-            entity.HasOne(d => d.test_type).WithMany(p => p.personality_tests)
+            entity.HasOne(d => d.TestType).WithMany(p => p.PersonalityTests)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("personality_tests_test_type_id_fkey");
         });
 
-        modelBuilder.Entity<question>(entity =>
+        modelBuilder.Entity<Question>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("questions_pkey");
+            entity.HasKey(e => e.Id).HasName("questions_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.order_index).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.OrderIndex).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.test_type).WithMany(p => p.questions).HasConstraintName("questions_test_type_id_fkey");
+            entity.HasOne(d => d.TestType).WithMany(p => p.Questions).HasConstraintName("questions_test_type_id_fkey");
         });
 
-        modelBuilder.Entity<question_answer>(entity =>
+        modelBuilder.Entity<QuestionAnswer>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("question_answers_pkey");
+            entity.HasKey(e => e.Id).HasName("question_answers_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.order_index).HasDefaultValue(0);
-            entity.Property(e => e.score_value).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.OrderIndex).HasDefaultValue(0);
+            entity.Property(e => e.ScoreValue).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.question).WithMany(p => p.question_answers).HasConstraintName("question_answers_question_id_fkey");
+            entity.HasOne(d => d.Question).WithMany(p => p.QuestionAnswers).HasConstraintName("question_answers_question_id_fkey");
         });
 
-        modelBuilder.Entity<refresh_token>(entity =>
+        modelBuilder.Entity<RefreshToken>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("refresh_tokens_pkey");
+            entity.HasKey(e => e.Id).HasName("refresh_tokens_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.user).WithMany(p => p.refresh_tokens).HasConstraintName("refresh_tokens_user_id_fkey");
+            entity.HasOne(d => d.User).WithMany(p => p.RefreshTokens).HasConstraintName("refresh_tokens_user_id_fkey");
         });
 
-        modelBuilder.Entity<report>(entity =>
+        modelBuilder.Entity<Report>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("reports_pkey");
+            entity.HasKey(e => e.Id).HasName("reports_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.reporter).WithMany(p => p.reports).HasConstraintName("reports_reporter_id_fkey");
+            entity.HasOne(d => d.Reporter).WithMany(p => p.Reports).HasConstraintName("reports_reporter_id_fkey");
         });
 
-        modelBuilder.Entity<report_type>(entity =>
+        modelBuilder.Entity<ReportType>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("report_types_pkey");
+            entity.HasKey(e => e.Id).HasName("report_types_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<review>(entity =>
+        modelBuilder.Entity<Review>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("reviews_pkey");
+            entity.HasKey(e => e.Id).HasName("reviews_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_anonymous).HasDefaultValue(false);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.like_count).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsAnonymous).HasDefaultValue(false);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.LikeCount).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.reviews)
+            entity.HasOne(d => d.Member).WithMany(p => p.Reviews)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("reviews_member_id_fkey");
 
-            entity.HasOne(d => d.venue).WithMany(p => p.reviews)
+            entity.HasOne(d => d.Venue).WithMany(p => p.Reviews)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("reviews_venue_id_fkey");
         });
 
-        modelBuilder.Entity<review_like>(entity =>
+        modelBuilder.Entity<ReviewLike>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("review_likes_pkey");
+            entity.HasKey(e => e.Id).HasName("review_likes_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.review_likes)
+            entity.HasOne(d => d.Member).WithMany(p => p.ReviewLikes)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("review_likes_member_id_fkey");
 
-            entity.HasOne(d => d.review).WithMany(p => p.review_likes)
+            entity.HasOne(d => d.Review).WithMany(p => p.ReviewLikes)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("review_likes_review_id_fkey");
         });
 
-        modelBuilder.Entity<search_history>(entity =>
+        modelBuilder.Entity<SearchHistory>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("search_histories_pkey");
+            entity.HasKey(e => e.Id).HasName("search_histories_pkey");
 
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.result_count).HasDefaultValue(0);
-            entity.Property(e => e.searched_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.ResultCount).HasDefaultValue(0);
+            entity.Property(e => e.SearchedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.search_histories)
+            entity.HasOne(d => d.Member).WithMany(p => p.SearchHistories)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("search_histories_member_id_fkey");
         });
 
-        modelBuilder.Entity<special_event>(entity =>
+        modelBuilder.Entity<SpecialEvent>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("special_events_pkey");
+            entity.HasKey(e => e.Id).HasName("special_events_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<subscription_package>(entity =>
+        modelBuilder.Entity<SubscriptionPackage>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("subscription_packages_pkey");
+            entity.HasKey(e => e.Id).HasName("subscription_packages_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.price).HasDefaultValueSql("0");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.Price).HasDefaultValueSql("0");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<test_type>(entity =>
+        modelBuilder.Entity<TestType>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("test_types_pkey");
+            entity.HasKey(e => e.Id).HasName("test_types_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.total_questions).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.TotalQuestions).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<top_search>(entity =>
+        modelBuilder.Entity<TopSearch>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("top_searches_pkey");
+            entity.HasKey(e => e.Id).HasName("top_searches_pkey");
 
-            entity.Property(e => e.hit_count).HasDefaultValue(0);
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.last_updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.HitCount).HasDefaultValue(0);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.LastUpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<transaction>(entity =>
+        modelBuilder.Entity<Transaction>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("transactions_pkey");
+            entity.HasKey(e => e.Id).HasName("transactions_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<user_account>(entity =>
+        modelBuilder.Entity<UserAccount>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("user_accounts_pkey");
+            entity.HasKey(e => e.Id).HasName("user_accounts_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.is_verified).HasDefaultValue(false);
-            entity.Property(e => e.role).HasDefaultValueSql("'MEMBER'::text");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Email).HasColumnName("email");
+            entity.Property(e => e.PasswordHash).HasColumnName("password_hash");
+            entity.Property(e => e.DisplayName).HasColumnName("display_name");
+            entity.Property(e => e.PhoneNumber).HasColumnName("phone_number");
+            entity.Property(e => e.AvatarUrl).HasColumnName("avatar_url");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()").HasColumnName("created_at");
+            entity.Property(e => e.IsActive).HasDefaultValue(true).HasColumnName("is_active");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false).HasColumnName("is_deleted");
+            entity.Property(e => e.IsVerified).HasDefaultValue(false).HasColumnName("is_verified");
+            entity.Property(e => e.Role).HasDefaultValueSql("'MEMBER'::text").HasColumnName("role");
+            entity.Property(e => e.LastLoginAt).HasColumnName("last_login_at");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()").HasColumnName("updated_at");
         });
 
-        modelBuilder.Entity<venue_location>(entity =>
+        modelBuilder.Entity<VenueLocation>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("venue_locations_pkey");
+            entity.HasKey(e => e.Id).HasName("venue_locations_pkey");
 
-            entity.Property(e => e.avarage_cost).HasDefaultValueSql("0");
-            entity.Property(e => e.average_rating).HasDefaultValueSql("0");
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.is_open).HasDefaultValue(true);
-            entity.Property(e => e.price_min).HasDefaultValueSql("0");
-            entity.Property(e => e.review_count).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.AvarageCost).HasDefaultValueSql("0");
+            entity.Property(e => e.AverageRating).HasDefaultValueSql("0");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.IsOpen).HasDefaultValue(true);
+            entity.Property(e => e.PriceMin).HasDefaultValueSql("0");
+            entity.Property(e => e.ReviewCount).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.location_tag).WithMany(p => p.venue_locations).HasConstraintName("venue_locations_location_tag_id_fkey");
+            entity.HasOne(d => d.LocationTag).WithMany(p => p.VenueLocations).HasConstraintName("venue_locations_location_tag_id_fkey");
 
-            entity.HasOne(d => d.venue_owner).WithMany(p => p.venue_locations)
+            entity.HasOne(d => d.VenueOwner).WithMany(p => p.VenueLocations)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("venue_locations_venue_owner_id_fkey");
         });
 
-        modelBuilder.Entity<venue_location_advertisement>(entity =>
+        modelBuilder.Entity<VenueLocationAdvertisement>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("venue_location_advertisements_pkey");
+            entity.HasKey(e => e.Id).HasName("venue_location_advertisements_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.priority_score).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.PriorityScore).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.advertisement).WithMany(p => p.venue_location_advertisements)
+            entity.HasOne(d => d.Advertisement).WithMany(p => p.VenueLocationAdvertisements)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("venue_location_advertisements_advertisement_id_fkey");
 
-            entity.HasOne(d => d.venue).WithMany(p => p.venue_location_advertisements)
+            entity.HasOne(d => d.Venue).WithMany(p => p.VenueLocationAdvertisements)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("venue_location_advertisements_venue_id_fkey");
         });
 
-        modelBuilder.Entity<venue_owner_profile>(entity =>
+        modelBuilder.Entity<VenueOwnerProfile>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("venue_owner_profiles_pkey");
+            entity.HasKey(e => e.Id).HasName("venue_owner_profiles_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.user).WithMany(p => p.venue_owner_profiles)
+            entity.HasOne(d => d.User).WithMany(p => p.VenueOwnerProfiles)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("venue_owner_profiles_user_id_fkey");
         });
 
-        modelBuilder.Entity<venue_subscription_package>(entity =>
+        modelBuilder.Entity<VenueSubscriptionPackage>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("venue_subscription_packages_pkey");
+            entity.HasKey(e => e.Id).HasName("venue_subscription_packages_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.package).WithMany(p => p.venue_subscription_packages)
+            entity.HasOne(d => d.Package).WithMany(p => p.VenueSubscriptionPackages)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("venue_subscription_packages_package_id_fkey");
 
-            entity.HasOne(d => d.venue).WithMany(p => p.venue_subscription_packages).HasConstraintName("venue_subscription_packages_venue_id_fkey");
+            entity.HasOne(d => d.Venue).WithMany(p => p.VenueSubscriptionPackages).HasConstraintName("venue_subscription_packages_venue_id_fkey");
         });
 
-        modelBuilder.Entity<voucher>(entity =>
+        modelBuilder.Entity<Voucher>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("vouchers_pkey");
+            entity.HasKey(e => e.Id).HasName("vouchers_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.usage_limit_per_member).HasDefaultValue(1);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UsageLimitPerMember).HasDefaultValue(1);
 
-            entity.HasOne(d => d.venue_owner).WithMany(p => p.vouchers).HasConstraintName("vouchers_venue_owner_id_fkey");
+            entity.HasOne(d => d.VenueOwner).WithMany(p => p.Vouchers).HasConstraintName("vouchers_venue_owner_id_fkey");
         });
 
-        modelBuilder.Entity<voucher_item>(entity =>
+        modelBuilder.Entity<VoucherItem>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("voucher_items_pkey");
+            entity.HasKey(e => e.Id).HasName("voucher_items_pkey");
 
-            entity.Property(e => e.acquired_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.AcquiredAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.voucher).WithMany(p => p.voucher_items)
+            entity.HasOne(d => d.Voucher).WithMany(p => p.VoucherItems)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("voucher_items_voucher_id_fkey");
 
-            entity.HasOne(d => d.voucher_item_member).WithMany(p => p.voucher_items).HasConstraintName("voucher_items_voucher_item_member_id_fkey");
+            entity.HasOne(d => d.VoucherItemMember).WithMany(p => p.VoucherItems).HasConstraintName("voucher_items_voucher_item_member_id_fkey");
         });
 
-        modelBuilder.Entity<voucher_item_member>(entity =>
+        modelBuilder.Entity<VoucherItemMember>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("voucher_item_members_pkey");
+            entity.HasKey(e => e.Id).HasName("voucher_item_members_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.quantity).HasDefaultValue(1);
-            entity.Property(e => e.total_points_used).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.Quantity).HasDefaultValue(1);
+            entity.Property(e => e.TotalPointsUsed).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.voucher_item_members).HasConstraintName("voucher_item_members_member_id_fkey");
+            entity.HasOne(d => d.Member).WithMany(p => p.VoucherItemMembers).HasConstraintName("voucher_item_members_member_id_fkey");
         });
 
-        modelBuilder.Entity<wallet>(entity =>
+        modelBuilder.Entity<Wallet>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("wallets_pkey");
+            entity.HasKey(e => e.Id).HasName("wallets_pkey");
 
-            entity.Property(e => e.balance).HasDefaultValueSql("0");
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.points).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.Balance).HasDefaultValueSql("0");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.Points).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.user).WithMany(p => p.wallets)
+            entity.HasOne(d => d.User).WithMany(p => p.Wallets)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("wallets_user_id_fkey");
         });
 
-        modelBuilder.Entity<withdraw_request>(entity =>
+        modelBuilder.Entity<WithdrawRequest>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("withdraw_requests_pkey");
+            entity.HasKey(e => e.Id).HasName("withdraw_requests_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.requested_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.RequestedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.wallet).WithMany(p => p.withdraw_requests)
+            entity.HasOne(d => d.Wallet).WithMany(p => p.WithdrawRequests)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("withdraw_requests_wallet_id_fkey");
         });

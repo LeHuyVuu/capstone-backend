@@ -3,7 +3,6 @@ using Amazon.Runtime;
 using capstone_backend.Api.Filters;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Services;
-using capstone_backend.Context;
 using capstone_backend.Data.Repositories;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -12,6 +11,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using capstone_backend.Data.Context;
 
 namespace capstone_backend.Extensions;
 
@@ -39,7 +39,7 @@ public static class ServiceExtensions
             string.IsNullOrEmpty(dbUser) ||
             string.IsNullOrEmpty(dbPassword))
         {
-            throw new Exception("❌ Database environment variables are not fully configured");
+            throw new Exception("[ERROR] Database environment variables are not fully configured");
         }
 
         var connectionString =
@@ -50,13 +50,13 @@ public static class ServiceExtensions
             $"Password={dbPassword};";
 
         // Debug log (không log password)
-        Console.WriteLine($"🗄️ DB Host: {dbHost}");
-        Console.WriteLine($"🗄️ DB Name: {dbName}");
-        Console.WriteLine($"🗄️ DB User: {dbUser}");
-        Console.WriteLine($"🗄️ DB Port: {dbPort}");
+        Console.WriteLine($"[INFO] DB Host: {dbHost}");
+        Console.WriteLine($"[INFO] DB Name: {dbName}");
+        Console.WriteLine($"[INFO] DB User: {dbUser}");
+        Console.WriteLine($"[INFO] DB Port: {dbPort}");
 
         services.AddDbContext<MyDbContext>(options =>
-            options.UseNpgsql(connectionString));
+            options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
 
         return services;
     }
@@ -68,9 +68,10 @@ public static class ServiceExtensions
     /// </summary>
     public static IServiceCollection AddRepositories(this IServiceCollection services)
     {
-      
+
         services.AddScoped<IUserRepository, UserRepository>();
-        
+        services.AddScoped<IMemberProfileRepository, MemberProfileRepository>();
+
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
@@ -84,26 +85,27 @@ public static class ServiceExtensions
     {
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IJwtService, JwtService>();
-        
+        services.AddScoped<IMemberService, MemberService>();
+
         // Register CometChat Service
         services.AddScoped<ICometChatService, CometChatService>();
-        
+
         // Register OpenAI Recommendation Service - only read from environment variables
         var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "";
         var assistantId = Environment.GetEnvironmentVariable("ASSISTANT_ID") ?? "";
-        
+
         // Debug logging
-        Console.WriteLine($"🔑 API Key: {(string.IsNullOrEmpty(apiKey) ? "[EMPTY]" : apiKey.Substring(0, Math.Min(15, apiKey.Length)) + "...")}");
-        Console.WriteLine($"🤖 Assistant ID: {assistantId}");
-        
+        Console.WriteLine($"[INFO] API Key: {(string.IsNullOrEmpty(apiKey) ? "[EMPTY]" : apiKey.Substring(0, Math.Min(15, apiKey.Length)) + "...")}");
+        Console.WriteLine($"[INFO] Assistant ID: {assistantId}");
+
         services.Configure<OpenAISettings>(options =>
         {
             options.ApiKey = apiKey;
             options.AssistantId = assistantId;
         });
-        
+
         services.AddHttpClient<IRecommendationService, RecommendationService>();
-        
+
         // Đăng ký AWS Rekognition Service để phân tích cảm xúc khuôn mặt
         services.AddAwsRekognitionService();
 
@@ -115,6 +117,9 @@ public static class ServiceExtensions
         services.AddScoped<IMoodTypeService, MoodTypeService>();
         services.AddScoped<ISearchHistoryService, SearchHistoryService>();
         services.AddScoped<ISpecialEventService, SpecialEventService>();
+
+        // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
+        services.AddScoped<ILocationFollowerService, LocationFollowerService>();
 
         return services;
     }
@@ -131,12 +136,12 @@ public static class ServiceExtensions
         var awsRegion = Environment.GetEnvironmentVariable("AWS_REGION") ?? "us-east-1";
 
         // Debug logging
-        Console.WriteLine($"🌍 AWS Region: {awsRegion}");
-        Console.WriteLine($"🔑 AWS Access Key: {(string.IsNullOrEmpty(awsAccessKey) ? "[EMPTY]" : awsAccessKey.Substring(0, Math.Min(10, awsAccessKey.Length)) + "...")}");
+        Console.WriteLine($"[INFO] AWS Region: {awsRegion}");
+        Console.WriteLine($"[INFO] AWS Access Key: {(string.IsNullOrEmpty(awsAccessKey) ? "[EMPTY]" : awsAccessKey.Substring(0, Math.Min(10, awsAccessKey.Length)) + "...")}");
 
         // Tạo AWS credentials từ environment variables
         var awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
-        
+
         // Cấu hình AWS Rekognition client
         var rekognitionConfig = new AmazonRekognitionConfig
         {
@@ -208,21 +213,21 @@ public static class ServiceExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") 
-                     ?? configuration["Jwt:SecretKey"] 
+        var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+                     ?? configuration["Jwt:SecretKey"]
                      ?? throw new InvalidOperationException("JWT Secret Key is not configured");
 
-        var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") 
-                        ?? configuration["Jwt:Issuer"] 
+        var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
+                        ?? configuration["Jwt:Issuer"]
                         ?? "CapstoneAPI";
 
-        var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") 
-                          ?? configuration["Jwt:Audience"] 
+        var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+                          ?? configuration["Jwt:Audience"]
                           ?? "CapstoneApp";
 
-        Console.WriteLine($"🔐 Auth: Cookie (Web) + JWT (Mobile)");
-        Console.WriteLine($"🔐 JWT Issuer: {jwtIssuer}");
-        Console.WriteLine($"🔐 JWT Audience: {jwtAudience}");
+        Console.WriteLine($"[INFO] Auth: Cookie (Web) + JWT (Mobile)");
+        Console.WriteLine($"[INFO] JWT Issuer: {jwtIssuer}");
+        Console.WriteLine($"[INFO] JWT Audience: {jwtAudience}");
 
         services.AddAuthentication(options =>
         {
@@ -239,7 +244,7 @@ public static class ServiceExtensions
             options.Cookie.SameSite = SameSiteMode.Strict;
             options.ExpireTimeSpan = TimeSpan.FromHours(8);
             options.SlidingExpiration = true;
-            
+
             options.Events.OnRedirectToLogin = context =>
             {
                 context.Response.StatusCode = 401;
@@ -297,16 +302,16 @@ public static class ServiceExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") 
-                     ?? configuration["Jwt:SecretKey"] 
+        var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+                     ?? configuration["Jwt:SecretKey"]
                      ?? throw new InvalidOperationException("JWT Secret Key is not configured");
 
-        var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") 
-                        ?? configuration["Jwt:Issuer"] 
+        var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER")
+                        ?? configuration["Jwt:Issuer"]
                         ?? "CapstoneAPI";
 
-        var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") 
-                          ?? configuration["Jwt:Audience"] 
+        var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+                          ?? configuration["Jwt:Audience"]
                           ?? "CapstoneApp";
 
         Console.WriteLine($"🔐 JWT Issuer: {jwtIssuer}");
@@ -341,12 +346,12 @@ public static class ServiceExtensions
                     // Allow token from query string for SignalR/WebSocket connections
                     var accessToken = context.Request.Query["access_token"];
                     var path = context.HttpContext.Request.Path;
-                    
+
                     if (!string.IsNullOrEmpty(accessToken))
                     {
                         context.Token = accessToken;
                     }
-                    
+
                     return Task.CompletedTask;
                 },
                 OnAuthenticationFailed = context =>
@@ -381,7 +386,7 @@ public static class ServiceExtensions
                 options.Cookie.SameSite = SameSiteMode.Strict;  // Chống CSRF
                 options.ExpireTimeSpan = TimeSpan.FromHours(8);  // Cookie hết hạn sau 8 giờ
                 options.SlidingExpiration = true;  // Tự động gia hạn khi user active
-                
+
                 // API trả về 401 thay vì redirect
                 options.Events.OnRedirectToLogin = context =>
                 {
@@ -413,22 +418,18 @@ public static class ServiceExtensions
     /// Đăng ký CORS để cho phép frontend gọi API
     /// </summary>
     public static IServiceCollection AddCorsConfiguration(
-        this IServiceCollection services, 
-        IConfiguration configuration)
+     this IServiceCollection services,
+     IConfiguration configuration)
     {
-        // Đọc danh sách origins từ appsettings.json
-        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
-                           ?? new[] { "http://localhost:3000" };
-
         services.AddCors(options =>
         {
             options.AddPolicy("AllowAll", builder =>
             {
                 builder
-                    .WithOrigins(allowedOrigins)  // Chỉ cho phép origins này
-                    .AllowAnyMethod()             // Cho phép tất cả methods (GET, POST, PUT...)
-                    .AllowAnyHeader()             // Cho phép tất cả headers
-                    .AllowCredentials();          // Cho phép gửi cookie
+                    .SetIsOriginAllowed(_ => true) // allow tất cả origin
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials();
             });
         });
 

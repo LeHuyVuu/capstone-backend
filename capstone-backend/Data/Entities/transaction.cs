@@ -4,32 +4,32 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace capstone_backend.Entities;
+namespace capstone_backend.Data.Entities;
 
-[Index("trans_type", "doc_no", Name = "idx_transactions_poly")]
-public partial class transaction
+[Index("TransType", "DocNo", Name = "idx_transactions_poly")]
+public partial class Transaction
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
     [Precision(18, 2)]
-    public decimal amount { get; set; }
+    public decimal Amount { get; set; }
 
-    public int user_id { get; set; }
+    public int UserId { get; set; }
 
-    public string payment_method { get; set; } = null!;
+    public string PaymentMethod { get; set; } = null!;
 
-    public int trans_type { get; set; }
+    public int TransType { get; set; }
 
-    public int doc_no { get; set; }
+    public int DocNo { get; set; }
 
-    public string? description { get; set; }
+    public string? Description { get; set; }
 
-    public string? external_ref_code { get; set; }
+    public string? ExternalRefCode { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 }

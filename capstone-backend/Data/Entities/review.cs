@@ -4,44 +4,44 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace capstone_backend.Entities;
+namespace capstone_backend.Data.Entities;
 
-[Index("venue_id", Name = "idx_review_venue")]
-public partial class review
+[Index("VenueId", Name = "idx_review_venue")]
+public partial class Review
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int venue_id { get; set; }
+    public int VenueId { get; set; }
 
-    public int member_id { get; set; }
+    public int MemberId { get; set; }
 
-    public int? rating { get; set; }
+    public int? Rating { get; set; }
 
-    public string? content { get; set; }
+    public string? Content { get; set; }
 
-    public DateTime? visited_at { get; set; }
+    public DateTime? VisitedAt { get; set; }
 
-    public bool? is_anonymous { get; set; }
+    public bool? IsAnonymous { get; set; }
 
-    public int? like_count { get; set; }
+    public int? LikeCount { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
-    [ForeignKey("member_id")]
-    [InverseProperty("reviews")]
-    public virtual member_profile member { get; set; } = null!;
+    [ForeignKey("MemberId")]
+    [InverseProperty("Reviews")]
+    public virtual MemberProfile Member { get; set; } = null!;
 
-    [InverseProperty("review")]
-    public virtual ICollection<review_like> review_likes { get; set; } = new List<review_like>();
+    [InverseProperty("Review")]
+    public virtual ICollection<ReviewLike> ReviewLikes { get; set; } = new List<ReviewLike>();
 
-    [ForeignKey("venue_id")]
-    [InverseProperty("reviews")]
-    public virtual venue_location venue { get; set; } = null!;
+    [ForeignKey("VenueId")]
+    [InverseProperty("Reviews")]
+    public virtual VenueLocation Venue { get; set; } = null!;
 }

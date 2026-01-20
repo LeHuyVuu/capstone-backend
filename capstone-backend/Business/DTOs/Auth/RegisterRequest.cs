@@ -29,7 +29,7 @@ public class RegisterRequest
     public DateOnly? DateOfBirth { get; set; }
     
     /// <summary>
-    /// Giới tính: "male", "female", "other"
+    /// Giới tính: "NAM", "NỮ", "KHÁC"
     /// </summary>
     public string? Gender { get; set; }
 }

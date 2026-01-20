@@ -8,11 +8,11 @@ var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
 if (File.Exists(envPath))
 {
     Env.Load(envPath);
-    Console.WriteLine($"✅ Loaded .env from: {envPath}");
+    Console.WriteLine($"[INFO] Loaded .env from: {envPath}");
 }
 else
 {
-    Console.WriteLine($"⚠️ .env file not found at: {envPath}");
+    Console.WriteLine($"[INFO] .env file not found at: {envPath}");
 }
 
 var builder = WebApplication.CreateBuilder(args);
@@ -111,9 +111,9 @@ app.MapControllers();
 // ========================================
 
 app.Logger.LogInformation("Application starting...");
-app.Logger.LogInformation("🚀 Scalar (recommended): http://localhost:5224/scalar");
-app.Logger.LogInformation("📘 Swagger UI: http://localhost:5224/swagger");
-app.Logger.LogInformation("📖 Redoc: http://localhost:5224/redoc");
+app.Logger.LogInformation("[INFO] Scalar (recommended): http://localhost:5224/scalar");
+app.Logger.LogInformation("[INFO] Swagger UI: http://localhost:5224/swagger");
+app.Logger.LogInformation("[INFO] Redoc: http://localhost:5224/redoc");
 app.Logger.LogInformation("API: /api");
 
 app.Run();

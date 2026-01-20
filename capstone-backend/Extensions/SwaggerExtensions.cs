@@ -22,13 +22,13 @@ public static class SwaggerExtensions
             options.SwaggerDoc("v1", new OpenApiInfo
             {
                 Version = "v1",
-                Title = "Capstone Backend API",
-                Description = "RESTful API for Capstone project with 3-tier architecture, EF Core, PostgreSQL, and Cookie Authentication",
+                Title = "CoupleMood Backend API",
+                Description = "RESTful API for Capstone project",
                 Contact = new OpenApiContact
                 {
                     Name = "Development Team",
-                    Email = "dev@capstone.com",
-                    Url = new Uri("https://github.com/capstone")
+                    Email = "couplemood.system@gmail.com",
+                    Url = new Uri("https://github.com/LeHuyVuu/capstone-backend")
                 },
                 License = new OpenApiLicense
                 {

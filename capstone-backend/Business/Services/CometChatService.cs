@@ -17,8 +17,8 @@ public class CometChatService : ICometChatService
         ?? throw new InvalidOperationException("COMETCHAT_APP_ID environment variable not configured");
     private string CometChatApiKey => Environment.GetEnvironmentVariable("COMETCHAT_API_KEY") 
         ?? throw new InvalidOperationException("COMETCHAT_API_KEY environment variable not configured");
-    private string CometChatRestApiUrl => Environment.GetEnvironmentVariable("COMETCHAT_REST_API_URL") 
-        ?? "https://api-us.cometchat.io/v3";
+    private string CometChatRegion => Environment.GetEnvironmentVariable("COMETCHAT_REGION") ?? "us";
+    private string CometChatRestApiUrl => $"https://{CometChatAppId}.api-{CometChatRegion}.cometchat.io/v3.0";
 
     public CometChatService(
         IHttpClientFactory httpClientFactory,

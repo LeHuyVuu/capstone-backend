@@ -26,8 +26,8 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .MaximumLength(100).WithMessage("Họ tên không được quá 100 ký tự");
 
         RuleFor(x => x.Gender)
-            .Must(gender => gender == null || gender == "male" || gender == "female" || gender == "other")
-            .WithMessage("Giới tính phải là 'male', 'female' hoặc 'other'")
+            .Must(gender => gender == null || gender == "MALE" || gender == "FEMALE" || gender == "OTHER")
+            .WithMessage("Giới tính phải là 'MALE', 'FEMALE' hoặc 'OTHER'")
             .When(x => !string.IsNullOrEmpty(x.Gender));
 
         RuleFor(x => x.PhoneNumber)
