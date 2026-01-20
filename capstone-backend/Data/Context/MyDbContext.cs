@@ -116,7 +116,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<VoucherItemMember> VoucherItemMembers { get; set; }
 
-    public virtual DbSet<wallet> Wallets { get; set; }
+    public virtual DbSet<Wallet> Wallets { get; set; }
 
     public virtual DbSet<withdraw_request> WithdrawRequests { get; set; }
 
@@ -853,15 +853,15 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.member).WithMany(p => p.voucher_item_members).HasConstraintName("voucher_item_members_member_id_fkey");
         });
 
-        modelBuilder.Entity<wallet>(entity =>
+        modelBuilder.Entity<Wallet>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("wallets_pkey");
+            entity.HasKey(e => e.Id).HasName("wallets_pkey");
 
-            entity.Property(e => e.balance).HasDefaultValueSql("0");
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.points).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.Balance).HasDefaultValueSql("0");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.Points).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.user).WithMany(p => p.wallets)
                 .OnDelete(DeleteBehavior.ClientSetNull)

@@ -53,5 +53,5 @@ public partial class UserAccount
     public virtual ICollection<VenueOwnerProfile> venue_owner_profiles { get; set; } = new List<VenueOwnerProfile>();
 
     [InverseProperty("user")]
-    public virtual ICollection<wallet> wallets { get; set; } = new List<wallet>();
+    public virtual ICollection<Wallet> wallets { get; set; } = new List<Wallet>();
 }

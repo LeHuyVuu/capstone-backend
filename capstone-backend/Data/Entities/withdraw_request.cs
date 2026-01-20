@@ -33,5 +33,5 @@ public partial class withdraw_request
 
     [ForeignKey("wallet_id")]
     [InverseProperty("withdraw_requests")]
-    public virtual wallet wallet { get; set; } = null!;
+    public virtual Wallet wallet { get; set; } = null!;
 }

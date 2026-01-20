@@ -6,23 +6,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class wallet
+public partial class Wallet
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int user_id { get; set; }
+    public int UserId { get; set; }
 
     [Precision(18, 2)]
-    public decimal? balance { get; set; }
+    public decimal? Balance { get; set; }
 
-    public int? points { get; set; }
+    public int? Points { get; set; }
 
-    public bool? is_active { get; set; }
+    public bool? IsActive { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
     [ForeignKey("user_id")]
     [InverseProperty("wallets")]
