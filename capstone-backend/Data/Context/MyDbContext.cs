@@ -110,7 +110,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<VenueSubscriptionPackage> VenueSubscriptionPackages { get; set; }
 
-    public virtual DbSet<voucher> Vouchers { get; set; }
+    public virtual DbSet<Voucher> Vouchers { get; set; }
 
     public virtual DbSet<voucher_item> VoucherItems { get; set; }
 
@@ -814,14 +814,14 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.venue).WithMany(p => p.venue_subscription_packages).HasConstraintName("venue_subscription_packages_venue_id_fkey");
         });
 
-        modelBuilder.Entity<voucher>(entity =>
+        modelBuilder.Entity<Voucher>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("vouchers_pkey");
+            entity.HasKey(e => e.Id).HasName("vouchers_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.usage_limit_per_member).HasDefaultValue(1);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UsageLimitPerMember).HasDefaultValue(1);
 
             entity.HasOne(d => d.venue_owner).WithMany(p => p.vouchers).HasConstraintName("vouchers_venue_owner_id_fkey");
         });

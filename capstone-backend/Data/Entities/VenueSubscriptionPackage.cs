@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-[Index("VenueId", "status", Name = "idx_venue_sub_package")]
+[Index("VenueId", "Status", Name = "idx_venue_sub_package")]
 public partial class VenueSubscriptionPackage
 {
     [Key]
