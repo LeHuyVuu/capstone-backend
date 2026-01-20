@@ -29,7 +29,7 @@ public partial class venue_location_advertisement
 
     [ForeignKey("advertisement_id")]
     [InverseProperty("venue_location_advertisements")]
-    public virtual advertisement advertisement { get; set; } = null!;
+    public virtual Advertisement advertisement { get; set; } = null!;
 
     [ForeignKey("venue_id")]
     [InverseProperty("venue_location_advertisements")]

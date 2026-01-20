@@ -16,7 +16,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<AdsOrder> AdsOrders { get; set; }
 
-    public virtual DbSet<advertisement> advertisements { get; set; }
+    public virtual DbSet<Advertisement> Advertisements { get; set; }
 
     public virtual DbSet<advertisement_package> advertisement_packages { get; set; }
 
@@ -160,13 +160,13 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("ads_orders_package_id_fkey");
         });
 
-        modelBuilder.Entity<advertisement>(entity =>
+        modelBuilder.Entity<Advertisement>(entity =>
         {
             entity.HasKey(e => e.id).HasName("advertisements_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.venue_owner).WithMany(p => p.advertisements)
                 .OnDelete(DeleteBehavior.ClientSetNull)

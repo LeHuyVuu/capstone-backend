@@ -28,7 +28,7 @@ public partial class venue_owner_profile
     public bool? is_deleted { get; set; }
 
     [InverseProperty("venue_owner")]
-    public virtual ICollection<advertisement> advertisements { get; set; } = new List<advertisement>();
+    public virtual ICollection<Advertisement> advertisements { get; set; } = new List<Advertisement>();
 
     [ForeignKey("user_id")]
     [InverseProperty("venue_owner_profiles")]
