@@ -34,7 +34,7 @@ public partial class date_plan
 
     [ForeignKey("couple_id")]
     [InverseProperty("date_plans")]
-    public virtual couple_profile couple { get; set; } = null!;
+    public virtual CoupleProfile couple { get; set; } = null!;
 
     [InverseProperty("date_plan")]
     public virtual ICollection<date_plan_item> date_plan_items { get; set; } = new List<date_plan_item>();

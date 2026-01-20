@@ -32,5 +32,5 @@ public partial class leaderboard
 
     [ForeignKey("couple_id")]
     [InverseProperty("leaderboards")]
-    public virtual couple_profile couple { get; set; } = null!;
+    public virtual CoupleProfile couple { get; set; } = null!;
 }

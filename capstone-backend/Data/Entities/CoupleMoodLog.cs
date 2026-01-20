@@ -25,7 +25,7 @@ public partial class CoupleMoodLog
 
     [ForeignKey("couple_id")]
     [InverseProperty("couple_mood_logs")]
-    public virtual couple_profile couple { get; set; } = null!;
+    public virtual CoupleProfile couple { get; set; } = null!;
 
     [ForeignKey("couple_mood_type_id")]
     [InverseProperty("couple_mood_logs")]

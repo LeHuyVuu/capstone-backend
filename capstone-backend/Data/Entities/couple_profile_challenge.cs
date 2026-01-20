@@ -36,5 +36,5 @@ public partial class couple_profile_challenge
 
     [ForeignKey("couple_id")]
     [InverseProperty("couple_profile_challenges")]
-    public virtual couple_profile couple { get; set; } = null!;
+    public virtual CoupleProfile couple { get; set; } = null!;
 }

@@ -37,10 +37,10 @@ public class MemberService : IMemberService
             throw new InvalidOperationException("Cannot invite yourself");
 
         // 4. Kiểm tra xem 2 member đã có couple profile chưa
-        var existingCouple = await _unitOfWork.Context.Set<couple_profile>()
-            .Where(c => c.is_deleted != true &&
-                       ((c.member_id_1 == currentMemberProfile.id && c.member_id_2 == partnerMemberProfile.id) ||
-                        (c.member_id_1 == partnerMemberProfile.id && c.member_id_2 == currentMemberProfile.id)))
+        var existingCouple = await _unitOfWork.Context.Set<CoupleProfile>()
+            .Where(c => c.IsDeleted != true &&
+                       ((c.MemberId1 == currentMemberProfile.id && c.MemberId2 == partnerMemberProfile.id) ||
+                        (c.MemberId1 == partnerMemberProfile.id && c.MemberId2 == currentMemberProfile.id)))
             .FirstOrDefaultAsync(cancellationToken);
 
         if (existingCouple != null)
@@ -49,21 +49,21 @@ public class MemberService : IMemberService
         // 5. Tạo couple profile mới
         // member_id_1 = người được mời (người nam có invite code)
         // member_id_2 = người gọi API (người nữ nhập invite code)
-        var coupleProfile = new couple_profile
+        var coupleProfile = new CoupleProfile
         {
-            member_id_1 = partnerMemberProfile.id,
-            member_id_2 = currentMemberProfile.id,
-            couple_name = $"{partnerMemberProfile.full_name} ❤️ {currentMemberProfile.full_name}",
-            start_date = DateOnly.FromDateTime(DateTime.UtcNow),
-            status = "ACTIVE",
-            total_points = 0,
-            interaction_points = 0,
-            created_at = DateTime.UtcNow,
-            updated_at = DateTime.UtcNow,
-            is_deleted = false
+            MemberId1 = partnerMemberProfile.id,
+            MemberId2 = currentMemberProfile.id,
+            CoupleName = $"{partnerMemberProfile.full_name} ❤️ {currentMemberProfile.full_name}",
+            StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            Status = "ACTIVE",
+            TotalPoints = 0,
+            InteractionPoints = 0,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
         };
 
-        await _unitOfWork.Context.Set<couple_profile>().AddAsync(coupleProfile, cancellationToken);
+        await _unitOfWork.Context.Set<CoupleProfile>().AddAsync(coupleProfile, cancellationToken);
         
         // 6. Cập nhật relationship_status của cả 2 member về IN_RELATIONSHIP
         partnerMemberProfile.relationship_status = "IN_RELATIONSHIP";
@@ -82,13 +82,13 @@ public class MemberService : IMemberService
         return new CoupleProfileResponse
         {
             Id = coupleProfile.id,
-            MemberId1 = coupleProfile.member_id_1,
-            MemberId2 = coupleProfile.member_id_2,
-            CoupleName = coupleProfile.couple_name,
-            StartDate = coupleProfile.start_date,
-            AniversaryDate = coupleProfile.aniversary_date,
-            Status = coupleProfile.status,
-            CreatedAt = coupleProfile.created_at ?? DateTime.UtcNow,
+            MemberId1 = coupleProfile.MemberId1,
+            MemberId2 = coupleProfile.MemberId2,
+            CoupleName = coupleProfile.CoupleName,
+            StartDate = coupleProfile.StartDate,
+            AniversaryDate = coupleProfile.AniversaryDate,
+            Status = coupleProfile.Status,
+            CreatedAt = coupleProfile.CreatedAt ?? DateTime.UtcNow,
             Member1Name = partnerMemberProfile.full_name,
             Member2Name = currentMemberProfile.full_name
         };

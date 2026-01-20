@@ -73,10 +73,10 @@ public partial class member_profile
     public virtual ICollection<Comment> comments { get; set; } = new List<Comment>();
 
     [InverseProperty("member_id_1Navigation")]
-    public virtual ICollection<couple_profile> couple_profilemember_id_1Navigations { get; set; } = new List<couple_profile>();
+    public virtual ICollection<CoupleProfile> couple_profilemember_id_1Navigations { get; set; } = new List<CoupleProfile>();
 
     [InverseProperty("member_id_2Navigation")]
-    public virtual ICollection<couple_profile> couple_profilemember_id_2Navigations { get; set; } = new List<couple_profile>();
+    public virtual ICollection<CoupleProfile> couple_profilemember_id_2Navigations { get; set; } = new List<CoupleProfile>();
 
     [InverseProperty("member")]
     public virtual ICollection<member_accessory> member_accessories { get; set; } = new List<member_accessory>();

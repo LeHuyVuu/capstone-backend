@@ -6,44 +6,44 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-[Index("member_id_1", "member_id_2", Name = "idx_couple_members")]
-[Index("member_id_1", "member_id_2", Name = "uq_couple_pair", IsUnique = true)]
-public partial class couple_profile
+[Index("MemberId1", "MemberId2", Name = "idx_couple_members")]
+[Index("MemberId1", "MemberId2", Name = "uq_couple_pair", IsUnique = true)]
+public partial class CoupleProfile
 {
     [Key]
     public int id { get; set; }
 
-    public int member_id_1 { get; set; }
+    public int MemberId1 { get; set; }
 
-    public int member_id_2 { get; set; }
+    public int MemberId2 { get; set; }
 
-    public int? couple_personality_type_id { get; set; }
+    public int? CouplePersonalityTypeId { get; set; }
 
-    public int? couple_mood_type_id { get; set; }
+    public int? CoupleMoodTypeId { get; set; }
 
-    public string? couple_name { get; set; }
+    public string? CoupleName { get; set; }
 
-    public DateOnly? start_date { get; set; }
+    public DateOnly? StartDate { get; set; }
 
-    public DateOnly? aniversary_date { get; set; }
-
-    [Precision(18, 2)]
-    public decimal? budget_min { get; set; }
+    public DateOnly? AniversaryDate { get; set; }
 
     [Precision(18, 2)]
-    public decimal? budget_max { get; set; }
+    public decimal? BudgetMin { get; set; }
 
-    public int? total_points { get; set; }
+    [Precision(18, 2)]
+    public decimal? BudgetMax { get; set; }
 
-    public int? interaction_points { get; set; }
+    public int? TotalPoints { get; set; }
 
-    public string? status { get; set; }
+    public int? InteractionPoints { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public string? Status { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+
+    public bool? IsDeleted { get; set; }
 
     [InverseProperty("couple")]
     public virtual ICollection<CoupleMoodLog> couple_mood_logs { get; set; } = new List<CoupleMoodLog>();

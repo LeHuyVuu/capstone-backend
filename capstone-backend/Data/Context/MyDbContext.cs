@@ -40,7 +40,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<CouplePersonalityType> CouplePersonalityTypes { get; set; }
 
-    public virtual DbSet<couple_profile> couple_profiles { get; set; }
+    public virtual DbSet<CoupleProfile> CoupleProfiles { get; set; }
 
     public virtual DbSet<couple_profile_challenge> couple_profile_challenges { get; set; }
 
@@ -337,16 +337,18 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<couple_profile>(entity =>
+        modelBuilder.Entity<CoupleProfile>(entity =>
         {
             entity.HasKey(e => e.id).HasName("couple_profiles_pkey");
 
-            entity.Property(e => e.budget_min).HasDefaultValueSql("0");
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.interaction_points).HasDefaultValue(0);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.total_points).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.MemberId1).HasColumnName("member_id_1");
+            entity.Property(e => e.MemberId2).HasColumnName("member_id_2");
+            entity.Property(e => e.BudgetMin).HasDefaultValueSql("0");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.InteractionPoints).HasDefaultValue(0);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.TotalPoints).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.couple_mood_type).WithMany(p => p.couple_profiles).HasConstraintName("couple_profiles_couple_mood_type_id_fkey");
 
