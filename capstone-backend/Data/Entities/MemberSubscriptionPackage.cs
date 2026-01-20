@@ -6,24 +6,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class member_subscription_package
+public partial class MemberSubscriptionPackage
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int member_id { get; set; }
+    public int MemberId { get; set; }
 
-    public int package_id { get; set; }
+    public int PackageId { get; set; }
 
-    public DateTime? start_date { get; set; }
+    public DateTime? StartDate { get; set; }
 
-    public DateTime? end_date { get; set; }
+    public DateTime? EndDate { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
     [ForeignKey("member_id")]
     [InverseProperty("member_subscription_packages")]

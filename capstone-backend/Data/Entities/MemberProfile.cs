@@ -85,7 +85,7 @@ public partial class MemberProfile
     public virtual ICollection<MemberMoodLog> member_mood_logs { get; set; } = new List<MemberMoodLog>();
 
     [InverseProperty("member")]
-    public virtual ICollection<member_subscription_package> member_subscription_packages { get; set; } = new List<member_subscription_package>();
+    public virtual ICollection<MemberSubscriptionPackage> member_subscription_packages { get; set; } = new List<MemberSubscriptionPackage>();
 
     [ForeignKey("mood_types_id")]
     [InverseProperty("member_profiles")]

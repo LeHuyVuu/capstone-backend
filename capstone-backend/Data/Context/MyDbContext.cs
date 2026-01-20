@@ -64,7 +64,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<MemberProfile> MemberProfiles { get; set; }
 
-    public virtual DbSet<member_subscription_package> member_subscription_packages { get; set; }
+    public virtual DbSet<MemberSubscriptionPackage> MemberSubscriptionPackages { get; set; }
 
     public virtual DbSet<MoodType> MoodTypes { get; set; }
 
@@ -515,12 +515,12 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.user).WithMany(p => p.member_profiles).HasConstraintName("member_profiles_user_id_fkey");
         });
 
-        modelBuilder.Entity<member_subscription_package>(entity =>
+        modelBuilder.Entity<MemberSubscriptionPackage>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("member_subscription_packages_pkey");
+            entity.HasKey(e => e.Id).HasName("member_subscription_packages_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.member).WithMany(p => p.member_subscription_packages)
                 .OnDelete(DeleteBehavior.ClientSetNull)
