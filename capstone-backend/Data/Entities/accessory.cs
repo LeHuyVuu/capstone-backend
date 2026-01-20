@@ -41,5 +41,5 @@ public partial class Accessory
     public string? Status { get; set; }
 
     [InverseProperty("accessory")]
-    public virtual ICollection<member_accessory> member_accessories { get; set; } = new List<member_accessory>();
+    public virtual ICollection<MemberAccessory> member_accessories { get; set; } = new List<MemberAccessory>();
 }

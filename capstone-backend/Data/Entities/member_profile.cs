@@ -79,7 +79,7 @@ public partial class member_profile
     public virtual ICollection<CoupleProfile> couple_profilemember_id_2Navigations { get; set; } = new List<CoupleProfile>();
 
     [InverseProperty("member")]
-    public virtual ICollection<member_accessory> member_accessories { get; set; } = new List<member_accessory>();
+    public virtual ICollection<MemberAccessory> member_accessories { get; set; } = new List<MemberAccessory>();
 
     [InverseProperty("member")]
     public virtual ICollection<member_mood_log> member_mood_logs { get; set; } = new List<member_mood_log>();

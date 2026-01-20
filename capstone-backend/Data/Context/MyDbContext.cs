@@ -58,7 +58,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Media> Media { get; set; }
 
-    public virtual DbSet<member_accessory> member_accessories { get; set; }
+    public virtual DbSet<MemberAccessory> MemberAccessories { get; set; }
 
     public virtual DbSet<member_mood_log> member_mood_logs { get; set; }
 
@@ -468,12 +468,12 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<member_accessory>(entity =>
+        modelBuilder.Entity<MemberAccessory>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("member_accessories_pkey");
+            entity.HasKey(e => e.Id).HasName("member_accessories_pkey");
 
-            entity.Property(e => e.acquired_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_equipped).HasDefaultValue(false);
+            entity.Property(e => e.AcquiredAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsEquipped).HasDefaultValue(false);
 
             entity.HasOne(d => d.accessory).WithMany(p => p.member_accessories)
                 .OnDelete(DeleteBehavior.Cascade)

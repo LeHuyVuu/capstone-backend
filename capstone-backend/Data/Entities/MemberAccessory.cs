@@ -6,20 +6,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class member_accessory
+public partial class MemberAccessory
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int? member_id { get; set; }
+    public int? MemberId { get; set; }
 
-    public int? accessory_id { get; set; }
+    public int? AccessoryId { get; set; }
 
-    public bool? is_equipped { get; set; }
+    public bool? IsEquipped { get; set; }
 
-    public DateTime? acquired_at { get; set; }
+    public DateTime? AcquiredAt { get; set; }
 
-    public DateTime? expiry_at { get; set; }
+    public DateTime? ExpiryAt { get; set; }
 
     [ForeignKey("accessory_id")]
     [InverseProperty("member_accessories")]
