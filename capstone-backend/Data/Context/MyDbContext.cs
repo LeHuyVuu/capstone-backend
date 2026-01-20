@@ -14,7 +14,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Accessory> Accessories { get; set; }
 
-    public virtual DbSet<ads_order> ads_orders { get; set; }
+    public virtual DbSet<AdsOrder> AdsOrders { get; set; }
 
     public virtual DbSet<advertisement> advertisements { get; set; }
 
@@ -144,12 +144,12 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.Status).HasColumnName("status");
         });
 
-        modelBuilder.Entity<ads_order>(entity =>
+        modelBuilder.Entity<AdsOrder>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("ads_orders_pkey");
+            entity.HasKey(e => e.Id).HasName("ads_orders_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.advertisement).WithMany(p => p.ads_orders)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -731,7 +731,6 @@ public partial class MyDbContext : DbContext
 
         modelBuilder.Entity<UserAccount>(entity =>
         {
-            entity.ToTable("user_accounts");
             entity.HasKey(e => e.Id).HasName("user_accounts_pkey");
 
             entity.Property(e => e.Id).HasColumnName("id");

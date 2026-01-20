@@ -33,5 +33,5 @@ public partial class advertisement_package
     public bool? is_deleted { get; set; }
 
     [InverseProperty("package")]
-    public virtual ICollection<ads_order> ads_orders { get; set; } = new List<ads_order>();
+    public virtual ICollection<AdsOrder> ads_orders { get; set; } = new List<AdsOrder>();
 }

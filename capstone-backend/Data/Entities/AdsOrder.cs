@@ -6,23 +6,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class ads_order
+public partial class AdsOrder
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int package_id { get; set; }
+    public int PackageId { get; set; }
 
-    public int advertisement_id { get; set; }
+    public int AdvertisementId { get; set; }
 
     [Precision(18, 2)]
-    public decimal? price_paid { get; set; }
+    public decimal? PricePaid { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
     [ForeignKey("advertisement_id")]
     [InverseProperty("ads_orders")]
