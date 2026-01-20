@@ -6,28 +6,28 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class date_plan_item
+public partial class DatePlanItem
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int date_plan_id { get; set; }
+    public int DatePlanId { get; set; }
 
-    public int venue_location_id { get; set; }
+    public int VenueLocationId { get; set; }
 
-    public int? order_index { get; set; }
+    public int? OrderIndex { get; set; }
 
-    public TimeOnly? start_time { get; set; }
+    public TimeOnly? StartTime { get; set; }
 
-    public TimeOnly? end_time { get; set; }
+    public TimeOnly? EndTime { get; set; }
 
-    public string? note { get; set; }
+    public string? Note { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
     [ForeignKey("date_plan_id")]
     [InverseProperty("date_plan_items")]

@@ -67,7 +67,7 @@ public partial class venue_location
     public virtual ICollection<CheckInHistory> check_in_histories { get; set; } = new List<CheckInHistory>();
 
     [InverseProperty("venue_location")]
-    public virtual ICollection<date_plan_item> date_plan_items { get; set; } = new List<date_plan_item>();
+    public virtual ICollection<DatePlanItem> date_plan_items { get; set; } = new List<DatePlanItem>();
 
     [ForeignKey("location_tag_id")]
     [InverseProperty("venue_locations")]

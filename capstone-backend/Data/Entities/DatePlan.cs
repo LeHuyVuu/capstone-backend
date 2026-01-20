@@ -37,5 +37,5 @@ public partial class DatePlan
     public virtual CoupleProfile couple { get; set; } = null!;
 
     [InverseProperty("date_plan")]
-    public virtual ICollection<date_plan_item> date_plan_items { get; set; } = new List<date_plan_item>();
+    public virtual ICollection<DatePlanItem> date_plan_items { get; set; } = new List<DatePlanItem>();
 }

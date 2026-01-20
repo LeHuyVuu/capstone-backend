@@ -46,7 +46,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<DatePlan> DatePlans { get; set; }
 
-    public virtual DbSet<date_plan_item> date_plan_items { get; set; }
+    public virtual DbSet<DatePlanItem> DatePlanItems { get; set; }
 
     public virtual DbSet<device_token> device_tokens { get; set; }
 
@@ -390,14 +390,14 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.couple).WithMany(p => p.date_plans).HasConstraintName("date_plans_couple_id_fkey");
         });
 
-        modelBuilder.Entity<date_plan_item>(entity =>
+        modelBuilder.Entity<DatePlanItem>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("date_plan_items_pkey");
+            entity.HasKey(e => e.Id).HasName("date_plan_items_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.order_index).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.OrderIndex).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.date_plan).WithMany(p => p.date_plan_items).HasConstraintName("date_plan_items_date_plan_id_fkey");
 
