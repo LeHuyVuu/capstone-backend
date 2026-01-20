@@ -24,7 +24,7 @@ public partial class couple_mood_type
     public bool? is_active { get; set; }
 
     [InverseProperty("couple_mood_type")]
-    public virtual ICollection<couple_mood_log> couple_mood_logs { get; set; } = new List<couple_mood_log>();
+    public virtual ICollection<CoupleMoodLog> couple_mood_logs { get; set; } = new List<CoupleMoodLog>();
 
     [InverseProperty("couple_mood_type")]
     public virtual ICollection<couple_profile> couple_profiles { get; set; } = new List<couple_profile>();

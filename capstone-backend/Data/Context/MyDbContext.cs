@@ -34,7 +34,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<CommentLike> CommentLikes { get; set; }
 
-    public virtual DbSet<couple_mood_log> couple_mood_logs { get; set; }
+    public virtual DbSet<CoupleMoodLog> CoupleMoodLogs { get; set; }
 
     public virtual DbSet<couple_mood_type> couple_mood_types { get; set; }
 
@@ -302,13 +302,13 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("comment_likes_member_id_fkey");
         });
 
-        modelBuilder.Entity<couple_mood_log>(entity =>
+        modelBuilder.Entity<CoupleMoodLog>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("couple_mood_logs_pkey");
+            entity.HasKey(e => e.Id).HasName("couple_mood_logs_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.couple).WithMany(p => p.couple_mood_logs).HasConstraintName("couple_mood_logs_couple_id_fkey");
 

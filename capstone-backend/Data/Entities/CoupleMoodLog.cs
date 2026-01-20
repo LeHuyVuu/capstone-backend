@@ -6,22 +6,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class couple_mood_log
+public partial class CoupleMoodLog
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int couple_id { get; set; }
+    public int CoupleId { get; set; }
 
-    public int couple_mood_type_id { get; set; }
+    public int CoupleMoodTypeId { get; set; }
 
-    public string? note { get; set; }
+    public string? Note { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
     [ForeignKey("couple_id")]
     [InverseProperty("couple_mood_logs")]

@@ -46,7 +46,7 @@ public partial class couple_profile
     public bool? is_deleted { get; set; }
 
     [InverseProperty("couple")]
-    public virtual ICollection<couple_mood_log> couple_mood_logs { get; set; } = new List<couple_mood_log>();
+    public virtual ICollection<CoupleMoodLog> couple_mood_logs { get; set; } = new List<CoupleMoodLog>();
 
     [ForeignKey("couple_mood_type_id")]
     [InverseProperty("couple_profiles")]
