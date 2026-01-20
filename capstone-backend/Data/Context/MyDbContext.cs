@@ -102,7 +102,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<UserAccount> UserAccounts { get; set; }
 
-    public virtual DbSet<venue_location> VenueLocations { get; set; }
+    public virtual DbSet<VenueLocation> VenueLocations { get; set; }
 
     public virtual DbSet<venue_location_advertisement> VenueLocationAdvertisements { get; set; }
 
@@ -255,7 +255,7 @@ public partial class MyDbContext : DbContext
             entity.HasMany(d => d.venues).WithMany(p => p.collections)
                 .UsingEntity<Dictionary<string, object>>(
                     "collection_venue_location",
-                    r => r.HasOne<venue_location>().WithMany()
+                    r => r.HasOne<VenueLocation>().WithMany()
                         .HasForeignKey("venue_id")
                         .HasConstraintName("collection_venue_locations_venue_id_fkey"),
                     l => l.HasOne<Collection>().WithMany()
@@ -750,18 +750,18 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()").HasColumnName("updated_at");
         });
 
-        modelBuilder.Entity<venue_location>(entity =>
+        modelBuilder.Entity<VenueLocation>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("venue_locations_pkey");
+            entity.HasKey(e => e.Id).HasName("venue_locations_pkey");
 
-            entity.Property(e => e.avarage_cost).HasDefaultValueSql("0");
-            entity.Property(e => e.average_rating).HasDefaultValueSql("0");
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.is_open).HasDefaultValue(true);
-            entity.Property(e => e.price_min).HasDefaultValueSql("0");
-            entity.Property(e => e.review_count).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.AvarageCost).HasDefaultValueSql("0");
+            entity.Property(e => e.AverageRating).HasDefaultValueSql("0");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.IsOpen).HasDefaultValue(true);
+            entity.Property(e => e.PriceMin).HasDefaultValueSql("0");
+            entity.Property(e => e.ReviewCount).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.location_tag).WithMany(p => p.venue_locations).HasConstraintName("venue_locations_location_tag_id_fkey");
 

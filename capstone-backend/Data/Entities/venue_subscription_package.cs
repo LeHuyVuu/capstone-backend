@@ -32,5 +32,5 @@ public partial class venue_subscription_package
 
     [ForeignKey("venue_id")]
     [InverseProperty("venue_subscription_packages")]
-    public virtual venue_location venue { get; set; } = null!;
+    public virtual VenueLocation venue { get; set; } = null!;
 }

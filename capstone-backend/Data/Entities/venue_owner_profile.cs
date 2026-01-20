@@ -35,7 +35,7 @@ public partial class venue_owner_profile
     public virtual UserAccount user { get; set; } = null!;
 
     [InverseProperty("venue_owner")]
-    public virtual ICollection<venue_location> venue_locations { get; set; } = new List<venue_location>();
+    public virtual ICollection<VenueLocation> venue_locations { get; set; } = new List<VenueLocation>();
 
     [InverseProperty("venue_owner")]
     public virtual ICollection<voucher> vouchers { get; set; } = new List<voucher>();

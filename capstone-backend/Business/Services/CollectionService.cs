@@ -125,13 +125,13 @@ public class CollectionService : ICollectionService
         if (collection == null)
             return null;
 
-        var venuesToAdd = await _unitOfWork.Context.Set<venue_location>()
-            .Where(v => request.VenueIds.Contains(v.id))
+        var venuesToAdd = await _unitOfWork.Context.Set<VenueLocation>()
+            .Where(v => request.VenueIds.Contains(v.Id))
             .ToListAsync(cancellationToken);
 
         foreach (var venue in venuesToAdd)
         {
-            if (!collection.venues.Any(v => v.id == venue.id))
+            if (!collection.venues.Any(v => v.Id == venue.Id))
             {
                 collection.venues.Add(venue);
             }
@@ -155,7 +155,7 @@ public class CollectionService : ICollectionService
             return null;
 
         var venuesToRemove = collection.venues
-            .Where(v => request.VenueIds.Contains(v.id))
+            .Where(v => request.VenueIds.Contains(v.Id))
             .ToList();
 
         foreach (var venue in venuesToRemove)
@@ -184,10 +184,10 @@ public class CollectionService : ICollectionService
             UpdatedAt = collection.UpdatedAt,
             Venues = collection.venues?.Select(v => new VenueSimpleResponse
             {
-                Id = v.id,
-                Name = v.name,
-                Description = v.description,
-                Address = v.address
+                Id = v.Id,
+                Name = v.Name,
+                Description = v.Description,
+                Address = v.Address
             }).ToList()
         };
     }

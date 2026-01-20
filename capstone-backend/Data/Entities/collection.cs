@@ -31,5 +31,5 @@ public partial class Collection
 
     [ForeignKey("collection_id")]
     [InverseProperty("collections")]
-    public virtual ICollection<venue_location> venues { get; set; } = new List<venue_location>();
+    public virtual ICollection<VenueLocation> venues { get; set; } = new List<VenueLocation>();
 }

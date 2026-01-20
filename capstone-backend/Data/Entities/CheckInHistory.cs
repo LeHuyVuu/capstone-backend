@@ -32,5 +32,5 @@ public partial class CheckInHistory
 
     [ForeignKey("venue_id")]
     [InverseProperty("check_in_histories")]
-    public virtual venue_location venue { get; set; } = null!;
+    public virtual VenueLocation venue { get; set; } = null!;
 }

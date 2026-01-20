@@ -8,60 +8,60 @@ namespace capstone_backend.Data.Entities;
 
 [Index("venue_owner_id", Name = "idx_venue_owner")]
 [Index("average_rating", Name = "idx_venue_rating")]
-public partial class venue_location
+public partial class VenueLocation
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int? location_tag_id { get; set; }
+    public int? LocationTagId { get; set; }
 
-    public int venue_owner_id { get; set; }
+    public int VenueOwnerId { get; set; }
 
-    public string name { get; set; } = null!;
+    public string Name { get; set; } = null!;
 
-    public string? description { get; set; }
+    public string? Description { get; set; }
 
-    public string address { get; set; } = null!;
+    public string Address { get; set; } = null!;
 
-    public string? email { get; set; }
+    public string? Email { get; set; }
 
-    public string? phone_number { get; set; }
+    public string? PhoneNumber { get; set; }
 
-    public string? website_url { get; set; }
+    public string? WebsiteUrl { get; set; }
 
-    public DateOnly? opening_time { get; set; }
+    public DateOnly? OpeningTime { get; set; }
 
-    public DateOnly? closing_time { get; set; }
+    public DateOnly? ClosingTime { get; set; }
 
-    public bool? is_open { get; set; }
-
-    [Precision(18, 2)]
-    public decimal? price_min { get; set; }
+    public bool? IsOpen { get; set; }
 
     [Precision(18, 2)]
-    public decimal? price_max { get; set; }
+    public decimal? PriceMin { get; set; }
+
+    [Precision(18, 2)]
+    public decimal? PriceMax { get; set; }
 
     [Precision(10, 8)]
-    public decimal? latitude { get; set; }
+    public decimal? Latitude { get; set; }
 
     [Precision(11, 8)]
-    public decimal? longitude { get; set; }
+    public decimal? Longitude { get; set; }
 
     [Precision(3, 2)]
-    public decimal? average_rating { get; set; }
+    public decimal? AverageRating { get; set; }
 
     [Precision(18, 2)]
-    public decimal? avarage_cost { get; set; }
+    public decimal? AvarageCost { get; set; }
 
-    public int? review_count { get; set; }
+    public int? ReviewCount { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
     [InverseProperty("venue")]
     public virtual ICollection<CheckInHistory> check_in_histories { get; set; } = new List<CheckInHistory>();
