@@ -82,7 +82,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Report> Reports { get; set; }
 
-    public virtual DbSet<report_type> report_types { get; set; }
+    public virtual DbSet<ReportType> ReportTypes { get; set; }
 
     public virtual DbSet<review> reviews { get; set; }
 
@@ -626,14 +626,14 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.reporter).WithMany(p => p.reports).HasConstraintName("reports_reporter_id_fkey");
         });
 
-        modelBuilder.Entity<report_type>(entity =>
+        modelBuilder.Entity<ReportType>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("report_types_pkey");
+            entity.HasKey(e => e.Id).HasName("report_types_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<review>(entity =>
