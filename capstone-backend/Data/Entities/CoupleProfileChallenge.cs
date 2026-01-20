@@ -6,29 +6,29 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class couple_profile_challenge
+public partial class CoupleProfileChallenge
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int couple_id { get; set; }
+    public int CoupleId { get; set; }
 
-    public int challenge_id { get; set; }
+    public int ChallengeId { get; set; }
 
-    public int? current_progress { get; set; }
+    public int? CurrentProgress { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
     [Column(TypeName = "jsonb")]
-    public string? completed_member_ids { get; set; }
+    public string? CompletedMemberIds { get; set; }
 
-    public DateTime? completed_at { get; set; }
+    public DateTime? CompletedAt { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
     [ForeignKey("challenge_id")]
     [InverseProperty("couple_profile_challenges")]

@@ -35,5 +35,5 @@ public partial class Challenge
     public bool? IsDeleted { get; set; }
 
     [InverseProperty("challenge")]
-    public virtual ICollection<couple_profile_challenge> couple_profile_challenges { get; set; } = new List<couple_profile_challenge>();
+    public virtual ICollection<CoupleProfileChallenge> couple_profile_challenges { get; set; } = new List<CoupleProfileChallenge>();
 }

@@ -42,7 +42,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<CoupleProfile> CoupleProfiles { get; set; }
 
-    public virtual DbSet<couple_profile_challenge> couple_profile_challenges { get; set; }
+    public virtual DbSet<CoupleProfileChallenge> CoupleProfileChallenges { get; set; }
 
     public virtual DbSet<date_plan> date_plans { get; set; }
 
@@ -363,15 +363,15 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("couple_profiles_member_id_2_fkey");
         });
 
-        modelBuilder.Entity<couple_profile_challenge>(entity =>
+        modelBuilder.Entity<CoupleProfileChallenge>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("couple_profile_challenges_pkey");
+            entity.HasKey(e => e.Id).HasName("couple_profile_challenges_pkey");
 
-            entity.Property(e => e.completed_member_ids).HasDefaultValueSql("'[]'::jsonb");
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.current_progress).HasDefaultValue(0);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CompletedMemberIds).HasDefaultValueSql("'[]'::jsonb");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.CurrentProgress).HasDefaultValue(0);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.challenge).WithMany(p => p.couple_profile_challenges).HasConstraintName("couple_profile_challenges_challenge_id_fkey");
 
