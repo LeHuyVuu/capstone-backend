@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.TestPlatform.TestHost;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -22,7 +23,7 @@ namespace capstone_backend.tests.IntegrationTests.Database
             var services = new ServiceCollection();
             services.AddDbContext<MyDbContext>(options =>
             {
-                options.UseNpgsql(conn);
+                options.UseNpgsql(conn).UseSnakeCaseNamingConvention();
             });
 
             _services = services.BuildServiceProvider();
@@ -34,29 +35,43 @@ namespace capstone_backend.tests.IntegrationTests.Database
             using var scope = _services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<MyDbContext>();
 
-            var entities = db.Model.GetEntityTypes()
-                .Where(e => !e.IsOwned())
-                .Where(e => e.GetTableName() != null);
+            // Lấy tất cả Entity có trong DbContext
+            var entityTypes = db.Model.GetEntityTypes()
+                .Where(e => !e.IsOwned())         // Bỏ qua Owned Type (Value Object)
+                .Where(e => e.GetTableName() != null) // Bỏ qua mấy cái không có bảng
+                .Where(e => e.ClrType != null);   // Bỏ qua Shadow Entities không có class C#
 
-            foreach (var entity in entities)
+            foreach (var entity in entityTypes)
             {
-                var table = entity.GetTableName();
-                var schema = entity.GetSchema() ?? "public";
+                // Bỏ qua bảng join many-many nếu nó không có class đại diện (tùy logic của mày)
+                if (entity.GetTableName() == "collectionvenue_location")
+                    continue;
 
-                if (table == "collectionvenue_location")
-                    break; // Skip join table
-
-                var sql = $@"SELECT * FROM ""{schema}"".""{table}"" LIMIT 1";
+                // --- MAGIC CỦA REFLECTION ---
+                // Mục đích: Gọi hàm CheckEntity<T>(db) với T là kiểu của entity hiện tại
+                var method = this.GetType()
+                    .GetMethod(nameof(CheckEntity), BindingFlags.NonPublic | BindingFlags.Instance)!
+                    .MakeGenericMethod(entity.ClrType);
 
                 try
                 {
-                    await db.Database.ExecuteSqlRawAsync(sql);
+                    // Invoke hàm CheckEntity
+                    await (Task)method.Invoke(this, new object[] { db })!;
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception($"Failed to query table {schema}.{table}: {ex.Message}", ex);
+                    // Lỗi sẽ nổ ra ở đây nếu tên cột không khớp
+                    // ex.InnerException thường chứa message "Column ... does not exist"
+                    throw new Exception($"[ERROR] Error Mapping Table '{entity.GetTableName()}' (Class: {entity.ClrType.Name}): {ex.InnerException?.Message ?? ex.Message}", ex);
                 }
             }
+        }
+
+        // Helper method: Ép EF Core thực hiện query SELECT mapping
+        private async Task CheckEntity<T>(MyDbContext db) where T : class
+        {
+            // AsNoTracking để nhẹ gánh, FirstOrDefaultAsync để gen SQL
+            await db.Set<T>().AsNoTracking().FirstOrDefaultAsync();
         }
     }
 }

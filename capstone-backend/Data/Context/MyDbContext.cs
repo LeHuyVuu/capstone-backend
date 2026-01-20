@@ -162,7 +162,7 @@ public partial class MyDbContext : DbContext
 
         modelBuilder.Entity<Advertisement>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("advertisements_pkey");
+            entity.HasKey(e => e.Id).HasName("advertisements_pkey");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);

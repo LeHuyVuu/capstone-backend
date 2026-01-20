@@ -9,7 +9,7 @@ namespace capstone_backend.Data.Entities;
 public partial class Advertisement
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
     public int VenueOwnerId { get; set; }
 
