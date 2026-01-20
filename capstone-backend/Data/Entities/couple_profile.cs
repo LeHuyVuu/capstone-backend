@@ -50,7 +50,7 @@ public partial class couple_profile
 
     [ForeignKey("couple_mood_type_id")]
     [InverseProperty("couple_profiles")]
-    public virtual couple_mood_type? couple_mood_type { get; set; }
+    public virtual CoupleMoodType? couple_mood_type { get; set; }
 
     [ForeignKey("couple_personality_type_id")]
     [InverseProperty("couple_profiles")]

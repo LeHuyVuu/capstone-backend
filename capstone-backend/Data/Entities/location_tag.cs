@@ -23,7 +23,7 @@ public partial class location_tag
 
     [ForeignKey("couple_mood_type_id")]
     [InverseProperty("location_tags")]
-    public virtual couple_mood_type? couple_mood_type { get; set; }
+    public virtual CoupleMoodType? couple_mood_type { get; set; }
 
     [ForeignKey("couple_personality_type_id")]
     [InverseProperty("location_tags")]

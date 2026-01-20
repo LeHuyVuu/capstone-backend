@@ -36,7 +36,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<CoupleMoodLog> CoupleMoodLogs { get; set; }
 
-    public virtual DbSet<couple_mood_type> couple_mood_types { get; set; }
+    public virtual DbSet<CoupleMoodType> CoupleMoodTypes { get; set; }
 
     public virtual DbSet<couple_personality_type> couple_personality_types { get; set; }
 
@@ -317,14 +317,14 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("couple_mood_logs_couple_mood_type_id_fkey");
         });
 
-        modelBuilder.Entity<couple_mood_type>(entity =>
+        modelBuilder.Entity<CoupleMoodType>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("couple_mood_types_pkey");
+            entity.HasKey(e => e.Id).HasName("couple_mood_types_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<couple_personality_type>(entity =>
