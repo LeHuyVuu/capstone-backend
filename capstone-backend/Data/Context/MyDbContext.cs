@@ -28,7 +28,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<CheckInHistory> CheckInHistories { get; set; }
 
-    public virtual DbSet<collection> collections { get; set; }
+    public virtual DbSet<Collection> Collections { get; set; }
 
     public virtual DbSet<comment> comments { get; set; }
 
@@ -240,13 +240,13 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("check_in_histories_venue_id_fkey");
         });
 
-        modelBuilder.Entity<collection>(entity =>
+        modelBuilder.Entity<Collection>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("collections_pkey");
+            entity.HasKey(e => e.Id).HasName("collections_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.member).WithMany(p => p.collections)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -258,7 +258,7 @@ public partial class MyDbContext : DbContext
                     r => r.HasOne<venue_location>().WithMany()
                         .HasForeignKey("venue_id")
                         .HasConstraintName("collection_venue_locations_venue_id_fkey"),
-                    l => l.HasOne<collection>().WithMany()
+                    l => l.HasOne<Collection>().WithMany()
                         .HasForeignKey("collection_id")
                         .HasConstraintName("collection_venue_locations_collection_id_fkey"),
                     j =>

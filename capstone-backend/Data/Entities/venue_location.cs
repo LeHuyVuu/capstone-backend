@@ -88,5 +88,5 @@ public partial class venue_location
 
     [ForeignKey("venue_id")]
     [InverseProperty("venues")]
-    public virtual ICollection<collection> collections { get; set; } = new List<collection>();
+    public virtual ICollection<Collection> collections { get; set; } = new List<Collection>();
 }

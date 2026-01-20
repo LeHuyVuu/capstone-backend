@@ -64,7 +64,7 @@ public partial class member_profile
     public virtual ICollection<CheckInHistory> check_in_histories { get; set; } = new List<CheckInHistory>();
 
     [InverseProperty("member")]
-    public virtual ICollection<collection> collections { get; set; } = new List<collection>();
+    public virtual ICollection<Collection> collections { get; set; } = new List<Collection>();
 
     [InverseProperty("member")]
     public virtual ICollection<comment_like> comment_likes { get; set; } = new List<comment_like>();

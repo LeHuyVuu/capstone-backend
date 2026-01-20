@@ -6,24 +6,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class collection
+public partial class Collection
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int member_id { get; set; }
+    public int MemberId { get; set; }
 
-    public string? collection_name { get; set; }
+    public string? CollectionName { get; set; }
 
-    public string? description { get; set; }
+    public string? Description { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
     [ForeignKey("member_id")]
     [InverseProperty("collections")]
