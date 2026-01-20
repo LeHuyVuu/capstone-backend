@@ -31,5 +31,5 @@ public partial class question_answer
 
     [ForeignKey("question_id")]
     [InverseProperty("question_answers")]
-    public virtual question question { get; set; } = null!;
+    public virtual Question question { get; set; } = null!;
 }

@@ -29,5 +29,5 @@ public partial class test_type
     public virtual ICollection<PersonalityTest> personality_tests { get; set; } = new List<PersonalityTest>();
 
     [InverseProperty("test_type")]
-    public virtual ICollection<question> questions { get; set; } = new List<question>();
+    public virtual ICollection<Question> questions { get; set; } = new List<Question>();
 }

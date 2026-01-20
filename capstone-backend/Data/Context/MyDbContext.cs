@@ -74,7 +74,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<PersonalityTest> PersonalityTests { get; set; }
 
-    public virtual DbSet<question> questions { get; set; }
+    public virtual DbSet<Question> Questions { get; set; }
 
     public virtual DbSet<question_answer> question_answers { get; set; }
 
@@ -577,15 +577,15 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("personality_tests_test_type_id_fkey");
         });
 
-        modelBuilder.Entity<question>(entity =>
+        modelBuilder.Entity<Question>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("questions_pkey");
+            entity.HasKey(e => e.Id).HasName("questions_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.order_index).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.OrderIndex).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.test_type).WithMany(p => p.questions).HasConstraintName("questions_test_type_id_fkey");
         });
