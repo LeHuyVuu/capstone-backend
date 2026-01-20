@@ -30,5 +30,5 @@ public partial class AdsOrder
 
     [ForeignKey("package_id")]
     [InverseProperty("ads_orders")]
-    public virtual advertisement_package package { get; set; } = null!;
+    public virtual AdvertisementPackage package { get; set; } = null!;
 }

@@ -18,7 +18,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Advertisement> Advertisements { get; set; }
 
-    public virtual DbSet<advertisement_package> advertisement_packages { get; set; }
+    public virtual DbSet<AdvertisementPackage> AdvertisementPackages { get; set; }
 
     public virtual DbSet<blog> blogs { get; set; }
 
@@ -173,15 +173,15 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("advertisements_venue_owner_id_fkey");
         });
 
-        modelBuilder.Entity<advertisement_package>(entity =>
+        modelBuilder.Entity<AdvertisementPackage>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("advertisement_packages_pkey");
+            entity.HasKey(e => e.Id).HasName("advertisement_packages_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.priority_score).HasDefaultValue(1);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.PriorityScore).HasDefaultValue(1);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<blog>(entity =>
