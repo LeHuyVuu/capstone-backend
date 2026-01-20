@@ -54,7 +54,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<LocationFollower> LocationFollowers { get; set; }
 
-    public virtual DbSet<location_tag> location_tags { get; set; }
+    public virtual DbSet<LocationTag> LocationTags { get; set; }
 
     public virtual DbSet<Media> Media { get; set; }
 
@@ -446,13 +446,13 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 
-        modelBuilder.Entity<location_tag>(entity =>
+        modelBuilder.Entity<LocationTag>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("location_tags_pkey");
+            entity.HasKey(e => e.Id).HasName("location_tags_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.couple_mood_type).WithMany(p => p.location_tags).HasConstraintName("location_tags_couple_mood_type_id_fkey");
 

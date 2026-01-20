@@ -6,20 +6,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class location_tag
+public partial class LocationTag
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int? couple_mood_type_id { get; set; }
+    public int? CoupleMoodTypeId { get; set; }
 
-    public int? couple_personality_type_id { get; set; }
+    public int? CouplePersonalityTypeId { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
     [ForeignKey("couple_mood_type_id")]
     [InverseProperty("location_tags")]

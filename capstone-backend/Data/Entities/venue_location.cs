@@ -71,7 +71,7 @@ public partial class venue_location
 
     [ForeignKey("location_tag_id")]
     [InverseProperty("venue_locations")]
-    public virtual location_tag? location_tag { get; set; }
+    public virtual LocationTag? location_tag { get; set; }
 
     [InverseProperty("venue")]
     public virtual ICollection<review> reviews { get; set; } = new List<review>();

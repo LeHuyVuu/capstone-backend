@@ -30,5 +30,5 @@ public partial class CoupleMoodType
     public virtual ICollection<CoupleProfile> couple_profiles { get; set; } = new List<CoupleProfile>();
 
     [InverseProperty("couple_mood_type")]
-    public virtual ICollection<location_tag> location_tags { get; set; } = new List<location_tag>();
+    public virtual ICollection<LocationTag> location_tags { get; set; } = new List<LocationTag>();
 }
