@@ -85,23 +85,27 @@ public class EmotionController : BaseController
             // Chuyển đổi kết quả sang DTO dễ hiểu
             var results = faces.Select(face =>
             {
-                var dominantEmotion = _emotionService.GetDominantEmotion(face);
+                var dominantEmotion = _emotionService.GetDominantEmotion(face);       // HAPPY, SAD,...
+                var dominantEmotionVi = _emotionService.MapEmotionToVietnamese(dominantEmotion);
 
                 return new FaceEmotionResponse
                 {
-                    DominantEmotion = dominantEmotion,
+                    DominantEmotion = dominantEmotionVi,                              // Vui, Buồn,...
                     EmotionSentence = _emotionService.GetEmotionSentence(dominantEmotion),
                     AllEmotions = _emotionService.GetAllEmotions(face),
                     AgeRange = $"{face.AgeRange.Low}-{face.AgeRange.High}",
                     Gender = face.Gender?.Value ?? "Unknown",
-                    GenderConfidence = face.Gender?.Confidence != null 
-                        ? Math.Round((decimal)face.Gender.Confidence, 2) : 0,
+                    GenderConfidence = face.Gender?.Confidence != null
+                        ? Math.Round((decimal)face.Gender.Confidence, 2)
+                        : 0,
                     HasSunglasses = face.Sunglasses?.Value ?? false,
                     IsSmiling = face.Smile?.Value ?? false,
-                    SmileConfidence = face.Smile?.Confidence != null 
-                        ? Math.Round((decimal)face.Smile.Confidence, 2) : 0
+                    SmileConfidence = face.Smile?.Confidence != null
+                        ? Math.Round((decimal)face.Smile.Confidence, 2)
+                        : 0
                 };
             }).ToList();
+
 
 
             var totalTime = (DateTime.UtcNow - startTime).TotalMilliseconds;

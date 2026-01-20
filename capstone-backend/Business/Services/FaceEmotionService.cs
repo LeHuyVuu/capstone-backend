@@ -158,5 +158,23 @@ public class FaceEmotionService
             _ => "Tụi mình chưa đoán rõ cảm xúc của bạn, nhưng bạn vẫn dễ thương lắm ✨"
         };
     }
+    
+    public string MapEmotionToVietnamese(string emotion)
+    {
+        return emotion switch
+        {
+            "HAPPY" => "Vui",
+            "SAD" => "Buồn",
+            "ANGRY" => "Tức giận",
+            "SURPRISED" => "Bất ngờ",
+            "CONFUSED" => "Bối rối",
+            "DISGUSTED" => "Khó chịu",
+            "CALM" => "Bình tĩnh",
+            "FEAR" => "Sợ hãi",
+            _ => "Không xác định"
+        };
+    }
+
+
 
 }
