@@ -27,7 +27,7 @@ public partial class location_tag
 
     [ForeignKey("couple_personality_type_id")]
     [InverseProperty("location_tags")]
-    public virtual couple_personality_type? couple_personality_type { get; set; }
+    public virtual CouplePersonalityType? couple_personality_type { get; set; }
 
     [InverseProperty("location_tag")]
     public virtual ICollection<venue_location> venue_locations { get; set; } = new List<venue_location>();

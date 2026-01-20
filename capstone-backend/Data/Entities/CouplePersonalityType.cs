@@ -6,22 +6,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class couple_personality_type
+public partial class CouplePersonalityType
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public string? name { get; set; }
+    public string? Name { get; set; }
 
-    public string? description { get; set; }
+    public string? Description { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
-    public bool? is_active { get; set; }
+    public bool? IsActive { get; set; }
 
     [InverseProperty("couple_personality_type")]
     public virtual ICollection<couple_profile> couple_profiles { get; set; } = new List<couple_profile>();

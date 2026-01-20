@@ -54,7 +54,7 @@ public partial class couple_profile
 
     [ForeignKey("couple_personality_type_id")]
     [InverseProperty("couple_profiles")]
-    public virtual couple_personality_type? couple_personality_type { get; set; }
+    public virtual CouplePersonalityType? couple_personality_type { get; set; }
 
     [InverseProperty("couple")]
     public virtual ICollection<couple_profile_challenge> couple_profile_challenges { get; set; } = new List<couple_profile_challenge>();
