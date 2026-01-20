@@ -108,7 +108,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<VenueOwnerProfile> VenueOwnerProfiles { get; set; }
 
-    public virtual DbSet<venue_subscription_package> VenueSubscriptionPackages { get; set; }
+    public virtual DbSet<VenueSubscriptionPackage> VenueSubscriptionPackages { get; set; }
 
     public virtual DbSet<voucher> Vouchers { get; set; }
 
@@ -800,12 +800,12 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("venue_owner_profiles_user_id_fkey");
         });
 
-        modelBuilder.Entity<venue_subscription_package>(entity =>
+        modelBuilder.Entity<VenueSubscriptionPackage>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("venue_subscription_packages_pkey");
+            entity.HasKey(e => e.Id).HasName("venue_subscription_packages_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.package).WithMany(p => p.venue_subscription_packages)
                 .OnDelete(DeleteBehavior.ClientSetNull)

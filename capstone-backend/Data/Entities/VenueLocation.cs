@@ -84,7 +84,7 @@ public partial class VenueLocation
     public virtual VenueOwnerProfile venue_owner { get; set; } = null!;
 
     [InverseProperty("venue")]
-    public virtual ICollection<venue_subscription_package> venue_subscription_packages { get; set; } = new List<venue_subscription_package>();
+    public virtual ICollection<VenueSubscriptionPackage> venue_subscription_packages { get; set; } = new List<VenueSubscriptionPackage>();
 
     [ForeignKey("venue_id")]
     [InverseProperty("venues")]

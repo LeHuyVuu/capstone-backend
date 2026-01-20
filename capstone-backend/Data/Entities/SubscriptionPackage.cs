@@ -34,5 +34,5 @@ public partial class SubscriptionPackage
     public virtual ICollection<MemberSubscriptionPackage> member_subscription_packages { get; set; } = new List<MemberSubscriptionPackage>();
 
     [InverseProperty("package")]
-    public virtual ICollection<venue_subscription_package> venue_subscription_packages { get; set; } = new List<venue_subscription_package>();
+    public virtual ICollection<VenueSubscriptionPackage> venue_subscription_packages { get; set; } = new List<VenueSubscriptionPackage>();
 }

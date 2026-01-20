@@ -6,25 +6,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-[Index("venue_id", "status", Name = "idx_venue_sub_package")]
-public partial class venue_subscription_package
+[Index("VenueId", "status", Name = "idx_venue_sub_package")]
+public partial class VenueSubscriptionPackage
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int venue_id { get; set; }
+    public int VenueId { get; set; }
 
-    public int package_id { get; set; }
+    public int PackageId { get; set; }
 
-    public DateTime? start_date { get; set; }
+    public DateTime? StartDate { get; set; }
 
-    public DateTime? end_date { get; set; }
+    public DateTime? EndDate { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
     [ForeignKey("package_id")]
     [InverseProperty("venue_subscription_packages")]
