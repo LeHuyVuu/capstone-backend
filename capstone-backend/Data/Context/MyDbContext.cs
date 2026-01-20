@@ -56,7 +56,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<location_tag> location_tags { get; set; }
 
-    public virtual DbSet<medium> media { get; set; }
+    public virtual DbSet<Media> Media { get; set; }
 
     public virtual DbSet<member_accessory> member_accessories { get; set; }
 
@@ -459,13 +459,13 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.couple_personality_type).WithMany(p => p.location_tags).HasConstraintName("location_tags_couple_personality_type_id_fkey");
         });
 
-        modelBuilder.Entity<medium>(entity =>
+        modelBuilder.Entity<Media>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("media_pkey");
+            entity.HasKey(e => e.Id).HasName("media_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<member_accessory>(entity =>
