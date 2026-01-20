@@ -32,7 +32,7 @@ public partial class couple_profile_challenge
 
     [ForeignKey("challenge_id")]
     [InverseProperty("couple_profile_challenges")]
-    public virtual challenge challenge { get; set; } = null!;
+    public virtual Challenge challenge { get; set; } = null!;
 
     [ForeignKey("couple_id")]
     [InverseProperty("couple_profile_challenges")]

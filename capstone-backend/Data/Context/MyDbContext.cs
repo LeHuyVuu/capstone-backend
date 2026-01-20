@@ -24,7 +24,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<BlogLike> BlogLikes { get; set; }
 
-    public virtual DbSet<challenge> challenges { get; set; }
+    public virtual DbSet<Challenge> Challenges { get; set; }
 
     public virtual DbSet<check_in_history> check_in_histories { get; set; }
 
@@ -214,14 +214,14 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("blog_likes_member_id_fkey");
         });
 
-        modelBuilder.Entity<challenge>(entity =>
+        modelBuilder.Entity<Challenge>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("challenges_pkey");
+            entity.HasKey(e => e.Id).HasName("challenges_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.reward_points).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.RewardPoints).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<check_in_history>(entity =>
