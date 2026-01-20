@@ -33,7 +33,7 @@ public partial class Blog
     public bool? IsDeleted { get; set; }
 
     [InverseProperty("blog")]
-    public virtual ICollection<blog_like> blog_likes { get; set; } = new List<blog_like>();
+    public virtual ICollection<BlogLike> blog_likes { get; set; } = new List<BlogLike>();
 
     [InverseProperty("blog")]
     public virtual ICollection<comment> comments { get; set; } = new List<comment>();

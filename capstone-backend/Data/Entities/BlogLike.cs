@@ -6,16 +6,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class blog_like
+public partial class BlogLike
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int? blog_id { get; set; }
+    public int? BlogId { get; set; }
 
-    public int? member_id { get; set; }
+    public int? MemberId { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
     [ForeignKey("blog_id")]
     [InverseProperty("blog_likes")]

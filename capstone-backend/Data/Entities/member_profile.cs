@@ -55,7 +55,7 @@ public partial class member_profile
     public bool? is_deleted { get; set; }
 
     [InverseProperty("member")]
-    public virtual ICollection<blog_like> blog_likes { get; set; } = new List<blog_like>();
+    public virtual ICollection<BlogLike> blog_likes { get; set; } = new List<BlogLike>();
 
     [InverseProperty("member")]
     public virtual ICollection<Blog> blogs { get; set; } = new List<Blog>();

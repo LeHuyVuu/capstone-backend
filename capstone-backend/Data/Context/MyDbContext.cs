@@ -22,7 +22,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Blog> Blogs { get; set; }
 
-    public virtual DbSet<blog_like> blog_likes { get; set; }
+    public virtual DbSet<BlogLike> BlogLikes { get; set; }
 
     public virtual DbSet<challenge> challenges { get; set; }
 
@@ -199,11 +199,11 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("blogs_member_id_fkey");
         });
 
-        modelBuilder.Entity<blog_like>(entity =>
+        modelBuilder.Entity<BlogLike>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("blog_likes_pkey");
+            entity.HasKey(e => e.Id).HasName("blog_likes_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.blog).WithMany(p => p.blog_likes)
                 .OnDelete(DeleteBehavior.Cascade)
