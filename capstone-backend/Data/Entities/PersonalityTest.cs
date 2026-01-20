@@ -36,5 +36,5 @@ public partial class PersonalityTest
 
     [ForeignKey("test_type_id")]
     [InverseProperty("personality_tests")]
-    public virtual test_type test_type { get; set; } = null!;
+    public virtual TestType test_type { get; set; } = null!;
 }

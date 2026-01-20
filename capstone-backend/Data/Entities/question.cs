@@ -32,5 +32,5 @@ public partial class Question
 
     [ForeignKey("test_type_id")]
     [InverseProperty("questions")]
-    public virtual test_type test_type { get; set; } = null!;
+    public virtual TestType test_type { get; set; } = null!;
 }

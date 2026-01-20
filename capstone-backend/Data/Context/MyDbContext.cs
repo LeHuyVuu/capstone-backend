@@ -94,7 +94,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<SubscriptionPackage> SubscriptionPackages { get; set; }
 
-    public virtual DbSet<test_type> TestTypes { get; set; }
+    public virtual DbSet<TestType> TestTypes { get; set; }
 
     public virtual DbSet<top_search> TopSearches { get; set; }
 
@@ -703,15 +703,15 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<test_type>(entity =>
+        modelBuilder.Entity<TestType>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("test_types_pkey");
+            entity.HasKey(e => e.Id).HasName("test_types_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.total_questions).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.TotalQuestions).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<top_search>(entity =>
