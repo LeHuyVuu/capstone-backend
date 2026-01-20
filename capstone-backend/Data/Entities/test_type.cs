@@ -26,7 +26,7 @@ public partial class test_type
     public bool? is_active { get; set; }
 
     [InverseProperty("test_type")]
-    public virtual ICollection<personality_test> personality_tests { get; set; } = new List<personality_test>();
+    public virtual ICollection<PersonalityTest> personality_tests { get; set; } = new List<PersonalityTest>();
 
     [InverseProperty("test_type")]
     public virtual ICollection<question> questions { get; set; } = new List<question>();

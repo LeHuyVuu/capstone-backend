@@ -92,7 +92,7 @@ public partial class MemberProfile
     public virtual MoodType? mood_types { get; set; }
 
     [InverseProperty("member")]
-    public virtual ICollection<personality_test> personality_tests { get; set; } = new List<personality_test>();
+    public virtual ICollection<PersonalityTest> personality_tests { get; set; } = new List<PersonalityTest>();
 
     [InverseProperty("reporter")]
     public virtual ICollection<report> reports { get; set; } = new List<report>();

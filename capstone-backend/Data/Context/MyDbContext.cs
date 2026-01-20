@@ -72,7 +72,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<OwnerMember> OwnerMembers { get; set; }
 
-    public virtual DbSet<personality_test> personality_tests { get; set; }
+    public virtual DbSet<PersonalityTest> PersonalityTests { get; set; }
 
     public virtual DbSet<question> questions { get; set; }
 
@@ -562,13 +562,13 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 
-        modelBuilder.Entity<personality_test>(entity =>
+        modelBuilder.Entity<PersonalityTest>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("personality_tests_pkey");
+            entity.HasKey(e => e.Id).HasName("personality_tests_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.member).WithMany(p => p.personality_tests).HasConstraintName("personality_tests_member_id_fkey");
 

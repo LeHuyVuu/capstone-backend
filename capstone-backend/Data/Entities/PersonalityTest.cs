@@ -6,29 +6,29 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class personality_test
+public partial class PersonalityTest
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int member_id { get; set; }
+    public int MemberId { get; set; }
 
-    public int test_type_id { get; set; }
+    public int TestTypeId { get; set; }
 
-    public string? result_code { get; set; }
+    public string? ResultCode { get; set; }
 
     [Column(TypeName = "jsonb")]
-    public string? result_data { get; set; }
+    public string? ResultData { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
-    public DateTime? taken_at { get; set; }
+    public DateTime? TakenAt { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
     [ForeignKey("member_id")]
     [InverseProperty("personality_tests")]
