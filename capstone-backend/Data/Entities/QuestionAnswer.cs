@@ -6,16 +6,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class Question
+public partial class QuestionAnswer
 {
     [Key]
     public int Id { get; set; }
 
-    public int TestTypeId { get; set; }
+    public int QuestionId { get; set; }
 
-    public string Content { get; set; } = null!;
+    public string AnswerContent { get; set; } = null!;
 
-    public string? AnswerType { get; set; }
+    public string? ScoreKey { get; set; }
+
+    public int? ScoreValue { get; set; }
 
     public int? OrderIndex { get; set; }
 
@@ -27,10 +29,7 @@ public partial class Question
 
     public bool? IsActive { get; set; }
 
-    [InverseProperty("question")]
-    public virtual ICollection<QuestionAnswer> question_answers { get; set; } = new List<QuestionAnswer>();
-
-    [ForeignKey("test_type_id")]
-    [InverseProperty("questions")]
-    public virtual test_type test_type { get; set; } = null!;
+    [ForeignKey("question_id")]
+    [InverseProperty("question_answers")]
+    public virtual Question question { get; set; } = null!;
 }
