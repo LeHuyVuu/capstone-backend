@@ -70,7 +70,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Notification> Notifications { get; set; }
 
-    public virtual DbSet<owner_member> owner_members { get; set; }
+    public virtual DbSet<OwnerMember> OwnerMembers { get; set; }
 
     public virtual DbSet<personality_test> personality_tests { get; set; }
 
@@ -553,13 +553,13 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.user).WithMany(p => p.notifications).HasConstraintName("notifications_user_id_fkey");
         });
 
-        modelBuilder.Entity<owner_member>(entity =>
+        modelBuilder.Entity<OwnerMember>(entity =>
         {
-            entity.HasKey(e => new { e.owner_user_id, e.member_user_id }).HasName("owner_members_pkey");
+            entity.HasKey(e => new { e.OwnerUserId, e.MemberUserId }).HasName("owner_members_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.status).HasDefaultValueSql("'ACTIVE'::character varying");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.Status).HasDefaultValueSql("'ACTIVE'::character varying");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 
         modelBuilder.Entity<personality_test>(entity =>
