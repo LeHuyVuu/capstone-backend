@@ -114,7 +114,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<VoucherItem> VoucherItems { get; set; }
 
-    public virtual DbSet<voucher_item_member> VoucherItemMembers { get; set; }
+    public virtual DbSet<VoucherItemMember> VoucherItemMembers { get; set; }
 
     public virtual DbSet<wallet> Wallets { get; set; }
 
@@ -841,14 +841,14 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.voucher_item_member).WithMany(p => p.voucher_items).HasConstraintName("voucher_items_voucher_item_member_id_fkey");
         });
 
-        modelBuilder.Entity<voucher_item_member>(entity =>
+        modelBuilder.Entity<VoucherItemMember>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("voucher_item_members_pkey");
+            entity.HasKey(e => e.Id).HasName("voucher_item_members_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.quantity).HasDefaultValue(1);
-            entity.Property(e => e.total_points_used).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.Quantity).HasDefaultValue(1);
+            entity.Property(e => e.TotalPointsUsed).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.member).WithMany(p => p.voucher_item_members).HasConstraintName("voucher_item_members_member_id_fkey");
         });

@@ -6,22 +6,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class voucher_item_member
+public partial class VoucherItemMember
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int? member_id { get; set; }
+    public int? MemberId { get; set; }
 
-    public int? quantity { get; set; }
+    public int? Quantity { get; set; }
 
-    public int? total_points_used { get; set; }
+    public int? TotalPointsUsed { get; set; }
 
-    public string? note { get; set; }
+    public string? Note { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
     [ForeignKey("member_id")]
     [InverseProperty("voucher_item_members")]

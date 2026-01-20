@@ -31,5 +31,5 @@ public partial class VoucherItem
 
     [ForeignKey("voucher_item_member_id")]
     [InverseProperty("voucher_items")]
-    public virtual voucher_item_member? voucher_item_member { get; set; }
+    public virtual VoucherItemMember? voucher_item_member { get; set; }
 }

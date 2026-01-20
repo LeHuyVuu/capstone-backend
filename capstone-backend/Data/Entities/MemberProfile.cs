@@ -111,5 +111,5 @@ public partial class MemberProfile
     public virtual UserAccount user { get; set; } = null!;
 
     [InverseProperty("member")]
-    public virtual ICollection<voucher_item_member> voucher_item_members { get; set; } = new List<voucher_item_member>();
+    public virtual ICollection<VoucherItemMember> voucher_item_members { get; set; } = new List<VoucherItemMember>();
 }
