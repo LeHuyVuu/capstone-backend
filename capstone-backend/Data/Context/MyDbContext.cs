@@ -88,7 +88,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<ReviewLike> ReviewLikes { get; set; }
 
-    public virtual DbSet<search_history> SearchHistories { get; set; }
+    public virtual DbSet<SearchHistory> SearchHistories { get; set; }
 
     public virtual DbSet<SpecialEvent> SpecialEvents { get; set; }
 
@@ -670,13 +670,13 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("review_likes_review_id_fkey");
         });
 
-        modelBuilder.Entity<search_history>(entity =>
+        modelBuilder.Entity<SearchHistory>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("search_histories_pkey");
+            entity.HasKey(e => e.Id).HasName("search_histories_pkey");
 
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.result_count).HasDefaultValue(0);
-            entity.Property(e => e.searched_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.ResultCount).HasDefaultValue(0);
+            entity.Property(e => e.SearchedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.member).WithMany(p => p.search_histories)
                 .OnDelete(DeleteBehavior.SetNull)

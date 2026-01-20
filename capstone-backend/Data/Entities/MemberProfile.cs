@@ -104,7 +104,7 @@ public partial class MemberProfile
     public virtual ICollection<Review> reviews { get; set; } = new List<Review>();
 
     [InverseProperty("member")]
-    public virtual ICollection<search_history> search_histories { get; set; } = new List<search_history>();
+    public virtual ICollection<SearchHistory> search_histories { get; set; } = new List<SearchHistory>();
 
     [ForeignKey("user_id")]
     [InverseProperty("member_profiles")]
