@@ -78,7 +78,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<QuestionAnswer> QuestionAnswers { get; set; }
 
-    public virtual DbSet<refresh_token> refresh_tokens { get; set; }
+    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public virtual DbSet<report> reports { get; set; }
 
@@ -604,13 +604,13 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.question).WithMany(p => p.question_answers).HasConstraintName("question_answers_question_id_fkey");
         });
 
-        modelBuilder.Entity<refresh_token>(entity =>
+        modelBuilder.Entity<RefreshToken>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("refresh_tokens_pkey");
+            entity.HasKey(e => e.Id).HasName("refresh_tokens_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.user).WithMany(p => p.refresh_tokens).HasConstraintName("refresh_tokens_user_id_fkey");
         });
