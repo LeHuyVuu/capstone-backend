@@ -37,7 +37,7 @@ public partial class Advertisement
     public virtual ICollection<AdsOrder> ads_orders { get; set; } = new List<AdsOrder>();
 
     [InverseProperty("advertisement")]
-    public virtual ICollection<venue_location_advertisement> venue_location_advertisements { get; set; } = new List<venue_location_advertisement>();
+    public virtual ICollection<VenueLocationAdvertisement> venue_location_advertisements { get; set; } = new List<VenueLocationAdvertisement>();
 
     [ForeignKey("venue_owner_id")]
     [InverseProperty("advertisements")]

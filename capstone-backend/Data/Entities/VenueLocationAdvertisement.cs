@@ -6,26 +6,26 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class venue_location_advertisement
+public partial class VenueLocationAdvertisement
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int advertisement_id { get; set; }
+    public int AdvertisementId { get; set; }
 
-    public int venue_id { get; set; }
+    public int VenueId { get; set; }
 
-    public int? priority_score { get; set; }
+    public int? PriorityScore { get; set; }
 
-    public DateTime start_date { get; set; }
+    public DateTime StartDate { get; set; }
 
-    public DateTime end_date { get; set; }
+    public DateTime EndDate { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
     [ForeignKey("advertisement_id")]
     [InverseProperty("venue_location_advertisements")]

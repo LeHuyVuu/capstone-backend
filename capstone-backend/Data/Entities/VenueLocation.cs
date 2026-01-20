@@ -77,7 +77,7 @@ public partial class VenueLocation
     public virtual ICollection<Review> reviews { get; set; } = new List<Review>();
 
     [InverseProperty("venue")]
-    public virtual ICollection<venue_location_advertisement> venue_location_advertisements { get; set; } = new List<venue_location_advertisement>();
+    public virtual ICollection<VenueLocationAdvertisement> venue_location_advertisements { get; set; } = new List<VenueLocationAdvertisement>();
 
     [ForeignKey("venue_owner_id")]
     [InverseProperty("venue_locations")]
