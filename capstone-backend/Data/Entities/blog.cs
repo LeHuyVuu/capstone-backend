@@ -6,31 +6,31 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-[Index("member_id", Name = "idx_blog_member")]
-public partial class blog
+[Index("MemberId", Name = "idx_blog_member")]
+public partial class Blog
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int member_id { get; set; }
+    public int MemberId { get; set; }
 
-    public string? title { get; set; }
+    public string? Title { get; set; }
 
-    public string? content { get; set; }
+    public string? Content { get; set; }
 
-    public int? like_count { get; set; }
+    public int? LikeCount { get; set; }
 
-    public int? comment_count { get; set; }
+    public int? CommentCount { get; set; }
 
-    public string? visibility { get; set; }
+    public string? Visibility { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
     [InverseProperty("blog")]
     public virtual ICollection<blog_like> blog_likes { get; set; } = new List<blog_like>();

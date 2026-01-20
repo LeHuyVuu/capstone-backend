@@ -58,7 +58,7 @@ public partial class member_profile
     public virtual ICollection<blog_like> blog_likes { get; set; } = new List<blog_like>();
 
     [InverseProperty("member")]
-    public virtual ICollection<blog> blogs { get; set; } = new List<blog>();
+    public virtual ICollection<Blog> blogs { get; set; } = new List<Blog>();
 
     [InverseProperty("member")]
     public virtual ICollection<check_in_history> check_in_histories { get; set; } = new List<check_in_history>();

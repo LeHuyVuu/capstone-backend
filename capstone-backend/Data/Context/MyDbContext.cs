@@ -20,7 +20,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<AdvertisementPackage> AdvertisementPackages { get; set; }
 
-    public virtual DbSet<blog> blogs { get; set; }
+    public virtual DbSet<Blog> Blogs { get; set; }
 
     public virtual DbSet<blog_like> blog_likes { get; set; }
 
@@ -184,15 +184,15 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<blog>(entity =>
+        modelBuilder.Entity<Blog>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("blogs_pkey");
+            entity.HasKey(e => e.Id).HasName("blogs_pkey");
 
-            entity.Property(e => e.comment_count).HasDefaultValue(0);
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.like_count).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CommentCount).HasDefaultValue(0);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.LikeCount).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.member).WithMany(p => p.blogs)
                 .OnDelete(DeleteBehavior.ClientSetNull)

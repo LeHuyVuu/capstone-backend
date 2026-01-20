@@ -19,7 +19,7 @@ public partial class blog_like
 
     [ForeignKey("blog_id")]
     [InverseProperty("blog_likes")]
-    public virtual blog? blog { get; set; }
+    public virtual Blog? blog { get; set; }
 
     [ForeignKey("member_id")]
     [InverseProperty("blog_likes")]
