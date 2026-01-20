@@ -84,7 +84,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<ReportType> ReportTypes { get; set; }
 
-    public virtual DbSet<review> reviews { get; set; }
+    public virtual DbSet<Review> Reviews { get; set; }
 
     public virtual DbSet<review_like> review_likes { get; set; }
 
@@ -636,15 +636,15 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<review>(entity =>
+        modelBuilder.Entity<Review>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("reviews_pkey");
+            entity.HasKey(e => e.Id).HasName("reviews_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_anonymous).HasDefaultValue(false);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.like_count).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsAnonymous).HasDefaultValue(false);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.LikeCount).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.member).WithMany(p => p.reviews)
                 .OnDelete(DeleteBehavior.ClientSetNull)

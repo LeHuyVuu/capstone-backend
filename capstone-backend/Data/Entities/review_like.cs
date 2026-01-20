@@ -23,5 +23,5 @@ public partial class review_like
 
     [ForeignKey("review_id")]
     [InverseProperty("review_likes")]
-    public virtual review? review { get; set; }
+    public virtual Review? review { get; set; }
 }
