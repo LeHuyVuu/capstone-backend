@@ -95,7 +95,7 @@ public partial class MemberProfile
     public virtual ICollection<PersonalityTest> personality_tests { get; set; } = new List<PersonalityTest>();
 
     [InverseProperty("reporter")]
-    public virtual ICollection<report> reports { get; set; } = new List<report>();
+    public virtual ICollection<Report> reports { get; set; } = new List<Report>();
 
     [InverseProperty("member")]
     public virtual ICollection<review_like> review_likes { get; set; } = new List<review_like>();
