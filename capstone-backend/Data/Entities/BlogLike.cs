@@ -17,11 +17,11 @@ public partial class BlogLike
 
     public DateTime? CreatedAt { get; set; }
 
-    [ForeignKey("blog_id")]
-    [InverseProperty("blog_likes")]
-    public virtual Blog? blog { get; set; }
+    [ForeignKey("BlogId")]
+    [InverseProperty("BlogLikes")]
+    public virtual Blog? Blog { get; set; }
 
-    [ForeignKey("member_id")]
-    [InverseProperty("blog_likes")]
-    public virtual MemberProfile? member { get; set; }
+    [ForeignKey("MemberId")]
+    [InverseProperty("BlogLikes")]
+    public virtual MemberProfile? Member { get; set; }
 }

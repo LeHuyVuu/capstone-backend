@@ -23,11 +23,11 @@ public partial class CoupleMoodLog
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("couple_id")]
-    [InverseProperty("couple_mood_logs")]
-    public virtual CoupleProfile couple { get; set; } = null!;
+    [ForeignKey("CoupleId")]
+    [InverseProperty("CoupleMoodLogs")]
+    public virtual CoupleProfile Couple { get; set; } = null!;
 
-    [ForeignKey("couple_mood_type_id")]
-    [InverseProperty("couple_mood_logs")]
-    public virtual CoupleMoodType couple_mood_type { get; set; } = null!;
+    [ForeignKey("CoupleMoodTypeId")]
+    [InverseProperty("CoupleMoodLogs")]
+    public virtual CoupleMoodType CoupleMoodType { get; set; } = null!;
 }

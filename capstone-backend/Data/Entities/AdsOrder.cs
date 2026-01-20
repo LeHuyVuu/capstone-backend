@@ -24,11 +24,11 @@ public partial class AdsOrder
 
     public DateTime? UpdatedAt { get; set; }
 
-    [ForeignKey("advertisement_id")]
-    [InverseProperty("ads_orders")]
-    public virtual Advertisement advertisement { get; set; } = null!;
+    [ForeignKey("AdvertisementId")]
+    [InverseProperty("AdsOrders")]
+    public virtual Advertisement Advertisement { get; set; } = null!;
 
-    [ForeignKey("package_id")]
-    [InverseProperty("ads_orders")]
-    public virtual AdvertisementPackage package { get; set; } = null!;
+    [ForeignKey("PackageId")]
+    [InverseProperty("AdsOrders")]
+    public virtual AdvertisementPackage Package { get; set; } = null!;
 }

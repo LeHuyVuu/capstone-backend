@@ -27,7 +27,7 @@ public partial class Report
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("reporter_id")]
-    [InverseProperty("reports")]
-    public virtual MemberProfile? reporter { get; set; }
+    [ForeignKey("ReporterId")]
+    [InverseProperty("Reports")]
+    public virtual MemberProfile? Reporter { get; set; }
 }

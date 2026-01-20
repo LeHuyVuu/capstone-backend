@@ -25,11 +25,11 @@ public partial class MemberSubscriptionPackage
 
     public DateTime? UpdatedAt { get; set; }
 
-    [ForeignKey("member_id")]
-    [InverseProperty("member_subscription_packages")]
-    public virtual MemberProfile member { get; set; } = null!;
+    [ForeignKey("MemberId")]
+    [InverseProperty("MemberSubscriptionPackages")]
+    public virtual MemberProfile Member { get; set; } = null!;
 
-    [ForeignKey("package_id")]
-    [InverseProperty("member_subscription_packages")]
-    public virtual SubscriptionPackage package { get; set; } = null!;
+    [ForeignKey("MemberId")]
+    [InverseProperty("MemberSubscriptionPackages")]
+    public virtual SubscriptionPackage Package { get; set; } = null!;
 }

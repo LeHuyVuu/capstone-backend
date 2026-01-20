@@ -29,11 +29,11 @@ public partial class DatePlanItem
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("date_plan_id")]
-    [InverseProperty("date_plan_items")]
-    public virtual DatePlan date_plan { get; set; } = null!;
+    [ForeignKey("DatePlanId")]
+    [InverseProperty("DatePlanItems")]
+    public virtual DatePlan DatePlan { get; set; } = null!;
 
-    [ForeignKey("venue_location_id")]
-    [InverseProperty("date_plan_items")]
-    public virtual VenueLocation venue_location { get; set; } = null!;
+    [ForeignKey("VenueLocationId")]
+    [InverseProperty("DatePlanItems")]
+    public virtual VenueLocation VenueLocation { get; set; } = null!;
 }

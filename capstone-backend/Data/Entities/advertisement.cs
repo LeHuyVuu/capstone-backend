@@ -33,13 +33,13 @@ public partial class Advertisement
 
     public bool? IsDeleted { get; set; }
 
-    [InverseProperty("advertisement")]
-    public virtual ICollection<AdsOrder> ads_orders { get; set; } = new List<AdsOrder>();
+    [InverseProperty("Advertisement")]
+    public virtual ICollection<AdsOrder> AdsOrders { get; set; } = new List<AdsOrder>();
 
-    [InverseProperty("advertisement")]
-    public virtual ICollection<VenueLocationAdvertisement> venue_location_advertisements { get; set; } = new List<VenueLocationAdvertisement>();
+    [InverseProperty("Advertisement")]
+    public virtual ICollection<VenueLocationAdvertisement> VenueLocationAdvertisements { get; set; } = new List<VenueLocationAdvertisement>();
 
-    [ForeignKey("venue_owner_id")]
-    [InverseProperty("advertisements")]
-    public virtual VenueOwnerProfile venue_owner { get; set; } = null!;
+    [ForeignKey("VenueOwnerId")]
+    [InverseProperty("Advertisements")]
+    public virtual VenueOwnerProfile VenueOwner { get; set; } = null!;
 }

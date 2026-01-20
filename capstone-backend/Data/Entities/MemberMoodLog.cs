@@ -29,11 +29,11 @@ public partial class MemberMoodLog
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("member_id")]
-    [InverseProperty("member_mood_logs")]
-    public virtual MemberProfile member { get; set; } = null!;
+    [ForeignKey("MemberId")]
+    [InverseProperty("MemberMoodLogs")]
+    public virtual MemberProfile Member { get; set; } = null!;
 
-    [ForeignKey("mood_type_id")]
-    [InverseProperty("member_mood_logs")]
-    public virtual MoodType mood_type { get; set; } = null!;
+    [ForeignKey("MoodTypeId")]
+    [InverseProperty("MemberMoodLogs")]
+    public virtual MoodType MoodType { get; set; } = null!;
 }

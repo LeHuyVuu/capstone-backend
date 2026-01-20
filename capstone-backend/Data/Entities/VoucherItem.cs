@@ -25,11 +25,11 @@ public partial class VoucherItem
 
     public DateTime? UpdatedAt { get; set; }
 
-    [ForeignKey("voucher_id")]
-    [InverseProperty("voucher_items")]
-    public virtual Voucher voucher { get; set; } = null!;
+    [ForeignKey("VoucherId")]
+    [InverseProperty("VoucherItems")]
+    public virtual Voucher Voucher { get; set; } = null!;
 
-    [ForeignKey("voucher_item_member_id")]
-    [InverseProperty("voucher_items")]
-    public virtual VoucherItemMember? voucher_item_member { get; set; }
+    [ForeignKey("VoucherItemMemberId")]
+    [InverseProperty("VoucherItems")]
+    public virtual VoucherItemMember? VoucherItemMember { get; set; }
 }

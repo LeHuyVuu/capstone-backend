@@ -25,7 +25,7 @@ public partial class Notification
 
     public DateTime? CreatedAt { get; set; }
 
-    [ForeignKey("user_id")]
-    [InverseProperty("notifications")]
-    public virtual UserAccount user { get; set; } = null!;
+    [ForeignKey("UserId")]
+    [InverseProperty("Notifications")]
+    public virtual UserAccount User { get; set; } = null!;
 }

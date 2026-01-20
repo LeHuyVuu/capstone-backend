@@ -21,11 +21,11 @@ public partial class MemberAccessory
 
     public DateTime? ExpiryAt { get; set; }
 
-    [ForeignKey("accessory_id")]
-    [InverseProperty("member_accessories")]
-    public virtual Accessory? accessory { get; set; }
+    [ForeignKey("AccessoryId")]
+    [InverseProperty("MemberAccessories")]
+    public virtual Accessory? Accessory { get; set; }
 
-    [ForeignKey("member_id")]
-    [InverseProperty("member_accessories")]
-    public virtual MemberProfile? member { get; set; }
+    [ForeignKey("MemberId")]
+    [InverseProperty("MemberAccessories")]
+    public virtual MemberProfile? Member { get; set; }
 }

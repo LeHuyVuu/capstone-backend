@@ -23,7 +23,7 @@ public partial class DeviceToken
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("user_id")]
-    [InverseProperty("device_tokens")]
-    public virtual UserAccount user { get; set; } = null!;
+    [ForeignKey("UserId")]
+    [InverseProperty("DeviceTokens")]
+    public virtual UserAccount User { get; set; } = null!;
 }

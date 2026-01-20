@@ -31,7 +31,7 @@ public partial class WithdrawRequest
 
     public DateTime? UpdatedAt { get; set; }
 
-    [ForeignKey("wallet_id")]
-    [InverseProperty("withdraw_requests")]
-    public virtual Wallet wallet { get; set; } = null!;
+    [ForeignKey("WalletId")]
+    [InverseProperty("WithdrawRequests")]
+    public virtual Wallet Wallet { get; set; } = null!;
 }

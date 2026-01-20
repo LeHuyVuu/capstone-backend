@@ -7,8 +7,8 @@ using Microsoft.EntityFrameworkCore;
 namespace capstone_backend.Data.Entities;
 
 [PrimaryKey("OwnerUserId", "MemberUserId")]
-[Index("MemberUserId", "status", Name = "idx_member_status")]
-[Index("OwnerUserId", "status", Name = "idx_owner_status")]
+[Index("MemberUserId", "Status", Name = "idx_member_status")]
+[Index("OwnerUserId", "Status", Name = "idx_owner_status")]
 public partial class OwnerMember
 {
     [Key]

@@ -21,14 +21,14 @@ public partial class LocationTag
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("couple_mood_type_id")]
-    [InverseProperty("location_tags")]
-    public virtual CoupleMoodType? couple_mood_type { get; set; }
+    [ForeignKey("CoupleMoodTypeId")]
+    [InverseProperty("LocationTags")]
+    public virtual CoupleMoodType? CoupleMoodType { get; set; }
 
-    [ForeignKey("couple_personality_type_id")]
-    [InverseProperty("location_tags")]
-    public virtual CouplePersonalityType? couple_personality_type { get; set; }
+    [ForeignKey("CouplePersonalityTypeId")]
+    [InverseProperty("LocationTags")]
+    public virtual CouplePersonalityType? CouplePersonalityType { get; set; }
 
-    [InverseProperty("location_tag")]
-    public virtual ICollection<VenueLocation> venue_locations { get; set; } = new List<VenueLocation>();
+    [InverseProperty("LocationTag")]
+    public virtual ICollection<VenueLocation> VenueLocations { get; set; } = new List<VenueLocation>();
 }

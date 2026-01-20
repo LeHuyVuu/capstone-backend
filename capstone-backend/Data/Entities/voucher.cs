@@ -45,10 +45,10 @@ public partial class Voucher
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("venue_owner_id")]
-    [InverseProperty("vouchers")]
-    public virtual VenueOwnerProfile? venue_owner { get; set; }
+    [ForeignKey("VenueOwnerId")]
+    [InverseProperty("Vouchers")]
+    public virtual VenueOwnerProfile? VenueOwner { get; set; }
 
-    [InverseProperty("voucher")]
-    public virtual ICollection<VoucherItem> voucher_items { get; set; } = new List<VoucherItem>();
+    [InverseProperty("Voucher")]
+    public virtual ICollection<VoucherItem> VoucherItems { get; set; } = new List<VoucherItem>();
 }

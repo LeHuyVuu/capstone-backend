@@ -27,11 +27,11 @@ public partial class VenueLocationAdvertisement
 
     public DateTime? UpdatedAt { get; set; }
 
-    [ForeignKey("advertisement_id")]
-    [InverseProperty("venue_location_advertisements")]
-    public virtual Advertisement advertisement { get; set; } = null!;
+    [ForeignKey("AdvertisementId")]
+    [InverseProperty("VenueLocationAdvertisements")]
+    public virtual Advertisement Advertisement { get; set; } = null!;
 
-    [ForeignKey("venue_id")]
-    [InverseProperty("venue_location_advertisements")]
-    public virtual VenueLocation venue { get; set; } = null!;
+    [ForeignKey("VenueId")]
+    [InverseProperty("VenueLocationAdvertisements")]
+    public virtual VenueLocation Venue { get; set; } = null!;
 }

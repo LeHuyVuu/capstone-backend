@@ -26,7 +26,7 @@ public partial class SearchHistory
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("member_id")]
-    [InverseProperty("search_histories")]
-    public virtual MemberProfile? member { get; set; }
+    [ForeignKey("MemberId")]
+    [InverseProperty("SearchHistories")]
+    public virtual MemberProfile? Member { get; set; }
 }

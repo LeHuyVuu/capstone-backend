@@ -33,7 +33,7 @@ public class UserRepository : Repository<UserAccount>, IUserRepository
         CancellationToken cancellationToken = default)
     {
         var query = _dbSet
-            .Include(u => u.member_profiles)
+            .Include(u => u.MemberProfiles)
             .AsQueryable();
 
         if (!includeSoftDeleted)
@@ -61,8 +61,8 @@ public class UserRepository : Repository<UserAccount>, IUserRepository
         CancellationToken cancellationToken = default)
     {
         var query = _dbSet
-            .Include(u => u.member_profiles)
-            .Include(u => u.venue_owner_profiles)
+            .Include(u => u.MemberProfiles)
+            .Include(u => u.VenueOwnerProfiles)
             .AsQueryable();
 
         if (!includeSoftDeleted)

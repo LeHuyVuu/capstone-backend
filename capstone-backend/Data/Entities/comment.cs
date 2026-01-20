@@ -31,14 +31,14 @@ public partial class Comment
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("blog_id")]
-    [InverseProperty("comments")]
-    public virtual Blog? blog { get; set; }
+    [ForeignKey("BlogId")]
+    [InverseProperty("Comments")]
+    public virtual Blog? Blog { get; set; }
 
-    [InverseProperty("comment")]
-    public virtual ICollection<CommentLike> comment_likes { get; set; } = new List<CommentLike>();
+    [InverseProperty("Comment")]
+    public virtual ICollection<CommentLike> CommentLikes { get; set; } = new List<CommentLike>();
 
-    [ForeignKey("member_id")]
-    [InverseProperty("comments")]
-    public virtual MemberProfile member { get; set; } = null!;
+    [ForeignKey("MemberId")]
+    [InverseProperty("Comments")]
+    public virtual MemberProfile Member { get; set; } = null!;
 }

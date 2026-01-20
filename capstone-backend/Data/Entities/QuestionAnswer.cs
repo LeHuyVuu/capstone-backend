@@ -29,7 +29,7 @@ public partial class QuestionAnswer
 
     public bool? IsActive { get; set; }
 
-    [ForeignKey("question_id")]
-    [InverseProperty("question_answers")]
-    public virtual Question question { get; set; } = null!;
+    [ForeignKey("QuestionId")]
+    [InverseProperty("QuestionAnswers")]
+    public virtual Question Question { get; set; } = null!;
 }

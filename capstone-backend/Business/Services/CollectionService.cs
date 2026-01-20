@@ -42,7 +42,7 @@ public class CollectionService : ICollectionService
     public async Task<CollectionResponse?> GetCollectionByIdAsync(int collectionId, CancellationToken cancellationToken = default)
     {
         var collection = await _unitOfWork.Context.Set<Collection>()
-            .Include(c => c.venues)
+            .Include(c => c.Venues)
             .FirstOrDefaultAsync(c => c.Id == collectionId && c.IsDeleted != true, cancellationToken);
 
         return collection == null ? null : MapToResponse(collection);
@@ -51,7 +51,7 @@ public class CollectionService : ICollectionService
     public async Task<PagedResult<CollectionResponse>> GetCollectionsByMemberAsync(int memberId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
         var query = _unitOfWork.Context.Set<Collection>()
-            .Include(c => c.venues)
+            .Include(c => c.Venues)
             .Where(c => c.MemberId == memberId && c.IsDeleted != true);
 
         var total = await query.CountAsync(cancellationToken);
@@ -119,7 +119,7 @@ public class CollectionService : ICollectionService
     public async Task<CollectionResponse?> AddVenuesToCollectionAsync(int collectionId, int memberId, PatchCollectionRequest request, CancellationToken cancellationToken = default)
     {
         var collection = await _unitOfWork.Context.Set<Collection>()
-            .Include(c => c.venues)
+            .Include(c => c.Venues)
             .FirstOrDefaultAsync(c => c.Id == collectionId && c.MemberId == memberId && c.IsDeleted != true, cancellationToken);
 
         if (collection == null)
@@ -131,9 +131,9 @@ public class CollectionService : ICollectionService
 
         foreach (var venue in venuesToAdd)
         {
-            if (!collection.venues.Any(v => v.Id == venue.Id))
+            if (!collection.Venues.Any(v => v.Id == venue.Id))
             {
-                collection.venues.Add(venue);
+                collection.Venues.Add(venue);
             }
         }
 
@@ -148,19 +148,19 @@ public class CollectionService : ICollectionService
     public async Task<CollectionResponse?> RemoveVenuesFromCollectionAsync(int collectionId, int memberId, PatchCollectionRequest request, CancellationToken cancellationToken = default)
     {
         var collection = await _unitOfWork.Context.Set<Collection>()
-            .Include(c => c.venues)
+            .Include(c => c.Venues)
             .FirstOrDefaultAsync(c => c.Id == collectionId && c.MemberId == memberId && c.IsDeleted != true, cancellationToken);
 
         if (collection == null)
             return null;
 
-        var venuesToRemove = collection.venues
+        var venuesToRemove = collection.Venues
             .Where(v => request.VenueIds.Contains(v.Id))
             .ToList();
 
         foreach (var venue in venuesToRemove)
         {
-            collection.venues.Remove(venue);
+            collection.Venues.Remove(venue);
         }
 
         collection.UpdatedAt = DateTime.UtcNow;
@@ -182,7 +182,7 @@ public class CollectionService : ICollectionService
             Status = collection.Status,
             CreatedAt = collection.CreatedAt,
             UpdatedAt = collection.UpdatedAt,
-            Venues = collection.venues?.Select(v => new VenueSimpleResponse
+            Venues = collection.Venues?.Select(v => new VenueSimpleResponse
             {
                 Id = v.Id,
                 Name = v.Name,

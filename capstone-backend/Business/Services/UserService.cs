@@ -42,7 +42,7 @@ public class UserService : IUserService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         // Get member profile for gender
-        var memberProfile = user.member_profiles?.FirstOrDefault();
+        var memberProfile = user.MemberProfiles?.FirstOrDefault();
         Console.Write(memberProfile);
         var gender = memberProfile?.Gender ?? string.Empty;
 
@@ -274,8 +274,8 @@ public class UserService : IUserService
     /// </summary>
     private static UserResponse MapToUserResponse(UserAccount user)
     {
-        var memberProfile = user.member_profiles?.FirstOrDefault(p => p.IsDeleted != true);
-        var venueOwnerProfile = user.venue_owner_profiles?.FirstOrDefault(p => p.IsDeleted != true);
+        var memberProfile = user.MemberProfiles?.FirstOrDefault(p => p.IsDeleted != true);
+        var venueOwnerProfile = user.VenueOwnerProfiles?.FirstOrDefault(p => p.IsDeleted != true);
 
         return new UserResponse
         {

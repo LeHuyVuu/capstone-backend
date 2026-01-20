@@ -40,6 +40,6 @@ public partial class Accessory
 
     public string? Status { get; set; }
 
-    [InverseProperty("accessory")]
-    public virtual ICollection<MemberAccessory> member_accessories { get; set; } = new List<MemberAccessory>();
+    [InverseProperty("Accessory")]
+    public virtual ICollection<MemberAccessory> MemberAccessories { get; set; } = new List<MemberAccessory>();
 }

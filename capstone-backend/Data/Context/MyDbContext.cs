@@ -30,6 +30,8 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Collection> Collections { get; set; }
 
+    public virtual DbSet<CollectionVenueLocation> CollectionVenueLocations { get; set; }
+
     public virtual DbSet<Comment> Comments { get; set; }
 
     public virtual DbSet<CommentLike> CommentLikes { get; set; }
@@ -151,11 +153,11 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.advertisement).WithMany(p => p.ads_orders)
+            entity.HasOne(d => d.Advertisement).WithMany(p => p.AdsOrders)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("ads_orders_advertisement_id_fkey");
 
-            entity.HasOne(d => d.package).WithMany(p => p.ads_orders)
+            entity.HasOne(d => d.Package).WithMany(p => p.AdsOrders)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("ads_orders_package_id_fkey");
         });
@@ -168,7 +170,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.venue_owner).WithMany(p => p.advertisements)
+            entity.HasOne(d => d.VenueOwner).WithMany(p => p.Advertisements)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("advertisements_venue_owner_id_fkey");
         });
@@ -194,7 +196,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.LikeCount).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.blogs)
+            entity.HasOne(d => d.Member).WithMany(p => p.Blogs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("blogs_member_id_fkey");
         });
@@ -205,11 +207,11 @@ public partial class MyDbContext : DbContext
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.blog).WithMany(p => p.blog_likes)
+            entity.HasOne(d => d.Blog).WithMany(p => p.BlogLikes)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("blog_likes_blog_id_fkey");
 
-            entity.HasOne(d => d.member).WithMany(p => p.blog_likes)
+            entity.HasOne(d => d.Member).WithMany(p => p.BlogLikes)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("blog_likes_member_id_fkey");
         });
@@ -231,11 +233,11 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.IsValid).HasDefaultValue(true);
 
-            entity.HasOne(d => d.member).WithMany(p => p.check_in_histories)
+            entity.HasOne(d => d.Member).WithMany(p => p.CheckInHistories)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("check_in_histories_member_id_fkey");
 
-            entity.HasOne(d => d.venue).WithMany(p => p.check_in_histories)
+            entity.HasOne(d => d.Venue).WithMany(p => p.CheckInHistories)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("check_in_histories_venue_id_fkey");
         });
@@ -248,24 +250,31 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.collections)
+            entity.HasOne(d => d.Member).WithMany(p => p.Collections)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("collections_member_id_fkey");
 
-            entity.HasMany(d => d.venues).WithMany(p => p.collections)
-                .UsingEntity<Dictionary<string, object>>(
-                    "collection_venue_location",
-                    r => r.HasOne<VenueLocation>().WithMany()
-                        .HasForeignKey("venue_id")
-                        .HasConstraintName("collection_venue_locations_venue_id_fkey"),
-                    l => l.HasOne<Collection>().WithMany()
-                        .HasForeignKey("collection_id")
-                        .HasConstraintName("collection_venue_locations_collection_id_fkey"),
-                    j =>
-                    {
-                        j.HasKey("collection_id", "venue_id").HasName("collection_venue_locations_pkey");
-                        j.ToTable("collection_venue_locations");
-                    });
+            entity.HasMany(d => d.Venues)
+                  .WithMany(p => p.Collections)
+                  .UsingEntity<CollectionVenueLocation>();
+        });
+
+        modelBuilder.Entity<CollectionVenueLocation>(entity =>
+        {
+
+            entity.HasKey(e => e.Id).HasName("collection_venue_locations_pkey");
+
+            entity.HasOne(d => d.Collection)
+                  .WithMany() 
+                  .HasForeignKey(d => d.CollectionId)
+                  .OnDelete(DeleteBehavior.ClientSetNull)
+                  .HasConstraintName("collection_venue_locations_collection_id_fkey");
+
+            entity.HasOne(d => d.Venue)
+                  .WithMany()
+                  .HasForeignKey(d => d.VenueId)
+                  .OnDelete(DeleteBehavior.ClientSetNull)
+                  .HasConstraintName("collection_venue_locations_venue_id_fkey");
         });
 
         modelBuilder.Entity<Comment>(entity =>
@@ -278,11 +287,11 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.LikeCount).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.blog).WithMany(p => p.comments)
+            entity.HasOne(d => d.Blog).WithMany(p => p.Comments)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("comments_blog_id_fkey");
 
-            entity.HasOne(d => d.member).WithMany(p => p.comments)
+            entity.HasOne(d => d.Member).WithMany(p => p.Comments)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("comments_member_id_fkey");
         });
@@ -293,11 +302,11 @@ public partial class MyDbContext : DbContext
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.comment).WithMany(p => p.comment_likes)
+            entity.HasOne(d => d.Comment).WithMany(p => p.CommentLikes)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("comment_likes_comment_id_fkey");
 
-            entity.HasOne(d => d.member).WithMany(p => p.comment_likes)
+            entity.HasOne(d => d.Member).WithMany(p => p.CommentLikes)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("comment_likes_member_id_fkey");
         });
@@ -310,9 +319,9 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.couple).WithMany(p => p.couple_mood_logs).HasConstraintName("couple_mood_logs_couple_id_fkey");
+            entity.HasOne(d => d.Couple).WithMany(p => p.CoupleMoodLogs).HasConstraintName("couple_mood_logs_couple_id_fkey");
 
-            entity.HasOne(d => d.couple_mood_type).WithMany(p => p.couple_mood_logs)
+            entity.HasOne(d => d.CoupleMoodType).WithMany(p => p.CoupleMoodLogs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("couple_mood_logs_couple_mood_type_id_fkey");
         });
@@ -350,15 +359,15 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.TotalPoints).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.couple_mood_type).WithMany(p => p.couple_profiles).HasConstraintName("couple_profiles_couple_mood_type_id_fkey");
+            entity.HasOne(d => d.CoupleMoodType).WithMany(p => p.CoupleProfiles).HasConstraintName("couple_profiles_couple_mood_type_id_fkey");
 
-            entity.HasOne(d => d.couple_personality_type).WithMany(p => p.couple_profiles).HasConstraintName("couple_profiles_couple_personality_type_id_fkey");
+            entity.HasOne(d => d.CouplePersonalityType).WithMany(p => p.CoupleProfiles).HasConstraintName("couple_profiles_couple_personality_type_id_fkey");
 
-            entity.HasOne(d => d.member_id_1Navigation).WithMany(p => p.couple_profilemember_id_1Navigations)
+            entity.HasOne(d => d.MemberId1Navigation).WithMany(p => p.CoupleProfilememberId1Navigations)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("couple_profiles_member_id_1_fkey");
 
-            entity.HasOne(d => d.member_id_2Navigation).WithMany(p => p.couple_profilemember_id_2Navigations)
+            entity.HasOne(d => d.MemberId2Navigation).WithMany(p => p.CoupleProfilememberId2Navigations)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("couple_profiles_member_id_2_fkey");
         });
@@ -373,9 +382,9 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.challenge).WithMany(p => p.couple_profile_challenges).HasConstraintName("couple_profile_challenges_challenge_id_fkey");
+            entity.HasOne(d => d.Challenge).WithMany(p => p.CoupleProfileChallenges).HasConstraintName("couple_profile_challenges_challenge_id_fkey");
 
-            entity.HasOne(d => d.couple).WithMany(p => p.couple_profile_challenges).HasConstraintName("couple_profile_challenges_couple_id_fkey");
+            entity.HasOne(d => d.Couple).WithMany(p => p.CoupleProfileChallenges).HasConstraintName("couple_profile_challenges_couple_id_fkey");
         });
 
         modelBuilder.Entity<DatePlan>(entity =>
@@ -387,7 +396,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.couple).WithMany(p => p.date_plans).HasConstraintName("date_plans_couple_id_fkey");
+            entity.HasOne(d => d.Couple).WithMany(p => p.DatePlans).HasConstraintName("date_plans_couple_id_fkey");
         });
 
         modelBuilder.Entity<DatePlanItem>(entity =>
@@ -399,9 +408,9 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.OrderIndex).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.date_plan).WithMany(p => p.date_plan_items).HasConstraintName("date_plan_items_date_plan_id_fkey");
+            entity.HasOne(d => d.DatePlan).WithMany(p => p.DatePlanItems).HasConstraintName("date_plan_items_date_plan_id_fkey");
 
-            entity.HasOne(d => d.venue_location).WithMany(p => p.date_plan_items)
+            entity.HasOne(d => d.VenueLocation).WithMany(p => p.DatePlanItems)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("date_plan_items_venue_location_id_fkey");
         });
@@ -414,7 +423,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.user).WithMany(p => p.device_tokens).HasConstraintName("device_tokens_user_id_fkey");
+            entity.HasOne(d => d.User).WithMany(p => p.DeviceTokens).HasConstraintName("device_tokens_user_id_fkey");
         });
 
         modelBuilder.Entity<Leaderboard>(entity =>
@@ -424,7 +433,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.TotalPoints).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.couple).WithMany(p => p.leaderboards).HasConstraintName("leaderboards_couple_id_fkey");
+            entity.HasOne(d => d.Couple).WithMany(p => p.Leaderboards).HasConstraintName("leaderboards_couple_id_fkey");
         });
 
         modelBuilder.Entity<LocationFollower>(entity =>
@@ -454,9 +463,9 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.couple_mood_type).WithMany(p => p.location_tags).HasConstraintName("location_tags_couple_mood_type_id_fkey");
+            entity.HasOne(d => d.CoupleMoodType).WithMany(p => p.LocationTags).HasConstraintName("location_tags_couple_mood_type_id_fkey");
 
-            entity.HasOne(d => d.couple_personality_type).WithMany(p => p.location_tags).HasConstraintName("location_tags_couple_personality_type_id_fkey");
+            entity.HasOne(d => d.CouplePersonalityType).WithMany(p => p.LocationTags).HasConstraintName("location_tags_couple_personality_type_id_fkey");
         });
 
         modelBuilder.Entity<Media>(entity =>
@@ -475,11 +484,11 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.AcquiredAt).HasDefaultValueSql("now()");
             entity.Property(e => e.IsEquipped).HasDefaultValue(false);
 
-            entity.HasOne(d => d.accessory).WithMany(p => p.member_accessories)
+            entity.HasOne(d => d.Accessory).WithMany(p => p.MemberAccessories)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("member_accessories_accessory_id_fkey");
 
-            entity.HasOne(d => d.member).WithMany(p => p.member_accessories)
+            entity.HasOne(d => d.Member).WithMany(p => p.MemberAccessories)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("member_accessories_member_id_fkey");
         });
@@ -493,9 +502,9 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsPrivate).HasDefaultValue(false);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.member_mood_logs).HasConstraintName("member_mood_logs_member_id_fkey");
+            entity.HasOne(d => d.Member).WithMany(p => p.MemberMoodLogs).HasConstraintName("member_mood_logs_member_id_fkey");
 
-            entity.HasOne(d => d.mood_type).WithMany(p => p.member_mood_logs)
+            entity.HasOne(d => d.MoodType).WithMany(p => p.MemberMoodLogs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("member_mood_logs_mood_type_id_fkey");
         });
@@ -510,9 +519,9 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.RelationshipStatus).HasDefaultValueSql("'SINGLE'::text");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.mood_types).WithMany(p => p.member_profiles).HasConstraintName("member_profiles_mood_types_id_fkey");
+            entity.HasOne(d => d.MoodTypes).WithMany(p => p.MemberProfiles).HasConstraintName("member_profiles_mood_types_id_fkey");
 
-            entity.HasOne(d => d.user).WithMany(p => p.member_profiles).HasConstraintName("member_profiles_user_id_fkey");
+            entity.HasOne(d => d.User).WithMany(p => p.MemberProfiles).HasConstraintName("member_profiles_user_id_fkey");
         });
 
         modelBuilder.Entity<MemberSubscriptionPackage>(entity =>
@@ -522,11 +531,11 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.member_subscription_packages)
+            entity.HasOne(d => d.Member).WithMany(p => p.MemberSubscriptionPackages)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("member_subscription_packages_member_id_fkey");
 
-            entity.HasOne(d => d.package).WithMany(p => p.member_subscription_packages)
+            entity.HasOne(d => d.Package).WithMany(p => p.MemberSubscriptionPackages)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("member_subscription_packages_package_id_fkey");
         });
@@ -550,7 +559,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.IsRead).HasDefaultValue(false);
 
-            entity.HasOne(d => d.user).WithMany(p => p.notifications).HasConstraintName("notifications_user_id_fkey");
+            entity.HasOne(d => d.User).WithMany(p => p.Notifications).HasConstraintName("notifications_user_id_fkey");
         });
 
         modelBuilder.Entity<OwnerMember>(entity =>
@@ -570,9 +579,9 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.personality_tests).HasConstraintName("personality_tests_member_id_fkey");
+            entity.HasOne(d => d.Member).WithMany(p => p.PersonalityTests).HasConstraintName("personality_tests_member_id_fkey");
 
-            entity.HasOne(d => d.test_type).WithMany(p => p.personality_tests)
+            entity.HasOne(d => d.TestType).WithMany(p => p.PersonalityTests)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("personality_tests_test_type_id_fkey");
         });
@@ -587,7 +596,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.OrderIndex).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.test_type).WithMany(p => p.questions).HasConstraintName("questions_test_type_id_fkey");
+            entity.HasOne(d => d.TestType).WithMany(p => p.Questions).HasConstraintName("questions_test_type_id_fkey");
         });
 
         modelBuilder.Entity<QuestionAnswer>(entity =>
@@ -601,7 +610,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.ScoreValue).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.question).WithMany(p => p.question_answers).HasConstraintName("question_answers_question_id_fkey");
+            entity.HasOne(d => d.Question).WithMany(p => p.QuestionAnswers).HasConstraintName("question_answers_question_id_fkey");
         });
 
         modelBuilder.Entity<RefreshToken>(entity =>
@@ -612,7 +621,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.user).WithMany(p => p.refresh_tokens).HasConstraintName("refresh_tokens_user_id_fkey");
+            entity.HasOne(d => d.User).WithMany(p => p.RefreshTokens).HasConstraintName("refresh_tokens_user_id_fkey");
         });
 
         modelBuilder.Entity<Report>(entity =>
@@ -623,7 +632,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.reporter).WithMany(p => p.reports).HasConstraintName("reports_reporter_id_fkey");
+            entity.HasOne(d => d.Reporter).WithMany(p => p.Reports).HasConstraintName("reports_reporter_id_fkey");
         });
 
         modelBuilder.Entity<ReportType>(entity =>
@@ -646,11 +655,11 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.LikeCount).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.reviews)
+            entity.HasOne(d => d.Member).WithMany(p => p.Reviews)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("reviews_member_id_fkey");
 
-            entity.HasOne(d => d.venue).WithMany(p => p.reviews)
+            entity.HasOne(d => d.Venue).WithMany(p => p.Reviews)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("reviews_venue_id_fkey");
         });
@@ -661,11 +670,11 @@ public partial class MyDbContext : DbContext
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.review_likes)
+            entity.HasOne(d => d.Member).WithMany(p => p.ReviewLikes)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("review_likes_member_id_fkey");
 
-            entity.HasOne(d => d.review).WithMany(p => p.review_likes)
+            entity.HasOne(d => d.Review).WithMany(p => p.ReviewLikes)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("review_likes_review_id_fkey");
         });
@@ -678,7 +687,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.ResultCount).HasDefaultValue(0);
             entity.Property(e => e.SearchedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.search_histories)
+            entity.HasOne(d => d.Member).WithMany(p => p.SearchHistories)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("search_histories_member_id_fkey");
         });
@@ -763,9 +772,9 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.ReviewCount).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.location_tag).WithMany(p => p.venue_locations).HasConstraintName("venue_locations_location_tag_id_fkey");
+            entity.HasOne(d => d.LocationTag).WithMany(p => p.VenueLocations).HasConstraintName("venue_locations_location_tag_id_fkey");
 
-            entity.HasOne(d => d.venue_owner).WithMany(p => p.venue_locations)
+            entity.HasOne(d => d.VenueOwner).WithMany(p => p.VenueLocations)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("venue_locations_venue_owner_id_fkey");
         });
@@ -778,11 +787,11 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.PriorityScore).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.advertisement).WithMany(p => p.venue_location_advertisements)
+            entity.HasOne(d => d.Advertisement).WithMany(p => p.VenueLocationAdvertisements)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("venue_location_advertisements_advertisement_id_fkey");
 
-            entity.HasOne(d => d.venue).WithMany(p => p.venue_location_advertisements)
+            entity.HasOne(d => d.Venue).WithMany(p => p.VenueLocationAdvertisements)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("venue_location_advertisements_venue_id_fkey");
         });
@@ -795,7 +804,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.user).WithMany(p => p.venue_owner_profiles)
+            entity.HasOne(d => d.User).WithMany(p => p.VenueOwnerProfiles)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("venue_owner_profiles_user_id_fkey");
         });
@@ -807,11 +816,11 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.package).WithMany(p => p.venue_subscription_packages)
+            entity.HasOne(d => d.Package).WithMany(p => p.VenueSubscriptionPackages)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("venue_subscription_packages_package_id_fkey");
 
-            entity.HasOne(d => d.venue).WithMany(p => p.venue_subscription_packages).HasConstraintName("venue_subscription_packages_venue_id_fkey");
+            entity.HasOne(d => d.Venue).WithMany(p => p.VenueSubscriptionPackages).HasConstraintName("venue_subscription_packages_venue_id_fkey");
         });
 
         modelBuilder.Entity<Voucher>(entity =>
@@ -823,7 +832,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.UsageLimitPerMember).HasDefaultValue(1);
 
-            entity.HasOne(d => d.venue_owner).WithMany(p => p.vouchers).HasConstraintName("vouchers_venue_owner_id_fkey");
+            entity.HasOne(d => d.VenueOwner).WithMany(p => p.Vouchers).HasConstraintName("vouchers_venue_owner_id_fkey");
         });
 
         modelBuilder.Entity<VoucherItem>(entity =>
@@ -834,11 +843,11 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.voucher).WithMany(p => p.voucher_items)
+            entity.HasOne(d => d.Voucher).WithMany(p => p.VoucherItems)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("voucher_items_voucher_id_fkey");
 
-            entity.HasOne(d => d.voucher_item_member).WithMany(p => p.voucher_items).HasConstraintName("voucher_items_voucher_item_member_id_fkey");
+            entity.HasOne(d => d.VoucherItemMember).WithMany(p => p.VoucherItems).HasConstraintName("voucher_items_voucher_item_member_id_fkey");
         });
 
         modelBuilder.Entity<VoucherItemMember>(entity =>
@@ -850,7 +859,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.TotalPointsUsed).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.member).WithMany(p => p.voucher_item_members).HasConstraintName("voucher_item_members_member_id_fkey");
+            entity.HasOne(d => d.Member).WithMany(p => p.VoucherItemMembers).HasConstraintName("voucher_item_members_member_id_fkey");
         });
 
         modelBuilder.Entity<Wallet>(entity =>
@@ -863,7 +872,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.Points).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.user).WithMany(p => p.wallets)
+            entity.HasOne(d => d.User).WithMany(p => p.Wallets)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("wallets_user_id_fkey");
         });
@@ -876,7 +885,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.RequestedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.wallet).WithMany(p => p.withdraw_requests)
+            entity.HasOne(d => d.Wallet).WithMany(p => p.WithdrawRequests)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("withdraw_requests_wallet_id_fkey");
         });

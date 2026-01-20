@@ -26,11 +26,11 @@ public partial class VenueSubscriptionPackage
 
     public DateTime? UpdatedAt { get; set; }
 
-    [ForeignKey("package_id")]
-    [InverseProperty("venue_subscription_packages")]
-    public virtual SubscriptionPackage package { get; set; } = null!;
+    [ForeignKey("PackageId")]
+    [InverseProperty("VenueSubscriptionPackages")]
+    public virtual SubscriptionPackage Package { get; set; } = null!;
 
-    [ForeignKey("venue_id")]
-    [InverseProperty("venue_subscription_packages")]
-    public virtual VenueLocation venue { get; set; } = null!;
+    [ForeignKey("VenueId")]
+    [InverseProperty("VenueSubscriptionPackages")]
+    public virtual VenueLocation Venue { get; set; } = null!;
 }

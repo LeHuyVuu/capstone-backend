@@ -25,11 +25,10 @@ public partial class Collection
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("member_id")]
-    [InverseProperty("collections")]
-    public virtual MemberProfile member { get; set; } = null!;
+    [ForeignKey("MemberId")]
+    [InverseProperty("Collections")]
+    public virtual MemberProfile Member { get; set; } = null!;
 
-    [ForeignKey("collection_id")]
-    [InverseProperty("collections")]
-    public virtual ICollection<VenueLocation> venues { get; set; } = new List<VenueLocation>();
+    [InverseProperty("Collections")]
+    public virtual ICollection<VenueLocation> Venues { get; set; } = new List<VenueLocation>();
 }

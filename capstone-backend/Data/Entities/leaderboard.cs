@@ -30,7 +30,7 @@ public partial class Leaderboard
 
     public string? Status { get; set; }
 
-    [ForeignKey("couple_id")]
-    [InverseProperty("leaderboards")]
-    public virtual CoupleProfile couple { get; set; } = null!;
+    [ForeignKey("CoupleId")]
+    [InverseProperty("Leaderboards")]
+    public virtual CoupleProfile Couple { get; set; } = null!;
 }

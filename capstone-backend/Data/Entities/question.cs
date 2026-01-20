@@ -27,10 +27,10 @@ public partial class Question
 
     public bool? IsActive { get; set; }
 
-    [InverseProperty("question")]
-    public virtual ICollection<QuestionAnswer> question_answers { get; set; } = new List<QuestionAnswer>();
+    [InverseProperty("Question")]
+    public virtual ICollection<QuestionAnswer> QuestionAnswers { get; set; } = new List<QuestionAnswer>();
 
-    [ForeignKey("test_type_id")]
-    [InverseProperty("questions")]
-    public virtual TestType test_type { get; set; } = null!;
+    [ForeignKey("TestTypeId")]
+    [InverseProperty("Questions")]
+    public virtual TestType TestType { get; set; } = null!;
 }

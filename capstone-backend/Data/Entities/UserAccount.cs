@@ -37,21 +37,21 @@ public partial class UserAccount
 
     public bool? IsDeleted { get; set; }
 
-    [InverseProperty("user")]
-    public virtual ICollection<DeviceToken> device_tokens { get; set; } = new List<DeviceToken>();
+    [InverseProperty("User")]
+    public virtual ICollection<DeviceToken> DeviceTokens { get; set; } = new List<DeviceToken>();
 
-    [InverseProperty("user")]
-    public virtual ICollection<MemberProfile> member_profiles { get; set; } = new List<MemberProfile>();
+    [InverseProperty("User")]
+    public virtual ICollection<MemberProfile> MemberProfiles { get; set; } = new List<MemberProfile>();
 
-    [InverseProperty("user")]
-    public virtual ICollection<Notification> notifications { get; set; } = new List<Notification>();
+    [InverseProperty("User")]
+    public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
-    [InverseProperty("user")]
-    public virtual ICollection<RefreshToken> refresh_tokens { get; set; } = new List<RefreshToken>();
+    [InverseProperty("User")]
+    public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 
-    [InverseProperty("user")]
-    public virtual ICollection<VenueOwnerProfile> venue_owner_profiles { get; set; } = new List<VenueOwnerProfile>();
+    [InverseProperty("User")]
+    public virtual ICollection<VenueOwnerProfile> VenueOwnerProfiles { get; set; } = new List<VenueOwnerProfile>();
 
-    [InverseProperty("user")]
-    public virtual ICollection<Wallet> wallets { get; set; } = new List<Wallet>();
+    [InverseProperty("User")]
+    public virtual ICollection<Wallet> Wallets { get; set; } = new List<Wallet>();
 }

@@ -26,11 +26,11 @@ public partial class CheckInHistory
 
     public bool? IsValid { get; set; }
 
-    [ForeignKey("member_id")]
-    [InverseProperty("check_in_histories")]
-    public virtual MemberProfile member { get; set; } = null!;
+    [ForeignKey("MemberId")]
+    [InverseProperty("CheckInHistories")]
+    public virtual MemberProfile Member { get; set; } = null!;
 
-    [ForeignKey("venue_id")]
-    [InverseProperty("check_in_histories")]
-    public virtual VenueLocation venue { get; set; } = null!;
+    [ForeignKey("VenueId")]
+    [InverseProperty("CheckInHistories")]
+    public virtual VenueLocation Venue { get; set; } = null!;
 }

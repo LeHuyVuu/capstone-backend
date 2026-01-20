@@ -23,9 +23,9 @@ public partial class CouplePersonalityType
 
     public bool? IsActive { get; set; }
 
-    [InverseProperty("couple_personality_type")]
-    public virtual ICollection<CoupleProfile> couple_profiles { get; set; } = new List<CoupleProfile>();
+    [InverseProperty("CouplePersonalityType")]
+    public virtual ICollection<CoupleProfile> CoupleProfiles { get; set; } = new List<CoupleProfile>();
 
-    [InverseProperty("couple_personality_type")]
-    public virtual ICollection<LocationTag> location_tags { get; set; } = new List<LocationTag>();
+    [InverseProperty("CouplePersonalityType")]
+    public virtual ICollection<LocationTag> LocationTags { get; set; } = new List<LocationTag>();
 }

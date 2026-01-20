@@ -33,7 +33,7 @@ public partial class RefreshToken
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("user_id")]
-    [InverseProperty("refresh_tokens")]
-    public virtual UserAccount user { get; set; } = null!;
+    [ForeignKey("UserId")]
+    [InverseProperty("RefreshTokens")]
+    public virtual UserAccount User { get; set; } = null!;
 }

@@ -54,62 +54,62 @@ public partial class MemberProfile
 
     public bool? IsDeleted { get; set; }
 
-    [InverseProperty("member")]
-    public virtual ICollection<BlogLike> blog_likes { get; set; } = new List<BlogLike>();
+    [InverseProperty("Member")]
+    public virtual ICollection<BlogLike> BlogLikes { get; set; } = new List<BlogLike>();
 
-    [InverseProperty("member")]
-    public virtual ICollection<Blog> blogs { get; set; } = new List<Blog>();
+    [InverseProperty("Member")]
+    public virtual ICollection<Blog> Blogs { get; set; } = new List<Blog>();
 
-    [InverseProperty("member")]
-    public virtual ICollection<CheckInHistory> check_in_histories { get; set; } = new List<CheckInHistory>();
+    [InverseProperty("Member")]
+    public virtual ICollection<CheckInHistory> CheckInHistories { get; set; } = new List<CheckInHistory>();
 
-    [InverseProperty("member")]
-    public virtual ICollection<Collection> collections { get; set; } = new List<Collection>();
+    [InverseProperty("Member")]
+    public virtual ICollection<Collection> Collections { get; set; } = new List<Collection>();
 
-    [InverseProperty("member")]
-    public virtual ICollection<CommentLike> comment_likes { get; set; } = new List<CommentLike>();
+    [InverseProperty("Member")]
+    public virtual ICollection<CommentLike> CommentLikes { get; set; } = new List<CommentLike>();
 
-    [InverseProperty("member")]
-    public virtual ICollection<Comment> comments { get; set; } = new List<Comment>();
+    [InverseProperty("Member")]
+    public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
-    [InverseProperty("member_id_1Navigation")]
-    public virtual ICollection<CoupleProfile> couple_profilemember_id_1Navigations { get; set; } = new List<CoupleProfile>();
+    [InverseProperty("MemberId1Navigation")]
+    public virtual ICollection<CoupleProfile> CoupleProfilememberId1Navigations { get; set; } = new List<CoupleProfile>();
 
-    [InverseProperty("member_id_2Navigation")]
-    public virtual ICollection<CoupleProfile> couple_profilemember_id_2Navigations { get; set; } = new List<CoupleProfile>();
+    [InverseProperty("MemberId2Navigation")]
+    public virtual ICollection<CoupleProfile> CoupleProfilememberId2Navigations { get; set; } = new List<CoupleProfile>();
 
-    [InverseProperty("member")]
-    public virtual ICollection<MemberAccessory> member_accessories { get; set; } = new List<MemberAccessory>();
+    [InverseProperty("Member")]
+    public virtual ICollection<MemberAccessory> MemberAccessories { get; set; } = new List<MemberAccessory>();
 
-    [InverseProperty("member")]
-    public virtual ICollection<MemberMoodLog> member_mood_logs { get; set; } = new List<MemberMoodLog>();
+    [InverseProperty("Member")]
+    public virtual ICollection<MemberMoodLog> MemberMoodLogs { get; set; } = new List<MemberMoodLog>();
 
-    [InverseProperty("member")]
-    public virtual ICollection<MemberSubscriptionPackage> member_subscription_packages { get; set; } = new List<MemberSubscriptionPackage>();
+    [InverseProperty("Member")]
+    public virtual ICollection<MemberSubscriptionPackage> MemberSubscriptionPackages { get; set; } = new List<MemberSubscriptionPackage>();
 
-    [ForeignKey("mood_types_id")]
-    [InverseProperty("member_profiles")]
-    public virtual MoodType? mood_types { get; set; }
+    [ForeignKey("MoodTypesId")]
+    [InverseProperty("MemberProfiles")]
+    public virtual MoodType? MoodTypes { get; set; }
 
-    [InverseProperty("member")]
-    public virtual ICollection<PersonalityTest> personality_tests { get; set; } = new List<PersonalityTest>();
+    [InverseProperty("Member")]
+    public virtual ICollection<PersonalityTest> PersonalityTests { get; set; } = new List<PersonalityTest>();
 
-    [InverseProperty("reporter")]
-    public virtual ICollection<Report> reports { get; set; } = new List<Report>();
+    [InverseProperty("Reporter")]
+    public virtual ICollection<Report> Reports { get; set; } = new List<Report>();
 
-    [InverseProperty("member")]
-    public virtual ICollection<ReviewLike> review_likes { get; set; } = new List<ReviewLike>();
+    [InverseProperty("Member")]
+    public virtual ICollection<ReviewLike> ReviewLikes { get; set; } = new List<ReviewLike>();
 
-    [InverseProperty("member")]
-    public virtual ICollection<Review> reviews { get; set; } = new List<Review>();
+    [InverseProperty("Member")]
+    public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
 
-    [InverseProperty("member")]
-    public virtual ICollection<SearchHistory> search_histories { get; set; } = new List<SearchHistory>();
+    [InverseProperty("Member")]
+    public virtual ICollection<SearchHistory> SearchHistories { get; set; } = new List<SearchHistory>();
 
-    [ForeignKey("user_id")]
-    [InverseProperty("member_profiles")]
-    public virtual UserAccount user { get; set; } = null!;
+    [ForeignKey("UserId")]
+    [InverseProperty("MemberProfiles")]
+    public virtual UserAccount User { get; set; } = null!;
 
-    [InverseProperty("member")]
-    public virtual ICollection<VoucherItemMember> voucher_item_members { get; set; } = new List<VoucherItemMember>();
+    [InverseProperty("Member")]
+    public virtual ICollection<VoucherItemMember> VoucherItemMembers { get; set; } = new List<VoucherItemMember>();
 }

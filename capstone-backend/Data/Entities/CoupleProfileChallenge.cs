@@ -30,11 +30,11 @@ public partial class CoupleProfileChallenge
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("challenge_id")]
-    [InverseProperty("couple_profile_challenges")]
-    public virtual Challenge challenge { get; set; } = null!;
+    [ForeignKey("ChallengeId")]
+    [InverseProperty("CoupleProfileChallenges")]
+    public virtual Challenge Challenge { get; set; } = null!;
 
-    [ForeignKey("couple_id")]
-    [InverseProperty("couple_profile_challenges")]
-    public virtual CoupleProfile couple { get; set; } = null!;
+    [ForeignKey("CoupleId")]
+    [InverseProperty("CoupleProfileChallenges")]
+    public virtual CoupleProfile Couple { get; set; } = null!;
 }

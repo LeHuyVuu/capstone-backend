@@ -32,13 +32,13 @@ public partial class Blog
 
     public bool? IsDeleted { get; set; }
 
-    [InverseProperty("blog")]
-    public virtual ICollection<BlogLike> blog_likes { get; set; } = new List<BlogLike>();
+    [InverseProperty("Blog")]
+    public virtual ICollection<BlogLike> BlogLikes { get; set; } = new List<BlogLike>();
 
-    [InverseProperty("blog")]
-    public virtual ICollection<Comment> comments { get; set; } = new List<Comment>();
+    [InverseProperty("Blog")]
+    public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
-    [ForeignKey("member_id")]
-    [InverseProperty("blogs")]
-    public virtual MemberProfile member { get; set; } = null!;
+    [ForeignKey("MemberId")]
+    [InverseProperty("Blogs")]
+    public virtual MemberProfile Member { get; set; } = null!;
 }

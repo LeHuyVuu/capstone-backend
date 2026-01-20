@@ -32,10 +32,10 @@ public partial class DatePlan
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("couple_id")]
-    [InverseProperty("date_plans")]
-    public virtual CoupleProfile couple { get; set; } = null!;
+    [ForeignKey("CoupleId")]
+    [InverseProperty("DatePlans")]
+    public virtual CoupleProfile Couple { get; set; } = null!;
 
-    [InverseProperty("date_plan")]
-    public virtual ICollection<DatePlanItem> date_plan_items { get; set; } = new List<DatePlanItem>();
+    [InverseProperty("DatePlan")]
+    public virtual ICollection<DatePlanItem> DatePlanItems { get; set; } = new List<DatePlanItem>();
 }

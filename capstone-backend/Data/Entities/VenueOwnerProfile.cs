@@ -27,16 +27,16 @@ public partial class VenueOwnerProfile
 
     public bool? IsDeleted { get; set; }
 
-    [InverseProperty("venue_owner")]
-    public virtual ICollection<Advertisement> advertisements { get; set; } = new List<Advertisement>();
+    [InverseProperty("VenueOwner")]
+    public virtual ICollection<Advertisement> Advertisements { get; set; } = new List<Advertisement>();
 
-    [ForeignKey("user_id")]
-    [InverseProperty("venue_owner_profiles")]
-    public virtual UserAccount user { get; set; } = null!;
+    [ForeignKey("UserId")]
+    [InverseProperty("VenueOwnerProfiles")]
+    public virtual UserAccount User { get; set; } = null!;
 
-    [InverseProperty("venue_owner")]
-    public virtual ICollection<VenueLocation> venue_locations { get; set; } = new List<VenueLocation>();
+    [InverseProperty("VenueOwner")]
+    public virtual ICollection<VenueLocation> VenueLocations { get; set; } = new List<VenueLocation>();
 
-    [InverseProperty("venue_owner")]
-    public virtual ICollection<Voucher> vouchers { get; set; } = new List<Voucher>();
+    [InverseProperty("VenueOwner")]
+    public virtual ICollection<Voucher> Vouchers { get; set; } = new List<Voucher>();
 }

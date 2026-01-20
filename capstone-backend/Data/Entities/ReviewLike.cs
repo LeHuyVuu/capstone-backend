@@ -17,11 +17,11 @@ public partial class ReviewLike
 
     public DateTime? CreatedAt { get; set; }
 
-    [ForeignKey("member_id")]
-    [InverseProperty("review_likes")]
-    public virtual MemberProfile? member { get; set; }
+    [ForeignKey("MemberId")]
+    [InverseProperty("ReviewLikes")]
+    public virtual MemberProfile? Member { get; set; }
 
-    [ForeignKey("review_id")]
-    [InverseProperty("review_likes")]
-    public virtual Review? review { get; set; }
+    [ForeignKey("ReviewId")]
+    [InverseProperty("ReviewLikes")]
+    public virtual Review? Review { get; set; }
 }

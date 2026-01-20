@@ -30,9 +30,9 @@ public partial class SubscriptionPackage
 
     public bool? IsActive { get; set; }
 
-    [InverseProperty("package")]
-    public virtual ICollection<MemberSubscriptionPackage> member_subscription_packages { get; set; } = new List<MemberSubscriptionPackage>();
+    [InverseProperty("Package")]
+    public virtual ICollection<MemberSubscriptionPackage> MemberSubscriptionPackages { get; set; } = new List<MemberSubscriptionPackage>();
 
-    [InverseProperty("package")]
-    public virtual ICollection<VenueSubscriptionPackage> venue_subscription_packages { get; set; } = new List<VenueSubscriptionPackage>();
+    [InverseProperty("Package")]
+    public virtual ICollection<VenueSubscriptionPackage> VenueSubscriptionPackages { get; set; } = new List<VenueSubscriptionPackage>();
 }

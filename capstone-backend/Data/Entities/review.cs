@@ -34,14 +34,14 @@ public partial class Review
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("member_id")]
-    [InverseProperty("reviews")]
-    public virtual MemberProfile member { get; set; } = null!;
+    [ForeignKey("MemberId")]
+    [InverseProperty("Reviews")]
+    public virtual MemberProfile Member { get; set; } = null!;
 
-    [InverseProperty("review")]
-    public virtual ICollection<ReviewLike> review_likes { get; set; } = new List<ReviewLike>();
+    [InverseProperty("Review")]
+    public virtual ICollection<ReviewLike> ReviewLikes { get; set; } = new List<ReviewLike>();
 
-    [ForeignKey("venue_id")]
-    [InverseProperty("reviews")]
-    public virtual VenueLocation venue { get; set; } = null!;
+    [ForeignKey("VenueId")]
+    [InverseProperty("Reviews")]
+    public virtual VenueLocation Venue { get; set; } = null!;
 }

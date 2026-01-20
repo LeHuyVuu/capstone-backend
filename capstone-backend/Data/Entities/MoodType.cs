@@ -23,9 +23,9 @@ public partial class MoodType
 
     public bool? IsActive { get; set; }
 
-    [InverseProperty("mood_type")]
-    public virtual ICollection<MemberMoodLog> member_mood_logs { get; set; } = new List<MemberMoodLog>();
+    [InverseProperty("MoodType")]
+    public virtual ICollection<MemberMoodLog> MemberMoodLogs { get; set; } = new List<MemberMoodLog>();
 
-    [InverseProperty("mood_types")]
-    public virtual ICollection<MemberProfile> member_profiles { get; set; } = new List<MemberProfile>();
+    [InverseProperty("MoodTypes")]
+    public virtual ICollection<MemberProfile> MemberProfiles { get; set; } = new List<MemberProfile>();
 }

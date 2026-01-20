@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-[Index("venue_owner_id", Name = "idx_venue_owner")]
-[Index("average_rating", Name = "idx_venue_rating")]
+[Index("VenueOwnerId", Name = "idx_venue_owner")]
+[Index("AverageRating", Name = "idx_venue_rating")]
 public partial class VenueLocation
 {
     [Key]
@@ -63,30 +63,29 @@ public partial class VenueLocation
 
     public bool? IsDeleted { get; set; }
 
-    [InverseProperty("venue")]
-    public virtual ICollection<CheckInHistory> check_in_histories { get; set; } = new List<CheckInHistory>();
+    [InverseProperty("Venue")]
+    public virtual ICollection<CheckInHistory> CheckInHistories { get; set; } = new List<CheckInHistory>();
 
-    [InverseProperty("venue_location")]
-    public virtual ICollection<DatePlanItem> date_plan_items { get; set; } = new List<DatePlanItem>();
+    [InverseProperty("VenueLocation")]
+    public virtual ICollection<DatePlanItem> DatePlanItems { get; set; } = new List<DatePlanItem>();
 
-    [ForeignKey("location_tag_id")]
-    [InverseProperty("venue_locations")]
-    public virtual LocationTag? location_tag { get; set; }
+    [ForeignKey("LocationTagId")]
+    [InverseProperty("VenueLocations")]
+    public virtual LocationTag? LocationTag { get; set; }
 
-    [InverseProperty("venue")]
-    public virtual ICollection<Review> reviews { get; set; } = new List<Review>();
+    [InverseProperty("Venue")]
+    public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
 
-    [InverseProperty("venue")]
-    public virtual ICollection<VenueLocationAdvertisement> venue_location_advertisements { get; set; } = new List<VenueLocationAdvertisement>();
+    [InverseProperty("Venue")]
+    public virtual ICollection<VenueLocationAdvertisement> VenueLocationAdvertisements { get; set; } = new List<VenueLocationAdvertisement>();
 
-    [ForeignKey("venue_owner_id")]
-    [InverseProperty("venue_locations")]
-    public virtual VenueOwnerProfile venue_owner { get; set; } = null!;
+    [ForeignKey("VenueOwnerId")]
+    [InverseProperty("VenueLocations")]
+    public virtual VenueOwnerProfile VenueOwner { get; set; } = null!;
 
-    [InverseProperty("venue")]
-    public virtual ICollection<VenueSubscriptionPackage> venue_subscription_packages { get; set; } = new List<VenueSubscriptionPackage>();
+    [InverseProperty("Venue")]
+    public virtual ICollection<VenueSubscriptionPackage> VenueSubscriptionPackages { get; set; } = new List<VenueSubscriptionPackage>();
 
-    [ForeignKey("venue_id")]
-    [InverseProperty("venues")]
-    public virtual ICollection<Collection> collections { get; set; } = new List<Collection>();
+    [InverseProperty("Venues")]
+    public virtual ICollection<Collection> Collections { get; set; } = new List<Collection>();
 }

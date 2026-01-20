@@ -24,10 +24,10 @@ public partial class Wallet
 
     public DateTime? UpdatedAt { get; set; }
 
-    [ForeignKey("user_id")]
-    [InverseProperty("wallets")]
-    public virtual UserAccount user { get; set; } = null!;
+    [ForeignKey("UserId")]
+    [InverseProperty("Wallets")]
+    public virtual UserAccount User { get; set; } = null!;
 
-    [InverseProperty("wallet")]
-    public virtual ICollection<WithdrawRequest> withdraw_requests { get; set; } = new List<WithdrawRequest>();
+    [InverseProperty("Wallet")]
+    public virtual ICollection<WithdrawRequest> WithdrawRequests { get; set; } = new List<WithdrawRequest>();
 }

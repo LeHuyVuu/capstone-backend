@@ -30,11 +30,11 @@ public partial class PersonalityTest
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("member_id")]
-    [InverseProperty("personality_tests")]
-    public virtual MemberProfile member { get; set; } = null!;
+    [ForeignKey("MemberId")]
+    [InverseProperty("PersonalityTests")]
+    public virtual MemberProfile Member { get; set; } = null!;
 
-    [ForeignKey("test_type_id")]
-    [InverseProperty("personality_tests")]
-    public virtual TestType test_type { get; set; } = null!;
+    [ForeignKey("TestTypeId")]
+    [InverseProperty("PersonalityTests")]
+    public virtual TestType TestType { get; set; } = null!;
 }

@@ -45,31 +45,31 @@ public partial class CoupleProfile
 
     public bool? IsDeleted { get; set; }
 
-    [InverseProperty("couple")]
-    public virtual ICollection<CoupleMoodLog> couple_mood_logs { get; set; } = new List<CoupleMoodLog>();
+    [InverseProperty("Couple")]
+    public virtual ICollection<CoupleMoodLog> CoupleMoodLogs { get; set; } = new List<CoupleMoodLog>();
 
-    [ForeignKey("couple_mood_type_id")]
-    [InverseProperty("couple_profiles")]
-    public virtual CoupleMoodType? couple_mood_type { get; set; }
+    [ForeignKey("CoupleMoodTypeId")]
+    [InverseProperty("CoupleProfiles")]
+    public virtual CoupleMoodType? CoupleMoodType { get; set; }
 
-    [ForeignKey("couple_personality_type_id")]
-    [InverseProperty("couple_profiles")]
-    public virtual CouplePersonalityType? couple_personality_type { get; set; }
+    [ForeignKey("CouplePersonalityTypeId")]
+    [InverseProperty("CoupleProfiles")]
+    public virtual CouplePersonalityType? CouplePersonalityType { get; set; }
 
-    [InverseProperty("couple")]
-    public virtual ICollection<CoupleProfileChallenge> couple_profile_challenges { get; set; } = new List<CoupleProfileChallenge>();
+    [InverseProperty("Couple")]
+    public virtual ICollection<CoupleProfileChallenge> CoupleProfileChallenges { get; set; } = new List<CoupleProfileChallenge>();
 
-    [InverseProperty("couple")]
-    public virtual ICollection<DatePlan> date_plans { get; set; } = new List<DatePlan>();
+    [InverseProperty("Couple")]
+    public virtual ICollection<DatePlan> DatePlans { get; set; } = new List<DatePlan>();
 
-    [InverseProperty("couple")]
-    public virtual ICollection<Leaderboard> leaderboards { get; set; } = new List<Leaderboard>();
+    [InverseProperty("Couple")]
+    public virtual ICollection<Leaderboard> Leaderboards { get; set; } = new List<Leaderboard>();
 
-    [ForeignKey("member_id_1")]
-    [InverseProperty("couple_profilemember_id_1Navigations")]
-    public virtual MemberProfile member_id_1Navigation { get; set; } = null!;
+    [ForeignKey("MemberId1")]
+    [InverseProperty("CoupleProfilememberId1Navigations")]
+    public virtual MemberProfile MemberId1Navigation { get; set; } = null!;
 
-    [ForeignKey("member_id_2")]
-    [InverseProperty("couple_profilemember_id_2Navigations")]
-    public virtual MemberProfile member_id_2Navigation { get; set; } = null!;
+    [ForeignKey("MemberId2")]
+    [InverseProperty("CoupleProfilememberId2Navigations")]
+    public virtual MemberProfile MemberId2Navigation { get; set; } = null!;
 }
