@@ -31,7 +31,7 @@ public partial class date_plan_item
 
     [ForeignKey("date_plan_id")]
     [InverseProperty("date_plan_items")]
-    public virtual date_plan date_plan { get; set; } = null!;
+    public virtual DatePlan date_plan { get; set; } = null!;
 
     [ForeignKey("venue_location_id")]
     [InverseProperty("date_plan_items")]

@@ -44,7 +44,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<CoupleProfileChallenge> CoupleProfileChallenges { get; set; }
 
-    public virtual DbSet<date_plan> date_plans { get; set; }
+    public virtual DbSet<DatePlan> DatePlans { get; set; }
 
     public virtual DbSet<date_plan_item> date_plan_items { get; set; }
 
@@ -378,14 +378,14 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.couple).WithMany(p => p.couple_profile_challenges).HasConstraintName("couple_profile_challenges_couple_id_fkey");
         });
 
-        modelBuilder.Entity<date_plan>(entity =>
+        modelBuilder.Entity<DatePlan>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("date_plans_pkey");
+            entity.HasKey(e => e.Id).HasName("date_plans_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.estimated_budget).HasDefaultValueSql("0");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.EstimatedBudget).HasDefaultValueSql("0");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.couple).WithMany(p => p.date_plans).HasConstraintName("date_plans_couple_id_fkey");
         });

@@ -60,7 +60,7 @@ public partial class CoupleProfile
     public virtual ICollection<CoupleProfileChallenge> couple_profile_challenges { get; set; } = new List<CoupleProfileChallenge>();
 
     [InverseProperty("couple")]
-    public virtual ICollection<date_plan> date_plans { get; set; } = new List<date_plan>();
+    public virtual ICollection<DatePlan> date_plans { get; set; } = new List<DatePlan>();
 
     [InverseProperty("couple")]
     public virtual ICollection<leaderboard> leaderboards { get; set; } = new List<leaderboard>();

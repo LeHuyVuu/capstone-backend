@@ -6,31 +6,31 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class date_plan
+public partial class DatePlan
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int couple_id { get; set; }
+    public int CoupleId { get; set; }
 
-    public string title { get; set; } = null!;
+    public string Title { get; set; } = null!;
 
-    public string? note { get; set; }
+    public string? Note { get; set; }
 
-    public DateTime? planned_start_at { get; set; }
+    public DateTime? PlannedStartAt { get; set; }
 
-    public DateTime? planned_end_at { get; set; }
+    public DateTime? PlannedEndAt { get; set; }
 
     [Precision(18, 2)]
-    public decimal? estimated_budget { get; set; }
+    public decimal? EstimatedBudget { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
     [ForeignKey("couple_id")]
     [InverseProperty("date_plans")]
