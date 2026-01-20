@@ -26,7 +26,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Challenge> Challenges { get; set; }
 
-    public virtual DbSet<check_in_history> check_in_histories { get; set; }
+    public virtual DbSet<CheckInHistory> CheckInHistories { get; set; }
 
     public virtual DbSet<collection> collections { get; set; }
 
@@ -224,12 +224,12 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<check_in_history>(entity =>
+        modelBuilder.Entity<CheckInHistory>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("check_in_histories_pkey");
+            entity.HasKey(e => e.Id).HasName("check_in_histories_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_valid).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsValid).HasDefaultValue(true);
 
             entity.HasOne(d => d.member).WithMany(p => p.check_in_histories)
                 .OnDelete(DeleteBehavior.ClientSetNull)

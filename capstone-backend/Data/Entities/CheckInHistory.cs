@@ -6,25 +6,25 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-[Index("venue_id", Name = "idx_checkin_venue")]
-public partial class check_in_history
+[Index("VenueId", Name = "idx_checkin_venue")]
+public partial class CheckInHistory
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int member_id { get; set; }
+    public int MemberId { get; set; }
 
-    public int venue_id { get; set; }
+    public int VenueId { get; set; }
 
     [Precision(10, 8)]
-    public decimal? latitude { get; set; }
+    public decimal? Latitude { get; set; }
 
     [Precision(11, 8)]
-    public decimal? longitude { get; set; }
+    public decimal? Longitude { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public bool? is_valid { get; set; }
+    public bool? IsValid { get; set; }
 
     [ForeignKey("member_id")]
     [InverseProperty("check_in_histories")]

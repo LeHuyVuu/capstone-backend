@@ -64,7 +64,7 @@ public partial class venue_location
     public bool? is_deleted { get; set; }
 
     [InverseProperty("venue")]
-    public virtual ICollection<check_in_history> check_in_histories { get; set; } = new List<check_in_history>();
+    public virtual ICollection<CheckInHistory> check_in_histories { get; set; } = new List<CheckInHistory>();
 
     [InverseProperty("venue_location")]
     public virtual ICollection<date_plan_item> date_plan_items { get; set; } = new List<date_plan_item>();
