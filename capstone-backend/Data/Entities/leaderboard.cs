@@ -6,29 +6,29 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-[Index("season_key", "total_points", Name = "idx_leaderboard_points", IsDescending = new[] { false, true })]
-public partial class leaderboard
+[Index("SeasonKey", "TotalPoints", Name = "idx_leaderboard_points", IsDescending = new[] { false, true })]
+public partial class Leaderboard
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int couple_id { get; set; }
+    public int CoupleId { get; set; }
 
-    public string? period_type { get; set; }
+    public string? PeriodType { get; set; }
 
-    public DateTime? period_start { get; set; }
+    public DateTime? PeriodStart { get; set; }
 
-    public DateTime? period_end { get; set; }
+    public DateTime? PeriodEnd { get; set; }
 
-    public string? season_key { get; set; }
+    public string? SeasonKey { get; set; }
 
-    public int? total_points { get; set; }
+    public int? TotalPoints { get; set; }
 
-    public int? rank_position { get; set; }
+    public int? RankPosition { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
     [ForeignKey("couple_id")]
     [InverseProperty("leaderboards")]

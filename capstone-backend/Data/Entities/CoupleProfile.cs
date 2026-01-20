@@ -63,7 +63,7 @@ public partial class CoupleProfile
     public virtual ICollection<DatePlan> date_plans { get; set; } = new List<DatePlan>();
 
     [InverseProperty("couple")]
-    public virtual ICollection<leaderboard> leaderboards { get; set; } = new List<leaderboard>();
+    public virtual ICollection<Leaderboard> leaderboards { get; set; } = new List<Leaderboard>();
 
     [ForeignKey("member_id_1")]
     [InverseProperty("couple_profilemember_id_1Navigations")]

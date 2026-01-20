@@ -50,7 +50,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<DeviceToken> DeviceTokens { get; set; }
 
-    public virtual DbSet<leaderboard> leaderboards { get; set; }
+    public virtual DbSet<Leaderboard> Leaderboards { get; set; }
 
     public virtual DbSet<location_follower> location_followers { get; set; }
 
@@ -417,12 +417,12 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.user).WithMany(p => p.device_tokens).HasConstraintName("device_tokens_user_id_fkey");
         });
 
-        modelBuilder.Entity<leaderboard>(entity =>
+        modelBuilder.Entity<Leaderboard>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("leaderboards_pkey");
+            entity.HasKey(e => e.Id).HasName("leaderboards_pkey");
 
-            entity.Property(e => e.total_points).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.TotalPoints).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.couple).WithMany(p => p.leaderboards).HasConstraintName("leaderboards_couple_id_fkey");
         });
