@@ -25,15 +25,15 @@ public class LocationFollowerService : ILocationFollowerService
         try
         {
             // Kiểm tra đã tồn tại chưa
-            var existing = await _unitOfWork.Context.location_followers
-                .Where(x => x.owner_user_id == currentUserId && x.follower_user_id == targetUserId)
+            var existing = await _unitOfWork.Context.LocationFollowers
+                .Where(x => x.OwnerUserId == currentUserId && x.FollowerUserId == targetUserId)
                 .FirstOrDefaultAsync();
 
             if (existing != null)
             {
                 // Cập nhật lại status = ACTIVE nếu đã tồn tại
-                existing.status = "ACTIVE";
-                existing.updated_at = DateTime.UtcNow;
+                existing.Status = "ACTIVE";
+                existing.UpdatedAt = DateTime.UtcNow;
             }
             else
             {
@@ -46,21 +46,21 @@ public class LocationFollowerService : ILocationFollowerService
                 }
 
                 // Tạo mới
-                var follower = new location_follower
+                var follower = new LocationFollower
                 {
-                    owner_user_id = currentUserId,
-                    follower_user_id = targetUserId,
-                    status = "ACTIVE",
-                    owner_share_status = "SHARING",
-                    follower_share_status = "RECEIVING",
-                    is_muted = false,
-                    follower_display_name = targetUser.display_name,
-                    follower_avatar_url = targetUser.avatar_url,
-                    created_at = DateTime.UtcNow,
-                    updated_at = DateTime.UtcNow
+                    OwnerUserId = currentUserId,
+                    FollowerUserId = targetUserId,
+                    Status = "ACTIVE",
+                    OwnerShareStatus = "SHARING",
+                    FollowerShareStatus = "RECEIVING",
+                    IsMuted = false,
+                    FollowerDisplayName = targetUser.DisplayName,
+                    FollowerAvatarUrl = targetUser.AvatarUrl,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
                 };
 
-                _unitOfWork.Context.location_followers.Add(follower);
+                _unitOfWork.Context.LocationFollowers.Add(follower);
             }
 
             await _unitOfWork.SaveChangesAsync();
@@ -78,14 +78,14 @@ public class LocationFollowerService : ILocationFollowerService
     {
         try
         {
-            var follower = await _unitOfWork.Context.location_followers
-                .Where(x => x.owner_user_id == currentUserId && x.follower_user_id == targetUserId)
+            var follower = await _unitOfWork.Context.LocationFollowers
+                .Where(x => x.OwnerUserId == currentUserId && x.FollowerUserId == targetUserId)
                 .FirstOrDefaultAsync();
 
             if (follower != null)
             {
-                follower.status = "REMOVED";
-                follower.updated_at = DateTime.UtcNow;
+                follower.Status = "REMOVED";
+                follower.UpdatedAt = DateTime.UtcNow;
                 await _unitOfWork.SaveChangesAsync();
             }
 
@@ -103,17 +103,17 @@ public class LocationFollowerService : ILocationFollowerService
     {
         try
         {
-            var followers = await _unitOfWork.Context.location_followers
-                .Where(x => x.owner_user_id == currentUserId && x.status == "ACTIVE")
+            var followers = await _unitOfWork.Context.LocationFollowers
+                .Where(x => x.OwnerUserId == currentUserId && x.Status == "ACTIVE")
                 .ToListAsync();
 
             return followers.Select(f => new LocationFollowerDto
             {
-                UserId = f.follower_user_id,
-                DisplayName = f.follower_display_name,
-                AvatarUrl = f.follower_avatar_url,
-                Status = f.status,
-                LastSeenAt = f.last_seen_at
+                UserId = f.FollowerUserId,
+                DisplayName = f.FollowerDisplayName,
+                AvatarUrl = f.FollowerAvatarUrl,
+                Status = f.Status,
+                LastSeenAt = f.LastSeenAt
             }).ToList();
         }
         catch (Exception ex)
@@ -127,17 +127,17 @@ public class LocationFollowerService : ILocationFollowerService
     {
         try
         {
-            var followers = await _unitOfWork.Context.location_followers
-                .Where(x => x.follower_user_id == currentUserId && x.status == "ACTIVE")
+            var followers = await _unitOfWork.Context.LocationFollowers
+                .Where(x => x.FollowerUserId == currentUserId && x.Status == "ACTIVE")
                 .ToListAsync();
 
             return followers.Select(f => new LocationFollowerDto
             {
-                UserId = f.owner_user_id,
-                DisplayName = f.owner_display_name,
-                AvatarUrl = f.owner_avatar_url,
-                Status = f.status,
-                LastSeenAt = f.last_seen_at
+                UserId = f.OwnerUserId,
+                DisplayName = f.OwnerDisplayName,
+                AvatarUrl = f.OwnerAvatarUrl,
+                Status = f.Status,
+                LastSeenAt = f.LastSeenAt
             }).ToList();
         }
         catch (Exception ex)

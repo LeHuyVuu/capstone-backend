@@ -21,12 +21,12 @@ public class SearchHistoryService : ISearchHistoryService
 
     public async Task<PagedResult<SearchHistoryResponse>> GetSearchHistoriesByMemberAsync(int memberId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
-        var query = _unitOfWork.Context.Set<search_history>()
-            .Where(h => h.member_id == memberId && h.is_deleted != true);
+        var query = _unitOfWork.Context.Set<SearchHistory>()
+            .Where(h => h.MemberId == memberId && h.IsDeleted != true);
 
         var total = await query.CountAsync(cancellationToken);
         var items = await query
-            .OrderByDescending(h => h.searched_at)
+            .OrderByDescending(h => h.SearchedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
@@ -42,36 +42,36 @@ public class SearchHistoryService : ISearchHistoryService
 
     public async Task<SearchHistoryResponse> CreateSearchHistoryAsync(int? memberId, string keyword, object? filterCriteria, int resultCount, CancellationToken cancellationToken = default)
     {
-        var searchHistory = new search_history
+        var searchHistory = new SearchHistory
         {
-            member_id = memberId,
-            keyword = keyword,
-            filter_criteria = filterCriteria != null ? JsonSerializer.Serialize(filterCriteria) : null,
-            result_count = resultCount,
-            searched_at = DateTime.UtcNow,
-            is_deleted = false
+            MemberId = memberId,
+            Keyword = keyword,
+            FilterCriteria = filterCriteria != null ? JsonSerializer.Serialize(filterCriteria) : null,
+            ResultCount = resultCount,
+            SearchedAt = DateTime.UtcNow,
+            IsDeleted = false
         };
 
-        await _unitOfWork.Context.Set<search_history>().AddAsync(searchHistory, cancellationToken);
+        await _unitOfWork.Context.Set<SearchHistory>().AddAsync(searchHistory, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Created search history {HistoryId} for member {MemberId} - keyword: {Keyword}", 
-            searchHistory.id, memberId, keyword);
+            searchHistory.Id, memberId, keyword);
 
         return MapToResponse(searchHistory);
     }
 
     public async Task<bool> DeleteSearchHistoryAsync(int id, int memberId, CancellationToken cancellationToken = default)
     {
-        var searchHistory = await _unitOfWork.Context.Set<search_history>()
-            .FirstOrDefaultAsync(h => h.id == id && h.member_id == memberId && h.is_deleted != true, cancellationToken);
+        var searchHistory = await _unitOfWork.Context.Set<SearchHistory>()
+            .FirstOrDefaultAsync(h => h.Id == id && h.MemberId == memberId && h.IsDeleted != true, cancellationToken);
 
         if (searchHistory == null)
             return false;
 
-        searchHistory.is_deleted = true;
+        searchHistory.IsDeleted = true;
 
-        _unitOfWork.Context.Set<search_history>().Update(searchHistory);
+        _unitOfWork.Context.Set<SearchHistory>().Update(searchHistory);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Deleted search history {HistoryId}", id);
@@ -81,13 +81,13 @@ public class SearchHistoryService : ISearchHistoryService
 
     public async Task<bool> ClearSearchHistoryAsync(int memberId, CancellationToken cancellationToken = default)
     {
-        var histories = await _unitOfWork.Context.Set<search_history>()
-            .Where(h => h.member_id == memberId && h.is_deleted != true)
+        var histories = await _unitOfWork.Context.Set<SearchHistory>()
+            .Where(h => h.MemberId == memberId && h.IsDeleted != true)
             .ToListAsync(cancellationToken);
 
         foreach (var history in histories)
         {
-            history.is_deleted = true;
+            history.IsDeleted = true;
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -97,29 +97,29 @@ public class SearchHistoryService : ISearchHistoryService
         return true;
     }
 
-    private SearchHistoryResponse MapToResponse(search_history history)
+    private SearchHistoryResponse MapToResponse(SearchHistory history)
     {
         object? filterCriteria = null;
-        if (!string.IsNullOrEmpty(history.filter_criteria))
+        if (!string.IsNullOrEmpty(history.FilterCriteria))
         {
             try
             {
-                filterCriteria = JsonSerializer.Deserialize<object>(history.filter_criteria);
+                filterCriteria = JsonSerializer.Deserialize<object>(history.FilterCriteria);
             }
             catch
             {
-                filterCriteria = history.filter_criteria;
+                filterCriteria = history.FilterCriteria;
             }
         }
 
         return new SearchHistoryResponse
         {
-            Id = history.id,
-            MemberId = history.member_id,
-            Keyword = history.keyword,
+            Id = history.Id,
+            MemberId = history.MemberId,
+            Keyword = history.Keyword,
             FilterCriteria = filterCriteria,
-            ResultCount = history.result_count,
-            SearchedAt = history.searched_at
+            ResultCount = history.ResultCount,
+            SearchedAt = history.SearchedAt
         };
     }
 }

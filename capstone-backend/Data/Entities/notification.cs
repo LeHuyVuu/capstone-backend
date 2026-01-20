@@ -6,26 +6,26 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class notification
+public partial class Notification
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int user_id { get; set; }
+    public int UserId { get; set; }
 
-    public string title { get; set; } = null!;
+    public string Title { get; set; } = null!;
 
-    public string? message { get; set; }
+    public string? Message { get; set; }
 
-    public string? type { get; set; }
+    public string? Type { get; set; }
 
-    public int? reference_id { get; set; }
+    public int? ReferenceId { get; set; }
 
-    public bool? is_read { get; set; }
+    public bool? IsRead { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    [ForeignKey("user_id")]
-    [InverseProperty("notifications")]
-    public virtual user_account user { get; set; } = null!;
+    [ForeignKey("UserId")]
+    [InverseProperty("Notifications")]
+    public virtual UserAccount User { get; set; } = null!;
 }

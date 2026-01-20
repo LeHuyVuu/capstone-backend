@@ -6,28 +6,28 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class report
+public partial class Report
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int? reporter_id { get; set; }
+    public int? ReporterId { get; set; }
 
-    public string? target_type { get; set; }
+    public string? TargetType { get; set; }
 
-    public int? target_id { get; set; }
+    public int? TargetId { get; set; }
 
-    public string? reason { get; set; }
+    public string? Reason { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
-    [ForeignKey("reporter_id")]
-    [InverseProperty("reports")]
-    public virtual member_profile? reporter { get; set; }
+    [ForeignKey("ReporterId")]
+    [InverseProperty("Reports")]
+    public virtual MemberProfile? Reporter { get; set; }
 }

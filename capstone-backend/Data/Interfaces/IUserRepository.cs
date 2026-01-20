@@ -5,12 +5,12 @@ namespace capstone_backend.Business.Interfaces;
 /// <summary>
 /// User repository interface for user_account specific operations
 /// </summary>
-public interface IUserRepository : IRepository<user_account>
+public interface IUserRepository : IRepository<UserAccount>
 {
     /// <summary>
     /// Get user by email address
     /// </summary>
-    Task<user_account?> GetByEmailAsync(string email, bool includeSoftDeleted = false, CancellationToken cancellationToken = default);
+    Task<UserAccount?> GetByEmailAsync(string email, bool includeSoftDeleted = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Check if email already exists
@@ -20,5 +20,5 @@ public interface IUserRepository : IRepository<user_account>
     /// <summary>
     /// Get user by ID with member and venue owner profiles included
     /// </summary>
-    Task<user_account?> GetByIdWithProfilesAsync(int id, bool includeSoftDeleted = false, CancellationToken cancellationToken = default);
+    Task<UserAccount?> GetByIdWithProfilesAsync(int id, bool includeSoftDeleted = false, CancellationToken cancellationToken = default);
 }

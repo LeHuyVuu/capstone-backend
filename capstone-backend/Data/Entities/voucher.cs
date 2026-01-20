@@ -6,49 +6,49 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class voucher
+public partial class Voucher
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int? venue_owner_id { get; set; }
+    public int? VenueOwnerId { get; set; }
 
-    public string code { get; set; } = null!;
+    public string Code { get; set; } = null!;
 
-    public string? title { get; set; }
+    public string? Title { get; set; }
 
-    public string? description { get; set; }
+    public string? Description { get; set; }
 
-    public string? discount_type { get; set; }
+    public string? DiscountType { get; set; }
 
     [Precision(18, 2)]
-    public decimal? discount_amount { get; set; }
+    public decimal? DiscountAmount { get; set; }
 
     [Precision(5, 2)]
-    public decimal? discount_percent { get; set; }
+    public decimal? DiscountPercent { get; set; }
 
-    public int? quantity { get; set; }
+    public int? Quantity { get; set; }
 
-    public int? remaining_quantity { get; set; }
+    public int? RemainingQuantity { get; set; }
 
-    public int? usage_limit_per_member { get; set; }
+    public int? UsageLimitPerMember { get; set; }
 
-    public DateTime? start_date { get; set; }
+    public DateTime? StartDate { get; set; }
 
-    public DateTime? end_date { get; set; }
+    public DateTime? End_Date { get; set; }
 
-    public string? status { get; set; }
+    public string? Status { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
-    [ForeignKey("venue_owner_id")]
-    [InverseProperty("vouchers")]
-    public virtual venue_owner_profile? venue_owner { get; set; }
+    [ForeignKey("VenueOwnerId")]
+    [InverseProperty("Vouchers")]
+    public virtual VenueOwnerProfile? VenueOwner { get; set; }
 
-    [InverseProperty("voucher")]
-    public virtual ICollection<voucher_item> voucher_items { get; set; } = new List<voucher_item>();
+    [InverseProperty("Voucher")]
+    public virtual ICollection<VoucherItem> VoucherItems { get; set; } = new List<VoucherItem>();
 }

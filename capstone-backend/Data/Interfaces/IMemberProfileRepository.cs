@@ -5,12 +5,12 @@ namespace capstone_backend.Business.Interfaces;
 /// <summary>
 /// Member profile repository interface for member_profile specific operations
 /// </summary>
-public interface IMemberProfileRepository : IRepository<member_profile>
+public interface IMemberProfileRepository : IRepository<MemberProfile>
 {
     /// <summary>
     /// Get member profile by invite code
     /// </summary>
-    Task<member_profile?> GetByInviteCodeAsync(
+    Task<MemberProfile?> GetByInviteCodeAsync(
         string inviteCode,
         bool includeSoftDeleted = false,
         CancellationToken cancellationToken = default);
@@ -18,7 +18,7 @@ public interface IMemberProfileRepository : IRepository<member_profile>
     /// <summary>
     /// Get member profile by user ID
     /// </summary>
-    Task<member_profile?> GetByUserIdAsync(
+    Task<MemberProfile?> GetByUserIdAsync(
         int userId,
         bool includeSoftDeleted = false,
         CancellationToken cancellationToken = default);
