@@ -112,7 +112,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Voucher> Vouchers { get; set; }
 
-    public virtual DbSet<voucher_item> VoucherItems { get; set; }
+    public virtual DbSet<VoucherItem> VoucherItems { get; set; }
 
     public virtual DbSet<voucher_item_member> VoucherItemMembers { get; set; }
 
@@ -826,13 +826,13 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.venue_owner).WithMany(p => p.vouchers).HasConstraintName("vouchers_venue_owner_id_fkey");
         });
 
-        modelBuilder.Entity<voucher_item>(entity =>
+        modelBuilder.Entity<VoucherItem>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("voucher_items_pkey");
+            entity.HasKey(e => e.Id).HasName("voucher_items_pkey");
 
-            entity.Property(e => e.acquired_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.AcquiredAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.voucher).WithMany(p => p.voucher_items)
                 .OnDelete(DeleteBehavior.ClientSetNull)

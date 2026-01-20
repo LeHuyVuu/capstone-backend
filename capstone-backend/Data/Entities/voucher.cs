@@ -50,5 +50,5 @@ public partial class Voucher
     public virtual VenueOwnerProfile? venue_owner { get; set; }
 
     [InverseProperty("voucher")]
-    public virtual ICollection<voucher_item> voucher_items { get; set; } = new List<voucher_item>();
+    public virtual ICollection<VoucherItem> voucher_items { get; set; } = new List<VoucherItem>();
 }

@@ -28,5 +28,5 @@ public partial class voucher_item_member
     public virtual MemberProfile? member { get; set; }
 
     [InverseProperty("voucher_item_member")]
-    public virtual ICollection<voucher_item> voucher_items { get; set; } = new List<voucher_item>();
+    public virtual ICollection<VoucherItem> voucher_items { get; set; } = new List<VoucherItem>();
 }
