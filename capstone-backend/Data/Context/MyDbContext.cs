@@ -90,7 +90,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<search_history> search_histories { get; set; }
 
-    public virtual DbSet<special_event> special_events { get; set; }
+    public virtual DbSet<SpecialEvent> SpecialEvents { get; set; }
 
     public virtual DbSet<subscription_package> subscription_packages { get; set; }
 
@@ -681,13 +681,13 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("search_histories_member_id_fkey");
         });
 
-        modelBuilder.Entity<special_event>(entity =>
+        modelBuilder.Entity<SpecialEvent>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("special_events_pkey");
+            entity.HasKey(e => e.Id).HasName("special_events_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<subscription_package>(entity =>

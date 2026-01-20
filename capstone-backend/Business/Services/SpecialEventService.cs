@@ -20,41 +20,41 @@ public class SpecialEventService : ISpecialEventService
 
     public async Task<SpecialEventResponse> CreateSpecialEventAsync(CreateSpecialEventRequest request, CancellationToken cancellationToken = default)
     {
-        var specialEvent = new special_event()
+        var specialEvent = new SpecialEvent()
         {
-            event_name = request.EventName,
-            description = request.Description,
-            start_date = request.StartDate,
-            end_date = request.EndDate,
-            created_at = DateTime.UtcNow,
-            updated_at = DateTime.UtcNow,
-            is_deleted = false
+            EventName = request.EventName,
+            Description = request.Description,
+            StartDate = request.StartDate,
+            EndDate = request.EndDate,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
         };
 
-        await _unitOfWork.Context.Set<special_event>().AddAsync(specialEvent, cancellationToken);
+        await _unitOfWork.Context.Set<SpecialEvent>().AddAsync(specialEvent, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Created special event {EventId} - {EventName}", specialEvent.id, specialEvent.event_name);
+        _logger.LogInformation("Created special event {EventId} - {EventName}", specialEvent.Id, specialEvent.EventName);
 
         return MapToResponse(specialEvent);
     }
 
     public async Task<SpecialEventResponse?> GetSpecialEventByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var specialEvent = await _unitOfWork.Context.Set<special_event>()
-            .FirstOrDefaultAsync(e => e.id == id && e.is_deleted != true, cancellationToken);
+        var specialEvent = await _unitOfWork.Context.Set<SpecialEvent>()
+            .FirstOrDefaultAsync(e => e.Id == id && e.IsDeleted != true, cancellationToken);
 
         return specialEvent == null ? null : MapToResponse(specialEvent);
     }
 
     public async Task<PagedResult<SpecialEventResponse>> GetAllSpecialEventsAsync(int page, int pageSize, CancellationToken cancellationToken = default)
     {
-        var query = _unitOfWork.Context.Set<special_event>()
-            .Where(e => e.is_deleted != true);
+        var query = _unitOfWork.Context.Set<SpecialEvent>()
+            .Where(e => e.IsDeleted != true);
 
         var total = await query.CountAsync(cancellationToken);
         var items = await query
-            .OrderByDescending(e => e.start_date)
+            .OrderByDescending(e => e.StartDate)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken);
@@ -71,11 +71,11 @@ public class SpecialEventService : ISpecialEventService
     public async Task<List<SpecialEventResponse>> GetActiveSpecialEventsAsync(CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
-        var events = await _unitOfWork.Context.Set<special_event>()
-            .Where(e => e.is_deleted != true && 
-                       e.start_date <= now && 
-                       e.end_date >= now)
-            .OrderBy(e => e.start_date)
+        var events = await _unitOfWork.Context.Set<SpecialEvent>()
+            .Where(e => e.IsDeleted != true && 
+                       e.StartDate <= now && 
+                       e.EndDate >= now)
+            .OrderBy(e => e.StartDate)
             .ToListAsync(cancellationToken);
 
         return events.Select(MapToResponse).ToList();
@@ -83,27 +83,27 @@ public class SpecialEventService : ISpecialEventService
 
     public async Task<SpecialEventResponse?> UpdateSpecialEventAsync(int id, UpdateSpecialEventRequest request, CancellationToken cancellationToken = default)
     {
-        var specialEvent = await _unitOfWork.Context.Set<special_event>()
-            .FirstOrDefaultAsync(e => e.id == id && e.is_deleted != true, cancellationToken);
+        var specialEvent = await _unitOfWork.Context.Set<SpecialEvent>()
+            .FirstOrDefaultAsync(e => e.Id == id && e.IsDeleted != true, cancellationToken);
 
         if (specialEvent == null)
             return null;
 
         if (!string.IsNullOrEmpty(request.EventName))
-            specialEvent.event_name = request.EventName;
+            specialEvent.EventName = request.EventName;
 
         if (request.Description != null)
-            specialEvent.description = request.Description;
+            specialEvent.Description = request.Description;
 
         if (request.StartDate.HasValue)
-            specialEvent.start_date = request.StartDate.Value;
+            specialEvent.StartDate = request.StartDate.Value;
 
         if (request.EndDate.HasValue)
-            specialEvent.end_date = request.EndDate.Value;
+            specialEvent.EndDate = request.EndDate.Value;
 
-        specialEvent.updated_at = DateTime.UtcNow;
+        specialEvent.UpdatedAt = DateTime.UtcNow;
 
-        _unitOfWork.Context.Set<special_event>().Update(specialEvent);
+        _unitOfWork.Context.Set<SpecialEvent>().Update(specialEvent);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Updated special event {EventId}", id);
@@ -113,16 +113,16 @@ public class SpecialEventService : ISpecialEventService
 
     public async Task<bool> DeleteSpecialEventAsync(int id, CancellationToken cancellationToken = default)
     {
-        var specialEvent = await _unitOfWork.Context.Set<special_event>()
-            .FirstOrDefaultAsync(e => e.id == id && e.is_deleted != true, cancellationToken);
+        var specialEvent = await _unitOfWork.Context.Set<SpecialEvent>()
+            .FirstOrDefaultAsync(e => e.Id == id && e.IsDeleted != true, cancellationToken);
 
         if (specialEvent == null)
             return false;
 
-        specialEvent.is_deleted = true;
-        specialEvent.updated_at = DateTime.UtcNow;
+        specialEvent.IsDeleted = true;
+        specialEvent.UpdatedAt = DateTime.UtcNow;
 
-        _unitOfWork.Context.Set<special_event>().Update(specialEvent);
+        _unitOfWork.Context.Set<SpecialEvent>().Update(specialEvent);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Deleted special event {EventId}", id);
@@ -130,17 +130,17 @@ public class SpecialEventService : ISpecialEventService
         return true;
     }
 
-    private SpecialEventResponse MapToResponse(special_event specialEvent)
+    private SpecialEventResponse MapToResponse(SpecialEvent specialEvent)
     {
         return new SpecialEventResponse
         {
-            Id = specialEvent.id,
-            EventName = specialEvent.event_name,
-            Description = specialEvent.description,
-            StartDate = specialEvent.start_date,
-            EndDate = specialEvent.end_date,
-            CreatedAt = specialEvent.created_at,
-            UpdatedAt = specialEvent.updated_at
+            Id = specialEvent.Id,
+            EventName = specialEvent.EventName,
+            Description = specialEvent.Description,
+            StartDate = specialEvent.StartDate,
+            EndDate = specialEvent.EndDate,
+            CreatedAt = specialEvent.CreatedAt,
+            UpdatedAt = specialEvent.UpdatedAt
         };
     }
 }
