@@ -27,5 +27,5 @@ public partial class mood_type
     public virtual ICollection<MemberMoodLog> member_mood_logs { get; set; } = new List<MemberMoodLog>();
 
     [InverseProperty("mood_types")]
-    public virtual ICollection<member_profile> member_profiles { get; set; } = new List<member_profile>();
+    public virtual ICollection<MemberProfile> member_profiles { get; set; } = new List<MemberProfile>();
 }

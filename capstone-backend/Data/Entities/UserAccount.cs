@@ -41,7 +41,7 @@ public partial class UserAccount
     public virtual ICollection<DeviceToken> device_tokens { get; set; } = new List<DeviceToken>();
 
     [InverseProperty("user")]
-    public virtual ICollection<member_profile> member_profiles { get; set; } = new List<member_profile>();
+    public virtual ICollection<MemberProfile> member_profiles { get; set; } = new List<MemberProfile>();
 
     [InverseProperty("user")]
     public virtual ICollection<notification> notifications { get; set; } = new List<notification>();

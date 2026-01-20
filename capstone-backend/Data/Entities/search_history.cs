@@ -28,5 +28,5 @@ public partial class search_history
 
     [ForeignKey("member_id")]
     [InverseProperty("search_histories")]
-    public virtual member_profile? member { get; set; }
+    public virtual MemberProfile? member { get; set; }
 }

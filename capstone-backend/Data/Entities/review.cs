@@ -36,7 +36,7 @@ public partial class review
 
     [ForeignKey("member_id")]
     [InverseProperty("reviews")]
-    public virtual member_profile member { get; set; } = null!;
+    public virtual MemberProfile member { get; set; } = null!;
 
     [InverseProperty("review")]
     public virtual ICollection<review_like> review_likes { get; set; } = new List<review_like>();

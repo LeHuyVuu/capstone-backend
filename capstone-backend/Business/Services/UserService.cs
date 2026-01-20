@@ -44,7 +44,7 @@ public class UserService : IUserService
         // Get member profile for gender
         var memberProfile = user.member_profiles?.FirstOrDefault();
         Console.Write(memberProfile);
-        var gender = memberProfile?.gender ?? string.Empty;
+        var gender = memberProfile?.Gender ?? string.Empty;
 
         // Generate JWT tokens
         var role = user.Role ?? "member";
@@ -144,26 +144,26 @@ public class UserService : IUserService
     /// </summary>
     private async Task CreateMemberProfileAsync(int userId, RegisterRequest request, CancellationToken cancellationToken)
     {
-        var memberProfile = new member_profile
+        var memberProfile = new MemberProfile
         {
-            user_id = userId,
-            full_name = request.FullName,
-            date_of_birth = request.DateOfBirth,
-            gender = request.Gender,
-            relationship_status = "SINGLE", // Default (uppercase)
-            created_at = DateTime.UtcNow,
-            updated_at = DateTime.UtcNow,
-            is_deleted = false
+            UserId = userId,
+            FullName = request.FullName,
+            DateOfBirth = request.DateOfBirth,
+            Gender = request.Gender,
+            RelationshipStatus = "SINGLE", // Default (uppercase)
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
         };
 
         // Generate unique invite code
-        memberProfile.invite_code = GenerateInviteCode();
+        memberProfile.InviteCode = GenerateInviteCode();
 
-        await _unitOfWork.Context.Set<member_profile>().AddAsync(memberProfile, cancellationToken);
+        await _unitOfWork.Context.Set<MemberProfile>().AddAsync(memberProfile, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation("Created member profile for user {UserId} with invite code {InviteCode}",
-            userId, memberProfile.invite_code);
+            userId, memberProfile.InviteCode);
     }
 
     /// <summary>
@@ -274,7 +274,7 @@ public class UserService : IUserService
     /// </summary>
     private static UserResponse MapToUserResponse(UserAccount user)
     {
-        var memberProfile = user.member_profiles?.FirstOrDefault(p => p.is_deleted != true);
+        var memberProfile = user.member_profiles?.FirstOrDefault(p => p.IsDeleted != true);
         var venueOwnerProfile = user.venue_owner_profiles?.FirstOrDefault(p => p.is_deleted != true);
 
         return new UserResponse
@@ -290,19 +290,19 @@ public class UserService : IUserService
             UpdatedAt = user.UpdatedAt,
             MemberProfile = memberProfile != null ? new MemberProfileResponse
             {
-                Id = memberProfile.id,
-                FullName = memberProfile.full_name,
-                DateOfBirth = memberProfile.date_of_birth,
-                Gender = memberProfile.gender,
-                Bio = memberProfile.bio,
-                RelationshipStatus = memberProfile.relationship_status,
-                HomeLatitude = memberProfile.home_latitude,
-                HomeLongitude = memberProfile.home_longitude,
-                BudgetMin = memberProfile.budget_min,
-                BudgetMax = memberProfile.budget_max,
-                Interests = memberProfile.interests,
-                AvailableTime = memberProfile.available_time,
-                InviteCode = memberProfile.invite_code
+                Id = memberProfile.Id,
+                FullName = memberProfile.FullName,
+                DateOfBirth = memberProfile.DateOfBirth,
+                Gender = memberProfile.Gender,
+                Bio = memberProfile.Bio,
+                RelationshipStatus = memberProfile.RelationshipStatus,
+                HomeLatitude = memberProfile.HomeLatitude,
+                HomeLongitude = memberProfile.HomeLongitude,
+                BudgetMin = memberProfile.BudgetMin,
+                BudgetMax = memberProfile.BudgetMax,
+                Interests = memberProfile.Interests,
+                AvailableTime = memberProfile.AvailableTime,
+                InviteCode = memberProfile.InviteCode
             } : null,
             VenueOwnerProfile = venueOwnerProfile != null ? new VenueOwnerProfileResponse
             {

@@ -29,5 +29,5 @@ public partial class report
 
     [ForeignKey("reporter_id")]
     [InverseProperty("reports")]
-    public virtual member_profile? reporter { get; set; }
+    public virtual MemberProfile? reporter { get; set; }
 }

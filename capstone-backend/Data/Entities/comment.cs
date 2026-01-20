@@ -40,5 +40,5 @@ public partial class Comment
 
     [ForeignKey("member_id")]
     [InverseProperty("comments")]
-    public virtual member_profile member { get; set; } = null!;
+    public virtual MemberProfile member { get; set; } = null!;
 }

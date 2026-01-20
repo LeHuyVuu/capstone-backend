@@ -32,7 +32,7 @@ public partial class personality_test
 
     [ForeignKey("member_id")]
     [InverseProperty("personality_tests")]
-    public virtual member_profile member { get; set; } = null!;
+    public virtual MemberProfile member { get; set; } = null!;
 
     [ForeignKey("test_type_id")]
     [InverseProperty("personality_tests")]

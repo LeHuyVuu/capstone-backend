@@ -8,51 +8,51 @@ namespace capstone_backend.Data.Entities;
 
 [Index("user_id", Name = "idx_member_user_id")]
 [Index("invite_code", Name = "member_profiles_invite_code_key", IsUnique = true)]
-public partial class member_profile
+public partial class MemberProfile
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int user_id { get; set; }
+    public int UserId { get; set; }
 
-    public int? mood_types_id { get; set; }
+    public int? MoodTypesId { get; set; }
 
-    public string? full_name { get; set; }
+    public string? FullName { get; set; }
 
-    public DateOnly? date_of_birth { get; set; }
+    public DateOnly? DateOfBirth { get; set; }
 
-    public string? gender { get; set; }
+    public string? Gender { get; set; }
 
-    public string? bio { get; set; }
+    public string? Bio { get; set; }
 
-    public string? relationship_status { get; set; }
+    public string? RelationshipStatus { get; set; }
 
     [Precision(10, 8)]
-    public decimal? home_latitude { get; set; }
+    public decimal? HomeLatitude { get; set; }
 
     [Precision(11, 8)]
-    public decimal? home_longitude { get; set; }
+    public decimal? HomeLongitude { get; set; }
 
     [Precision(18, 2)]
-    public decimal? budget_min { get; set; }
+    public decimal? BudgetMin { get; set; }
 
     [Precision(18, 2)]
-    public decimal? budget_max { get; set; }
+    public decimal? BudgetMax { get; set; }
 
     [Column(TypeName = "jsonb")]
-    public string? interests { get; set; }
+    public string? Interests { get; set; }
 
     [Column(TypeName = "jsonb")]
-    public string? available_time { get; set; }
+    public string? AvailableTime { get; set; }
 
     [StringLength(10)]
-    public string? invite_code { get; set; }
+    public string? InviteCode { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
     [InverseProperty("member")]
     public virtual ICollection<BlogLike> blog_likes { get; set; } = new List<BlogLike>();

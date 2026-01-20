@@ -27,7 +27,7 @@ public partial class member_subscription_package
 
     [ForeignKey("member_id")]
     [InverseProperty("member_subscription_packages")]
-    public virtual member_profile member { get; set; } = null!;
+    public virtual MemberProfile member { get; set; } = null!;
 
     [ForeignKey("package_id")]
     [InverseProperty("member_subscription_packages")]

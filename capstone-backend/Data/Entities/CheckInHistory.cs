@@ -28,7 +28,7 @@ public partial class CheckInHistory
 
     [ForeignKey("member_id")]
     [InverseProperty("check_in_histories")]
-    public virtual member_profile member { get; set; } = null!;
+    public virtual MemberProfile member { get; set; } = null!;
 
     [ForeignKey("venue_id")]
     [InverseProperty("check_in_histories")]

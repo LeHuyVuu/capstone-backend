@@ -25,7 +25,7 @@ public partial class voucher_item_member
 
     [ForeignKey("member_id")]
     [InverseProperty("voucher_item_members")]
-    public virtual member_profile? member { get; set; }
+    public virtual MemberProfile? member { get; set; }
 
     [InverseProperty("voucher_item_member")]
     public virtual ICollection<voucher_item> voucher_items { get; set; } = new List<voucher_item>();

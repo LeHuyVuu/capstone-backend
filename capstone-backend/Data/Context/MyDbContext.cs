@@ -62,7 +62,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<MemberMoodLog> MemberMoodLogs { get; set; }
 
-    public virtual DbSet<member_profile> member_profiles { get; set; }
+    public virtual DbSet<MemberProfile> MemberProfiles { get; set; }
 
     public virtual DbSet<member_subscription_package> member_subscription_packages { get; set; }
 
@@ -500,15 +500,15 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("member_mood_logs_mood_type_id_fkey");
         });
 
-        modelBuilder.Entity<member_profile>(entity =>
+        modelBuilder.Entity<MemberProfile>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("member_profiles_pkey");
+            entity.HasKey(e => e.Id).HasName("member_profiles_pkey");
 
-            entity.Property(e => e.budget_min).HasDefaultValueSql("0");
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.relationship_status).HasDefaultValueSql("'SINGLE'::text");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.BudgetMin).HasDefaultValueSql("0");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.RelationshipStatus).HasDefaultValueSql("'SINGLE'::text");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.mood_types).WithMany(p => p.member_profiles).HasConstraintName("member_profiles_mood_types_id_fkey");
 

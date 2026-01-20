@@ -19,7 +19,7 @@ public partial class review_like
 
     [ForeignKey("member_id")]
     [InverseProperty("review_likes")]
-    public virtual member_profile? member { get; set; }
+    public virtual MemberProfile? member { get; set; }
 
     [ForeignKey("review_id")]
     [InverseProperty("review_likes")]

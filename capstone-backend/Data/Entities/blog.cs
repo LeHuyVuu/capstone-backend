@@ -40,5 +40,5 @@ public partial class Blog
 
     [ForeignKey("member_id")]
     [InverseProperty("blogs")]
-    public virtual member_profile member { get; set; } = null!;
+    public virtual MemberProfile member { get; set; } = null!;
 }

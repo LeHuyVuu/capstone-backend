@@ -27,5 +27,5 @@ public partial class MemberAccessory
 
     [ForeignKey("member_id")]
     [InverseProperty("member_accessories")]
-    public virtual member_profile? member { get; set; }
+    public virtual MemberProfile? member { get; set; }
 }

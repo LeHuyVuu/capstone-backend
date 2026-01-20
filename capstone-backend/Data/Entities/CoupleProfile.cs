@@ -67,9 +67,9 @@ public partial class CoupleProfile
 
     [ForeignKey("member_id_1")]
     [InverseProperty("couple_profilemember_id_1Navigations")]
-    public virtual member_profile member_id_1Navigation { get; set; } = null!;
+    public virtual MemberProfile member_id_1Navigation { get; set; } = null!;
 
     [ForeignKey("member_id_2")]
     [InverseProperty("couple_profilemember_id_2Navigations")]
-    public virtual member_profile member_id_2Navigation { get; set; } = null!;
+    public virtual MemberProfile member_id_2Navigation { get; set; } = null!;
 }

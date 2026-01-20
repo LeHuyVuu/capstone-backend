@@ -23,5 +23,5 @@ public partial class CommentLike
 
     [ForeignKey("member_id")]
     [InverseProperty("comment_likes")]
-    public virtual member_profile? member { get; set; }
+    public virtual MemberProfile? member { get; set; }
 }

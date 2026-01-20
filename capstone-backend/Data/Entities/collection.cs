@@ -27,7 +27,7 @@ public partial class Collection
 
     [ForeignKey("member_id")]
     [InverseProperty("collections")]
-    public virtual member_profile member { get; set; } = null!;
+    public virtual MemberProfile member { get; set; } = null!;
 
     [ForeignKey("collection_id")]
     [InverseProperty("collections")]

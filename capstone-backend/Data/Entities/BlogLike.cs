@@ -23,5 +23,5 @@ public partial class BlogLike
 
     [ForeignKey("member_id")]
     [InverseProperty("blog_likes")]
-    public virtual member_profile? member { get; set; }
+    public virtual MemberProfile? member { get; set; }
 }

@@ -31,7 +31,7 @@ public partial class MemberMoodLog
 
     [ForeignKey("member_id")]
     [InverseProperty("member_mood_logs")]
-    public virtual member_profile member { get; set; } = null!;
+    public virtual MemberProfile member { get; set; } = null!;
 
     [ForeignKey("mood_type_id")]
     [InverseProperty("member_mood_logs")]
