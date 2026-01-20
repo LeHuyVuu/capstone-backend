@@ -41,5 +41,5 @@ public partial class Advertisement
 
     [ForeignKey("venue_owner_id")]
     [InverseProperty("advertisements")]
-    public virtual venue_owner_profile venue_owner { get; set; } = null!;
+    public virtual VenueOwnerProfile venue_owner { get; set; } = null!;
 }

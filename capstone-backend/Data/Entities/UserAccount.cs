@@ -50,7 +50,7 @@ public partial class UserAccount
     public virtual ICollection<RefreshToken> refresh_tokens { get; set; } = new List<RefreshToken>();
 
     [InverseProperty("user")]
-    public virtual ICollection<venue_owner_profile> venue_owner_profiles { get; set; } = new List<venue_owner_profile>();
+    public virtual ICollection<VenueOwnerProfile> venue_owner_profiles { get; set; } = new List<VenueOwnerProfile>();
 
     [InverseProperty("user")]
     public virtual ICollection<wallet> wallets { get; set; } = new List<wallet>();

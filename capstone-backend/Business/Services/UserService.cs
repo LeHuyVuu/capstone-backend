@@ -275,7 +275,7 @@ public class UserService : IUserService
     private static UserResponse MapToUserResponse(UserAccount user)
     {
         var memberProfile = user.member_profiles?.FirstOrDefault(p => p.IsDeleted != true);
-        var venueOwnerProfile = user.venue_owner_profiles?.FirstOrDefault(p => p.is_deleted != true);
+        var venueOwnerProfile = user.venue_owner_profiles?.FirstOrDefault(p => p.IsDeleted != true);
 
         return new UserResponse
         {
@@ -306,11 +306,11 @@ public class UserService : IUserService
             } : null,
             VenueOwnerProfile = venueOwnerProfile != null ? new VenueOwnerProfileResponse
             {
-                Id = venueOwnerProfile.id,
-                BusinessName = venueOwnerProfile.business_name,
-                PhoneNumber = venueOwnerProfile.phone_number,
-                Email = venueOwnerProfile.email,
-                Address = venueOwnerProfile.address
+                Id = venueOwnerProfile.Id,
+                BusinessName = venueOwnerProfile.BusinessName,
+                PhoneNumber = venueOwnerProfile.PhoneNumber,
+                Email = venueOwnerProfile.Email,
+                Address = venueOwnerProfile.Address
             } : null
         };
     }

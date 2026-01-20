@@ -106,7 +106,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<VenueLocationAdvertisement> VenueLocationAdvertisements { get; set; }
 
-    public virtual DbSet<venue_owner_profile> VenueOwnerProfiles { get; set; }
+    public virtual DbSet<VenueOwnerProfile> VenueOwnerProfiles { get; set; }
 
     public virtual DbSet<venue_subscription_package> VenueSubscriptionPackages { get; set; }
 
@@ -787,13 +787,13 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("venue_location_advertisements_venue_id_fkey");
         });
 
-        modelBuilder.Entity<venue_owner_profile>(entity =>
+        modelBuilder.Entity<VenueOwnerProfile>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("venue_owner_profiles_pkey");
+            entity.HasKey(e => e.Id).HasName("venue_owner_profiles_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.user).WithMany(p => p.venue_owner_profiles)
                 .OnDelete(DeleteBehavior.ClientSetNull)
