@@ -30,7 +30,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Collection> Collections { get; set; }
 
-    public virtual DbSet<comment> comments { get; set; }
+    public virtual DbSet<Comment> Comments { get; set; }
 
     public virtual DbSet<comment_like> comment_likes { get; set; }
 
@@ -268,15 +268,15 @@ public partial class MyDbContext : DbContext
                     });
         });
 
-        modelBuilder.Entity<comment>(entity =>
+        modelBuilder.Entity<Comment>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("comments_pkey");
+            entity.HasKey(e => e.Id).HasName("comments_pkey");
 
-            entity.Property(e => e.comment_count).HasDefaultValue(0);
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.like_count).HasDefaultValue(0);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CommentCount).HasDefaultValue(0);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.LikeCount).HasDefaultValue(0);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.blog).WithMany(p => p.comments)
                 .OnDelete(DeleteBehavior.Cascade)

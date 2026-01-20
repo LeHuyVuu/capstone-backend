@@ -70,7 +70,7 @@ public partial class member_profile
     public virtual ICollection<comment_like> comment_likes { get; set; } = new List<comment_like>();
 
     [InverseProperty("member")]
-    public virtual ICollection<comment> comments { get; set; } = new List<comment>();
+    public virtual ICollection<Comment> comments { get; set; } = new List<Comment>();
 
     [InverseProperty("member_id_1Navigation")]
     public virtual ICollection<couple_profile> couple_profilemember_id_1Navigations { get; set; } = new List<couple_profile>();

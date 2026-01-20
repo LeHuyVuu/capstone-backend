@@ -19,7 +19,7 @@ public partial class comment_like
 
     [ForeignKey("comment_id")]
     [InverseProperty("comment_likes")]
-    public virtual comment? comment { get; set; }
+    public virtual Comment? comment { get; set; }
 
     [ForeignKey("member_id")]
     [InverseProperty("comment_likes")]
