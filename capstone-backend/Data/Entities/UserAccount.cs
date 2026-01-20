@@ -38,7 +38,7 @@ public partial class UserAccount
     public bool? IsDeleted { get; set; }
 
     [InverseProperty("user")]
-    public virtual ICollection<device_token> device_tokens { get; set; } = new List<device_token>();
+    public virtual ICollection<DeviceToken> device_tokens { get; set; } = new List<DeviceToken>();
 
     [InverseProperty("user")]
     public virtual ICollection<member_profile> member_profiles { get; set; } = new List<member_profile>();

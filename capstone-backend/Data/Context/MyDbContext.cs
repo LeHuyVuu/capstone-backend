@@ -48,7 +48,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<DatePlanItem> DatePlanItems { get; set; }
 
-    public virtual DbSet<device_token> device_tokens { get; set; }
+    public virtual DbSet<DeviceToken> DeviceTokens { get; set; }
 
     public virtual DbSet<leaderboard> leaderboards { get; set; }
 
@@ -406,13 +406,13 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("date_plan_items_venue_location_id_fkey");
         });
 
-        modelBuilder.Entity<device_token>(entity =>
+        modelBuilder.Entity<DeviceToken>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("device_tokens_pkey");
+            entity.HasKey(e => e.Id).HasName("device_tokens_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.user).WithMany(p => p.device_tokens).HasConstraintName("device_tokens_user_id_fkey");
         });

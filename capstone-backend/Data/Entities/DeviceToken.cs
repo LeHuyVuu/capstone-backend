@@ -6,22 +6,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class device_token
+public partial class DeviceToken
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public int user_id { get; set; }
+    public int UserId { get; set; }
 
-    public string token_hash { get; set; } = null!;
+    public string TokenHash { get; set; } = null!;
 
-    public string? platform { get; set; }
+    public string? Platform { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
     [ForeignKey("user_id")]
     [InverseProperty("device_tokens")]
