@@ -66,7 +66,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<member_subscription_package> member_subscription_packages { get; set; }
 
-    public virtual DbSet<mood_type> mood_types { get; set; }
+    public virtual DbSet<MoodType> MoodTypes { get; set; }
 
     public virtual DbSet<notification> notifications { get; set; }
 
@@ -531,14 +531,14 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("member_subscription_packages_package_id_fkey");
         });
 
-        modelBuilder.Entity<mood_type>(entity =>
+        modelBuilder.Entity<MoodType>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("mood_types_pkey");
+            entity.HasKey(e => e.Id).HasName("mood_types_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<notification>(entity =>

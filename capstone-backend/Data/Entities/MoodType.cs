@@ -6,22 +6,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-public partial class mood_type
+public partial class MoodType
 {
     [Key]
-    public int id { get; set; }
+    public int Id { get; set; }
 
-    public string name { get; set; } = null!;
+    public string Name { get; set; } = null!;
 
-    public string? icon_url { get; set; }
+    public string? IconUrl { get; set; }
 
-    public DateTime? created_at { get; set; }
+    public DateTime? CreatedAt { get; set; }
 
-    public DateTime? updated_at { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public bool? is_deleted { get; set; }
+    public bool? IsDeleted { get; set; }
 
-    public bool? is_active { get; set; }
+    public bool? IsActive { get; set; }
 
     [InverseProperty("mood_type")]
     public virtual ICollection<MemberMoodLog> member_mood_logs { get; set; } = new List<MemberMoodLog>();

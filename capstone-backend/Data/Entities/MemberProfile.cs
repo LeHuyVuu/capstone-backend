@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-[Index("user_id", Name = "idx_member_user_id")]
-[Index("invite_code", Name = "member_profiles_invite_code_key", IsUnique = true)]
+[Index("UserId", Name = "idx_member_user_id")]
+[Index("InviteCode", Name = "member_profiles_invite_code_key", IsUnique = true)]
 public partial class MemberProfile
 {
     [Key]
@@ -89,7 +89,7 @@ public partial class MemberProfile
 
     [ForeignKey("mood_types_id")]
     [InverseProperty("member_profiles")]
-    public virtual mood_type? mood_types { get; set; }
+    public virtual MoodType? mood_types { get; set; }
 
     [InverseProperty("member")]
     public virtual ICollection<personality_test> personality_tests { get; set; } = new List<personality_test>();

@@ -35,5 +35,5 @@ public partial class MemberMoodLog
 
     [ForeignKey("mood_type_id")]
     [InverseProperty("member_mood_logs")]
-    public virtual mood_type mood_type { get; set; } = null!;
+    public virtual MoodType mood_type { get; set; } = null!;
 }
