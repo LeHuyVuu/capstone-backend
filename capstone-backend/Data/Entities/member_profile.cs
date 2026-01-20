@@ -82,7 +82,7 @@ public partial class member_profile
     public virtual ICollection<MemberAccessory> member_accessories { get; set; } = new List<MemberAccessory>();
 
     [InverseProperty("member")]
-    public virtual ICollection<member_mood_log> member_mood_logs { get; set; } = new List<member_mood_log>();
+    public virtual ICollection<MemberMoodLog> member_mood_logs { get; set; } = new List<MemberMoodLog>();
 
     [InverseProperty("member")]
     public virtual ICollection<member_subscription_package> member_subscription_packages { get; set; } = new List<member_subscription_package>();

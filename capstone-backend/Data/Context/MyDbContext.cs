@@ -60,7 +60,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<MemberAccessory> MemberAccessories { get; set; }
 
-    public virtual DbSet<member_mood_log> member_mood_logs { get; set; }
+    public virtual DbSet<MemberMoodLog> MemberMoodLogs { get; set; }
 
     public virtual DbSet<member_profile> member_profiles { get; set; }
 
@@ -484,14 +484,14 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("member_accessories_member_id_fkey");
         });
 
-        modelBuilder.Entity<member_mood_log>(entity =>
+        modelBuilder.Entity<MemberMoodLog>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("member_mood_logs_pkey");
+            entity.HasKey(e => e.Id).HasName("member_mood_logs_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.is_deleted).HasDefaultValue(false);
-            entity.Property(e => e.is_private).HasDefaultValue(false);
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            entity.Property(e => e.IsPrivate).HasDefaultValue(false);
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.member).WithMany(p => p.member_mood_logs).HasConstraintName("member_mood_logs_member_id_fkey");
 
