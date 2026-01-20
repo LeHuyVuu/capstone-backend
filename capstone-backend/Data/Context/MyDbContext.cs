@@ -118,7 +118,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Wallet> Wallets { get; set; }
 
-    public virtual DbSet<withdraw_request> WithdrawRequests { get; set; }
+    public virtual DbSet<WithdrawRequest> WithdrawRequests { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -868,13 +868,13 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("wallets_user_id_fkey");
         });
 
-        modelBuilder.Entity<withdraw_request>(entity =>
+        modelBuilder.Entity<WithdrawRequest>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("withdraw_requests_pkey");
+            entity.HasKey(e => e.Id).HasName("withdraw_requests_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.requested_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.RequestedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.wallet).WithMany(p => p.withdraw_requests)
                 .OnDelete(DeleteBehavior.ClientSetNull)

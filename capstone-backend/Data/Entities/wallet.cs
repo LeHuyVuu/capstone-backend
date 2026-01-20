@@ -29,5 +29,5 @@ public partial class Wallet
     public virtual UserAccount user { get; set; } = null!;
 
     [InverseProperty("wallet")]
-    public virtual ICollection<withdraw_request> withdraw_requests { get; set; } = new List<withdraw_request>();
+    public virtual ICollection<WithdrawRequest> withdraw_requests { get; set; } = new List<WithdrawRequest>();
 }
