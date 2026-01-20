@@ -96,7 +96,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<TestType> TestTypes { get; set; }
 
-    public virtual DbSet<top_search> TopSearches { get; set; }
+    public virtual DbSet<TopSearch> TopSearches { get; set; }
 
     public virtual DbSet<transaction> Transactions { get; set; }
 
@@ -714,13 +714,13 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<top_search>(entity =>
+        modelBuilder.Entity<TopSearch>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("top_searches_pkey");
+            entity.HasKey(e => e.Id).HasName("top_searches_pkey");
 
-            entity.Property(e => e.hit_count).HasDefaultValue(0);
-            entity.Property(e => e.is_active).HasDefaultValue(true);
-            entity.Property(e => e.last_updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.HitCount).HasDefaultValue(0);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.LastUpdatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<transaction>(entity =>
