@@ -98,7 +98,7 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<TopSearch> TopSearches { get; set; }
 
-    public virtual DbSet<transaction> Transactions { get; set; }
+    public virtual DbSet<Transaction> Transactions { get; set; }
 
     public virtual DbSet<UserAccount> UserAccounts { get; set; }
 
@@ -723,12 +723,12 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.LastUpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<transaction>(entity =>
+        modelBuilder.Entity<Transaction>(entity =>
         {
-            entity.HasKey(e => e.id).HasName("transactions_pkey");
+            entity.HasKey(e => e.Id).HasName("transactions_pkey");
 
-            entity.Property(e => e.created_at).HasDefaultValueSql("now()");
-            entity.Property(e => e.updated_at).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<UserAccount>(entity =>
