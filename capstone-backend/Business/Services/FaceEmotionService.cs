@@ -140,4 +140,41 @@ public class FaceEmotionService
                 e => Math.Round((decimal)e.Confidence!.Value, 2)
             );
     }
+    
+    
+    
+    public string GetEmotionSentence(string emotion)
+    {
+        return emotion switch
+        {
+            "HAPPY" => "Chúng mình thấy bạn đang zuiii lắm đó, phải hông nè 😊",
+            "SAD" => "Hình như bạn đang hơi buồn một chút, tụi mình ở đây nè 💙",
+            "ANGRY" => "Có vẻ bạn đang hơi căng thẳng đó, hít thở sâu nha 😤",
+            "SURPRISED" => "Woww, trông bạn có vẻ rất bất ngờ luôn 😲",
+            "CONFUSED" => "Bạn đang hơi bối rối đúng hông ta 🤔",
+            "DISGUSTED" => "Có gì đó làm bạn không thoải mái thì phải 😖",
+            "CALM" => "Bạn trông rất bình tĩnh và thư giãn luôn 😌",
+            "FEAR" => "Có vẻ bạn đang hơi lo lắng đó, đừng sợ nha 🫂",
+            _ => "Tụi mình chưa đoán rõ cảm xúc của bạn, nhưng bạn vẫn dễ thương lắm ✨"
+        };
+    }
+    
+    public string MapEmotionToVietnamese(string emotion)
+    {
+        return emotion switch
+        {
+            "HAPPY" => "Vui",
+            "SAD" => "Buồn",
+            "ANGRY" => "Tức giận",
+            "SURPRISED" => "Bất ngờ",
+            "CONFUSED" => "Bối rối",
+            "DISGUSTED" => "Khó chịu",
+            "CALM" => "Bình tĩnh",
+            "FEAR" => "Sợ hãi",
+            _ => "Không xác định"
+        };
+    }
+
+
+
 }
