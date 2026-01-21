@@ -1,7 +1,10 @@
 using capstone_backend.Api.Models;
 using capstone_backend.Business.DTOs.Emotion;
 using capstone_backend.Business.Services;
+using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Api.Controllers;
 
@@ -10,15 +13,18 @@ namespace capstone_backend.Api.Controllers;
 /// </summary>
 [Route("api/[controller]")]
 [ApiController]
+[Authorize]
 public class EmotionController : BaseController
 {
     private readonly FaceEmotionService _emotionService;
     private readonly ILogger<EmotionController> _logger;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public EmotionController(FaceEmotionService emotionService, ILogger<EmotionController> logger)
+    public EmotionController(FaceEmotionService emotionService, ILogger<EmotionController> logger, IUnitOfWork unitOfWork)
     {
         _emotionService = emotionService;
         _logger = logger;
+        _unitOfWork = unitOfWork;
     }
 
     /// <summary>
@@ -105,6 +111,52 @@ public class EmotionController : BaseController
                         : 0
                 };
             }).ToList();
+
+            // Cập nhật MoodTypesId vào MemberProfile dựa trên emotion đầu tiên
+            if (results.Count > 0)
+            {
+                var userId = GetCurrentUserId();
+                if (userId.HasValue)
+                {
+                    try
+                    {
+                        var firstEmotion = _emotionService.GetDominantEmotion(faces[0]); // HAPPY, SAD, ...
+                        
+                        // Query MoodType dựa trên emotion name
+                        var moodType = await _unitOfWork.Context.MoodTypes
+                            .FirstOrDefaultAsync(m => m.Name.ToUpper() == firstEmotion.ToUpper() 
+                                                    && m.IsDeleted != true 
+                                                    && m.IsActive == true);
+
+                        if (moodType != null)
+                        {
+                            // Lấy MemberProfile của user
+                            var memberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId.Value);
+                            
+                            if (memberProfile != null)
+                            {
+                                // Cập nhật MoodTypesId
+                                memberProfile.MoodTypesId = moodType.Id;
+                                memberProfile.UpdatedAt = DateTime.UtcNow;
+                                
+                                _unitOfWork.MembersProfile.Update(memberProfile);
+                                await _unitOfWork.SaveChangesAsync();
+                                
+                                _logger.LogInformation($"✅ Đã cập nhật MoodTypesId={moodType.Id} ({moodType.Name}) cho UserId={userId.Value}");
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"⚠️ Không tìm thấy MoodType với tên '{firstEmotion}'");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log lỗi nhưng vẫn trả về kết quả emotion
+                        _logger.LogError(ex, "❌ Lỗi khi cập nhật MoodTypesId");
+                    }
+                }
+            }
 
 
 
