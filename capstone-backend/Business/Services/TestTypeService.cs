@@ -42,7 +42,7 @@ namespace capstone_backend.Business.Services
             try
             {
                 var exist = await _unitOfWork.TestTypes.GetByIdAsync(id);
-                if (exist == null || exist.IsActive == false || exist.IsDeleted == true)
+                if (exist == null)
                     throw new Exception("Test type not found");
 
                 exist.IsDeleted = true;
@@ -92,7 +92,7 @@ namespace capstone_backend.Business.Services
             try
             {
                 var exist = await _unitOfWork.TestTypes.GetByIdAsync(id);
-                if (exist == null || exist.IsActive == false || exist.IsDeleted == true)
+                if (exist == null)
                     throw new Exception("Test type not found");
 
                 // Mapping
