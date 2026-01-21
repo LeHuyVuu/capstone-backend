@@ -64,5 +64,25 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        [HttpPatch("{id:int}/delete")]
+        public async Task<IActionResult> DeleteTestType(int id)
+        {
+            try
+            {
+                var isAdmin = IsCurrentUserInRole("ADMIN");
+                if (!isAdmin)
+                    return ForbiddenResponse("You do not have permission to access this resource");
+                var response = await _testTypeService.DeleteTestTypeAsync(id);
+                if (response > 0)
+                    return OkResponse("Test type deleted successfully");
+                else
+                    return BadRequestResponse("Failed to delete test type");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

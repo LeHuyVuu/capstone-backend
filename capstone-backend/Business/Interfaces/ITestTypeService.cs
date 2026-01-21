@@ -7,5 +7,6 @@ namespace capstone_backend.Business.Interfaces
     {
         Task<int> CreateTestTypeAsync(CreateTestTypeResquest request);
         Task<int> UpdateTestTypeAsync(int id, UpdateTestTypeRequest request);
+        Task<int> DeleteTestTypeAsync(int id);
     }
 }

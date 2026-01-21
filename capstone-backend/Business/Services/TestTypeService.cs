@@ -37,12 +37,32 @@ namespace capstone_backend.Business.Services
             }
         }
 
+        public async Task<int> DeleteTestTypeAsync(int id)
+        {
+            try
+            {
+                var exist = await _unitOfWork.TestTypes.GetByIdAsync(id);
+                if (exist == null || exist.IsActive == false || exist.IsDeleted == true)
+                    throw new Exception("Test type not found");
+
+                exist.IsDeleted = true;
+                exist.IsActive = false;
+
+                _unitOfWork.TestTypes.Update(exist);
+                return await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
         public async Task<int> UpdateTestTypeAsync(int id, UpdateTestTypeRequest request)
         {
             try
             {
                 var exist = await _unitOfWork.TestTypes.GetByIdAsync(id);
-                if (exist == null)
+                if (exist == null || exist.IsActive == false || exist.IsDeleted == true)
                     throw new Exception("Test type not found");
 
                 // Mapping
