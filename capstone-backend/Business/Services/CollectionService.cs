@@ -32,7 +32,7 @@ public class CollectionService : ICollectionService
         };
 
         await _unitOfWork.Context.Set<Collection>().AddAsync(collection, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Created collection {CollectionId} for member {MemberId}", collection.Id, memberId);
 
@@ -90,7 +90,7 @@ public class CollectionService : ICollectionService
         collection.UpdatedAt = DateTime.UtcNow;
 
         _unitOfWork.Context.Set<Collection>().Update(collection);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Updated collection {CollectionId}", collectionId);
 
@@ -109,7 +109,7 @@ public class CollectionService : ICollectionService
         collection.UpdatedAt = DateTime.UtcNow;
 
         _unitOfWork.Context.Set<Collection>().Update(collection);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Deleted collection {CollectionId}", collectionId);
 
@@ -138,7 +138,7 @@ public class CollectionService : ICollectionService
         }
 
         collection.UpdatedAt = DateTime.UtcNow;
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Added {Count} venues to collection {CollectionId}", venuesToAdd.Count, collectionId);
 
@@ -164,7 +164,7 @@ public class CollectionService : ICollectionService
         }
 
         collection.UpdatedAt = DateTime.UtcNow;
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Removed {Count} venues from collection {CollectionId}", venuesToRemove.Count, collectionId);
 
