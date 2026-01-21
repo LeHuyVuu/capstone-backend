@@ -83,17 +83,30 @@ public class EmotionController : BaseController
             Console.Write("Data trả về nè:" + faces);
             // Chuyển đổi kết quả sang DTO dễ hiểu
             // Chuyển đổi kết quả sang DTO dễ hiểu
-            var results = faces.Select(face => new FaceEmotionResponse
+            var results = faces.Select(face =>
             {
-                DominantEmotion = _emotionService.GetDominantEmotion(face),
-                AllEmotions = _emotionService.GetAllEmotions(face),
-                AgeRange = $"{face.AgeRange.Low}-{face.AgeRange.High}",
-                Gender = face.Gender?.Value ?? "Unknown",
-                GenderConfidence = face.Gender?.Confidence != null ? Math.Round((decimal)face.Gender.Confidence, 2) : 0,
-                HasSunglasses = face.Sunglasses?.Value ?? false,
-                IsSmiling = face.Smile?.Value ?? false,
-                SmileConfidence = face.Smile?.Confidence != null ? Math.Round((decimal)face.Smile.Confidence, 2) : 0
+                var dominantEmotion = _emotionService.GetDominantEmotion(face);       // HAPPY, SAD,...
+                var dominantEmotionVi = _emotionService.MapEmotionToVietnamese(dominantEmotion);
+
+                return new FaceEmotionResponse
+                {
+                    DominantEmotion = dominantEmotionVi,                              // Vui, Buồn,...
+                    EmotionSentence = _emotionService.GetEmotionSentence(dominantEmotion),
+                    AllEmotions = _emotionService.GetAllEmotions(face),
+                    AgeRange = $"{face.AgeRange.Low}-{face.AgeRange.High}",
+                    Gender = face.Gender?.Value ?? "Unknown",
+                    GenderConfidence = face.Gender?.Confidence != null
+                        ? Math.Round((decimal)face.Gender.Confidence, 2)
+                        : 0,
+                    HasSunglasses = face.Sunglasses?.Value ?? false,
+                    IsSmiling = face.Smile?.Value ?? false,
+                    SmileConfidence = face.Smile?.Confidence != null
+                        ? Math.Round((decimal)face.Smile.Confidence, 2)
+                        : 0
+                };
             }).ToList();
+
+
 
             var totalTime = (DateTime.UtcNow - startTime).TotalMilliseconds;
             _logger.LogInformation($"⚡ Hoàn thành phân tích {results.Count} khuôn mặt trong {totalTime}ms");

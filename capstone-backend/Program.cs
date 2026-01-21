@@ -1,4 +1,5 @@
 using capstone_backend.Api.Middleware;
+using capstone_backend.Business.Mappings;
 using capstone_backend.Extensions;
 using DotNetEnv;
 using Scalar.AspNetCore;
@@ -66,6 +67,8 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
     options.ValueLengthLimit = int.MaxValue;
     options.MultipartHeadersLengthLimit = int.MaxValue;
 });
+// 11. Add Auto Mapper
+builder.Services.AddAutoMapper(typeof(TestTypeProfile));
 
 var app = builder.Build();
 

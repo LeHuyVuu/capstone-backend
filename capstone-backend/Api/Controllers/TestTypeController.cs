@@ -1,0 +1,119 @@
+﻿using capstone_backend.Business.DTOs.TestType;
+using capstone_backend.Business.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+
+namespace capstone_backend.Api.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class TestTypeController : BaseController
+    {
+        private readonly ITestTypeService _testTypeService;
+
+        public TestTypeController(ITestTypeService testTypeService)
+        {
+            _testTypeService = testTypeService;
+        }
+
+        /// <summary>
+        /// Get All Test Type
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> TestTypes()
+        {
+            try
+            {
+                var role = GetCurrentUserRole();
+                if (role != "ADMIN" && role != "MEMBER")
+                    return ForbiddenResponse("You do not have permission to access this resource");
+
+                var response = new List<GetAllTestTypeResponse>();
+
+                if (role == "ADMIN")
+                {
+                    response = await _testTypeService.GetAllTestTypeAsync(role);
+                }
+                else
+                {
+                    response = await _testTypeService.GetAllTestTypeAsync();
+                }
+
+                    return OkResponse(response, "Test types retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Create Test Type (Admin only)
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> TestType([FromBody] CreateTestTypeResquest request)
+        {
+            try
+            {
+                var isAdmin = IsCurrentUserInRole("ADMIN");
+                if (!isAdmin)
+                    return ForbiddenResponse("You do not have permission to access this resource");
+
+                var response = await _testTypeService.CreateTestTypeAsync(request);
+                if (response > 0)
+                    return CreatedResponse("Test type created successfully");
+                else
+                    return BadRequestResponse("Failed to create test type");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Update Test Type (Admin only)
+        /// </summary>
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> UpdateTestType(int id, [FromBody] UpdateTestTypeRequest request)
+        {
+            try
+            {
+                var isAdmin = IsCurrentUserInRole("ADMIN");
+                if (!isAdmin)
+                    return ForbiddenResponse("You do not have permission to access this resource");
+                var response = await _testTypeService.UpdateTestTypeAsync(id, request);
+                if (response > 0)
+                    return OkResponse("Test type updated successfully");
+                else
+                    return BadRequestResponse("Failed to update test type");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        [HttpPatch("{id:int}/delete")]
+        public async Task<IActionResult> DeleteTestType(int id)
+        {
+            try
+            {
+                var isAdmin = IsCurrentUserInRole("ADMIN");
+                if (!isAdmin)
+                    return ForbiddenResponse("You do not have permission to access this resource");
+                var response = await _testTypeService.DeleteTestTypeAsync(id);
+                if (response > 0)
+                    return OkResponse("Test type deleted successfully");
+                else
+                    return BadRequestResponse("Failed to delete test type");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+    }
+}

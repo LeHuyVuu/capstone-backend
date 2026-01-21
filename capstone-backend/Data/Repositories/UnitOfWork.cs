@@ -1,5 +1,6 @@
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Context;
+using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace capstone_backend.Data.Repositories;
@@ -12,11 +13,15 @@ public class UnitOfWork : IUnitOfWork
     private readonly MyDbContext _context;
     private IDbContextTransaction? _transaction;
 
-    public UnitOfWork(MyDbContext context, IUserRepository userRepository, IMemberProfileRepository memberProfileRepository)
+    public UnitOfWork(MyDbContext context, 
+        IUserRepository userRepository, 
+        IMemberProfileRepository memberProfileRepository,
+        ITestTypeRepository testTypeRepository)
     {
         _context = context;
         Users = userRepository;
         MembersProfile = memberProfileRepository;
+        TestTypes = testTypeRepository;
     }
 
     public MyDbContext Context => _context;
@@ -25,29 +30,31 @@ public class UnitOfWork : IUnitOfWork
 
     public IMemberProfileRepository MembersProfile { get; }
 
-    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public ITestTypeRepository TestTypes { get; }
+
+    public async Task<int> SaveChangesAsync()
     {
-        return await _context.SaveChangesAsync(cancellationToken);
+        return await _context.SaveChangesAsync();
     }
 
-    public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
+    public async Task BeginTransactionAsync()
     {
-        _transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+        _transaction = await _context.Database.BeginTransactionAsync();
     }
 
-    public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
+    public async Task CommitTransactionAsync()
     {
         try
         {
-            await SaveChangesAsync(cancellationToken);
+            await SaveChangesAsync();
             if (_transaction != null)
             {
-                await _transaction.CommitAsync(cancellationToken);
+                await _transaction.CommitAsync();
             }
         }
         catch
         {
-            await RollbackTransactionAsync(cancellationToken);
+            await RollbackTransactionAsync();
             throw;
         }
         finally
@@ -60,11 +67,11 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
-    public async Task RollbackTransactionAsync(CancellationToken cancellationToken = default)
+    public async Task RollbackTransactionAsync()
     {
         if (_transaction != null)
         {
-            await _transaction.RollbackAsync(cancellationToken);
+            await _transaction.RollbackAsync();
             await _transaction.DisposeAsync();
             _transaction = null;
         }

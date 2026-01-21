@@ -47,6 +47,9 @@ public class FaceEmotionResponse
     /// Độ tin cậy của nụ cười (%)
     /// </summary>
     public decimal SmileConfidence { get; set; }
+    
+    public string EmotionSentence { get; set; }   // 👈 thêm dòng này
+
 }
 
 /// <summary>

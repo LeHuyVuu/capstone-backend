@@ -1,4 +1,5 @@
 using capstone_backend.Data.Context;
+using capstone_backend.Data.Interfaces;
 
 namespace capstone_backend.Business.Interfaces;
 
@@ -19,23 +20,25 @@ public interface IUnitOfWork : IDisposable
 
     IMemberProfileRepository MembersProfile { get; }
 
+    ITestTypeRepository TestTypes { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>
-    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task<int> SaveChangesAsync();
 
     /// <summary>
     /// Begin a new database transaction
     /// </summary>
-    Task BeginTransactionAsync(CancellationToken cancellationToken = default);
+    Task BeginTransactionAsync();
 
     /// <summary>
     /// Commit the current transaction
     /// </summary>
-    Task CommitTransactionAsync(CancellationToken cancellationToken = default);
+    Task CommitTransactionAsync();
 
     /// <summary>
     /// Rollback the current transaction
     /// </summary>
-    Task RollbackTransactionAsync(CancellationToken cancellationToken = default);
+    Task RollbackTransactionAsync();
 }

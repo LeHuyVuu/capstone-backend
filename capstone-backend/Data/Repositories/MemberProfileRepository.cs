@@ -8,7 +8,7 @@ namespace capstone_backend.Data.Repositories;
 /// <summary>
 /// Member profile repository implementation for member_profile entity
 /// </summary>
-public class MemberProfileRepository : Repository<MemberProfile>, IMemberProfileRepository
+public class MemberProfileRepository : GenericRepository<MemberProfile>, IMemberProfileRepository
 {
     public MemberProfileRepository(MyDbContext context) : base(context)
     {

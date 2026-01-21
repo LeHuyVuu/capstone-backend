@@ -32,7 +32,7 @@ public class SpecialEventService : ISpecialEventService
         };
 
         await _unitOfWork.Context.Set<SpecialEvent>().AddAsync(specialEvent, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Created special event {EventId} - {EventName}", specialEvent.Id, specialEvent.EventName);
 
@@ -104,7 +104,7 @@ public class SpecialEventService : ISpecialEventService
         specialEvent.UpdatedAt = DateTime.UtcNow;
 
         _unitOfWork.Context.Set<SpecialEvent>().Update(specialEvent);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Updated special event {EventId}", id);
 
@@ -123,7 +123,7 @@ public class SpecialEventService : ISpecialEventService
         specialEvent.UpdatedAt = DateTime.UtcNow;
 
         _unitOfWork.Context.Set<SpecialEvent>().Update(specialEvent);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Deleted special event {EventId}", id);
 

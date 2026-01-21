@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using capstone_backend.Data.Context;
+using capstone_backend.Data.Interfaces;
 
 namespace capstone_backend.Extensions;
 
@@ -71,6 +72,7 @@ public static class ServiceExtensions
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IMemberProfileRepository, MemberProfileRepository>();
+        services.AddScoped<ITestTypeRepository, TestTypeRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -117,6 +119,7 @@ public static class ServiceExtensions
         services.AddScoped<IMoodTypeService, MoodTypeService>();
         services.AddScoped<ISearchHistoryService, SearchHistoryService>();
         services.AddScoped<ISpecialEventService, SpecialEventService>();
+        services.AddScoped<ITestTypeService, TestTypeService>();
 
         // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
         services.AddScoped<ILocationFollowerService, LocationFollowerService>();
