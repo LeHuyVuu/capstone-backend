@@ -5,6 +5,7 @@ namespace capstone_backend.Business.Interfaces
 {
     public interface ITestTypeService
     {
-        Task CreateTestTypeAsync(CreateTestTypeResquest request);
+        Task<int> CreateTestTypeAsync(CreateTestTypeResquest request);
+        
     }
 }

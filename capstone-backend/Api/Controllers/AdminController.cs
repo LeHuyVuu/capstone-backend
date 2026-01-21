@@ -35,9 +35,11 @@ namespace capstone_backend.Api.Controllers
             if (!isAdmin)
                 return ForbiddenResponse("You do not have permission to access this resource");
 
-            await _testTypeService.CreateTestTypeAsync(request);
-
-            return OkResponse("Test type created successfully");
+            var response = await _testTypeService.CreateTestTypeAsync(request);
+            if (response > 0)
+                return CreatedResponse("Test type created successfully");
+            else 
+                return BadRequestResponse("Failed to create test type");
         }
     }
 }

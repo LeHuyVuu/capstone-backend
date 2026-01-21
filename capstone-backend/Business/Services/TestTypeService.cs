@@ -16,7 +16,7 @@ namespace capstone_backend.Business.Services
             _mapper = mapper;
         }
 
-        public async Task CreateTestTypeAsync(CreateTestTypeResquest request)
+        public async Task<int> CreateTestTypeAsync(CreateTestTypeResquest request)
         {
             try
             {
@@ -25,7 +25,7 @@ namespace capstone_backend.Business.Services
 
                 // Creating
                 await _unitOfWork.TestTypes.AddAsync(testType);
-                await _unitOfWork.SaveChangesAsync();
+                return await _unitOfWork.SaveChangesAsync();
             }
             catch (Exception ex)
             {
