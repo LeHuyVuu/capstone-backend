@@ -1,0 +1,10 @@
+﻿using capstone_backend.Business.DTOs.TestType;
+using capstone_backend.Data.Entities;
+
+namespace capstone_backend.Business.Interfaces
+{
+    public interface ITestTypeService
+    {
+        Task CreateTestTypeAsync(CreateTestTypeResquest request);
+    }
+}

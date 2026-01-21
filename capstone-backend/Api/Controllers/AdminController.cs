@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using capstone_backend.Business.DTOs.TestType;
+using capstone_backend.Business.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -7,13 +9,35 @@ namespace capstone_backend.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [Authorize]
     public class AdminController : BaseController
     {
-        [HttpGet("role")]
+        private readonly ITestTypeService _testTypeService;
+
+        public AdminController(ITestTypeService testTypeService)
+        {
+            _testTypeService = testTypeService;
+        }
+
+        [HttpGet]
         public async Task<IActionResult> GetRoleAdmin()
         {
-            return OkResponse(GetCurrentUserRole());
+            if (GetCurrentUserRole() != "ADMIN")
+                return ForbiddenResponse("You do not have permission to access this resource");
+            else 
+                return OkResponse("You are an admin");
+        }
+
+        [HttpPost("test-type")]
+        public async Task<IActionResult> TestType([FromBody] CreateTestTypeResquest request)
+        {
+            var isAdmin = IsCurrentUserInRole("ADMIN");
+            if (!isAdmin)
+                return ForbiddenResponse("You do not have permission to access this resource");
+
+            await _testTypeService.CreateTestTypeAsync(request);
+
+            return OkResponse("Test type created successfully");
         }
     }
 }
