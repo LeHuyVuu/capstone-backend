@@ -19,16 +19,15 @@ public class MemberService : IMemberService
 
     public async Task<CoupleProfileResponse> InviteMemberAsync(
         int currentUserId,
-        string inviteCode,
-        CancellationToken cancellationToken = default)
+        string inviteCode)
     {
         // 1. Lấy member profile của người gọi API (người nữ - người nhập invite code)
-        var currentMemberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(currentUserId, cancellationToken: cancellationToken);
+        var currentMemberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(currentUserId);
         if (currentMemberProfile == null)
             throw new InvalidOperationException("Current user does not have a member profile");
 
         // 2. Tìm member profile theo invite code được nhập vào (người nam - người được mời)
-        var partnerMemberProfile = await _unitOfWork.MembersProfile.GetByInviteCodeAsync(inviteCode, cancellationToken: cancellationToken);
+        var partnerMemberProfile = await _unitOfWork.MembersProfile.GetByInviteCodeAsync(inviteCode);
         if (partnerMemberProfile == null)
             throw new InvalidOperationException($"No member found with invite code '{inviteCode}'");
 
@@ -41,7 +40,7 @@ public class MemberService : IMemberService
             .Where(c => c.IsDeleted != true &&
                        ((c.MemberId1 == currentMemberProfile.Id && c.MemberId2 == partnerMemberProfile.Id) ||
                         (c.MemberId1 == partnerMemberProfile.Id && c.MemberId2 == currentMemberProfile.Id)))
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync();
 
         if (existingCouple != null)
             throw new InvalidOperationException("Couple profile already exists for these members");
@@ -63,7 +62,7 @@ public class MemberService : IMemberService
             IsDeleted = false
         };
 
-        await _unitOfWork.Context.Set<CoupleProfile>().AddAsync(coupleProfile, cancellationToken);
+        await _unitOfWork.Context.Set<CoupleProfile>().AddAsync(coupleProfile);
         
         // 6. Cập nhật relationship_status của cả 2 member về IN_RELATIONSHIP
         partnerMemberProfile.RelationshipStatus = "IN_RELATIONSHIP";
@@ -72,7 +71,7 @@ public class MemberService : IMemberService
         currentMemberProfile.RelationshipStatus = "IN_RELATIONSHIP";
         currentMemberProfile.UpdatedAt = DateTime.UtcNow;
         
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation(
             "Created couple profile {CoupleId} for partner member {PartnerId} (invite code owner) and current member {CurrentId} (invite code sender). Updated both members' relationship status to IN_RELATIONSHIP",

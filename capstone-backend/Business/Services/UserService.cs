@@ -24,9 +24,9 @@ public class UserService : IUserService
         _cometChatService = cometChatService;
     }
 
-    public async Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
+    public async Task<LoginResponse?> LoginAsync(LoginRequest request)
     {
-        var user = await _unitOfWork.Users.GetByEmailAsync(request.Email, cancellationToken: cancellationToken);
+        var user = await _unitOfWork.Users.GetByEmailAsync(request.Email);
 
         if (user == null || user.IsActive != true)
             return null;
@@ -39,7 +39,7 @@ public class UserService : IUserService
 
         user.LastLoginAt = DateTime.UtcNow;
         _unitOfWork.Users.Update(user);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         // Get member profile for gender
         var memberProfile = user.MemberProfiles?.FirstOrDefault();
@@ -58,8 +58,8 @@ public class UserService : IUserService
         string cometChatAuthToken = string.Empty;
         try
         {
-            cometChatUid = await _cometChatService.EnsureCometChatUserExistsAsync(user.Email, fullName, cancellationToken);
-            cometChatAuthToken = await _cometChatService.GenerateCometChatAuthTokenAsync(cometChatUid, cancellationToken);
+            cometChatUid = await _cometChatService.EnsureCometChatUserExistsAsync(user.Email, fullName);
+            cometChatAuthToken = await _cometChatService.GenerateCometChatAuthTokenAsync(cometChatUid);
             _logger.LogInformation("CometChat integration successful for user {UserId}", user.Id);
         }
         catch (Exception ex)
@@ -79,10 +79,10 @@ public class UserService : IUserService
         };
     }
 
-    public async Task<LoginResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+    public async Task<LoginResponse> RegisterAsync(RegisterRequest request)
     {
         // Kiểm tra email đã tồn tại
-        if (await _unitOfWork.Users.EmailExistsAsync(request.Email, cancellationToken: cancellationToken))
+        if (await _unitOfWork.Users.EmailExistsAsync(request.Email))
             throw new InvalidOperationException($"Email '{request.Email}' đã được sử dụng");
 
         // Tạo user account với BCrypt hashing
@@ -103,11 +103,11 @@ public class UserService : IUserService
             LastLoginAt = DateTime.UtcNow
         };
 
-        await _unitOfWork.Users.AddAsync(user, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.Users.AddAsync(user);
+        await _unitOfWork.SaveChangesAsync();
 
         // Tạo member profile
-        await CreateMemberProfileAsync(user.Id, request, cancellationToken);
+        await CreateMemberProfileAsync(user.Id, request);
 
         // Generate JWT tokens
         var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, "member", request.FullName);
@@ -119,8 +119,8 @@ public class UserService : IUserService
         string cometChatAuthToken = string.Empty;
         try
         {
-            cometChatUid = await _cometChatService.CreateCometChatUserAsync(user.Email, request.FullName, cancellationToken);
-            cometChatAuthToken = await _cometChatService.GenerateCometChatAuthTokenAsync(cometChatUid, cancellationToken);
+            cometChatUid = await _cometChatService.CreateCometChatUserAsync(user.Email, request.FullName);
+            cometChatAuthToken = await _cometChatService.GenerateCometChatAuthTokenAsync(cometChatUid);
             _logger.LogInformation("CometChat user created successfully for user {UserId}", user.Id);
         }
         catch (Exception ex)
@@ -142,7 +142,7 @@ public class UserService : IUserService
     /// <summary>
     /// Tạo member profile cho user
     /// </summary>
-    private async Task CreateMemberProfileAsync(int userId, RegisterRequest request, CancellationToken cancellationToken)
+    private async Task CreateMemberProfileAsync(int userId, RegisterRequest request)
     {
         var memberProfile = new MemberProfile
         {
@@ -159,8 +159,8 @@ public class UserService : IUserService
         // Generate unique invite code
         memberProfile.InviteCode = GenerateInviteCode();
 
-        await _unitOfWork.Context.Set<MemberProfile>().AddAsync(memberProfile, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.Context.Set<MemberProfile>().AddAsync(memberProfile);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Created member profile for user {UserId} with invite code {InviteCode}",
             userId, memberProfile.InviteCode);
@@ -178,20 +178,20 @@ public class UserService : IUserService
             .ToArray());
     }
 
-    public async Task<UserResponse?> GetCurrentUserAsync(int userId, CancellationToken cancellationToken = default)
+    public async Task<UserResponse?> GetCurrentUserAsync(int userId)
     {
-        var user = await _unitOfWork.Users.GetByIdWithProfilesAsync(userId, cancellationToken: cancellationToken);
+        var user = await _unitOfWork.Users.GetByIdWithProfilesAsync(userId);
         return user == null ? null : MapToUserResponse(user);
     }
 
-    public async Task<UserResponse?> GetUserByIdAsync(int userId, CancellationToken cancellationToken = default)
+    public async Task<UserResponse?> GetUserByIdAsync(int userId)
     {
-        var user = await _unitOfWork.Users.GetByIdAsync(userId, cancellationToken: cancellationToken);
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
         return user == null ? null : MapToUserResponse(user);
     }
 
     public async Task<PagedResult<UserResponse>> GetUsersAsync(
-        int pageNumber, int pageSize, string? searchTerm = null, CancellationToken cancellationToken = default)
+        int pageNumber, int pageSize, string? searchTerm = null)
     {
         var (users, totalCount) = await _unitOfWork.Users.GetPagedAsync(
             pageNumber,
@@ -199,8 +199,7 @@ public class UserService : IUserService
             filter: string.IsNullOrEmpty(searchTerm)
                 ? u => u.IsDeleted != true
                 : u => u.IsDeleted != true && (u.Email.Contains(searchTerm) || (u.DisplayName != null && u.DisplayName.Contains(searchTerm))),
-            orderBy: query => query.OrderByDescending(u => u.CreatedAt),
-            cancellationToken: cancellationToken);
+            orderBy: query => query.OrderByDescending(u => u.CreatedAt));
 
         return new PagedResult<UserResponse>(
             users.Select(MapToUserResponse),
@@ -210,9 +209,9 @@ public class UserService : IUserService
     }
 
     public async Task<UserResponse> CreateUserAsync(
-        CreateUserRequest request, int? createdBy = null, CancellationToken cancellationToken = default)
+        CreateUserRequest request, int? createdBy = null)
     {
-        if (await _unitOfWork.Users.EmailExistsAsync(request.Email, cancellationToken: cancellationToken))
+        if (await _unitOfWork.Users.EmailExistsAsync(request.Email))
             throw new InvalidOperationException($"Email '{request.Email}' already exists");
 
         // TODO: Use BCrypt.Net.BCrypt.HashPassword(request.Password)
@@ -232,16 +231,16 @@ public class UserService : IUserService
             UpdatedAt = DateTime.UtcNow
         };
 
-        await _unitOfWork.Users.AddAsync(user, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.Users.AddAsync(user);
+        await _unitOfWork.SaveChangesAsync();
 
         return MapToUserResponse(user);
     }
 
     public async Task<UserResponse?> UpdateUserAsync(
-        int userId, UpdateUserRequest request, int? updatedBy = null, CancellationToken cancellationToken = default)
+        int userId, UpdateUserRequest request, int? updatedBy = null)
     {
-        var user = await _unitOfWork.Users.GetByIdAsync(userId, cancellationToken: cancellationToken);
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
         if (user == null) return null;
 
         user.DisplayName = request.FullName;
@@ -253,19 +252,19 @@ public class UserService : IUserService
             user.Role = request.Role;
 
         _unitOfWork.Users.Update(user);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         return MapToUserResponse(user);
     }
 
     public async Task<bool> DeleteUserAsync(
-        int userId, int? deletedBy = null, CancellationToken cancellationToken = default)
+        int userId)
     {
-        var user = await _unitOfWork.Users.GetByIdAsync(userId, cancellationToken: cancellationToken);
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
         if (user == null) return false;
 
-        _unitOfWork.Users.SoftDelete(user, deletedBy);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _unitOfWork.Users.SoftDelete(user);
+        await _unitOfWork.SaveChangesAsync();
         return true;
     }
 

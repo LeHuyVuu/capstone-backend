@@ -5,7 +5,7 @@ namespace capstone_backend.Business.Interfaces;
 /// <summary>
 /// User repository interface for user_account specific operations
 /// </summary>
-public interface IUserRepository : IRepository<UserAccount>
+public interface IUserRepository : IGenericRepository<UserAccount>
 {
     /// <summary>
     /// Get user by email address

@@ -53,7 +53,7 @@ public class SearchHistoryService : ISearchHistoryService
         };
 
         await _unitOfWork.Context.Set<SearchHistory>().AddAsync(searchHistory, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Created search history {HistoryId} for member {MemberId} - keyword: {Keyword}", 
             searchHistory.Id, memberId, keyword);
@@ -72,7 +72,7 @@ public class SearchHistoryService : ISearchHistoryService
         searchHistory.IsDeleted = true;
 
         _unitOfWork.Context.Set<SearchHistory>().Update(searchHistory);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Deleted search history {HistoryId}", id);
 
@@ -90,7 +90,7 @@ public class SearchHistoryService : ISearchHistoryService
             history.IsDeleted = true;
         }
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Cleared {Count} search histories for member {MemberId}", histories.Count, memberId);
 

@@ -70,7 +70,7 @@ public class UsersController : BaseController
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteUser(int id)
     {
-        var success = await _userService.DeleteUserAsync(id, GetCurrentUserId());
+        var success = await _userService.DeleteUserAsync(id);
         if (!success) return NotFoundResponse();
         return OkResponse<object?>(null, "Deleted successfully");
     }

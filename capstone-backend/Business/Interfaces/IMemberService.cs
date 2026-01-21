@@ -11,5 +11,5 @@ public interface IMemberService
     /// <param name="inviteCode">Invite code of the member to invite</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created couple profile</returns>
-    Task<CoupleProfileResponse> InviteMemberAsync(int currentUserId, string inviteCode, CancellationToken cancellationToken = default);
+    Task<CoupleProfileResponse> InviteMemberAsync(int currentUserId, string inviteCode);
 }

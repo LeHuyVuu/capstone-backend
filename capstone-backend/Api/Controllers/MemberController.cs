@@ -26,8 +26,7 @@ public class MemberController : BaseController
     /// <returns>Created couple profile</returns>
     [HttpPost("invite")]
     public async Task<IActionResult> InviteMember(
-        [FromBody] InviteMemberRequest request,
-        CancellationToken cancellationToken = default)
+        [FromBody] InviteMemberRequest request)
     {
         try
         {
@@ -39,8 +38,7 @@ public class MemberController : BaseController
 
             var coupleProfile = await _memberService.InviteMemberAsync(
                 currentUserId.Value,
-                request.InviteCode,
-                cancellationToken);
+                request.InviteCode);
 
             return OkResponse(coupleProfile, "Couple profile created successfully");
         }

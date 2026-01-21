@@ -8,23 +8,19 @@ namespace capstone_backend.Data.Repositories;
 /// <summary>
 /// User repository implementation for user_account entity
 /// </summary>
-public class UserRepository : Repository<UserAccount>, IUserRepository
+public class UserRepository : GenericRepository<UserAccount>, IUserRepository
 {
     public UserRepository(MyDbContext context) : base(context)
     {
     }
 
-    public override async Task<UserAccount?> GetByIdAsync(
-        int id,
-        bool includeSoftDeleted = false,
-        CancellationToken cancellationToken = default)
+    public async Task<UserAccount?> GetByIdAsync(int id)
     {
         var query = _dbSet.AsQueryable();
         
-        if (!includeSoftDeleted)
-            query = query.Where(u => u.IsDeleted != true);
+        query = query.Where(u => u.IsDeleted != true);
 
-        return await query.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+        return await query.FirstOrDefaultAsync(u => u.Id == id);
     }
 
     public async Task<UserAccount?> GetByEmailAsync(
@@ -69,12 +65,5 @@ public class UserRepository : Repository<UserAccount>, IUserRepository
             query = query.Where(u => u.IsDeleted != true);
 
         return await query.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
-    }
-
-    public override void SoftDelete(UserAccount entity, int? deletedBy = null)
-    {
-        entity.IsDeleted = true;
-        entity.UpdatedAt = DateTime.UtcNow;
-        _dbSet.Update(entity);
     }
 }
