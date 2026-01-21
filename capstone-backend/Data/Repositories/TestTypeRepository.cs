@@ -11,9 +11,24 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<IEnumerable<TestType>> GetAllAsync()
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(t => t.IsDeleted == false)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<TestType>> GetAllTestTypeMemberAsync()
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(t => t.IsActive == true && t.IsDeleted == false)
+                .ToListAsync();
+        }
+
         public async Task<TestType?> GetByNameAsync(string name)
         {
-            Console.WriteLine(name);
             return await _dbSet.FirstOrDefaultAsync(t => t.Name == name);
         }
     }

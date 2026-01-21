@@ -57,6 +57,36 @@ namespace capstone_backend.Business.Services
             }
         }
 
+        public async Task<List<GetAllTestTypeResponse>> GetAllTestTypeAsync(string role = "MEMBER")
+        {
+            try
+            {
+                var testTypes = new List<TestType>();
+                if (role.ToUpper() == "ADMIN")
+                {
+                    testTypes = (await _unitOfWork.TestTypes.GetAllAsync()).ToList();
+                }
+                else
+                {
+                    testTypes = (await _unitOfWork.TestTypes.GetAllTestTypeMemberAsync()).ToList();
+                }
+
+                var response = new List<GetAllTestTypeResponse>();
+
+                // Mapping
+                foreach (var testType in testTypes)
+                {
+                    response.Add(_mapper.Map<GetAllTestTypeResponse>(testType));
+                }
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
         public async Task<int> UpdateTestTypeAsync(int id, UpdateTestTypeRequest request)
         {
             try
