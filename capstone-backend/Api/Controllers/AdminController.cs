@@ -31,15 +31,22 @@ namespace capstone_backend.Api.Controllers
         [HttpPost("test-type")]
         public async Task<IActionResult> TestType([FromBody] CreateTestTypeResquest request)
         {
-            var isAdmin = IsCurrentUserInRole("ADMIN");
-            if (!isAdmin)
-                return ForbiddenResponse("You do not have permission to access this resource");
+            try
+            {
+                var isAdmin = IsCurrentUserInRole("ADMIN");
+                if (!isAdmin)
+                    return ForbiddenResponse("You do not have permission to access this resource");
 
-            var response = await _testTypeService.CreateTestTypeAsync(request);
-            if (response > 0)
-                return CreatedResponse("Test type created successfully");
-            else 
-                return BadRequestResponse("Failed to create test type");
+                var response = await _testTypeService.CreateTestTypeAsync(request);
+                if (response > 0)
+                    return CreatedResponse("Test type created successfully");
+                else
+                    return BadRequestResponse("Failed to create test type");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
         }
     }
 }

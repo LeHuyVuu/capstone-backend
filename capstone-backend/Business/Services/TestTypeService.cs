@@ -20,6 +20,10 @@ namespace capstone_backend.Business.Services
         {
             try
             {
+                // Validation
+                if (await _unitOfWork.TestTypes.GetByNameAsync(request.Name) != null)
+                    throw new Exception("Test type with the same name already exists");
+
                 // Mapping
                 var testType = _mapper.Map<TestType>(request);
 
