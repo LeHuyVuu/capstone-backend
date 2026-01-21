@@ -7,5 +7,6 @@ namespace capstone_backend.Data.Interfaces
     {
         public Task<TestType?> GetByNameAsync(string name);
         public Task<IEnumerable<TestType>> GetAllTestTypeMemberAsync();
+        public Task<TestType?> GetByIdForUserAsync(int id);
     }
 }
