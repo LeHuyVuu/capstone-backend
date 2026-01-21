@@ -263,7 +263,8 @@ public class UserService : IUserService
         var user = await _unitOfWork.Users.GetByIdAsync(userId);
         if (user == null) return false;
 
-        _unitOfWork.Users.SoftDelete(user);
+        user.IsDeleted = true;
+        _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync();
         return true;
     }

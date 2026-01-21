@@ -1,4 +1,5 @@
 using capstone_backend.Data.Context;
+using capstone_backend.Data.Interfaces;
 
 namespace capstone_backend.Business.Interfaces;
 
@@ -18,6 +19,8 @@ public interface IUnitOfWork : IDisposable
     IUserRepository Users { get; }
 
     IMemberProfileRepository MembersProfile { get; }
+
+    ITestTypeRepository TestTypes { get; }
 
     /// <summary>
     /// Save all changes to database
