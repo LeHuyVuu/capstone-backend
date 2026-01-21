@@ -19,6 +19,11 @@ public abstract class BaseController : ControllerBase
         return int.TryParse(userIdClaim, out var id) ? id : null;
     }
 
+    protected string? GetCurrentUserRole()
+    {
+        return User.FindFirst(ClaimTypes.Role)?.Value;
+    }
+
     // Responses thành công
     protected IActionResult OkResponse<T>(T data, string message = "Success")
         => Ok(ApiResponse<T>.Success(data, message, 200, GetTraceId()));
