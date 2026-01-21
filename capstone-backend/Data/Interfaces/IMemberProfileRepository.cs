@@ -5,7 +5,7 @@ namespace capstone_backend.Business.Interfaces;
 /// <summary>
 /// Member profile repository interface for member_profile specific operations
 /// </summary>
-public interface IMemberProfileRepository : IRepository<MemberProfile>
+public interface IMemberProfileRepository : IGenericRepository<MemberProfile>
 {
     /// <summary>
     /// Get member profile by invite code

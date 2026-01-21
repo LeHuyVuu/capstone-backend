@@ -19,7 +19,7 @@ public interface IUserService
     /// <param name="request">Login credentials</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Login response with user info if successful, null if failed</returns>
-    Task<LoginResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
+    Task<LoginResponse?> LoginAsync(LoginRequest request);
 
     /// <summary>
     /// Register new user account
@@ -28,7 +28,7 @@ public interface IUserService
     /// <param name="request">Registration information</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Login response with user info and JWT tokens</returns>
-    Task<LoginResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
+    Task<LoginResponse> RegisterAsync(RegisterRequest request);
 
     /// <summary>
     /// Get current user information by user ID
@@ -36,7 +36,7 @@ public interface IUserService
     /// <param name="userId">User's unique identifier</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>User response if found, null otherwise</returns>
-    Task<UserResponse?> GetCurrentUserAsync(int userId, CancellationToken cancellationToken = default);
+    Task<UserResponse?> GetCurrentUserAsync(int userId);
 
     /// <summary>
     /// Get user by ID
@@ -44,7 +44,7 @@ public interface IUserService
     /// <param name="userId">User's unique identifier</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>User response if found, null otherwise</returns>
-    Task<UserResponse?> GetUserByIdAsync(int userId, CancellationToken cancellationToken = default);
+    Task<UserResponse?> GetUserByIdAsync(int userId);
 
     /// <summary>
     /// Get paginated list of users
@@ -57,8 +57,7 @@ public interface IUserService
     Task<PagedResult<UserResponse>> GetUsersAsync(
         int pageNumber,
         int pageSize,
-        string? searchTerm = null,
-        CancellationToken cancellationToken = default);
+        string? searchTerm = null);
 
     /// <summary>
     /// Create a new user
@@ -69,8 +68,7 @@ public interface IUserService
     /// <returns>Created user response</returns>
     Task<UserResponse> CreateUserAsync(
         CreateUserRequest request,
-        int? createdBy = null,
-        CancellationToken cancellationToken = default);
+        int? createdBy = null);
 
     /// <summary>
     /// Update an existing user
@@ -83,8 +81,7 @@ public interface IUserService
     Task<UserResponse?> UpdateUserAsync(
         int userId,
         UpdateUserRequest request,
-        int? updatedBy = null,
-        CancellationToken cancellationToken = default);
+        int? updatedBy = null);
 
     /// <summary>
     /// Delete a user (soft delete)
@@ -94,7 +91,5 @@ public interface IUserService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>True if deleted successfully, false if user not found</returns>
     Task<bool> DeleteUserAsync(
-        int userId,
-        int? deletedBy = null,
-        CancellationToken cancellationToken = default);
+        int userId);
 }
