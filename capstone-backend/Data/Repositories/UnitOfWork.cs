@@ -1,5 +1,6 @@
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Context;
+using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace capstone_backend.Data.Repositories;
@@ -12,11 +13,15 @@ public class UnitOfWork : IUnitOfWork
     private readonly MyDbContext _context;
     private IDbContextTransaction? _transaction;
 
-    public UnitOfWork(MyDbContext context, IUserRepository userRepository, IMemberProfileRepository memberProfileRepository)
+    public UnitOfWork(MyDbContext context, 
+        IUserRepository userRepository, 
+        IMemberProfileRepository memberProfileRepository,
+        ITestTypeRepository testTypeRepository)
     {
         _context = context;
         Users = userRepository;
         MembersProfile = memberProfileRepository;
+        TestTypes = testTypeRepository;
     }
 
     public MyDbContext Context => _context;
@@ -24,6 +29,8 @@ public class UnitOfWork : IUnitOfWork
     public IUserRepository Users { get; }
 
     public IMemberProfileRepository MembersProfile { get; }
+
+    public ITestTypeRepository TestTypes { get; }
 
     public async Task<int> SaveChangesAsync()
     {

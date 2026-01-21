@@ -19,9 +19,23 @@ public abstract class BaseController : ControllerBase
         return int.TryParse(userIdClaim, out var id) ? id : null;
     }
 
+    protected string? GetCurrentUserRole()
+    {
+        return User.FindFirst(ClaimTypes.Role)?.Value;
+    }
+
+    protected bool IsCurrentUserInRole(string role)
+    {
+        var userRole = GetCurrentUserRole();
+        return string.Equals(userRole, role, StringComparison.OrdinalIgnoreCase);
+    }
+
     // Responses thành công
     protected IActionResult OkResponse<T>(T data, string message = "Success")
         => Ok(ApiResponse<T>.Success(data, message, 200, GetTraceId()));
+
+    protected IActionResult OkResponse(string message = "Success")
+        => Ok(ApiResponse<object>.Success(null, message, 200, GetTraceId()));
 
     protected IActionResult CreatedResponse<T>(T data, string message = "Created")
         => StatusCode(201, ApiResponse<T>.Success(data, message, 201, GetTraceId()));

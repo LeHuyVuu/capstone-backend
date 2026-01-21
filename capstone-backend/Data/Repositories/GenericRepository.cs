@@ -83,18 +83,6 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         return (items, totalCount);
     }
 
-    public void SoftDelete(T entity)
-    {
-        if (entity is ISoftDelete softDeleteEntity)
-        {
-            softDeleteEntity.IsDeleted = true;
-            softDeleteEntity.UpdatedAt = DateTime.UtcNow;
-
-            _dbSet.Attach(entity);
-            _context.Entry(entity).State = EntityState.Modified;
-        }      
-    }
-
     public void Update(T entity)
     {
         _dbSet.Attach(entity);

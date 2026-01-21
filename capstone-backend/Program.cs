@@ -1,4 +1,5 @@
 using capstone_backend.Api.Middleware;
+using capstone_backend.Business.Mappings;
 using capstone_backend.Extensions;
 using DotNetEnv;
 using Scalar.AspNetCore;
@@ -52,6 +53,9 @@ builder.Services.AddSwaggerConfiguration();
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
+
+// 11. Add Auto Mapper
+builder.Services.AddAutoMapper(typeof(TestTypeProfile));
 
 var app = builder.Build();
 
