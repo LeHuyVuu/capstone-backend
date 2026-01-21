@@ -57,7 +57,7 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task<List<GetAllTestTypeResponse>> GetAllTestTypeAsync(string role = "MEMBER")
+        public async Task<List<TestTypeResponse>> GetAllTestTypeAsync(string role = "MEMBER")
         {
             try
             {
@@ -71,18 +71,47 @@ namespace capstone_backend.Business.Services
                     testTypes = (await _unitOfWork.TestTypes.GetAllTestTypeMemberAsync()).ToList();
                 }
 
-                var response = new List<GetAllTestTypeResponse>();
+                var response = new List<TestTypeResponse>();
 
                 // Mapping
                 foreach (var testType in testTypes)
                 {
-                    response.Add(_mapper.Map<GetAllTestTypeResponse>(testType));
+                    response.Add(_mapper.Map<TestTypeResponse>(testType));
                 }
 
                 return response;
             }
             catch (Exception ex)
             {
+                throw;
+            }
+        }
+
+        public async Task<TestTypeResponse?> GetByIdAsync(int id, string role = "MEMBER")
+        {
+            try
+            {
+                var response = new TestTypeResponse();
+
+                if (role.ToUpper() == "ADMIN")
+                {
+                    response = _mapper.Map<TestTypeResponse>(await _unitOfWork.TestTypes.GetByIdAsync(id));
+                }
+                else
+                {
+                    response = _mapper.Map<TestTypeResponse>(await _unitOfWork.TestTypes.GetByIdForUserAsync(id));
+                }
+
+                if (response == null)
+                {
+                    throw new Exception("Test type not found");
+                }
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+
                 throw;
             }
         }

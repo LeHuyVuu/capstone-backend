@@ -19,7 +19,7 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Get All Test Type
+        /// Get All Test Types
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> TestTypes()
@@ -30,7 +30,7 @@ namespace capstone_backend.Api.Controllers
                 if (role != "ADMIN" && role != "MEMBER")
                     return ForbiddenResponse("You do not have permission to access this resource");
 
-                var response = new List<GetAllTestTypeResponse>();
+                var response = new List<TestTypeResponse>();
 
                 if (role == "ADMIN")
                 {
@@ -42,6 +42,37 @@ namespace capstone_backend.Api.Controllers
                 }
 
                     return OkResponse(response, "Test types retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get Test Type
+        /// </summary>
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> TestType(int id)
+        {
+            try
+            {
+                var role = GetCurrentUserRole();
+                if (role != "ADMIN" && role != "MEMBER")
+                    return ForbiddenResponse("You do not have permission to access this resource");
+
+                var response = new TestTypeResponse();
+
+                if (role == "ADMIN")
+                {
+                    response = await _testTypeService.GetByIdAsync(id, role);
+                }
+                else
+                {
+                    response = await _testTypeService.GetByIdAsync(id);
+                }
+
+                return OkResponse(response, "Test type retrieved successfully");
             }
             catch (Exception ex)
             {

@@ -1,6 +1,6 @@
 ﻿namespace capstone_backend.Business.DTOs.TestType
 {
-    public class GetAllTestTypeResponse
+    public class TestTypeResponse
     {
         public int Id { get; set; }
         public string Name { get; set; }
