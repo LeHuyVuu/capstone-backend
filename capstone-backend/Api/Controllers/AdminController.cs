@@ -12,11 +12,10 @@ namespace capstone_backend.Api.Controllers
     [Authorize]
     public class AdminController : BaseController
     {
-        private readonly ITestTypeService _testTypeService;
 
-        public AdminController(ITestTypeService testTypeService)
+        public AdminController()
         {
-            _testTypeService = testTypeService;
+           
         }
 
         [HttpGet]
@@ -26,27 +25,6 @@ namespace capstone_backend.Api.Controllers
                 return ForbiddenResponse("You do not have permission to access this resource");
             else 
                 return OkResponse("You are an admin");
-        }
-
-        [HttpPost("test-type")]
-        public async Task<IActionResult> TestType([FromBody] CreateTestTypeResquest request)
-        {
-            try
-            {
-                var isAdmin = IsCurrentUserInRole("ADMIN");
-                if (!isAdmin)
-                    return ForbiddenResponse("You do not have permission to access this resource");
-
-                var response = await _testTypeService.CreateTestTypeAsync(request);
-                if (response > 0)
-                    return CreatedResponse("Test type created successfully");
-                else
-                    return BadRequestResponse("Failed to create test type");
-            }
-            catch (Exception ex)
-            {
-                return BadRequestResponse(ex.Message);
-            }
         }
     }
 }

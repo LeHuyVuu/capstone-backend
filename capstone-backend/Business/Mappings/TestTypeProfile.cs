@@ -9,6 +9,8 @@ namespace capstone_backend.Business.Mappings
         public TestTypeProfile()
         {
             CreateMap<CreateTestTypeResquest, TestType>();
+            CreateMap<UpdateTestTypeRequest, TestType>()
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));   
         }
     }
 }
