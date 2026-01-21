@@ -69,7 +69,6 @@ public static class ServiceExtensions
     /// </summary>
     public static IServiceCollection AddRepositories(this IServiceCollection services)
     {
-
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IMemberProfileRepository, MemberProfileRepository>();
         services.AddScoped<ITestTypeRepository, TestTypeRepository>();
@@ -97,7 +96,8 @@ public static class ServiceExtensions
         var assistantId = Environment.GetEnvironmentVariable("ASSISTANT_ID") ?? "";
 
         // Debug logging
-        Console.WriteLine($"[INFO] API Key: {(string.IsNullOrEmpty(apiKey) ? "[EMPTY]" : apiKey.Substring(0, Math.Min(15, apiKey.Length)) + "...")}");
+        Console.WriteLine(
+            $"[INFO] API Key: {(string.IsNullOrEmpty(apiKey) ? "[EMPTY]" : apiKey.Substring(0, Math.Min(15, apiKey.Length)) + "...")}");
         Console.WriteLine($"[INFO] Assistant ID: {assistantId}");
 
         services.Configure<OpenAISettings>(options =>
@@ -130,34 +130,25 @@ public static class ServiceExtensions
     /// </summary>
     public static IServiceCollection AddAwsRekognitionService(this IServiceCollection services)
     {
-        // Đọc AWS credentials từ environment variables
-        var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY");
-        var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_KEY");
-        var awsRegion = Environment.GetEnvironmentVariable("AWS_REGION") ?? "us-east-1";
+        var accessKey = (Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID") ?? "").Trim();
+        var secretKey = (Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY") ?? "").Trim();
+        var region = (Environment.GetEnvironmentVariable("AWS_REGION") ?? "ap-southeast-2").Trim();
 
-        // Debug logging
-        Console.WriteLine($"[INFO] AWS Region: {awsRegion}");
-        Console.WriteLine($"[INFO] AWS Access Key: {(string.IsNullOrEmpty(awsAccessKey) ? "[EMPTY]" : awsAccessKey.Substring(0, Math.Min(10, awsAccessKey.Length)) + "...")}");
+        if (string.IsNullOrWhiteSpace(accessKey) || string.IsNullOrWhiteSpace(secretKey))
+            throw new Exception("[ERROR] Missing AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY");
 
-        // Tạo AWS credentials từ environment variables
-        var awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
+        Console.WriteLine($"[INFO] AWS Region: {region}");
+        Console.WriteLine($"[INFO] AWS AccessKey: {accessKey.Substring(0, Math.Min(10, accessKey.Length))}...");
 
-        // Cấu hình AWS Rekognition client
-        var rekognitionConfig = new AmazonRekognitionConfig
-        {
-            RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(awsRegion)
-        };
+        var creds = new BasicAWSCredentials(accessKey, secretKey);
 
-        // Đăng ký AWS Rekognition client vào DI container
-        services.AddSingleton<IAmazonRekognition>(
-            new AmazonRekognitionClient(awsCredentials, rekognitionConfig)
-        );
+        services.AddSingleton<IAmazonRekognition>(sp =>
+            new AmazonRekognitionClient(creds, Amazon.RegionEndpoint.GetBySystemName(region)));
 
-        // Đăng ký FaceEmotionService
         services.AddScoped<FaceEmotionService>();
-
         return services;
     }
+
 
     /// <summary>
     /// Đăng ký FluentValidation để validate request
@@ -194,65 +185,67 @@ public static class ServiceExtensions
         Console.WriteLine($"[INFO] JWT Audience: {jwtAudience}");
 
         services.AddAuthentication(options =>
-        {
-            // Default scheme for Web is Cookie
-            options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        })
-        // Cookie Authentication for Web
-        .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
-        {
-            options.Cookie.Name = "CapstoneAuth";
-            options.Cookie.HttpOnly = true;
-            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-            options.Cookie.SameSite = SameSiteMode.Strict;
-            options.ExpireTimeSpan = TimeSpan.FromHours(8);
-            options.SlidingExpiration = true;
+            {
+                // Default scheme for Web is Cookie
+                options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            })
+            // Cookie Authentication for Web
+            .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+            {
+                options.Cookie.Name = "CapstoneAuth";
+                options.Cookie.HttpOnly = true;
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                options.Cookie.SameSite = SameSiteMode.Strict;
+                options.ExpireTimeSpan = TimeSpan.FromHours(8);
+                options.SlidingExpiration = true;
 
-            options.Events.OnRedirectToLogin = context =>
+                options.Events.OnRedirectToLogin = context =>
+                {
+                    context.Response.StatusCode = 401;
+                    return Task.CompletedTask;
+                };
+            })
+            // JWT Authentication for Mobile
+            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
             {
-                context.Response.StatusCode = 401;
-                return Task.CompletedTask;
-            };
-        })
-        // JWT Authentication for Mobile
-        .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
-        {
-            options.RequireHttpsMetadata = false;
-            options.SaveToken = true;
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-                ValidateIssuer = true,
-                ValidIssuer = jwtIssuer,
-                ValidateAudience = true,
-                ValidAudience = jwtAudience,
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero
-            };
+                options.RequireHttpsMetadata = false;
+                options.SaveToken = true;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtIssuer,
+                    ValidateAudience = true,
+                    ValidAudience = jwtAudience,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero
+                };
 
-            options.Events = new JwtBearerEvents
-            {
-                OnMessageReceived = context =>
+                options.Events = new JwtBearerEvents
                 {
-                    var accessToken = context.Request.Query["access_token"];
-                    if (!string.IsNullOrEmpty(accessToken))
+                    OnMessageReceived = context =>
                     {
-                        context.Token = accessToken;
-                    }
-                    return Task.CompletedTask;
-                },
-                OnAuthenticationFailed = context =>
-                {
-                    if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+                        var accessToken = context.Request.Query["access_token"];
+                        if (!string.IsNullOrEmpty(accessToken))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    },
+                    OnAuthenticationFailed = context =>
                     {
-                        context.Response.Headers.Append("Token-Expired", "true");
+                        if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+                        {
+                            context.Response.Headers.Append("Token-Expired", "true");
+                        }
+
+                        return Task.CompletedTask;
                     }
-                    return Task.CompletedTask;
-                }
-            };
-        });
+                };
+            });
 
         services.AddAuthorization();
 
@@ -282,52 +275,53 @@ public static class ServiceExtensions
         Console.WriteLine($"🔐 JWT Audience: {jwtAudience}");
 
         services.AddAuthentication(options =>
-        {
-            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-        })
-        .AddJwtBearer(options =>
-        {
-            options.RequireHttpsMetadata = false; // Set to true in production with HTTPS
-            options.SaveToken = true;
-            options.TokenValidationParameters = new TokenValidationParameters
             {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-                ValidateIssuer = true,
-                ValidIssuer = jwtIssuer,
-                ValidateAudience = true,
-                ValidAudience = jwtAudience,
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero // No tolerance for expired tokens
-            };
-
-            // For handling JWT in both Authorization header and query string (optional)
-            options.Events = new JwtBearerEvents
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
             {
-                OnMessageReceived = context =>
+                options.RequireHttpsMetadata = false; // Set to true in production with HTTPS
+                options.SaveToken = true;
+                options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    // Allow token from query string for SignalR/WebSocket connections
-                    var accessToken = context.Request.Query["access_token"];
-                    var path = context.HttpContext.Request.Path;
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtIssuer,
+                    ValidateAudience = true,
+                    ValidAudience = jwtAudience,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero // No tolerance for expired tokens
+                };
 
-                    if (!string.IsNullOrEmpty(accessToken))
-                    {
-                        context.Token = accessToken;
-                    }
-
-                    return Task.CompletedTask;
-                },
-                OnAuthenticationFailed = context =>
+                // For handling JWT in both Authorization header and query string (optional)
+                options.Events = new JwtBearerEvents
                 {
-                    if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+                    OnMessageReceived = context =>
                     {
-                        context.Response.Headers.Append("Token-Expired", "true");
+                        // Allow token from query string for SignalR/WebSocket connections
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+
+                        if (!string.IsNullOrEmpty(accessToken))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    },
+                    OnAuthenticationFailed = context =>
+                    {
+                        if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+                        {
+                            context.Response.Headers.Append("Token-Expired", "true");
+                        }
+
+                        return Task.CompletedTask;
                     }
-                    return Task.CompletedTask;
-                }
-            };
-        });
+                };
+            });
 
         services.AddAuthorization();
 
@@ -345,11 +339,11 @@ public static class ServiceExtensions
             .AddCookie(options =>
             {
                 options.Cookie.Name = "CapstoneAuth";
-                options.Cookie.HttpOnly = true;  // Bảo mật: không cho JS access
-                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;  // Chỉ gửi qua HTTPS
-                options.Cookie.SameSite = SameSiteMode.Strict;  // Chống CSRF
-                options.ExpireTimeSpan = TimeSpan.FromHours(8);  // Cookie hết hạn sau 8 giờ
-                options.SlidingExpiration = true;  // Tự động gia hạn khi user active
+                options.Cookie.HttpOnly = true; // Bảo mật: không cho JS access
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Chỉ gửi qua HTTPS
+                options.Cookie.SameSite = SameSiteMode.Strict; // Chống CSRF
+                options.ExpireTimeSpan = TimeSpan.FromHours(8); // Cookie hết hạn sau 8 giờ
+                options.SlidingExpiration = true; // Tự động gia hạn khi user active
 
                 // API trả về 401 thay vì redirect
                 options.Events.OnRedirectToLogin = context =>
@@ -370,10 +364,7 @@ public static class ServiceExtensions
     /// </summary>
     public static IServiceCollection AddValidationFilter(this IServiceCollection services)
     {
-        services.AddControllers(options =>
-        {
-            options.Filters.Add<ValidationFilter>();
-        });
+        services.AddControllers(options => { options.Filters.Add<ValidationFilter>(); });
 
         return services;
     }
@@ -382,8 +373,8 @@ public static class ServiceExtensions
     /// Đăng ký CORS để cho phép frontend gọi API
     /// </summary>
     public static IServiceCollection AddCorsConfiguration(
-     this IServiceCollection services,
-     IConfiguration configuration)
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         services.AddCors(options =>
         {
