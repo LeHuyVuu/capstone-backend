@@ -18,22 +18,24 @@ public class MoodTypeController : BaseController
     /// <summary>
     /// Get all active mood types
     /// </summary>
+    /// <param name="gender">male | female (optional)</param>
     [HttpGet]
     [AllowAnonymous]
-    public async Task<IActionResult> GetAllMoodTypes()
+    public async Task<IActionResult> GetAllMoodTypes([FromQuery] string? gender)
     {
-        var moodTypes = await _moodTypeService.GetAllMoodTypesAsync();
+        var moodTypes = await _moodTypeService.GetAllMoodTypesAsync(gender);
         return OkResponse(moodTypes);
     }
 
     /// <summary>
     /// Get mood type by ID
     /// </summary>
+    /// <param name="gender">male | female (optional)</param>
     [HttpGet("{id}")]
     [AllowAnonymous]
-    public async Task<IActionResult> GetMoodTypeById(int id)
+    public async Task<IActionResult> GetMoodTypeById(int id, [FromQuery] string? gender)
     {
-        var moodType = await _moodTypeService.GetMoodTypeByIdAsync(id);
+        var moodType = await _moodTypeService.GetMoodTypeByIdAsync(id, gender);
         if (moodType == null)
             return NotFoundResponse("Mood type not found");
 
