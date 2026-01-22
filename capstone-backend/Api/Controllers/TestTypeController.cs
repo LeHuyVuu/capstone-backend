@@ -1,4 +1,5 @@
-﻿using capstone_backend.Business.DTOs.TestType;
+﻿using capstone_backend.Business.DTOs.Question;
+using capstone_backend.Business.DTOs.TestType;
 using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -12,10 +13,12 @@ namespace capstone_backend.Api.Controllers
     public class TestTypeController : BaseController
     {
         private readonly ITestTypeService _testTypeService;
+        private readonly IQuestionService _questionService;
 
-        public TestTypeController(ITestTypeService testTypeService)
+        public TestTypeController(ITestTypeService testTypeService, IQuestionService questionService)
         {
             _testTypeService = testTypeService;
+            _questionService = questionService;
         }
 
         /// <summary>
@@ -144,6 +147,34 @@ namespace capstone_backend.Api.Controllers
             catch (Exception ex)
             {
                 return BadRequestResponse(ex.Message);
+            }
+        }
+
+        [HttpPost("{testTypeId:int}/question/import")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> GenerateQuestions([FromRoute] int testTypeId, [FromForm] GenerateQuestionsRequest request, CancellationToken ct)
+        {
+            try
+            {
+                if (request.File == null || request.File.Length == 0)
+                    return BadRequest("File is required.");
+
+                await using var stream = request.File.OpenReadStream();
+
+                var result = await _questionService.GenerateQuestionAsync(
+                    testTypeId,
+                    stream,
+                    ct
+                );
+
+                return result.Errors.Any()
+                    ? BadRequest(result)
+                    : Ok(result);
+            }
+            catch (Exception ex)
+            {
+
+                throw;
             }
         }
     }

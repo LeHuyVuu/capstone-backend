@@ -148,7 +148,23 @@ internal class FileUploadOperationFilter : IOperationFilter
             return;
 
         // Xóa các parameter cũ
-        operation.Parameters?.Clear();
+        //operation.Parameters?.Clear();
+
+        var fileParamNames = formFileParams.Select(p => p.Name).ToHashSet();
+
+        if (operation.Parameters != null)
+        {
+            // Lọc ra những thằng cần xóa
+            var paramsToRemove = operation.Parameters
+                .Where(p => fileParamNames.Contains(p.Name))
+                .ToList();
+
+            // Xóa từng thằng một
+            foreach (var p in paramsToRemove)
+            {
+                operation.Parameters.Remove(p);
+            }
+        }
 
         // Thiết lập request body là multipart/form-data
         operation.RequestBody = new OpenApiRequestBody
