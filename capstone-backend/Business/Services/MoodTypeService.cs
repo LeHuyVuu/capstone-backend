@@ -1,18 +1,22 @@
 using System.Text.Json;
+using capstone_backend.Business.DTOs.Emotion;
 using capstone_backend.Business.DTOs.MoodType;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace capstone_backend.Business.Services;
 
 public class MoodTypeService : IMoodTypeService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<MoodTypeService> _logger;
 
-    public MoodTypeService(IUnitOfWork unitOfWork)
+    public MoodTypeService(IUnitOfWork unitOfWork, ILogger<MoodTypeService> logger)
     {
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<List<MoodTypeResponse>> GetAllMoodTypesAsync(string? gender, CancellationToken cancellationToken = default)
@@ -31,6 +35,48 @@ public class MoodTypeService : IMoodTypeService
             .FirstOrDefaultAsync(m => m.Id == id && m.IsDeleted != true, cancellationToken);
 
         return moodType == null ? null : MapToResponse(moodType, gender);
+    }
+
+    public async Task<UpdateMoodTypeResponse?> UpdateMoodTypeForUserAsync(int userId, int moodTypeId, CancellationToken cancellationToken = default)
+    {
+        // Kiệm tra mood type có tồn tại không
+        var moodType = await _unitOfWork.Context.MoodTypes
+            .FirstOrDefaultAsync(m => m.Id == moodTypeId 
+                                    && m.IsDeleted != true 
+                                    && m.IsActive == true, cancellationToken);
+
+        if (moodType == null)
+        {
+            _logger.LogWarning($"Không tìm thấy mood type với ID {moodTypeId}");
+            return null;
+        }
+
+        // Lấy member profile của user
+        var memberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId, cancellationToken: cancellationToken);
+
+        if (memberProfile == null)
+        {
+            _logger.LogWarning($"Không tìm thấy member profile cho user {userId}");
+            return null;
+        }
+
+        // Cập nhật mood type ID
+        memberProfile.MoodTypesId = moodType.Id;
+        memberProfile.UpdatedAt = DateTime.UtcNow;
+
+        _unitOfWork.MembersProfile.Update(memberProfile);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation($"✅ User {userId} đã cập nhật mood type thành {moodType.Name} (ID: {moodType.Id})");
+
+        // Trả về response
+        return new UpdateMoodTypeResponse
+        {
+            MoodTypeId = moodType.Id,
+            MoodTypeName = moodType.Name,
+            IconUrl = moodType.IconUrl,
+            UpdatedAt = memberProfile.UpdatedAt ?? DateTime.UtcNow
+        };
     }
 
     private MoodTypeResponse MapToResponse(MoodType moodType, string? gender)
