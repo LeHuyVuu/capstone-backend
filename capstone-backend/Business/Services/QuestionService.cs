@@ -11,6 +11,7 @@ namespace capstone_backend.Business.Services
     {
         private readonly IUnitOfWork _unitOfWork;
 
+
         public QuestionService(IUnitOfWork unitOfWork)
         {
             _unitOfWork = unitOfWork;
@@ -20,6 +21,11 @@ namespace capstone_backend.Business.Services
         {
             try
             {
+                // 0. 1. Validate test type ID
+                var testType = await _unitOfWork.TestTypes.GetByIdAsync(testTypeId);
+                if (testType == null)
+                    throw new Exception("Test type not found");
+
                 // 1. Read CSV rows
                 var rows = CsvReader(csvStream);
 
