@@ -22,6 +22,12 @@ public interface IUnitOfWork : IDisposable
 
     ITestTypeRepository TestTypes { get; }
 
+    IQuestionRepository Questions { get; }
+
+    IQuestionAnswerRepository QuestionAnswers { get; }
+
+    IPersonalityTestRepository PersonalityTests { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>
