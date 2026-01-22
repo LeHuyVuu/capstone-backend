@@ -17,6 +17,7 @@ public class UnitOfWork : IUnitOfWork
     public UnitOfWork(MyDbContext context, 
         IUserRepository userRepository, 
         IMemberProfileRepository memberProfileRepository,
+        IMemberMoodLogRepository memberMoodLogRepository,
         ITestTypeRepository testTypeRepository,
         IQuestionRepository questionRepository,
         IQuestionAnswerRepository questionAnswerRepository,
@@ -25,6 +26,7 @@ public class UnitOfWork : IUnitOfWork
         _context = context;
         Users = userRepository;
         MembersProfile = memberProfileRepository;
+        MemberMoodLogs = memberMoodLogRepository;
         TestTypes = testTypeRepository;
         Questions = questionRepository;
         QuestionAnswers = questionAnswerRepository;
@@ -36,6 +38,9 @@ public class UnitOfWork : IUnitOfWork
     public IUserRepository Users { get; }
 
     public IMemberProfileRepository MembersProfile { get; }
+
+    public IMemberMoodLogRepository MemberMoodLogs { get; }
+
 
     public ITestTypeRepository TestTypes { get; }
 
