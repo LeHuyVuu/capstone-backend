@@ -25,13 +25,13 @@ public class S3StorageService
             ?? "ap-southeast-2";
     }
 
-    public async Task<string> UploadFileAsync(IFormFile file)
+    public async Task<string> UploadFileAsync(IFormFile file, int userId, string type)
     {
         if (file == null || file.Length == 0)
             throw new ArgumentException("File rỗng");
 
         var ext = Path.GetExtension(file.FileName);
-        var key = $"uploads/{Guid.NewGuid()}{ext}";
+        var key = $"{type.ToLower()}s/{userId}/{Guid.NewGuid()}{ext}";
 
         await using var stream = file.OpenReadStream();
 

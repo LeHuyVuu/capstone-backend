@@ -13,6 +13,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Interfaces;
+using System.Text.Json.Serialization;
 
 namespace capstone_backend.Extensions;
 
@@ -411,7 +412,13 @@ public static class ServiceExtensions
     /// </summary>
     public static IServiceCollection AddValidationFilter(this IServiceCollection services)
     {
-        services.AddControllers(options => { options.Filters.Add<ValidationFilter>(); });
+        services.AddControllers(options => { options.Filters.Add<ValidationFilter>(); })
+            .AddJsonOptions(opts =>
+            {
+                opts.JsonSerializerOptions.Converters.Add(
+                    new JsonStringEnumConverter()
+                    );
+            });
 
         return services;
     }
