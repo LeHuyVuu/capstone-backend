@@ -39,7 +39,7 @@ public class MoodTypeService : IMoodTypeService
 
     public async Task<UpdateMoodTypeResponse?> UpdateMoodTypeForUserAsync(int userId, int moodTypeId, CancellationToken cancellationToken = default)
     {
-        // Kiệm tra mood type có tồn tại không
+        // Kiểm tra mood type có tồn tại không
         var moodType = await _unitOfWork.Context.MoodTypes
             .FirstOrDefaultAsync(m => m.Id == moodTypeId 
                                     && m.IsDeleted != true 
@@ -65,7 +65,57 @@ public class MoodTypeService : IMoodTypeService
         memberProfile.UpdatedAt = DateTime.UtcNow;
 
         _unitOfWork.MembersProfile.Update(memberProfile);
-        await _unitOfWork.SaveChangesAsync();
+
+        // Lấy URL ảnh dựa vào gender của member
+        var gender = (memberProfile.Gender ?? "").Trim().ToLowerInvariant();
+        if (gender != "male" && gender != "female") gender = "female"; // default
+        var imageUrl = ResolveIconUrl(moodType.IconUrl, gender);
+
+        // Lấy giờ VN (UTC+7)
+        var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+        var nowVN = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        var todayVN = nowVN.Date;
+
+        // Kiểm tra xem hôm nay (theo giờ VN) đã có MoodLog chưa
+        var existingLog = await _unitOfWork.Context.Set<MemberMoodLog>()
+            .Where(m => m.MemberId == memberProfile.Id 
+                     && m.CreatedAt.HasValue 
+                     && m.IsDeleted != true)
+            .ToListAsync(cancellationToken);
+
+        // Filter theo ngày VN (do database lưu UTC)
+        var todayLog = existingLog
+            .Where(m => {
+                var logDateVN = TimeZoneInfo.ConvertTimeFromUtc(m.CreatedAt!.Value, vnTimeZone).Date;
+                return logDateVN == todayVN;
+            })
+            .FirstOrDefault();
+
+        if (todayLog != null)
+        {
+            // Trong cùng ngày → UPDATE MoodTypeId
+            todayLog.MoodTypeId = moodType.Id;
+            todayLog.UpdatedAt = nowVN; // Lưu giờ VN
+            _unitOfWork.MemberMoodLogs.Update(todayLog);
+            _logger.LogInformation($"🔄 Updated existing mood log for today VN (MoodType: {moodType.Name})");
+        }
+        else
+        {
+            // Ngày mới → INSERT record mới
+            await _unitOfWork.MemberMoodLogs.AddAsync(new MemberMoodLog
+            {
+                MemberId = memberProfile.Id,
+                MoodTypeId = moodType.Id,
+                ImageUrl = imageUrl,
+                IsPrivate = false,
+                CreatedAt = nowVN, // Lưu giờ VN
+                UpdatedAt = nowVN, // Lưu giờ VN
+                IsDeleted = false
+            });
+            _logger.LogInformation($"➕ Created new mood log for today VN (MoodType: {moodType.Name})");
+        }
+
+        await _unitOfWork.SaveChangesAsync(); 
 
         _logger.LogInformation($"✅ User {userId} đã cập nhật mood type thành {moodType.Name} (ID: {moodType.Id})");
 
