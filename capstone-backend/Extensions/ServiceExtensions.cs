@@ -13,6 +13,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Interfaces;
+using System.Text.Json.Serialization;
 
 namespace capstone_backend.Extensions;
 
@@ -114,6 +115,9 @@ public static class ServiceExtensions
         // Đăng ký AWS Rekognition Service để phân tích cảm xúc khuôn mặt
         services.AddAwsRekognitionService();
 
+        // Đăng ký AWS S3 Service để upload files
+        services.AddAwsS3Service();
+        
         // Register new services
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IMoodTypeService, MoodTypeService>();
@@ -153,6 +157,45 @@ public static class ServiceExtensions
         services.AddScoped<FaceEmotionService>();
         return services;
     }
+
+
+    /// <summary>
+    /// Đăng ký AWS S3 Service
+    /// Đọc credentials từ environment variables
+    /// </summary>
+  public static IServiceCollection AddAwsS3Service(this IServiceCollection services)
+{
+    // Đọc AWS credentials từ environment variables (ĐÚNG TÊN)
+    var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+    var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+    var awsRegion = Environment.GetEnvironmentVariable("AWS_REGION") ?? "ap-southeast-2";
+    var s3BucketName = Environment.GetEnvironmentVariable("AWS_S3_BUCKET_NAME");
+
+    if (string.IsNullOrWhiteSpace(awsAccessKey) || string.IsNullOrWhiteSpace(awsSecretKey))
+        throw new Exception("[ERROR] Missing AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY for S3");
+
+    if (string.IsNullOrWhiteSpace(s3BucketName))
+        throw new Exception("[ERROR] Missing AWS_S3_BUCKET_NAME");
+
+    Console.WriteLine($"🪣 S3 Bucket: {s3BucketName}");
+    Console.WriteLine($"🌍 S3 Region: {awsRegion}");
+
+    var awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
+
+    var s3Config = new Amazon.S3.AmazonS3Config
+    {
+        RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(awsRegion)
+    };
+
+    services.AddSingleton<Amazon.S3.IAmazonS3>(
+        new Amazon.S3.AmazonS3Client(awsCredentials, s3Config)
+    );
+
+    // Bạn đang DI IS3Service/S3Service, OK
+    services.AddScoped<S3StorageService>();
+
+    return services;
+}
 
 
     /// <summary>
@@ -369,7 +412,13 @@ public static class ServiceExtensions
     /// </summary>
     public static IServiceCollection AddValidationFilter(this IServiceCollection services)
     {
-        services.AddControllers(options => { options.Filters.Add<ValidationFilter>(); });
+        services.AddControllers(options => { options.Filters.Add<ValidationFilter>(); })
+            .AddJsonOptions(opts =>
+            {
+                opts.JsonSerializerOptions.Converters.Add(
+                    new JsonStringEnumConverter()
+                    );
+            });
 
         return services;
     }
