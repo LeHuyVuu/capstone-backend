@@ -112,6 +112,55 @@ public class AuthController : BaseController
     }
 
     /// <summary>
+    /// Register new VenueOwner account
+    /// Creates user_account with role="venueowner" and venue_owner_profile
+    /// </summary>
+    [HttpPost("register-venue-owner")]
+    [AllowAnonymous]
+    public async Task<IActionResult> RegisterVenueOwner([FromBody] RegisterVenueOwnerRequest request)
+    {
+        try
+        {
+            var registerResponse = await _userService.RegisterVenueOwnerAsync(request);
+
+            // Decode JWT token to get user claims
+            var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadJwtToken(registerResponse.AccessToken);
+            
+            // Create claims for cookie authentication from JWT token
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, jwtToken.Claims.First(c => c.Type == "sub").Value),
+                new Claim(ClaimTypes.Email, jwtToken.Claims.First(c => c.Type == "email").Value),
+                new Claim(ClaimTypes.Name, jwtToken.Claims.First(c => c.Type == ClaimTypes.Name).Value),
+                new Claim(ClaimTypes.Role, jwtToken.Claims.First(c => c.Type == ClaimTypes.Role).Value)
+            };
+
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+
+            // Sign in with cookie (for web)
+            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal,
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30)
+                });
+
+            // Return full response with JWT tokens (for mobile) and user info (for web)
+            return OkResponse(registerResponse, "VenueOwner registration successful");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse($"VenueOwner registration failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Logout - Works for both WEB and MOBILE
     /// Web: Clears authentication cookie
     /// Mobile: Client removes tokens from storage
