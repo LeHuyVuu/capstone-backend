@@ -26,6 +26,7 @@ namespace capstone_backend.Business.Services
 
                 // Mapping
                 var testType = _mapper.Map<TestType>(request);
+                testType.Code = GenerateTestTypeCode(request.TotalQuestions);
 
                 // Creating
                 await _unitOfWork.TestTypes.AddAsync(testType);
@@ -126,6 +127,8 @@ namespace capstone_backend.Business.Services
 
                 // Mapping
                 _mapper.Map(request, exist);
+                exist.Code = GenerateTestTypeCode(exist.TotalQuestions.Value);
+
                 _unitOfWork.TestTypes.Update(exist);
                 return await _unitOfWork.SaveChangesAsync();
             }
@@ -133,6 +136,14 @@ namespace capstone_backend.Business.Services
             {
                 throw;
             }
+        }
+
+        private string GenerateTestTypeCode(int totalQuestions, string type = "MBTI")
+        {
+            var utc = DateTime.UtcNow;
+            var unix = new DateTimeOffset(utc).ToUnixTimeSeconds();
+
+            return $"TT_{type.ToUpper()}_{totalQuestions}_{unix}";
         }
     }
 }
