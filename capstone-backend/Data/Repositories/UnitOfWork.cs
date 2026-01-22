@@ -1,5 +1,6 @@
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Context;
+using capstone_backend.Data.Entities;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore.Storage;
 
@@ -16,12 +17,18 @@ public class UnitOfWork : IUnitOfWork
     public UnitOfWork(MyDbContext context, 
         IUserRepository userRepository, 
         IMemberProfileRepository memberProfileRepository,
-        ITestTypeRepository testTypeRepository)
+        ITestTypeRepository testTypeRepository,
+        IQuestionRepository questionRepository,
+        IQuestionAnswerRepository questionAnswerRepository,
+        IPersonalityTestRepository personalityTestRepository)
     {
         _context = context;
         Users = userRepository;
         MembersProfile = memberProfileRepository;
         TestTypes = testTypeRepository;
+        Questions = questionRepository;
+        QuestionAnswers = questionAnswerRepository;
+        PersonalityTests = personalityTestRepository;
     }
 
     public MyDbContext Context => _context;
@@ -31,6 +38,12 @@ public class UnitOfWork : IUnitOfWork
     public IMemberProfileRepository MembersProfile { get; }
 
     public ITestTypeRepository TestTypes { get; }
+
+    public IPersonalityTestRepository PersonalityTests { get; }
+
+    public IQuestionRepository Questions { get; }
+
+    public IQuestionAnswerRepository QuestionAnswers { get; }
 
     public async Task<int> SaveChangesAsync()
     {

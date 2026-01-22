@@ -29,9 +29,9 @@ public partial class VenueLocation
 
     public string? WebsiteUrl { get; set; }
 
-    public DateOnly? OpeningTime { get; set; }
+    public DateTime? OpeningTime { get; set; }
 
-    public DateOnly? ClosingTime { get; set; }
+    public DateTime? ClosingTime { get; set; }
 
     public bool? IsOpen { get; set; }
 

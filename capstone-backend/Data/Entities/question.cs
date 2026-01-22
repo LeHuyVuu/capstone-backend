@@ -19,6 +19,8 @@ public partial class Question
 
     public int? OrderIndex { get; set; }
 
+    public string? Dimension { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
