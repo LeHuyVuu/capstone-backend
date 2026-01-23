@@ -56,16 +56,18 @@ public class UserService : IUserService
         // CometChat integration: Ensure user exists and generate auth token
         string cometChatUid = string.Empty;
         string cometChatAuthToken = string.Empty;
-        try
+        if (user.Role == "member")
         {
-            cometChatUid = await _cometChatService.EnsureCometChatUserExistsAsync(user.Email, fullName);
-            cometChatAuthToken = await _cometChatService.GenerateCometChatAuthTokenAsync(cometChatUid);
-            _logger.LogInformation("CometChat integration successful for user {UserId}", user.Id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "CometChat integration failed for user {UserId}. Continuing with login.", user.Id);
-            // Don't fail login if CometChat fails - continue without chat functionality
+            try
+            {
+                cometChatUid = await _cometChatService.EnsureCometChatUserExistsAsync(user.Email, fullName);
+                cometChatAuthToken = await _cometChatService.GenerateCometChatAuthTokenAsync(cometChatUid);
+                _logger.LogInformation("CometChat integration successful for user {UserId}", user.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "CometChat integration failed for user {UserId}. Continuing with login.", user.Id);
+            }
         }
 
         return new LoginResponse
@@ -176,6 +178,80 @@ public class UserService : IUserService
         return new string(Enumerable.Range(0, 6)
             .Select(_ => chars[random.Next(chars.Length)])
             .ToArray());
+    }
+
+    /// <summary>
+    /// Register VenueOwner account with venue_owner_profile
+    /// </summary>
+    public async Task<LoginResponse> RegisterVenueOwnerAsync(RegisterVenueOwnerRequest request)
+    {
+        // Kiểm tra email đã tồn tại
+        if (await _unitOfWork.Users.EmailExistsAsync(request.Email))
+            throw new InvalidOperationException($"Email '{request.Email}' đã được sử dụng");
+
+        // Tạo user account với BCrypt hashing
+        string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+
+        var user = new UserAccount()
+        {
+            Email = request.Email,
+            PasswordHash = passwordHash,
+            DisplayName = request.BusinessName,
+            PhoneNumber = request.PhoneNumber,
+            Role = "VENUEOWNER", // Role là venue owner
+            IsActive = true,
+            IsVerified = false,
+            IsDeleted = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            LastLoginAt = DateTime.UtcNow
+        };
+
+        await _unitOfWork.Users.AddAsync(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        // Tạo venue owner profile
+        await CreateVenueOwnerProfileAsync(user.Id, request);
+
+        // Generate JWT tokens
+        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, "venueowner", request.BusinessName);
+        var refreshToken = _jwtService.GenerateRefreshToken();
+        var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
+
+        _logger.LogInformation("✅ VenueOwner registered successfully: {Email} (UserId: {UserId})", user.Email, user.Id);
+
+        return new LoginResponse
+        {
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes),
+            CometChatUid = string.Empty,
+            CometChatAuthToken = string.Empty
+        };
+    }
+
+    /// <summary>
+    /// Tạo venue owner profile cho user
+    /// </summary>
+    private async Task CreateVenueOwnerProfileAsync(int userId, RegisterVenueOwnerRequest request)
+    {
+        var venueOwnerProfile = new VenueOwnerProfile
+        {
+            UserId = userId,
+            BusinessName = request.BusinessName,
+            PhoneNumber = request.PhoneNumber,
+            Email = request.Email,
+            Address = request.Address,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+
+        await _unitOfWork.Context.Set<VenueOwnerProfile>().AddAsync(venueOwnerProfile);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("✅ Created venue owner profile for user {UserId} - Business: {BusinessName}",
+            userId, request.BusinessName);
     }
 
     public async Task<UserResponse?> GetCurrentUserAsync(int userId)

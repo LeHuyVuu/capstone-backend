@@ -13,7 +13,7 @@ namespace capstone_backend.Api.Controllers;
 /// </summary>
 [Route("api/[controller]")]
 [ApiController]
-[Authorize]
+// [Authorize] // TẠM THỜI BỎ ĐỂ TEST - SAU NÀY BẬT LẠI
 public class EmotionController : BaseController
 {
     private readonly FaceEmotionService _emotionService;
@@ -34,14 +34,30 @@ public class EmotionController : BaseController
     /// <returns>Danh sách cảm xúc của tất cả khuôn mặt trong ảnh</returns>
     /// <response code="200">Phân tích thành công</response>
     /// <response code="400">File ảnh không hợp lệ hoặc không có khuôn mặt</response>
+    /// <response code="401">Chưa xác thực hoặc token không hợp lệ</response>
     /// <response code="500">Lỗi khi gọi AWS Rekognition</response>
+    /// <remarks>
+   
+    /// </remarks>
     [HttpPost("analyze")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ApiResponse<List<FaceEmotionResponse>>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
     public async Task<IActionResult> AnalyzeEmotion(IFormFile image)
     {
         var startTime = DateTime.UtcNow;
+
+        // ✅ LOG: Kiểm tra xem có token không
+        var authHeader = Request.Headers["Authorization"].FirstOrDefault();
+        var queryToken = Request.Query["access_token"].FirstOrDefault();
+        var formToken = Request.Form.ContainsKey("token") ? Request.Form["token"].ToString() : null;
+        
+        _logger.LogInformation($"🔑 Authorization Header: {authHeader ?? "NULL"}");
+        _logger.LogInformation($"🔑 Query Token: {queryToken ?? "NULL"}");
+        _logger.LogInformation($"🔑 Form Token: {formToken ?? "NULL"}");
+        _logger.LogInformation($"🔑 User.Identity.IsAuthenticated: {User.Identity?.IsAuthenticated}");
+        _logger.LogInformation($"🔑 Current UserId: {GetCurrentUserId()}");
 
         // Kiểm tra file có tồn tại không
         if (image == null || image.Length == 0)

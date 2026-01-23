@@ -31,6 +31,14 @@ public interface IUserService
     Task<LoginResponse> RegisterAsync(RegisterRequest request);
 
     /// <summary>
+    /// Register new VenueOwner account
+    /// Creates user account with role="venueowner" and venue_owner_profile
+    /// </summary>
+    /// <param name="request">VenueOwner registration information</param>
+    /// <returns>Login response with user info and JWT tokens</returns>
+    Task<LoginResponse> RegisterVenueOwnerAsync(RegisterVenueOwnerRequest request);
+
+    /// <summary>
     /// Get current user information by user ID
     /// </summary>
     /// <param name="userId">User's unique identifier</param>
