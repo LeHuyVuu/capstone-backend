@@ -38,13 +38,14 @@ public static class SwaggerExtensions
             });
 
             // Cookie Authentication Security Scheme
-            options.AddSecurityDefinition("Cookie", new OpenApiSecurityScheme
+            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
-                Type = SecuritySchemeType.ApiKey,
-                In = ParameterLocation.Cookie,
-                Name = "CapstoneAuth",
-                Description = "Cookie-based authentication. Login via /api/auth/login to receive authentication cookie.",
-                Scheme = "Cookie"
+                Name = "Authorization",
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                In = ParameterLocation.Header,
+                Description = "JWT Authorization header using the Bearer scheme."
             });
 
             // Apply security requirement globally
@@ -56,7 +57,7 @@ public static class SwaggerExtensions
                         Reference = new OpenApiReference
                         {
                             Type = ReferenceType.SecurityScheme,
-                            Id = "Cookie"
+                            Id = "Bearer"
                         }
                     },
                     Array.Empty<string>()
