@@ -5,5 +5,6 @@ namespace capstone_backend.Data.Interfaces
 {
     public interface IQuestionAnswerRepository : IGenericRepository<QuestionAnswer>
     {
+        Task<List<QuestionAnswer>> GetAllByQuestionIdsAsync(List<int> questionIds, string role);
     }
 }

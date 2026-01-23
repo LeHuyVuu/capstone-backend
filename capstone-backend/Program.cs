@@ -70,6 +70,7 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
 });
 // 11. Add Auto Mapper
 builder.Services.AddAutoMapper(typeof(TestTypeProfile));
+builder.Services.AddAutoMapper(typeof(QuestionProfile));
 
 // 12. Add HttpContextAccessor
 builder.Services.AddHttpContextAccessor();
