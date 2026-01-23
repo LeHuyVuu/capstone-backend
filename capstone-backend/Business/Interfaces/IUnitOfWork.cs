@@ -20,6 +20,9 @@ public interface IUnitOfWork : IDisposable
 
     IMemberProfileRepository MembersProfile { get; }
 
+    IMemberMoodLogRepository MemberMoodLogs { get; }
+
+
     ITestTypeRepository TestTypes { get; }
 
     IQuestionRepository Questions { get; }
