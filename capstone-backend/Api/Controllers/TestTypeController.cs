@@ -68,6 +68,7 @@ namespace capstone_backend.Api.Controllers
 
                 if (role == "ADMIN")
                 {
+
                     response = await _testTypeService.GetByIdAsync(id, role);
                 }
                 else
