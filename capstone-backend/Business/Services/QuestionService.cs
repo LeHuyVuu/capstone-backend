@@ -1,6 +1,9 @@
-﻿using capstone_backend.Business.DTOs.Question;
+﻿using Amazon.Runtime.Internal;
+using capstone_backend.Api.Models;
+using capstone_backend.Business.DTOs.Question;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using CsvHelper;
 using CsvHelper.Configuration;
 using System.Globalization;
@@ -10,18 +13,23 @@ namespace capstone_backend.Business.Services
     public class QuestionService : IQuestionService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly S3StorageService _s3Service;
+        private readonly ICurrentUser _currentUser;
 
-
-        public QuestionService(IUnitOfWork unitOfWork)
+        public QuestionService(IUnitOfWork unitOfWork, S3StorageService s3Service, ICurrentUser currentUser)
         {
             _unitOfWork = unitOfWork;
+            _s3Service = s3Service;
+            _currentUser = currentUser;
         }
 
-        public async Task<ImportResult> GenerateQuestionAsync(int testTypeId, Stream csvStream, CancellationToken ct = default)
+        public async Task<ImportResult> GenerateQuestionAsync(int testTypeId, IFormFile file, CancellationToken ct = default)
         {
             try
             {
-                // 0. 1. Validate test type ID
+                await using var csvStream = file.OpenReadStream();
+
+                // 0. Validate test type ID
                 var testType = await _unitOfWork.TestTypes.GetByIdAsync(testTypeId);
                 if (testType == null)
                     throw new Exception("Test type not found");
@@ -89,8 +97,17 @@ namespace capstone_backend.Business.Services
                     inserted++;
                 }
 
-                await _unitOfWork.SaveChangesAsync();
-                
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                // 6. Upload CSV to S3
+                if (result > 0)
+                {
+                    var userId = _currentUser.UserId
+                            ?? throw new UnauthorizedAccessException("User not authenticated");
+
+                    await _s3Service.UploadFileAsync(file, userId, "DOCUMENT");
+                }
+
                 return new ImportResult(
                     rows.Count,
                     inserted,
