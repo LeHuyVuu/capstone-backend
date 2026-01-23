@@ -88,25 +88,33 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task<TestTypeResponse?> GetByIdAsync(int id, string role = "MEMBER")
+        public async Task<TestTypeDetailDto?> GetByIdAsync(int id, string role = "MEMBER")
         {
             try
             {
-                var response = new TestTypeResponse();
+                var isAdmin = role.ToUpper() == "ADMIN";
 
-                if (role.ToUpper() == "ADMIN")
-                {
-                    response = _mapper.Map<TestTypeResponse>(await _unitOfWork.TestTypes.GetByIdAsync(id));
-                }
-                else
-                {
-                    response = _mapper.Map<TestTypeResponse>(await _unitOfWork.TestTypes.GetByIdForUserAsync(id));
-                }
+                var testType = role.ToUpper() == "ADMIN"
+                    ? await _unitOfWork.TestTypes.GetByIdAsync(id)
+                    : await _unitOfWork.TestTypes.GetByIdForUserAsync(id);
 
-                if (response == null)
-                {
+                if (testType == null)
                     throw new Exception("Test type not found");
+
+                var versions = await _unitOfWork.Questions.GetAllVersionsAsync(id);
+
+                if (!isAdmin)
+                {
+                    versions = versions
+                        .Where(v => v.IsActive)
+                        .ToList();
                 }
+
+                var response = _mapper.Map<TestTypeDetailDto>(testType);
+                response.Versions = versions;
+                response.LastestVersion = versions
+                        .FirstOrDefault(v => v.IsActive)
+                        ?.Version ?? 0;
 
                 return response;
             }

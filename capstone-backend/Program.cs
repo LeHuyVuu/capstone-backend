@@ -1,4 +1,5 @@
 using capstone_backend.Api.Middleware;
+using capstone_backend.Api.Models;
 using capstone_backend.Business.Mappings;
 using capstone_backend.Extensions;
 using DotNetEnv;
@@ -69,6 +70,10 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
 });
 // 11. Add Auto Mapper
 builder.Services.AddAutoMapper(typeof(TestTypeProfile));
+
+// 12. Add HttpContextAccessor
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
 var app = builder.Build();
 

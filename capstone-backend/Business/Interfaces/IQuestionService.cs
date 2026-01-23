@@ -4,6 +4,6 @@ namespace capstone_backend.Business.Interfaces
 {
     public interface IQuestionService
     {
-        Task<ImportResult> GenerateQuestionAsync(int testTypeId, Stream csvStream, CancellationToken ct = default);
+        Task<ImportResult> GenerateQuestionAsync(int testTypeId, IFormFile file, CancellationToken ct = default);
     }
 }
