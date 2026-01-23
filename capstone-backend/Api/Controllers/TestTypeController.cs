@@ -64,7 +64,7 @@ namespace capstone_backend.Api.Controllers
                 if (role != "ADMIN" && role != "MEMBER")
                     return ForbiddenResponse("You do not have permission to access this resource");
 
-                var response = new TestTypeResponse();
+                var response = new TestTypeDetailDto();
 
                 if (role == "ADMIN")
                 {
