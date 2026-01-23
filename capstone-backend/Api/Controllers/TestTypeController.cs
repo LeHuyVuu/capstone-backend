@@ -130,6 +130,9 @@ namespace capstone_backend.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Delete Test Type (Admin only)
+        /// </summary>
         [HttpPatch("{id:int}/delete")]
         public async Task<IActionResult> DeleteTestType(int id)
         {
@@ -150,12 +153,19 @@ namespace capstone_backend.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Import Question for Test Type (Admin only)
+        /// </summary>
         [HttpPost("{testTypeId:int}/question/import")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> GenerateQuestions([FromRoute] int testTypeId, [FromForm] GenerateQuestionsRequest request, CancellationToken ct)
         {
             try
             {
+                var isAdmin = IsCurrentUserInRole("ADMIN");
+                if (!isAdmin)
+                    return ForbiddenResponse("You do not have permission to access this resource");
+
                 if (request.File == null || request.File.Length == 0)
                     return BadRequest("File is required.");
 
