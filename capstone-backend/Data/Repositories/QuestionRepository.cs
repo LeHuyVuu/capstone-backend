@@ -1,4 +1,5 @@
-﻿using capstone_backend.Business.Interfaces;
+﻿using capstone_backend.Business.DTOs.TestType;
+using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Interfaces;
@@ -12,11 +13,27 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
-        public async Task<int> GetCurrentMaxOrderAsync(int testTypeId, CancellationToken ct = default)
+        public async Task<List<VersionSummaryDto>> GetAllVersionsAsync(int testTypeId)
         {
             return await _dbSet
-                .Where(q => q.TestTypeId == testTypeId)
-                .MaxAsync(q => (int?) q.OrderIndex, ct) ?? 0;
+                .AsNoTracking()
+                .Where(q => q.TestTypeId == testTypeId && q.IsDeleted == false)
+                .GroupBy(q => q.Version)
+                .Select(g => new VersionSummaryDto
+                {
+                    Version = g.Key.Value,
+                    TotalQuestions = g.Count(),
+                    IsActive = g.Any(q => q.IsActive == true)
+                })
+                .OrderByDescending(x => x.Version)
+                .ToListAsync();
+        }
+
+        public async Task<int> GetCurrentVersionAsync(int testTypeId, CancellationToken ct = default)
+        {
+            return await _dbSet
+                .Where(q => q.TestTypeId == testTypeId && q.IsDeleted == false)
+                .MaxAsync(q => q.Version, ct) ?? 0;
         }
     }
 }

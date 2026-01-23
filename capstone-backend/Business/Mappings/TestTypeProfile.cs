@@ -12,6 +12,7 @@ namespace capstone_backend.Business.Mappings
             CreateMap<UpdateTestTypeRequest, TestType>()
                 .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
             CreateMap<TestType, TestTypeResponse>();
+            CreateMap<TestType, TestTypeDetailDto>();
         }
     }
 }

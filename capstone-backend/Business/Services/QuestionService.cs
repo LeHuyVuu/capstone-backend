@@ -1,6 +1,9 @@
-﻿using capstone_backend.Business.DTOs.Question;
+﻿using Amazon.Runtime.Internal;
+using capstone_backend.Api.Models;
+using capstone_backend.Business.DTOs.Question;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using CsvHelper;
 using CsvHelper.Configuration;
 using System.Globalization;
@@ -10,18 +13,23 @@ namespace capstone_backend.Business.Services
     public class QuestionService : IQuestionService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly S3StorageService _s3Service;
+        private readonly ICurrentUser _currentUser;
 
-
-        public QuestionService(IUnitOfWork unitOfWork)
+        public QuestionService(IUnitOfWork unitOfWork, S3StorageService s3Service, ICurrentUser currentUser)
         {
             _unitOfWork = unitOfWork;
+            _s3Service = s3Service;
+            _currentUser = currentUser;
         }
 
-        public async Task<ImportResult> GenerateQuestionAsync(int testTypeId, Stream csvStream, CancellationToken ct = default)
+        public async Task<ImportResult> GenerateQuestionAsync(int testTypeId, IFormFile file, CancellationToken ct = default)
         {
             try
             {
-                // 0. 1. Validate test type ID
+                await using var csvStream = file.OpenReadStream();
+
+                // 0. Validate test type ID
                 var testType = await _unitOfWork.TestTypes.GetByIdAsync(testTypeId);
                 if (testType == null)
                     throw new Exception("Test type not found");
@@ -30,7 +38,7 @@ namespace capstone_backend.Business.Services
                 var rows = CsvReader(csvStream);
 
                 // 2. Validate CSV rows
-                var errors = ValidateCsvRows(rows);
+                var errors = ValidateCsvRows(rows, testType.TotalQuestions.Value);
                 if (errors.Any())
                 {
                     return new ImportResult(
@@ -41,7 +49,9 @@ namespace capstone_backend.Business.Services
                 }
 
                 // 3. Get current max order if already have questions of this test type
-                var order = await _unitOfWork.Questions.GetCurrentMaxOrderAsync(testTypeId, ct);
+                var version = await _unitOfWork.Questions.GetCurrentVersionAsync(testTypeId, ct);
+                var order = 0;
+                var newVersion = version + 1;
 
                 var inserted = 0;
 
@@ -58,7 +68,9 @@ namespace capstone_backend.Business.Services
                         Content = row.Question.Trim(),
                         AnswerType = row.Type.Trim(),
                         OrderIndex = ++order,
+                        Version = newVersion,
                         Dimension = row.Dimension.Trim().ToUpperInvariant(),
+                        IsActive = false,
                     };
 
                     var answer1 = new QuestionAnswer
@@ -86,8 +98,17 @@ namespace capstone_backend.Business.Services
                     inserted++;
                 }
 
-                await _unitOfWork.SaveChangesAsync();
-                
+                var result = await _unitOfWork.SaveChangesAsync();
+
+                // 6. Upload CSV to S3
+                if (result > 0)
+                {
+                    var userId = _currentUser.UserId
+                            ?? throw new UnauthorizedAccessException("User not authenticated");
+
+                    await _s3Service.UploadFileAsync(file, userId, "DOCUMENT");
+                }
+
                 return new ImportResult(
                     rows.Count,
                     inserted,
@@ -119,30 +140,58 @@ namespace capstone_backend.Business.Services
             return csv.GetRecords<QuestionImportRow>().ToList();
         }
 
-        private static List<string> ValidateCsvRows(List<QuestionImportRow> rows)
+        private static List<string> ValidateCsvRows(List<QuestionImportRow> rows, int totalQuestion)
         {
-            var errors = new List<string>();
-            var allowed = new[] { "E/I", "S/N", "T/F", "J/P" };
+            var errors = new List<string>();           
+
+            if (totalQuestion <= 0)
+                errors.Add("Expected totalQuestion must be > 0");
+
+            if (rows == null || rows.Count == 0)
+                return new List<string> { "CSV has no data rows" };
+
+            if (rows.Count != totalQuestion)
+                errors.Add($"Total questions in CSV ({rows.Count}) does not match expected ({totalQuestion})");
+
+            var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "E/I", "S/N", "T/F", "J/P" };
+
+            var seenQuestions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             for (int i = 0; i < rows.Count; i++)
             {
                 var r = rows[i];
                 var line = i + 2;
 
-                if (!allowed.Contains(r.Dimension?.Trim().ToUpperInvariant()))
+                // Check dimension
+                var dim = r.Dimension?.Trim();
+                if (string.IsNullOrWhiteSpace(dim) || !allowed.Contains(dim))
                     errors.Add($"Line {line}: invalid dimension");
 
-                if (string.IsNullOrEmpty(r.Type))
+                if (string.IsNullOrWhiteSpace(r.Type))
                     errors.Add($"Line {line}: type is empty");
 
-                if (string.IsNullOrEmpty(r.Question))
+                // Check question
+                var q = r.Question?.Trim();
+                if (string.IsNullOrWhiteSpace(q))
                     errors.Add($"Line {line}: question is empty");
+                else
+                {
+                    if (!seenQuestions.Add(q))
+                        errors.Add($"Line {line}: duplicate question");
+                }
 
-                if (string.IsNullOrEmpty(r.Answer1))
+                // Check answers
+                var a1 = r.Answer1?.Trim();
+                var a2 = r.Answer2?.Trim();
+                if (string.IsNullOrWhiteSpace(a1))
                     errors.Add($"Line {line}: answer 1 is empty");
 
-                if (string.IsNullOrEmpty(r.Answer2))
+                if (string.IsNullOrWhiteSpace(a2))
                     errors.Add($"Line {line}: answer 2 is empty");
+
+                if (!string.IsNullOrWhiteSpace(a1) && !string.IsNullOrWhiteSpace(a2) &&
+                     string.Equals(a1, a2, StringComparison.OrdinalIgnoreCase))
+                    errors.Add($"Line {line}: answer 1 and answer 2 must be different");
             }
 
             return errors;

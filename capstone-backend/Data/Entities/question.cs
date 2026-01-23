@@ -13,6 +13,8 @@ public partial class Question
 
     public int TestTypeId { get; set; }
 
+    public int? Version { get; set; }
+
     public string Content { get; set; } = null!;
 
     public string? AnswerType { get; set; }
