@@ -236,8 +236,8 @@ public static class ServiceExtensions
         services.AddAuthentication(options =>
             {
                 // Default scheme for Web is Cookie
-                options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             })
             // Cookie Authentication for Web
             .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
