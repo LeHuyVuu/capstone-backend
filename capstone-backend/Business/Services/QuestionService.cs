@@ -49,7 +49,8 @@ namespace capstone_backend.Business.Services
                 }
 
                 // 3. Get current max order if already have questions of this test type
-                var (order, version) = await _unitOfWork.Questions.GetCurrentMaxOrderAndVersionAsync(testTypeId, ct);
+                var version = await _unitOfWork.Questions.GetCurrentVersionAsync(testTypeId, ct);
+                var order = 0;
                 var newVersion = version + 1;
 
                 var inserted = 0;

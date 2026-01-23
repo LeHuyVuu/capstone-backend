@@ -12,21 +12,11 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
-        public async Task<(int order, int version)> GetCurrentMaxOrderAndVersionAsync(int testTypeId, CancellationToken ct = default)
+        public async Task<int> GetCurrentVersionAsync(int testTypeId, CancellationToken ct = default)
         {
-            var result = await _dbSet
-                .Where(q => q.TestTypeId == testTypeId && (q.IsDeleted == false))
-                .GroupBy(q => 1)
-                .Select(g => new
-                {
-                    MaxOrder = g.Max(q => q.OrderIndex) ?? 0,
-                    MaxVersion = g.Max(q => q.Version) ?? 0
-                })
-                .FirstOrDefaultAsync(ct);
-
-            return result == null 
-                ? (0, 0) 
-                : (result.MaxOrder, result.MaxVersion);
+            return await _dbSet
+                .Where(q => q.TestTypeId == testTypeId && q.IsDeleted == false)
+                .MaxAsync(q => q.Version, ct) ?? 0;
         }
     }
 }

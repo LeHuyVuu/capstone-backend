@@ -5,6 +5,6 @@ namespace capstone_backend.Data.Interfaces
 {
     public interface IQuestionRepository : IGenericRepository<Question>
     {
-        Task<(int order, int version)> GetCurrentMaxOrderAndVersionAsync(int testTypeId, CancellationToken ct = default);
+        Task<int> GetCurrentVersionAsync(int testTypeId, CancellationToken ct = default);
     }
 }
