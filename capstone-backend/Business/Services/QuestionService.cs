@@ -38,7 +38,7 @@ namespace capstone_backend.Business.Services
                 var rows = CsvReader(csvStream);
 
                 // 2. Validate CSV rows
-                var errors = ValidateCsvRows(rows);
+                var errors = ValidateCsvRows(rows, testType.TotalQuestions.Value);
                 if (errors.Any())
                 {
                     return new ImportResult(
@@ -140,30 +140,58 @@ namespace capstone_backend.Business.Services
             return csv.GetRecords<QuestionImportRow>().ToList();
         }
 
-        private static List<string> ValidateCsvRows(List<QuestionImportRow> rows)
+        private static List<string> ValidateCsvRows(List<QuestionImportRow> rows, int totalQuestion)
         {
-            var errors = new List<string>();
-            var allowed = new[] { "E/I", "S/N", "T/F", "J/P" };
+            var errors = new List<string>();           
+
+            if (totalQuestion <= 0)
+                errors.Add("Expected totalQuestion must be > 0");
+
+            if (rows == null || rows.Count == 0)
+                return new List<string> { "CSV has no data rows" };
+
+            if (rows.Count != totalQuestion)
+                errors.Add($"Total questions in CSV ({rows.Count}) does not match expected ({totalQuestion})");
+
+            var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "E/I", "S/N", "T/F", "J/P" };
+
+            var seenQuestions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             for (int i = 0; i < rows.Count; i++)
             {
                 var r = rows[i];
                 var line = i + 2;
 
-                if (!allowed.Contains(r.Dimension?.Trim().ToUpperInvariant()))
+                // Check dimension
+                var dim = r.Dimension?.Trim();
+                if (string.IsNullOrWhiteSpace(dim) || !allowed.Contains(dim))
                     errors.Add($"Line {line}: invalid dimension");
 
-                if (string.IsNullOrEmpty(r.Type))
+                if (string.IsNullOrWhiteSpace(r.Type))
                     errors.Add($"Line {line}: type is empty");
 
-                if (string.IsNullOrEmpty(r.Question))
+                // Check question
+                var q = r.Question?.Trim();
+                if (string.IsNullOrWhiteSpace(q))
                     errors.Add($"Line {line}: question is empty");
+                else
+                {
+                    if (!seenQuestions.Add(q))
+                        errors.Add($"Line {line}: duplicate question");
+                }
 
-                if (string.IsNullOrEmpty(r.Answer1))
+                // Check answers
+                var a1 = r.Answer1?.Trim();
+                var a2 = r.Answer2?.Trim();
+                if (string.IsNullOrWhiteSpace(a1))
                     errors.Add($"Line {line}: answer 1 is empty");
 
-                if (string.IsNullOrEmpty(r.Answer2))
+                if (string.IsNullOrWhiteSpace(a2))
                     errors.Add($"Line {line}: answer 2 is empty");
+
+                if (!string.IsNullOrWhiteSpace(a1) && !string.IsNullOrWhiteSpace(a2) &&
+                     string.Equals(a1, a2, StringComparison.OrdinalIgnoreCase))
+                    errors.Add($"Line {line}: answer 1 and answer 2 must be different");
             }
 
             return errors;
