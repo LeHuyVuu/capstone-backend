@@ -69,7 +69,11 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
     options.MultipartHeadersLengthLimit = int.MaxValue;
 });
 // 11. Add Auto Mapper
-builder.Services.AddAutoMapper(typeof(TestTypeProfile), typeof(VenueLocationProfile));
+builder.Services.AddAutoMapper(
+    typeof(TestTypeProfile),
+    typeof(QuestionProfile),
+    typeof(VenueLocationProfile)
+);
 
 // 12. Add HttpContextAccessor
 builder.Services.AddHttpContextAccessor();

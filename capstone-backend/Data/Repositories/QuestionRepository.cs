@@ -13,6 +13,15 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public Task<List<Question>> GetAllByVersionAsync(int version, string role)
+        {
+            var result = role.ToUpper() == "ADMIN"
+                ? _dbSet.Where(q => q.Version == version && q.IsDeleted == false).ToListAsync()
+                : _dbSet.Where(q => q.Version == version && q.IsActive == true && q.IsDeleted == false).ToListAsync();
+
+            return result;
+        }
+
         public async Task<List<VersionSummaryDto>> GetAllVersionsAsync(int testTypeId)
         {
             return await _dbSet

@@ -44,7 +44,7 @@ namespace capstone_backend.Api.Controllers
                     response = await _testTypeService.GetAllTestTypeAsync();
                 }
 
-                    return OkResponse(response, "Test types retrieved successfully");
+                return OkResponse(response, "Test types retrieved successfully");
             }
             catch (Exception ex)
             {
@@ -53,7 +53,7 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Get Test Type
+        /// Get Test Type (Admin only)
         /// </summary>
         [HttpGet("{id:int}")]
         public async Task<IActionResult> TestType(int id)
@@ -157,9 +157,9 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Import Question for Test Type (Admin only)
         /// </summary>
-        [HttpPost("{testTypeId:int}/question/import")]
+        [HttpPost("{id:int}/question/import")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> GenerateQuestions([FromRoute] int testTypeId, [FromForm] GenerateQuestionsRequest request, CancellationToken ct)
+        public async Task<IActionResult> GenerateQuestions([FromRoute] int id, [FromForm] GenerateQuestionsRequest request, CancellationToken ct)
         {
             try
             {
@@ -168,10 +168,10 @@ namespace capstone_backend.Api.Controllers
                     return ForbiddenResponse("You do not have permission to access this resource");
 
                 if (request.File == null || request.File.Length == 0)
-                    return BadRequest("File is required.");               
+                    return BadRequest("File is required.");
 
                 var result = await _questionService.GenerateQuestionAsync(
-                    testTypeId,
+                    id,
                     request.File,
                     ct
                 );
@@ -184,6 +184,24 @@ namespace capstone_backend.Api.Controllers
             {
 
                 throw;
+            }
+        }
+
+        [HttpGet("{id:int}/question")]
+        public async Task<IActionResult> GetQuestionsByTestTypeAndVersion(int id)
+        {
+            try
+            {
+                var role = GetCurrentUserRole();
+                if (role != "ADMIN" && role != "MEMBER")
+                    return ForbiddenResponse("You do not have permission to access this resource");
+
+                var questions = await _questionService.GetAllQuestionsByVersionAsync(id);
+                return OkResponse(questions, "Questions retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
             }
         }
     }
