@@ -6,7 +6,7 @@ namespace capstone_backend.Business.Interfaces
     public interface ITestTypeService
     {
         Task<List<TestTypeResponse>> GetAllTestTypeAsync();
-        Task<TestTypeDetailDto?> GetByIdAsync(int id, string role = "MEMBER");
+        Task<TestTypeDetailDto?> GetByIdAsync(int id);
         Task<int> CreateTestTypeAsync(CreateTestTypeResquest request);
         Task<int> UpdateTestTypeAsync(int id, UpdateTestTypeRequest request);
         Task<int> DeleteTestTypeAsync(int id);
