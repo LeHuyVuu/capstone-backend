@@ -213,19 +213,20 @@ namespace capstone_backend.Business.Services
             };
         }
 
-        public async Task<List<QuestionResponse>> GetAllQuestionsByVersionAsync(int testTypeId)
+        public async Task<List<QuestionResponse>> GetAllQuestionsByVersionAsync(int testTypeId, int version)
         {
             try
             {
                 var testType = await _unitOfWork.TestTypes.GetByIdAsync(testTypeId);
-
                 if (testType == null)
                     throw new Exception("Test type not found");
-                if (testType.CurrentVersion == null)
-                    throw new Exception("Test type has no questions");
 
-                var questions = await _unitOfWork.Questions.GetAllByVersionAsync(testType.CurrentVersion.Value, _currentUser.Role);
+                // Check version existence
+                var versions = await _unitOfWork.Questions.GetAllVersionsAsync(testTypeId);
+                if (!versions.Any(v => v.Version == version))
+                    throw new Exception("Version not found for this test type");
 
+                var questions = await _unitOfWork.Questions.GetAllByVersionAsync(testTypeId, version);
                 if (!questions.Any())
                     throw new Exception("Test type has no questions");
 
@@ -234,7 +235,7 @@ namespace capstone_backend.Business.Services
                 var questionResponses = _mapper.Map<List<QuestionResponse>>(questions);
 
                 var answers = await _unitOfWork.QuestionAnswers
-                        .GetAllByQuestionIdsAsync(questionIds, _currentUser.Role);
+                        .GetAllByQuestionIdsAsync(questionIds);
 
                 foreach (var q in questionResponses)
                 {

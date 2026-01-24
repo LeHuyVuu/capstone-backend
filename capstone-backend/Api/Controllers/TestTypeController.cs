@@ -172,7 +172,7 @@ namespace capstone_backend.Api.Controllers
         /// Get All Questions for Test Type (Admin only)
         /// </summary>
         [HttpGet("{id:int}/question")]
-        public async Task<IActionResult> GetQuestionsByTestTypeAndVersion(int id)
+        public async Task<IActionResult> GetQuestionsByTestTypeAndVersion(int id, [FromQuery] int version)
         {
             try
             {
@@ -180,7 +180,7 @@ namespace capstone_backend.Api.Controllers
                 if (role != "ADMIN")
                     return ForbiddenResponse("You do not have permission to access this resource");
 
-                var questions = await _questionService.GetAllQuestionsByVersionAsync(id);
+                var questions = await _questionService.GetAllQuestionsByVersionAsync(id, version);
                 return OkResponse(questions, "Questions retrieved successfully");
             }
             catch (Exception ex)

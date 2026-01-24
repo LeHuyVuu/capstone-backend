@@ -13,11 +13,11 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
-        public Task<List<Question>> GetAllByVersionAsync(int version, string role)
+        public Task<List<Question>> GetAllByVersionAsync(int testTypeId, int version)
         {
-            var result = role.ToUpper() == "ADMIN"
-                ? _dbSet.Where(q => q.Version == version && q.IsDeleted == false).ToListAsync()
-                : _dbSet.Where(q => q.Version == version && q.IsActive == true && q.IsDeleted == false).ToListAsync();
+            var result = _dbSet
+                .Where(q => q.TestTypeId == testTypeId && q.Version == version && q.IsDeleted == false)
+                .ToListAsync();
 
             return result;
         }
