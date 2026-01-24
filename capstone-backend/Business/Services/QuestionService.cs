@@ -1,6 +1,8 @@
 ﻿using Amazon.Runtime.Internal;
+using AutoMapper;
 using capstone_backend.Api.Models;
 using capstone_backend.Business.DTOs.Question;
+using capstone_backend.Business.DTOs.QuestionAnswer;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
@@ -15,12 +17,14 @@ namespace capstone_backend.Business.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly S3StorageService _s3Service;
         private readonly ICurrentUser _currentUser;
+        private readonly IMapper _mapper;
 
-        public QuestionService(IUnitOfWork unitOfWork, S3StorageService s3Service, ICurrentUser currentUser)
+        public QuestionService(IUnitOfWork unitOfWork, S3StorageService s3Service, ICurrentUser currentUser, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
             _s3Service = s3Service;
             _currentUser = currentUser;
+            _mapper = mapper;
         }
 
         public async Task<ImportResult> GenerateQuestionAsync(int testTypeId, IFormFile file, CancellationToken ct = default)
@@ -70,7 +74,7 @@ namespace capstone_backend.Business.Services
                         OrderIndex = ++order,
                         Version = newVersion,
                         Dimension = row.Dimension.Trim().ToUpperInvariant(),
-                        IsActive = false,
+                        IsActive = true,
                     };
 
                     var answer1 = new QuestionAnswer
@@ -122,6 +126,66 @@ namespace capstone_backend.Business.Services
             }
         }
 
+        public async Task<int> ActivateVersionAsync(int testTypeId, int version)
+        {
+            var testType = await _unitOfWork.TestTypes.GetByIdAsync(testTypeId);
+            if (testType == null)
+                throw new Exception("Test type not found");
+
+            var questions = await _unitOfWork.Questions.GetAllByVersionAsync(testTypeId, version);
+            if (!questions.Any())
+                throw new Exception("Test type has no questions");
+
+            if (testType.CurrentVersion == version)
+                throw new Exception("This version is already active");
+
+            testType.CurrentVersion = version;
+
+            _unitOfWork.TestTypes.Update(testType);
+            return await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<List<QuestionResponse>> GetAllQuestionsByVersionAsync(int testTypeId, int version)
+        {
+            try
+            {
+                var testType = await _unitOfWork.TestTypes.GetByIdAsync(testTypeId);
+                if (testType == null)
+                    throw new Exception("Test type not found");
+
+                // Check version existence
+                var versions = await _unitOfWork.Questions.GetAllVersionsAsync(testTypeId);
+                if (!versions.Any(v => v.Version == version))
+                    throw new Exception("Version not found for this test type");
+
+                var questions = await _unitOfWork.Questions.GetAllByVersionAsync(testTypeId, version);
+                if (!questions.Any())
+                    throw new Exception("Test type has no questions");
+
+                var questionIds = questions.Select(q => q.Id).ToList();
+
+                var questionResponses = _mapper.Map<List<QuestionResponse>>(questions);
+
+                var answers = await _unitOfWork.QuestionAnswers
+                        .GetAllByQuestionIdsAsync(questionIds);
+
+                foreach (var q in questionResponses)
+                {
+                    q.Answers = answers
+                        .Where(a => a.QuestionId == q.Id)
+                        .Select(a => _mapper.Map<QuestionAnswerResponse>(a))
+                        .ToList();
+                }
+
+                return questionResponses;
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
+        }
+
         private static List<QuestionImportRow> CsvReader(Stream csvStream)
         {
             csvStream.Position = 0;
@@ -142,7 +206,7 @@ namespace capstone_backend.Business.Services
 
         private static List<string> ValidateCsvRows(List<QuestionImportRow> rows, int totalQuestion)
         {
-            var errors = new List<string>();           
+            var errors = new List<string>();
 
             if (totalQuestion <= 0)
                 errors.Add("Expected totalQuestion must be > 0");

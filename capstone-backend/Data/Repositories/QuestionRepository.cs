@@ -13,6 +13,15 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public Task<List<Question>> GetAllByVersionAsync(int testTypeId, int version)
+        {
+            var result = _dbSet
+                .Where(q => q.TestTypeId == testTypeId && q.Version == version && q.IsDeleted == false)
+                .ToListAsync();
+
+            return result;
+        }
+
         public async Task<List<VersionSummaryDto>> GetAllVersionsAsync(int testTypeId)
         {
             return await _dbSet
@@ -22,8 +31,7 @@ namespace capstone_backend.Data.Repositories
                 .Select(g => new VersionSummaryDto
                 {
                     Version = g.Key.Value,
-                    TotalQuestions = g.Count(),
-                    IsActive = g.Any(q => q.IsActive == true)
+                    TotalQuestions = g.Count()
                 })
                 .OrderByDescending(x => x.Version)
                 .ToListAsync();
