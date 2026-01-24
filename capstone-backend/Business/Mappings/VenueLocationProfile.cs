@@ -26,5 +26,14 @@ public class VenueLocationProfile : Profile
 
         // VenueOwnerProfile to VenueOwnerProfileResponse
         CreateMap<VenueOwnerProfile, VenueOwnerProfileResponse>();
+
+        // Review to VenueReviewResponse
+        CreateMap<Review, VenueReviewResponse>();
+
+        // MemberProfile to ReviewMemberInfo
+        CreateMap<MemberProfile, ReviewMemberInfo>()
+            .ForMember(dest => dest.DisplayName, opt => opt.MapFrom(src => src.User.DisplayName))
+            .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.User.AvatarUrl))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email));
     }
 }

@@ -20,11 +20,13 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
     public async Task<VenueLocation?> GetByIdWithDetailsAsync(int id)
     {
         return await _dbSet
+            .AsNoTracking()
             .Include(v => v.LocationTag)
                 .ThenInclude(lt => lt!.CoupleMoodType)
             .Include(v => v.LocationTag)
                 .ThenInclude(lt => lt!.CouplePersonalityType)
             .Include(v => v.VenueOwner)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(v => v.Id == id && v.IsDeleted != true);
     }
 
@@ -36,5 +38,28 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
         return await _dbSet
             .Where(v => v.VenueOwnerId == venueOwnerId && v.IsDeleted != true)
             .ToListAsync();
+    }
+
+    /// <summary>
+    /// Get reviews for a venue with member and user information
+    /// </summary>
+    public async Task<(List<Review> Reviews, int TotalCount)> GetReviewsByVenueIdAsync(int venueId, int page, int pageSize)
+    {
+        var query = _context.Set<Review>()
+            .AsNoTracking()
+            .Include(r => r.Member)
+                .ThenInclude(m => m.User)
+            .Where(r => r.VenueId == venueId && r.IsDeleted != true);
+
+        var totalCount = await query.CountAsync();
+
+        var reviews = await query
+            .OrderByDescending(r => r.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .AsSplitQuery()
+            .ToListAsync();
+
+        return (reviews, totalCount);
     }
 }

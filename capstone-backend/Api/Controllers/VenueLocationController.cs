@@ -23,7 +23,6 @@ public class VenueLocationController : BaseController
     /// Returns venue information with location tag (couple mood type and couple personality type) and venue owner profile.
     /// </summary>
     /// <param name="id">Venue location ID</param>
-    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Venue location detail</returns>
     [HttpGet("{id}")]
     public async Task<IActionResult> GetVenueLocationById(int id)
@@ -38,5 +37,24 @@ public class VenueLocationController : BaseController
         }
 
         return OkResponse(venue, "Venue location retrieved successfully");
+    }
+
+    /// <summary>
+    /// Get reviews for a specific venue location.
+    /// Returns reviews with member information (name, avatar) and like count.
+    /// </summary>
+    /// <param name="id">Venue location ID</param>
+    /// <param name="page">Page number (default: 1)</param>
+    /// <param name="pageSize">Page size (default: 10)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Paginated list of reviews</returns>
+    [HttpGet("{id}/reviews")]
+    public async Task<IActionResult> GetReviewsByVenueId(int id, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    {
+        _logger.LogInformation("Requesting reviews for venue ID: {VenueId}, Page: {Page}, PageSize: {PageSize}", id, page, pageSize);
+
+        var reviews = await _venueLocationService.GetReviewsByVenueIdAsync(id, page, pageSize);
+
+        return OkResponse(reviews, $"Retrieved {reviews.Items.Count()} reviews for venue location");
     }
 }
