@@ -19,6 +19,8 @@ public partial class TestType
 
     public int? TotalQuestions { get; set; }
 
+    public int? CurrentVersion { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
