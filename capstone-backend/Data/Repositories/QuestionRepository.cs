@@ -31,8 +31,7 @@ namespace capstone_backend.Data.Repositories
                 .Select(g => new VersionSummaryDto
                 {
                     Version = g.Key.Value,
-                    TotalQuestions = g.Count(),
-                    IsActive = g.Any(q => q.IsActive == true)
+                    TotalQuestions = g.Count()
                 })
                 .OrderByDescending(x => x.Version)
                 .ToListAsync();

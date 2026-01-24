@@ -24,7 +24,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Get All Test Types (Admin only)
         /// </summary>
-        [HttpGet("test-types")]
+        [HttpGet]
         public async Task<IActionResult> TestTypes()
         {
             try
@@ -182,6 +182,29 @@ namespace capstone_backend.Api.Controllers
 
                 var questions = await _questionService.GetAllQuestionsByVersionAsync(id, version);
                 return OkResponse(questions, "Questions retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Activate Question Version for Test Type (Admin only)
+        /// </summary>
+        [HttpPatch("{id:int}/activate-version")]
+        public async Task<IActionResult> ActivateQuestionVersion(int id, [FromQuery] int version)
+        {
+            try
+            {
+                var isAdmin = IsCurrentUserInRole("ADMIN");
+                if (!isAdmin)
+                    return ForbiddenResponse("You do not have permission to access this resource");
+                var response = await _questionService.ActivateVersionAsync(id, version);
+                if (response > 0)
+                    return OkResponse("Question version activated successfully");
+                else
+                    return BadRequestResponse("Failed to activate question version");
             }
             catch (Exception ex)
             {

@@ -93,9 +93,6 @@ namespace capstone_backend.Business.Services
 
                 var response = _mapper.Map<TestTypeDetailDto>(testType);
                 response.Versions = versions;
-                response.LastestVersion = versions
-                        .FirstOrDefault(v => v.IsActive)
-                        ?.Version ?? 0;
 
                 return response;
             }
