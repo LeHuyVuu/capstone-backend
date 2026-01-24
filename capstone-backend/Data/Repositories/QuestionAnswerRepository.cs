@@ -11,16 +11,11 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
-        public async Task<List<QuestionAnswer>> GetAllByQuestionIdsAsync(
-            List<int> questionIds,
-            string role)
+        public async Task<List<QuestionAnswer>> GetAllByQuestionIdsAsync(List<int> questionIds)
         {
-            var query = _dbSet.Where(a => questionIds.Contains(a.QuestionId));
-
-            if (role != "ADMIN")
-                query = query.Where(a => a.IsActive == true);
-
-            return await query.ToListAsync();
+            return await _dbSet
+                .Where(a => questionIds.Contains(a.QuestionId) && a.IsDeleted == false)
+                .ToListAsync();
         }
     }
 }

@@ -58,19 +58,11 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task<List<TestTypeResponse>> GetAllTestTypeAsync(string role = "MEMBER")
+        public async Task<List<TestTypeResponse>> GetAllTestTypeAsync()
         {
             try
             {
-                var testTypes = new List<TestType>();
-                if (role.ToUpper() == "ADMIN")
-                {
-                    testTypes = (await _unitOfWork.TestTypes.GetAllAsync()).ToList();
-                }
-                else
-                {
-                    testTypes = (await _unitOfWork.TestTypes.GetAllTestTypeMemberAsync()).ToList();
-                }
+                var testTypes = (await _unitOfWork.TestTypes.GetAllAsync()).ToList();
 
                 var response = new List<TestTypeResponse>();
 
@@ -88,33 +80,19 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task<TestTypeDetailDto?> GetByIdAsync(int id, string role = "MEMBER")
+        public async Task<TestTypeDetailDto?> GetByIdAsync(int id)
         {
             try
             {
-                var isAdmin = role.ToUpper() == "ADMIN";
-
-                var testType = role.ToUpper() == "ADMIN"
-                    ? await _unitOfWork.TestTypes.GetByIdAsync(id)
-                    : await _unitOfWork.TestTypes.GetByIdForUserAsync(id);
+                var testType = await _unitOfWork.TestTypes.GetByIdAsync(id);
 
                 if (testType == null)
                     throw new Exception("Test type not found");
 
                 var versions = await _unitOfWork.Questions.GetAllVersionsAsync(id);
 
-                if (!isAdmin)
-                {
-                    versions = versions
-                        .Where(v => v.IsActive)
-                        .ToList();
-                }
-
                 var response = _mapper.Map<TestTypeDetailDto>(testType);
                 response.Versions = versions;
-                response.LastestVersion = versions
-                        .FirstOrDefault(v => v.IsActive)
-                        ?.Version ?? 0;
 
                 return response;
             }

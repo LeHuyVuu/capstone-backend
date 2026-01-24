@@ -9,7 +9,7 @@ namespace capstone_backend.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "ADMIN")]
     public class TestTypeController : BaseController
     {
         private readonly ITestTypeService _testTypeService;
@@ -22,7 +22,7 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Get All Test Types
+        /// Get All Test Types (Admin only)
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> TestTypes()
@@ -30,19 +30,10 @@ namespace capstone_backend.Api.Controllers
             try
             {
                 var role = GetCurrentUserRole();
-                if (role != "ADMIN" && role != "MEMBER")
+                if (role != "ADMIN")
                     return ForbiddenResponse("You do not have permission to access this resource");
 
-                var response = new List<TestTypeResponse>();
-
-                if (role == "ADMIN")
-                {
-                    response = await _testTypeService.GetAllTestTypeAsync(role);
-                }
-                else
-                {
-                    response = await _testTypeService.GetAllTestTypeAsync();
-                }
+                var response = await _testTypeService.GetAllTestTypeAsync();
 
                 return OkResponse(response, "Test types retrieved successfully");
             }
@@ -61,20 +52,10 @@ namespace capstone_backend.Api.Controllers
             try
             {
                 var role = GetCurrentUserRole();
-                if (role != "ADMIN" && role != "MEMBER")
+                if (role != "ADMIN")
                     return ForbiddenResponse("You do not have permission to access this resource");
 
-                var response = new TestTypeDetailDto();
-
-                if (role == "ADMIN")
-                {
-
-                    response = await _testTypeService.GetByIdAsync(id, role);
-                }
-                else
-                {
-                    response = await _testTypeService.GetByIdAsync(id);
-                }
+                var response = await _testTypeService.GetByIdAsync(id);
 
                 return OkResponse(response, "Test type retrieved successfully");
             }
@@ -187,17 +168,43 @@ namespace capstone_backend.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Get All Questions for Test Type (Admin only)
+        /// </summary>
         [HttpGet("{id:int}/question")]
-        public async Task<IActionResult> GetQuestionsByTestTypeAndVersion(int id)
+        public async Task<IActionResult> GetQuestionsByTestTypeAndVersion(int id, [FromQuery] int version)
         {
             try
             {
                 var role = GetCurrentUserRole();
-                if (role != "ADMIN" && role != "MEMBER")
+                if (role != "ADMIN")
                     return ForbiddenResponse("You do not have permission to access this resource");
 
-                var questions = await _questionService.GetAllQuestionsByVersionAsync(id);
+                var questions = await _questionService.GetAllQuestionsByVersionAsync(id, version);
                 return OkResponse(questions, "Questions retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Activate Question Version for Test Type (Admin only)
+        /// </summary>
+        [HttpPatch("{id:int}/activate-version")]
+        public async Task<IActionResult> ActivateQuestionVersion(int id, [FromQuery] int version)
+        {
+            try
+            {
+                var isAdmin = IsCurrentUserInRole("ADMIN");
+                if (!isAdmin)
+                    return ForbiddenResponse("You do not have permission to access this resource");
+                var response = await _questionService.ActivateVersionAsync(id, version);
+                if (response > 0)
+                    return OkResponse("Question version activated successfully");
+                else
+                    return BadRequestResponse("Failed to activate question version");
             }
             catch (Exception ex)
             {
