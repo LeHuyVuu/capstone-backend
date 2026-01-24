@@ -272,45 +272,5 @@ namespace capstone_backend.Business.Services
                 _ => throw new ArgumentException("Invalid dimension"),
             };
         }
-
-        public async Task<List<QuestionResponse>> GetAllQuestionsByVersionAsync(int testTypeId)
-        {
-            try
-            {
-                var testType = await _unitOfWork.TestTypes.GetByIdAsync(testTypeId);
-
-                if (testType == null)
-                    throw new Exception("Test type not found");
-                if (testType.CurrentVersion == null)
-                    throw new Exception("Test type has no questions");
-
-                var questions = await _unitOfWork.Questions.GetAllByVersionAsync(testType.CurrentVersion.Value, _currentUser.Role);
-
-                if (!questions.Any())
-                    throw new Exception("Test type has no questions");
-
-                var questionIds = questions.Select(q => q.Id).ToList();
-
-                var questionResponses = _mapper.Map<List<QuestionResponse>>(questions);
-
-                var answers = await _unitOfWork.QuestionAnswers
-                        .GetAllByQuestionIdsAsync(questionIds, _currentUser.Role);
-
-                foreach (var q in questionResponses)
-                {
-                    q.Answers = answers
-                        .Where(a => a.QuestionId == q.Id)
-                        .Select(a => _mapper.Map<QuestionAnswerResponse>(a))
-                        .ToList();
-                }
-
-                return questionResponses;
-            }
-            catch (Exception ex)
-            {
-
-                throw;
-            }
-        }
     }
 }
