@@ -96,7 +96,8 @@ app.MapScalarApiReference(options =>
     options
         .WithTitle("Capstone API")
         .WithTheme(Scalar.AspNetCore.ScalarTheme.Purple)
-        .WithDefaultHttpClient(Scalar.AspNetCore.ScalarTarget.CSharp, Scalar.AspNetCore.ScalarClient.HttpClient);
+        .WithDefaultHttpClient(Scalar.AspNetCore.ScalarTarget.CSharp, Scalar.AspNetCore.ScalarClient.HttpClient)
+        .WithOpenApiRoutePattern("/swagger/v1/swagger.json");
 });
 
 // 4. HTTPS Redirection
@@ -119,9 +120,5 @@ app.MapControllers();
 // ========================================
 
 app.Logger.LogInformation("Application starting...");
-app.Logger.LogInformation("[INFO] Scalar (recommended): http://localhost:5224/scalar");
-app.Logger.LogInformation("[INFO] Swagger UI: http://localhost:5224/swagger");
-app.Logger.LogInformation("[INFO] Redoc: http://localhost:5224/redoc");
-app.Logger.LogInformation("API: /api");
 
 app.Run();

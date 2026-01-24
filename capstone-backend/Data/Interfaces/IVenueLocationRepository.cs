@@ -29,7 +29,27 @@ public interface IVenueLocationRepository : IGenericRepository<VenueLocation>
     /// <param name="venueId">Venue location ID</param>
     /// <param name="page">Page number</param>
     /// <param name="pageSize">Page size</param>
-    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Tuple of reviews list and total count</returns>
     Task<(List<Review> Reviews, int TotalCount)> GetReviewsByVenueIdAsync(int venueId, int page, int pageSize);
+
+    /// <summary>
+    /// Get venues for recommendations with filtering
+    /// Supports both region string and lat/lon geo-location filtering
+    /// </summary>
+    /// <param name="coupleMoodType">Couple mood type to filter</param>
+    /// <param name="personalityTags">Personality tags to filter</param>
+    /// <param name="region">Region/address to filter (ignored if lat/lon provided)</param>
+    /// <param name="latitude">Latitude for geo-location search</param>
+    /// <param name="longitude">Longitude for geo-location search</param>
+    /// <param name="radiusKm">Search radius in kilometers</param>
+    /// <param name="limit">Maximum number of results</param>
+    /// <returns>List of matching venues</returns>
+    Task<List<VenueLocation>> GetForRecommendationsAsync(
+        string? coupleMoodType,
+        List<string> personalityTags,
+        string? region,
+        decimal? latitude,
+        decimal? longitude,
+        decimal? radiusKm,
+        int limit);
 }

@@ -8,6 +8,7 @@ namespace capstone_backend.Data.Entities;
 
 [Index("VenueOwnerId", Name = "idx_venue_owner")]
 [Index("AverageRating", Name = "idx_venue_rating")]
+[Index("Latitude", "Longitude", Name = "idx_venue_location")]
 public partial class VenueLocation
 {
     [Key]
