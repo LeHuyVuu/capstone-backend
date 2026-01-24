@@ -9,7 +9,7 @@ namespace capstone_backend.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class TestTypeController : BaseController
     {
         private readonly ITestTypeService _testTypeService;
@@ -22,27 +22,18 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Get All Test Types
+        /// Get All Test Types (Admin only)
         /// </summary>
-        [HttpGet]
+        [HttpGet("test-types")]
         public async Task<IActionResult> TestTypes()
         {
             try
             {
                 var role = GetCurrentUserRole();
-                if (role != "ADMIN" && role != "MEMBER")
+                if (role != "ADMIN")
                     return ForbiddenResponse("You do not have permission to access this resource");
 
-                var response = new List<TestTypeResponse>();
-
-                if (role == "ADMIN")
-                {
-                    response = await _testTypeService.GetAllTestTypeAsync(role);
-                }
-                else
-                {
-                    response = await _testTypeService.GetAllTestTypeAsync();
-                }
+                var response = await _testTypeService.GetAllTestTypeAsync();
 
                 return OkResponse(response, "Test types retrieved successfully");
             }
