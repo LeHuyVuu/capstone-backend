@@ -31,6 +31,8 @@ public interface IUnitOfWork : IDisposable
 
     IPersonalityTestRepository PersonalityTests { get; }
 
+    IVenueLocationRepository VenueLocations { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>
