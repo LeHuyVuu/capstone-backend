@@ -24,4 +24,26 @@ public interface IVenueLocationService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Paged list of reviews with member information and like count</returns>
     Task<PagedResult<VenueReviewResponse>> GetReviewsByVenueIdAsync(int venueId, int page = 1, int pageSize = 10);
+
+    /// <summary>
+    /// Create a new venue location with location tags
+    /// </summary>
+    /// <param name="request">Create venue location request</param>
+    /// <param name="venueOwnerId">Venue owner member ID</param>
+    /// <returns>Created venue location response</returns>
+    Task<VenueLocationDetailResponse> CreateVenueLocationAsync(CreateVenueLocationRequest request, int venueOwnerId);
+
+    /// <summary>
+    /// Update venue location information
+    /// </summary>
+    /// <param name="id">Venue location ID</param>
+    /// <param name="request">Update venue location request</param>
+    /// <returns>Updated venue location response</returns>
+    Task<VenueLocationDetailResponse?> UpdateVenueLocationAsync(int id, UpdateVenueLocationRequest request);
+
+    /// <summary>
+    /// Get all location tags with couple mood type and couple personality type
+    /// </summary>
+    /// <returns>List of location tags</returns>
+    Task<List<LocationTagResponse>> GetAllLocationTagsAsync();
 }

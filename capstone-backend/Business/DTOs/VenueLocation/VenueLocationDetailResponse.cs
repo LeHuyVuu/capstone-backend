@@ -41,6 +41,7 @@ public class VenueLocationDetailResponse
 public class LocationTagInfo
 {
     public int Id { get; set; }
+    public string? TagName { get; set; }
     public CoupleMoodTypeInfo? CoupleMoodType { get; set; }
     public CouplePersonalityTypeInfo? CouplePersonalityType { get; set; }
 }

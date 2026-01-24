@@ -1,3 +1,4 @@
+using capstone_backend.Business.DTOs.VenueLocation;
 using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -46,7 +47,6 @@ public class VenueLocationController : BaseController
     /// <param name="id">Venue location ID</param>
     /// <param name="page">Page number (default: 1)</param>
     /// <param name="pageSize">Page size (default: 10)</param>
-    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Paginated list of reviews</returns>
     [HttpGet("{id}/reviews")]
     public async Task<IActionResult> GetReviewsByVenueId(int id, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
@@ -56,5 +56,57 @@ public class VenueLocationController : BaseController
         var reviews = await _venueLocationService.GetReviewsByVenueIdAsync(id, page, pageSize);
 
         return OkResponse(reviews, $"Retrieved {reviews.Items.Count()} reviews for venue location");
+    }
+
+    /// <summary>
+    /// Register a new venue location with associated location tags.
+    /// Requires authentication - user must be a venue owner.
+    /// </summary>
+    /// <param name="request">Venue location registration request</param>
+    /// <returns>Created venue location detail</returns>
+    [HttpPost("register")]
+    public async Task<IActionResult> RegisterVenueLocation([FromBody] CreateVenueLocationRequest request)
+    {
+        // Get current user ID
+        var currentUserId = GetCurrentUserId();
+        if (!currentUserId.HasValue)
+        {
+            return UnauthorizedResponse("User not authenticated");
+        }
+
+        _logger.LogInformation("User {UserId} attempting to register venue location: {VenueName}", currentUserId, request.Name);
+
+        try
+        {
+            var venue = await _venueLocationService.CreateVenueLocationAsync(request, currentUserId.Value);
+            return CreatedResponse(venue, "Venue location registered successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error registering venue location for user {UserId}", currentUserId);
+            return BadRequestResponse("Failed to register venue location");
+        }
+    }
+
+    /// <summary>
+    /// Update venue location information.
+    /// Requires authentication - user must be the venue owner.
+    /// </summary>
+    /// <param name="id">Venue location ID</param>
+    /// <param name="request">Venue location update request</param>
+    /// <returns>Updated venue location detail</returns>
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateVenueLocation(int id, [FromBody] UpdateVenueLocationRequest request)
+    {
+        _logger.LogInformation("Updating venue location with ID: {VenueId}", id);
+
+        var venue = await _venueLocationService.UpdateVenueLocationAsync(id, request);
+        
+        if (venue == null)
+        {
+            return NotFoundResponse($"Venue location with ID {id} not found");
+        }
+
+        return OkResponse(venue, "Venue location updated successfully");
     }
 }
