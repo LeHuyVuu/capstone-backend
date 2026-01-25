@@ -78,6 +78,7 @@ public static class ServiceExtensions
         services.AddScoped<IQuestionAnswerRepository, QuestionAnswerRepository>();
         services.AddScoped<IPersonalityTestRepository, PersonalityTestRepository>();
         services.AddScoped<IVenueLocationRepository, VenueLocationRepository>();
+        services.AddScoped<ILocationTagRepository, LocationTagRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -97,22 +98,11 @@ public static class ServiceExtensions
         // Register CometChat Service
         services.AddScoped<ICometChatService, CometChatService>();
 
-        // Register OpenAI Recommendation Service - only read from environment variables
-        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "";
-        var assistantId = Environment.GetEnvironmentVariable("ASSISTANT_ID") ?? "";
-
-        // Debug logging
-        Console.WriteLine(
-            $"[INFO] API Key: {(string.IsNullOrEmpty(apiKey) ? "[EMPTY]" : apiKey.Substring(0, Math.Min(15, apiKey.Length)) + "...")}");
-        Console.WriteLine($"[INFO] Assistant ID: {assistantId}");
-
-        services.Configure<OpenAISettings>(options =>
-        {
-            options.ApiKey = apiKey;
-            options.AssistantId = assistantId;
-        });
-
-        services.AddHttpClient<IRecommendationService, RecommendationService>();
+        // Register AI Recommendation Services
+        services.AddScoped<IMoodMappingService, MoodMappingService>();
+        services.AddScoped<IPersonalityMappingService, PersonalityMappingService>();
+        services.AddScoped<IVenueScoringEngine, VenueScoringEngine>();
+        services.AddScoped<IRecommendationService, OpenAIRecommendationService>();
 
         // Đăng ký AWS Rekognition Service để phân tích cảm xúc khuôn mặt
         services.AddAwsRekognitionService();

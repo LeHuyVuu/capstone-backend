@@ -25,6 +25,10 @@ public class VenueLocationDetailResponse
     public decimal? AvarageCost { get; set; }
     public int? ReviewCount { get; set; }
     public string? Status { get; set; }
+    public string? CoverImage { get; set; }
+    public string? InteriorImage { get; set; }
+    public string? FullPageMenuImage { get; set; }
+    public bool? IsOwnerVerified { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
@@ -41,6 +45,7 @@ public class VenueLocationDetailResponse
 public class LocationTagInfo
 {
     public int Id { get; set; }
+    public string? TagName { get; set; }
     public CoupleMoodTypeInfo? CoupleMoodType { get; set; }
     public CouplePersonalityTypeInfo? CouplePersonalityType { get; set; }
 }
