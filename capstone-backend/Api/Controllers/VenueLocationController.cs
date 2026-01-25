@@ -61,6 +61,7 @@ public class VenueLocationController : BaseController
     /// <summary>
     /// Register a new venue location with associated location tags.
     /// Requires authentication - user must be a venue owner.
+    /// Location tag is determined based on couple mood type ID and couple personality type ID.
     /// </summary>
     /// <param name="request">Venue location registration request</param>
     /// <returns>Created venue location detail</returns>
@@ -108,5 +109,35 @@ public class VenueLocationController : BaseController
         }
 
         return OkResponse(venue, "Venue location updated successfully");
+    }
+
+    /// <summary>
+    /// Get all couple mood types.
+    /// Returns a list of all active couple mood types that can be used for venue registration.
+    /// </summary>
+    /// <returns>List of couple mood types</returns>
+    [HttpGet("mood-types/all")]
+    public async Task<IActionResult> GetAllCoupleMoodTypes()
+    {
+        _logger.LogInformation("Requesting all couple mood types");
+
+        var moodTypes = await _venueLocationService.GetAllCoupleMoodTypesAsync();
+
+        return OkResponse(moodTypes, $"Retrieved {moodTypes.Count} couple mood types");
+    }
+
+    /// <summary>
+    /// Get all couple personality types.
+    /// Returns a list of all active couple personality types that can be used for venue registration.
+    /// </summary>
+    /// <returns>List of couple personality types</returns>
+    [HttpGet("personality-types/all")]
+    public async Task<IActionResult> GetAllCouplePersonalityTypes()
+    {
+        _logger.LogInformation("Requesting all couple personality types");
+
+        var personalityTypes = await _venueLocationService.GetAllCouplePersonalityTypesAsync();
+
+        return OkResponse(personalityTypes, $"Retrieved {personalityTypes.Count} couple personality types");
     }
 }

@@ -88,9 +88,21 @@ public class VenueLocationService : IVenueLocationService
     /// <summary>
     /// Create a new venue location with location tags
     /// </summary>
-    public async Task<VenueLocationDetailResponse> CreateVenueLocationAsync(CreateVenueLocationRequest request, int venueOwnerId)
+    public async Task<VenueLocationDetailResponse> CreateVenueLocationAsync(CreateVenueLocationRequest request, int userId)
     {
-        _logger.LogInformation("Creating new venue location: {VenueName} for owner {VenueOwnerId}", request.Name, venueOwnerId);
+        _logger.LogInformation("Creating new venue location: {VenueName} for user {UserId}", request.Name, userId);
+
+        // Find VenueOwnerProfile for the user
+        var venueOwnerProfile = await _unitOfWork.Context.Set<VenueOwnerProfile>()
+            .FirstOrDefaultAsync(vop => vop.UserId == userId && vop.IsDeleted != true);
+
+        if (venueOwnerProfile == null)
+        {
+            _logger.LogError("User {UserId} does not have a venue owner profile", userId);
+            throw new InvalidOperationException($"User {userId} is not registered as a venue owner. Please create a venue owner profile first.");
+        }
+
+        _logger.LogInformation("Found venue owner profile ID {VenueOwnerProfileId} for user {UserId}", venueOwnerProfile.Id, userId);
 
         // Create new venue location entity
         var venueLocation = new VenueLocation
@@ -108,7 +120,7 @@ public class VenueLocationService : IVenueLocationService
             PriceMax = request.PriceMax,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
-            VenueOwnerId = venueOwnerId,
+            VenueOwnerId = venueOwnerProfile.Id,
             Status = "Active",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -117,10 +129,24 @@ public class VenueLocationService : IVenueLocationService
             ReviewCount = 0
         };
 
-        // Set location tag if provided (using first one)
-        if (request.LocationTagIds.Any())
+        // Find and set location tag based on couple mood type and personality type IDs
+        if (request.CoupleMoodTypeId.HasValue || request.CouplePersonalityTypeId.HasValue)
         {
-            venueLocation.LocationTagId = request.LocationTagIds.First();
+            var locationTag = await _unitOfWork.LocationTags.GetByMoodAndPersonalityTypeIdsAsync(
+                request.CoupleMoodTypeId, 
+                request.CouplePersonalityTypeId);
+
+            if (locationTag != null)
+            {
+                venueLocation.LocationTagId = locationTag.Id;
+                _logger.LogInformation("Found location tag ID {LocationTagId} for couple mood type {CoupleMoodTypeId} and personality type {CouplePersonalityTypeId}",
+                    locationTag.Id, request.CoupleMoodTypeId, request.CouplePersonalityTypeId);
+            }
+            else
+            {
+                _logger.LogWarning("No location tag found for couple mood type {CoupleMoodTypeId} and personality type {CouplePersonalityTypeId}",
+                    request.CoupleMoodTypeId, request.CouplePersonalityTypeId);
+            }
         }
 
         // Add to database
@@ -237,6 +263,54 @@ public class VenueLocationService : IVenueLocationService
 
         _logger.LogInformation("Retrieved {Count} location tags", responses.Count);
         return responses;
+    }
+
+    /// <summary>
+    /// Get all couple mood types
+    /// </summary>
+    public async Task<List<CoupleMoodTypeInfo>> GetAllCoupleMoodTypesAsync()
+    {
+        _logger.LogInformation("Retrieving all couple mood types");
+
+        var moodTypes = await _unitOfWork.Context.Set<CoupleMoodType>()
+            .AsNoTracking()
+            .Where(mt => mt.IsDeleted != true && mt.IsActive == true)
+            .OrderBy(mt => mt.Name)
+            .ToListAsync();
+
+        return moodTypes
+            .Select(mt => new CoupleMoodTypeInfo
+            {
+                Id = mt.Id,
+                Name = mt.Name,
+                Description = mt.Description,
+                IsActive = mt.IsActive
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Get all couple personality types
+    /// </summary>
+    public async Task<List<CouplePersonalityTypeInfo>> GetAllCouplePersonalityTypesAsync()
+    {
+        _logger.LogInformation("Retrieving all couple personality types");
+
+        var personalityTypes = await _unitOfWork.Context.Set<CouplePersonalityType>()
+            .AsNoTracking()
+            .Where(pt => pt.IsDeleted != true && pt.IsActive == true)
+            .OrderBy(pt => pt.Name)
+            .ToListAsync();
+
+        return personalityTypes
+            .Select(pt => new CouplePersonalityTypeInfo
+            {
+                Id = pt.Id,
+                Name = pt.Name,
+                Description = pt.Description,
+                IsActive = pt.IsActive
+            })
+            .ToList();
     }
 
     /// <summary>

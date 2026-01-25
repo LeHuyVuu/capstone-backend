@@ -32,7 +32,12 @@ public class CreateVenueLocationRequest
     public decimal? Longitude { get; set; }
 
     /// <summary>
-    /// List of location tag IDs to associate with this venue
+    /// Couple mood type ID to determine location tag
     /// </summary>
-    public List<int> LocationTagIds { get; set; } = new();
+    public int? CoupleMoodTypeId { get; set; }
+
+    /// <summary>
+    /// Couple personality type ID to determine location tag
+    /// </summary>
+    public int? CouplePersonalityTypeId { get; set; }
 }

@@ -78,6 +78,7 @@ public static class ServiceExtensions
         services.AddScoped<IQuestionAnswerRepository, QuestionAnswerRepository>();
         services.AddScoped<IPersonalityTestRepository, PersonalityTestRepository>();
         services.AddScoped<IVenueLocationRepository, VenueLocationRepository>();
+        services.AddScoped<ILocationTagRepository, LocationTagRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
