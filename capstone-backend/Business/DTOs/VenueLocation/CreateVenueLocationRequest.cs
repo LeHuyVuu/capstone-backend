@@ -32,6 +32,26 @@ public class CreateVenueLocationRequest
     public decimal? Longitude { get; set; }
 
     /// <summary>
+    /// Cover image URL for the venue
+    /// </summary>
+    public string? CoverImage { get; set; }
+
+    /// <summary>
+    /// Interior image URL for the venue
+    /// </summary>
+    public string? InteriorImage { get; set; }
+
+    /// <summary>
+    /// Full-page menu image URL for the venue
+    /// </summary>
+    public string? FullPageMenuImage { get; set; }
+
+    /// <summary>
+    /// Indicates if the venue owner is verified
+    /// </summary>
+    public bool? IsOwnerVerified { get; set; }
+
+    /// <summary>
     /// Couple mood type ID to determine location tag
     /// </summary>
     public int? CoupleMoodTypeId { get; set; }

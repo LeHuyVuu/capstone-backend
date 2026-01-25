@@ -765,6 +765,10 @@ public partial class MyDbContext : DbContext
 
             entity.Property(e => e.AvarageCost).HasDefaultValueSql("0");
             entity.Property(e => e.AverageRating).HasDefaultValueSql("0");
+            entity.Property(e => e.CoverImage).HasColumnName("cover_image");
+            entity.Property(e => e.InteriorImage).HasColumnName("interior_image");
+            entity.Property(e => e.FullPageMenuImage).HasColumnName("full_page_menu_image");
+            entity.Property(e => e.IsOwnerVerified).HasDefaultValue(false).HasColumnName("is_owner_verified");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.IsOpen).HasDefaultValue(true);

@@ -120,6 +120,10 @@ public class VenueLocationService : IVenueLocationService
             PriceMax = request.PriceMax,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
+            CoverImage = request.CoverImage,
+            InteriorImage = request.InteriorImage,
+            FullPageMenuImage = request.FullPageMenuImage,
+            IsOwnerVerified = request.IsOwnerVerified ?? false,
             VenueOwnerId = venueOwnerProfile.Id,
             Status = "Active",
             CreatedAt = DateTime.UtcNow,
@@ -214,6 +218,18 @@ public class VenueLocationService : IVenueLocationService
         
         if (request.Longitude.HasValue)
             venue.Longitude = request.Longitude;
+        
+        if (request.CoverImage != null)
+            venue.CoverImage = request.CoverImage;
+        
+        if (request.InteriorImage != null)
+            venue.InteriorImage = request.InteriorImage;
+        
+        if (request.FullPageMenuImage != null)
+            venue.FullPageMenuImage = request.FullPageMenuImage;
+        
+        if (request.IsOwnerVerified.HasValue)
+            venue.IsOwnerVerified = request.IsOwnerVerified;
 
         venue.UpdatedAt = DateTime.UtcNow;
 

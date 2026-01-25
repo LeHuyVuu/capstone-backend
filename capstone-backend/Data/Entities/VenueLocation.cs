@@ -58,6 +58,14 @@ public partial class VenueLocation
 
     public string? Status { get; set; }
 
+    public string? CoverImage { get; set; }
+
+    public string? InteriorImage { get; set; }
+
+    public string? FullPageMenuImage { get; set; }
+
+    public bool? IsOwnerVerified { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
