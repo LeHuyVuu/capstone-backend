@@ -1,44 +1,88 @@
-using System.Text.Json.Serialization;
-
 namespace capstone_backend.Business.DTOs.Recommendation;
 
+/// <summary>
+/// Response DTO containing AI-generated venue recommendations
+/// </summary>
 public class RecommendationResponse
 {
-    public List<RecommendationItem> Recommendations { get; set; } = new();
+    /// <summary>
+    /// List of recommended venues with scores
+    /// </summary>
+    public List<RecommendedVenue> Recommendations { get; set; } = new();
+    
+    /// <summary>
+    /// AI-generated explanation for the recommendations
+    /// </summary>
+    public string Explanation { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Detected couple mood type based on input moods
+    /// </summary>
+    public string? CoupleMoodType { get; set; }
+    
+    /// <summary>
+    /// Detected personality tags based on MBTI types
+    /// </summary>
+    public List<string> PersonalityTags { get; set; } = new();
+    
+    /// <summary>
+    /// Total processing time in milliseconds
+    /// </summary>
+    public long ProcessingTimeMs { get; set; }
 }
 
-public class RecommendationItem
+/// <summary>
+/// Individual venue recommendation with scoring details
+/// </summary>
+public class RecommendedVenue
 {
-    [JsonPropertyName("id")]
-    public string Id { get; set; } = string.Empty;
+    /// <summary>
+    /// Venue location ID
+    /// </summary>
+    public int VenueLocationId { get; set; }
     
-    [JsonPropertyName("name")]
+    /// <summary>
+    /// Venue name
+    /// </summary>
     public string Name { get; set; } = string.Empty;
     
-    [JsonPropertyName("score")]
-    public int Score { get; set; }
+    /// <summary>
+    /// Venue address
+    /// </summary>
+    public string Address { get; set; } = string.Empty;
     
-    [JsonPropertyName("mood_tags")]
-    public List<string> MoodTags { get; set; } = new();
-    
-    [JsonPropertyName("min_budget")]
-    public long MinBudget { get; set; }
-    
-    [JsonPropertyName("max_budget")]
-    public long MaxBudget { get; set; }
-    
-    [JsonPropertyName("weather_tags")]
-    public List<string> WeatherTags { get; set; } = new();
-    
-    [JsonPropertyName("intimacy")]
-    public string Intimacy { get; set; } = string.Empty;
-    
-    [JsonPropertyName("energy")]
-    public string Energy { get; set; } = string.Empty;
-    
-    [JsonPropertyName("environment")]
-    public string Environment { get; set; } = string.Empty;
-    
-    [JsonPropertyName("description")]
+    /// <summary>
+    /// Venue description
+    /// </summary>
     public string Description { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Overall recommendation score (0-100)
+    /// </summary>
+    public double Score { get; set; }
+    
+    /// <summary>
+    /// Match reason from AI analysis
+    /// </summary>
+    public string MatchReason { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Average rating from reviews
+    /// </summary>
+    public decimal? AverageRating { get; set; }
+    
+    /// <summary>
+    /// Total number of reviews
+    /// </summary>
+    public int ReviewCount { get; set; }
+    
+    /// <summary>
+    /// Venue images
+    /// </summary>
+    public List<string> Images { get; set; } = new();
+    
+    /// <summary>
+    /// Matched location tags
+    /// </summary>
+    public List<string> MatchedTags { get; set; } = new();
 }

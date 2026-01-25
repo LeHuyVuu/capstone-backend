@@ -33,6 +33,8 @@ public interface IUnitOfWork : IDisposable
 
     IVenueLocationRepository VenueLocations { get; }
 
+    ILocationTagRepository LocationTags { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>

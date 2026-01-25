@@ -13,7 +13,6 @@ public interface IVenueLocationRepository : IGenericRepository<VenueLocation>
     /// Get venue location by ID with all related entities
     /// </summary>
     /// <param name="id">Venue location ID</param>
-    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Venue location with related data or null</returns>
     Task<VenueLocation?> GetByIdWithDetailsAsync(int id);
 
@@ -21,7 +20,36 @@ public interface IVenueLocationRepository : IGenericRepository<VenueLocation>
     /// Get venue locations by venue owner ID
     /// </summary>
     /// <param name="venueOwnerId">Venue owner ID</param>
-    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of venue locations</returns>
     Task<List<VenueLocation>> GetByVenueOwnerIdAsync(int venueOwnerId);
+
+    /// <summary>
+    /// Get reviews for a venue with member and user information
+    /// </summary>
+    /// <param name="venueId">Venue location ID</param>
+    /// <param name="page">Page number</param>
+    /// <param name="pageSize">Page size</param>
+    /// <returns>Tuple of reviews list and total count</returns>
+    Task<(List<Review> Reviews, int TotalCount)> GetReviewsByVenueIdAsync(int venueId, int page, int pageSize);
+
+    /// <summary>
+    /// Get venues for recommendations with filtering
+    /// Supports both region string and lat/lon geo-location filtering
+    /// </summary>
+    /// <param name="coupleMoodType">Couple mood type to filter</param>
+    /// <param name="personalityTags">Personality tags to filter</param>
+    /// <param name="region">Region/address to filter (ignored if lat/lon provided)</param>
+    /// <param name="latitude">Latitude for geo-location search</param>
+    /// <param name="longitude">Longitude for geo-location search</param>
+    /// <param name="radiusKm">Search radius in kilometers</param>
+    /// <param name="limit">Maximum number of results</param>
+    /// <returns>List of matching venues</returns>
+    Task<List<VenueLocation>> GetForRecommendationsAsync(
+        string? coupleMoodType,
+        List<string> personalityTags,
+        string? region,
+        decimal? latitude,
+        decimal? longitude,
+        decimal? radiusKm,
+        int limit);
 }

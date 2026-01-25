@@ -8,6 +8,7 @@ namespace capstone_backend.Data.Entities;
 
 [Index("VenueOwnerId", Name = "idx_venue_owner")]
 [Index("AverageRating", Name = "idx_venue_rating")]
+[Index("Latitude", "Longitude", Name = "idx_venue_location")]
 public partial class VenueLocation
 {
     [Key]
@@ -56,6 +57,14 @@ public partial class VenueLocation
     public int? ReviewCount { get; set; }
 
     public string? Status { get; set; }
+
+    public string? CoverImage { get; set; }
+
+    public string? InteriorImage { get; set; }
+
+    public string? FullPageMenuImage { get; set; }
+
+    public bool? IsOwnerVerified { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 

@@ -22,7 +22,8 @@ public class UnitOfWork : IUnitOfWork
         IQuestionRepository questionRepository,
         IQuestionAnswerRepository questionAnswerRepository,
         IPersonalityTestRepository personalityTestRepository,
-        IVenueLocationRepository venueLocationRepository)
+        IVenueLocationRepository venueLocationRepository,
+        ILocationTagRepository locationTagRepository)
     {
         _context = context;
         Users = userRepository;
@@ -33,6 +34,7 @@ public class UnitOfWork : IUnitOfWork
         QuestionAnswers = questionAnswerRepository;
         PersonalityTests = personalityTestRepository;
         VenueLocations = venueLocationRepository;
+        LocationTags = locationTagRepository;
     }
 
     public MyDbContext Context => _context;
@@ -53,6 +55,8 @@ public class UnitOfWork : IUnitOfWork
     public IQuestionAnswerRepository QuestionAnswers { get; }
 
     public IVenueLocationRepository VenueLocations { get; }
+
+    public ILocationTagRepository LocationTags { get; }
 
     public async Task<int> SaveChangesAsync()
     {
