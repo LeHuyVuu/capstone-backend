@@ -71,9 +71,10 @@ public class MoodTypeService : IMoodTypeService
         if (gender != "male" && gender != "female") gender = "female"; // default
         var imageUrl = ResolveIconUrl(moodType.IconUrl, gender);
 
-        // Lấy giờ VN (UTC+7)
+        // Lấy giờ VN (UTC+7) để so sánh ngày
         var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
-        var nowVN = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+        var nowUTC = DateTime.UtcNow;
+        var nowVN = TimeZoneInfo.ConvertTimeFromUtc(nowUTC, vnTimeZone);
         var todayVN = nowVN.Date;
 
         // Kiểm tra xem hôm nay (theo giờ VN) đã có MoodLog chưa
@@ -95,7 +96,7 @@ public class MoodTypeService : IMoodTypeService
         {
             // Trong cùng ngày → UPDATE MoodTypeId
             todayLog.MoodTypeId = moodType.Id;
-            todayLog.UpdatedAt = nowVN; // Lưu giờ VN
+            todayLog.UpdatedAt = nowUTC; // Lưu UTC vào database
             _unitOfWork.MemberMoodLogs.Update(todayLog);
             _logger.LogInformation($"🔄 Updated existing mood log for today VN (MoodType: {moodType.Name})");
         }
@@ -108,8 +109,8 @@ public class MoodTypeService : IMoodTypeService
                 MoodTypeId = moodType.Id,
                 ImageUrl = imageUrl,
                 IsPrivate = false,
-                CreatedAt = nowVN, // Lưu giờ VN
-                UpdatedAt = nowVN, // Lưu giờ VN
+                CreatedAt = nowUTC, // Lưu UTC vào database
+                UpdatedAt = nowUTC, // Lưu UTC vào database
                 IsDeleted = false
             });
             _logger.LogInformation($"➕ Created new mood log for today VN (MoodType: {moodType.Name})");
@@ -124,7 +125,7 @@ public class MoodTypeService : IMoodTypeService
         {
             MoodTypeId = moodType.Id,
             MoodTypeName = moodType.Name,
-            IconUrl = moodType.IconUrl,
+            // IconUrl = moodType.IconUrl,
             UpdatedAt = memberProfile.UpdatedAt ?? DateTime.UtcNow
         };
     }
