@@ -13,6 +13,17 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<IEnumerable<Question>> GetAllByListQuestionIdsAsync(List<int> questionIds)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(q => q.IsDeleted == false && q.IsActive == true && questionIds.Contains(q.Id))
+                .Include(q => q.QuestionAnswers
+                    .Where(qa => qa.IsDeleted == false && qa.IsActive == true)
+                )
+                .ToListAsync();
+        }
+
         public Task<List<Question>> GetAllByVersionAsync(int testTypeId, int version)
         {
             var result = _dbSet

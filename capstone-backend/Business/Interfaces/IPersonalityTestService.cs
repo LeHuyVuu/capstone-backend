@@ -8,5 +8,6 @@ namespace capstone_backend.Business.Interfaces
     {
         Task<int> HandleTestAsync(int userId, int testTypeId, SaveTestResultRequest request);
         Task<PagedResult<PersonalityTestResponse>> GetHistoryTests(int pageNumber, int pageSize, int userId);
+        Task<PersonalityTestDetailResponse> GetTestHistoryDetailAsync(int id, int userId);
     }
 }

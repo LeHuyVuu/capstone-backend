@@ -22,6 +22,9 @@ namespace capstone_backend.Api.Controllers
             _personalityTestService = personalityTestService;
         }
 
+        /// <summary>
+        /// Get All Test Types
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetTestTypes()
         {
@@ -36,6 +39,9 @@ namespace capstone_backend.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Get All History Tests
+        /// </summary>
         [HttpGet("history")]
         public async Task<IActionResult> GetTestHistory([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
         {
@@ -51,6 +57,27 @@ namespace capstone_backend.Api.Controllers
             }
         }
 
+        ///<summary>
+        /// Get Detail of 1 History Test
+        /// </summary>
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetTestHistoryDetail(int id)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _personalityTestService.GetTestHistoryDetailAsync(id, userId.Value);
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get All Questions of 1 test type
+        /// </summary>
         [HttpGet("{testTypeId:int}/questions")]
         public async Task<IActionResult> GetQuestions(int testTypeId)
         {
@@ -66,6 +93,22 @@ namespace capstone_backend.Api.Controllers
             }
         }
 
+        /// <summary>
+        /// Save progress or submit a personality test
+        /// </summary>
+        /// <remarks>
+        /// 1. SAVE_PROGRESS: Lưu tạm tiến độ khi người dùng chưa làm xong bài test  
+        /// 2. SUBMIT: Nộp bài test khi người dùng hoàn thành
+        /// 
+        /// Quy ước:
+        /// - action = "SAVE_PROGRESS" → chỉ lưu, không chấm điểm
+        /// - action = "SUBMIT" → BE validate đủ câu hỏi và trả kết quả
+        /// 
+        /// FE chỉ cần gửi:
+        /// - action
+        /// - currentQuestionIndex
+        /// - answers (questionId, answerId)
+        /// </remarks>
         [HttpPost("{testTypeId:int}/submit")]
         public async Task<IActionResult> SaveOrSubmitTest(int testTypeId, [FromBody] SaveTestResultRequest request)
         {

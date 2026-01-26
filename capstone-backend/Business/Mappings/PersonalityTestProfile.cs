@@ -9,12 +9,8 @@ namespace capstone_backend.Business.Mappings
     {
         public PersonalityTestProfile()
         {
-            CreateMap<PersonalityTest, PersonalityTestResponse>()
-                .ForMember(dest => dest.ResultData, opt => opt.MapFrom(src => string.IsNullOrEmpty(src.ResultData)
-                        ? null
-                        : JsonNode.Parse(src.ResultData, null, default)
-                    )
-                );
+            CreateMap<PersonalityTest, PersonalityTestResponse>();
+            CreateMap<PersonalityTest, PersonalityTestDetailResponse>();
         }
     }
 }

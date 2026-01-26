@@ -38,7 +38,7 @@ namespace capstone_backend.Business.Services
                 if (member == null)
                     throw new Exception("Member profile not found");
 
-                var (tests, count) = await _unitOfWork.PersonalityTests.GetPagedAsync(pageNumber, pageSize, filter: (pt => pt.MemberId == member.Id && pt.IsDeleted == false), orderBy: (pt => pt.OrderByDescending(pt => pt.TakenAt)));
+                var (tests, count) = await _unitOfWork.PersonalityTests.GetPagedAsync(pageNumber, pageSize, filter: (pt => pt.MemberId == member.Id && pt.IsDeleted == false), orderBy: (pt => pt.OrderByDescending(pt => pt.TakenAt ?? pt.CreatedAt)));
 
                 var toMap = tests.ToList();
 
@@ -51,6 +51,73 @@ namespace capstone_backend.Business.Services
                     PageSize = pageSize,
                     TotalCount = count
                 };
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
+        public async Task<PersonalityTestDetailResponse> GetTestHistoryDetailAsync(int id, int userId)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member profile not found");
+
+                var test = await _unitOfWork.PersonalityTests.GetByIdAndMemberIdAsync(id, member.Id);
+                if (test == null)
+                    throw new Exception("Personality test not found");
+
+                var jsonNode = JsonNode.Parse(test.ResultData);
+                var result = _mapper.Map<PersonalityTestDetailResponse>(test);
+
+                var saveIds = new List<(int qId, int aId)>();
+                if (jsonNode["answers"] is JsonArray arr)
+                {
+                    foreach (var node in arr)
+                    {
+                        var qId = node?["QuestionId"]?.GetValue<int>();
+                        var aId = node?["AnswerId"]?.GetValue<int>();
+                        if (qId.HasValue && aId.HasValue)
+                            saveIds.Add((qId.Value, aId.Value));
+                    }
+                }
+
+                // Query questions and answers
+                var questionIds = saveIds.Select(x => x.qId).Distinct().ToList();
+
+                var dbQuestions = await _unitOfWork.Questions.GetAllByListQuestionIdsAsync(questionIds);
+                var details = new List<MemberAnswerDetailDto>();
+                foreach (var (qId, aId) in saveIds)
+                {
+                    var question = dbQuestions.FirstOrDefault(q => q.Id == qId);
+                    if (question != null)
+                    {
+                        var options = question.QuestionAnswers.Select(qa => new AnswerOptionDto
+                        {
+                            AnswerId = qa.Id,
+                            Content = qa.AnswerContent,
+                            ScoreKey = qa.ScoreKey,
+                            ScoreValue = qa.ScoreValue.Value,
+                            IsSelected = qa.Id == aId
+                        }).ToList();
+
+                        details.Add(new MemberAnswerDetailDto
+                        {
+                            QuestionId = question.Id,
+                            QuestionContent = question.Content,
+                            MemberSelectedAnswerId = aId,
+                            Options = options
+                        });
+                    }
+                }
+
+                result.Summary = jsonNode["result"];
+                result.Details = details;
+
+                return result;
             }
             catch (Exception ex)
             {

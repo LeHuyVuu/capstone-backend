@@ -21,6 +21,11 @@ namespace capstone_backend.Data.Repositories
                 .ToListAsync();
         }
 
+        public async Task<PersonalityTest?> GetByIdAndMemberIdAsync(int id, int memberId)
+        {
+            return await _dbSet.Where(pt => pt.Id == id && pt.MemberId == memberId && pt.IsDeleted == false).FirstOrDefaultAsync();
+        }
+
         public async Task<PersonalityTest?> GetByMemberAndTestTypeAsync(int memberId, int testTypeId, string status)
         {
             return await _dbSet
