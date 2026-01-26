@@ -36,6 +36,21 @@ namespace capstone_backend.Api.Controllers
             }
         }
 
+        [HttpGet("history")]
+        public async Task<IActionResult> GetTestHistory([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _personalityTestService.GetHistoryTests(pageNumber, pageSize, userId.Value);
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
         [HttpGet("{testTypeId:int}/questions")]
         public async Task<IActionResult> GetQuestions(int testTypeId)
         {

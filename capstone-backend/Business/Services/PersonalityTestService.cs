@@ -1,5 +1,7 @@
-﻿using AutoMapper.Execution;
+﻿using AutoMapper;
+using AutoMapper.Execution;
 using Azure.Core;
+using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.PersonalityTest;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
@@ -7,6 +9,7 @@ using capstone_backend.Data.Enums;
 using capstone_backend.Data.Static;
 using CsvHelper;
 using CsvHelper.Configuration;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.OpenApi.Models;
 using System.Globalization;
 using System.Runtime.InteropServices.JavaScript;
@@ -19,10 +22,40 @@ namespace capstone_backend.Business.Services
     public class PersonalityTestService : IPersonalityTestService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public PersonalityTestService(IUnitOfWork unitOfWork)
+        public PersonalityTestService(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
+        }
+
+        public async Task<PagedResult<PersonalityTestResponse>> GetHistoryTests(int pageNumber, int pageSize, int userId)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member profile not found");
+
+                var (tests, count) = await _unitOfWork.PersonalityTests.GetPagedAsync(pageNumber, pageSize, filter: (pt => pt.MemberId == member.Id && pt.IsDeleted == false), orderBy: (pt => pt.OrderByDescending(pt => pt.TakenAt)));
+
+                var toMap = tests.ToList();
+
+                var result = _mapper.Map<List<PersonalityTestResponse>>(toMap);
+
+                return new PagedResult<PersonalityTestResponse>
+                {
+                    Items = result,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    TotalCount = count
+                };
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
         }
 
         public async Task<int> HandleTestAsync(int userId, int testTypeId, SaveTestResultRequest request)
@@ -248,7 +281,7 @@ namespace capstone_backend.Business.Services
 
                 answerIdsToCheck.Add(ans.AnswerId);
             }
-       
+
             var validMap = await _unitOfWork.Questions.GetValidStructureAsync(testTypeId);
             foreach (var ans in request.Answers)
             {

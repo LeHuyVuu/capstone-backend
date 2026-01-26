@@ -3,6 +3,7 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace capstone_backend.Data.Repositories
 {
@@ -12,11 +13,20 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<IEnumerable<PersonalityTest>> GetAllAsync()
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(pt => pt.IsDeleted == false)
+                .ToListAsync();
+        }
+
         public async Task<PersonalityTest?> GetByMemberAndTestTypeAsync(int memberId, int testTypeId, string status)
         {
             return await _dbSet
                 .Where(pt => pt.MemberId == memberId && pt.TestTypeId == testTypeId && pt.IsDeleted == false && pt.Status == status)
                 .FirstOrDefaultAsync();
         }
+
     }
 }
