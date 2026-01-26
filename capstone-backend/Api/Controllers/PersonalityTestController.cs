@@ -1,4 +1,5 @@
-﻿using capstone_backend.Business.Interfaces;
+﻿using capstone_backend.Business.DTOs.PersonalityTest;
+using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -12,11 +13,13 @@ namespace capstone_backend.Api.Controllers
     {
         private readonly IQuestionService _questionService;
         private readonly ITestTypeService _testTypeService;
+        private readonly IPersonalityTestService _personalityTestService;
 
-        public PersonalityTestController(IQuestionService questionService, ITestTypeService testTypeService)
+        public PersonalityTestController(IQuestionService questionService, ITestTypeService testTypeService, IPersonalityTestService personalityTestService)
         {
             _questionService = questionService;
             _testTypeService = testTypeService;
+            _personalityTestService = personalityTestService;
         }
 
         [HttpGet]
@@ -44,6 +47,21 @@ namespace capstone_backend.Api.Controllers
             catch (Exception ex)
             {
 
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        [HttpPost("{testTypeId:int}/submit")]
+        public async Task<IActionResult> SaveOrSubmitTest(int testTypeId, [FromBody] SaveTestResultRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _personalityTestService.HandleTestAsync(GetCurrentUserId().Value, testTypeId, request);
+                return OkResponse(result, "Test submitted successfully");
+            }
+            catch (Exception ex)
+            {
                 return BadRequestResponse(ex.Message);
             }
         }
