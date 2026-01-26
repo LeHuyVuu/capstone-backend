@@ -75,6 +75,24 @@ namespace capstone_backend.Api.Controllers
             }
         }
 
+        ///<summary>
+        /// Get My Current Personality Result
+        /// </summary>
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMyCurrentPersonality()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _personalityTestService.GetCurrentPersonalityAsync(userId.Value);
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
         /// <summary>
         /// Get All Questions of 1 test type
         /// </summary>
