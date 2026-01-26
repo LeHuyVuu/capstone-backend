@@ -33,5 +33,13 @@ namespace capstone_backend.Data.Repositories
                 .FirstOrDefaultAsync();
         }
 
+        public Task<PersonalityTest?> GetCurrentPersonalityAsync(int memberId)
+        {
+            return _dbSet
+                .AsNoTracking()
+                .Where(pt => pt.MemberId == memberId && pt.IsDeleted == false && pt.Status == PersonalityTestStatus.COMPLETED.ToString())
+                .OrderByDescending(pt => pt.TakenAt ?? pt.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
     }
 }

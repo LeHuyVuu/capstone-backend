@@ -125,6 +125,28 @@ namespace capstone_backend.Business.Services
             }
         }
 
+        public async Task<PersonalityTestResponse> GetCurrentPersonalityAsync(int userId)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member profile not found");
+
+                var test = await _unitOfWork.PersonalityTests.GetCurrentPersonalityAsync(member.Id);
+                if (test == null)
+                    throw new Exception("Member has not completed any personality test yet");
+
+                var result = _mapper.Map<PersonalityTestResponse>(test);
+                return result;
+            }
+            catch (Exception ex)
+            {
+
+                throw;
+            }
+        }
+
         public async Task<int> HandleTestAsync(int userId, int testTypeId, SaveTestResultRequest request)
         {
             try
