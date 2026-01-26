@@ -186,6 +186,33 @@ namespace capstone_backend.Business.Services
             }
         }
 
+        public async Task<List<QuestionResponse>> GetAllQuestionsForMemberAsync(int testTypeId)
+        {
+            try
+            {
+                // Check test type existence
+                var testType = await _unitOfWork.TestTypes.GetByIdAsync(testTypeId);
+                if (testType == null)
+                    throw new Exception("Test type not found");
+
+                var version = testType.CurrentVersion;
+                if (version == null)
+                    throw new Exception("Test type has no active version");
+
+                var questions = await _unitOfWork.Questions.GetAllQuestionsByTestTypeIdAsync(testTypeId);
+                if (!questions.Any())
+                    throw new Exception("Test type has no questions");
+
+                var response = _mapper.Map<List<QuestionResponse>>(questions);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+
         private static List<QuestionImportRow> CsvReader(Stream csvStream)
         {
             csvStream.Position = 0;

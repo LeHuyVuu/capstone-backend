@@ -5,5 +5,6 @@ namespace capstone_backend.Data.Interfaces
 {
     public interface IPersonalityTestRepository : IGenericRepository<PersonalityTest>
     {
+        Task<PersonalityTest?> GetByMemberAndTestTypeAsync(int memberId, int testTypeId, string status);
     }
 }

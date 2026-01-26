@@ -62,7 +62,7 @@ namespace capstone_backend.Business.Services
         {
             try
             {
-                var testTypes = (await _unitOfWork.TestTypes.GetAllAsync()).ToList();
+                var testTypes = await _unitOfWork.TestTypes.GetAllAsync();
 
                 var response = new List<TestTypeResponse>();
 
@@ -76,6 +76,22 @@ namespace capstone_backend.Business.Services
             }
             catch (Exception ex)
             {
+                throw;
+            }
+        }
+
+        public async Task<List<TestTypeResponse>> GetAllActiveAsync()
+        {
+            try
+            {
+                var testTypes = await _unitOfWork.TestTypes.GetAllActiveAsync();
+                var result = _mapper.Map<List<TestTypeResponse>>(testTypes);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+
                 throw;
             }
         }

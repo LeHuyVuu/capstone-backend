@@ -22,6 +22,24 @@ namespace capstone_backend.Data.Repositories
             return result;
         }
 
+        public async Task<IEnumerable<Question>> GetAllQuestionsByTestTypeIdAsync(int testTypeId)
+        {
+            var testTypeCurrentVersion = await GetCurrentVersionAsync(testTypeId);
+
+            return await _dbSet
+                .AsNoTracking()
+                .Where(q => q.TestTypeId == testTypeId &&
+                    q.IsDeleted == false &&
+                    q.IsActive == true &&
+                    q.Version == testTypeCurrentVersion
+                )
+                .Include(q => q.QuestionAnswers
+                    .Where(qa => qa.IsDeleted == false && qa.IsActive == true)
+                )
+                .ToListAsync();
+                
+        }
+
         public async Task<List<VersionSummaryDto>> GetAllVersionsAsync(int testTypeId)
         {
             return await _dbSet
@@ -42,6 +60,23 @@ namespace capstone_backend.Data.Repositories
             return await _dbSet
                 .Where(q => q.TestTypeId == testTypeId && q.IsDeleted == false)
                 .MaxAsync(q => q.Version, ct) ?? 0;
+        }
+
+        public async Task<Dictionary<int, HashSet<int>>> GetValidStructureAsync(int testTypeId)
+        {
+            var data = await _dbSet
+                .Where(q => q.TestTypeId == testTypeId && q.IsDeleted == false && q.IsActive == true)
+                .Select(q => new
+                {
+                    QuestionId = q.Id,
+                    AnswerIds = q.QuestionAnswers.Select(qa => qa.Id).ToList()
+                })
+                .ToListAsync();
+
+            return data.ToDictionary(
+                x => x.QuestionId,
+                x => x.AnswerIds.ToHashSet()
+            );
         }
     }
 }
