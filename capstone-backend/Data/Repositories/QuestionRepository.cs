@@ -22,6 +22,24 @@ namespace capstone_backend.Data.Repositories
             return result;
         }
 
+        public async Task<IEnumerable<Question>> GetAllQuestionsByTestTypeIdAsync(int testTypeId)
+        {
+            var testTypeCurrentVersion = await GetCurrentVersionAsync(testTypeId);
+
+            return await _dbSet
+                .AsNoTracking()
+                .Where(q => q.TestTypeId == testTypeId &&
+                    q.IsDeleted == false &&
+                    q.IsActive == true &&
+                    q.Version == testTypeCurrentVersion
+                )
+                .Include(q => q.QuestionAnswers
+                    .Where(qa => qa.IsDeleted == false && qa.IsActive == true)
+                )
+                .ToListAsync();
+                
+        }
+
         public async Task<List<VersionSummaryDto>> GetAllVersionsAsync(int testTypeId)
         {
             return await _dbSet

@@ -25,6 +25,13 @@ namespace capstone_backend.Data.Repositories
                 .FirstOrDefaultAsync(t => t.Id == id && t.IsDeleted == false);
         }
 
+        public async Task<TestType?> GetByIdForMemberAsync(int id)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == id && t.IsDeleted == false && t.IsActive == true);
+        }
+
         public async Task<TestType?> GetByNameAsync(string name)
         {
             return await _dbSet.FirstOrDefaultAsync(t => t.Name == name);

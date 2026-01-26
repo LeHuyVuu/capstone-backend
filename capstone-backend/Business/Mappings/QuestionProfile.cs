@@ -9,7 +9,8 @@ namespace capstone_backend.Business.Mappings
     {
         public QuestionProfile()
         {
-            CreateMap<Question, QuestionResponse>();
+            CreateMap<Question, QuestionResponse>()
+                .ForMember(dest => dest.Answers, opt => opt.MapFrom(src => src.QuestionAnswers));
             CreateMap<QuestionAnswer, QuestionAnswerResponse>();
         }
     }
