@@ -1,10 +1,13 @@
 ﻿using AutoMapper.Execution;
+using Azure.Core;
 using capstone_backend.Business.DTOs.PersonalityTest;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
+using capstone_backend.Data.Static;
 using CsvHelper;
 using CsvHelper.Configuration;
+using Microsoft.OpenApi.Models;
 using System.Globalization;
 using System.Runtime.InteropServices.JavaScript;
 using System.Text.Json;
@@ -37,9 +40,11 @@ namespace capstone_backend.Business.Services
                     throw new Exception("Test type not found");
 
                 // Validate answers
-                var isValid = await ValidateAnswers(request, testTypeId);
-                if (!isValid)
-                    throw new Exception("Invalid answers submitted");
+                if (request.Answers != null && request.Answers.Any())
+                {
+                    if (!await ValidateAnswers(request, testTypeId))
+                        throw new Exception("Invalid answers submitted");
+                }
 
                 // Check if the member has already taken the test
                 var record = await _unitOfWork.PersonalityTests.GetByMemberAndTestTypeAsync(member.Id, testTypeId, PersonalityTestStatus.IN_PROGRESS.ToString());
@@ -50,16 +55,28 @@ namespace capstone_backend.Business.Services
                     ? new JsonObject()
                     : JsonNode.Parse(record.ResultData)!.AsObject();
 
+                // MERGE NEW ANSWERS
+                if (request.Answers != null && request.Answers.Any())
+                {
+                    MergeAnswers(json, request.Answers);
+                }
+
                 switch (request.Action)
                 {
                     case TestAction.SAVE_PROGRESS:
                         // Update result data
-                        HandleSaveProgress(json, request);
+                        json["status"] = PersonalityTestStatus.IN_PROGRESS.ToString();
+                        if (request.CurrentQuestionIndex.HasValue)
+                            json["currentQuestionIndex"] = request.CurrentQuestionIndex.Value;
                         break;
 
-                    //case TestAction.SUBMIT:
-                    //    // Update result data
-                    //    HandleSubmit(json, request)
+                    case TestAction.SUBMIT:
+                        // Update result data
+                        record.ResultCode = await HandleSubmitAsync(json, testTypeId, testType.TotalQuestions.Value);
+                        record.Status = PersonalityTestStatus.COMPLETED.ToString();
+                        record.TakenAt = DateTime.UtcNow;
+                        break;
+
                     default:
                         throw new ArgumentOutOfRangeException("Invalid action");
                 }
@@ -100,24 +117,120 @@ namespace capstone_backend.Business.Services
             return newRecord;
         }
 
-        private void HandleSaveProgress(JsonObject json, SaveTestResultRequest request)
+        private void MergeAnswers(JsonObject json, List<AnswerDto> newAnswers)
         {
-            json["status"] = PersonalityTestStatus.IN_PROGRESS.ToString();
+            var answersNode = json["answers"];
+            JsonArray answersArray;
 
-            if (request.CurrentQuestionIndex.HasValue)
-                json["currentQuestionIndex"] = request.CurrentQuestionIndex.Value;
-
-            if (request.Answers != null)
+            if (answersNode is JsonArray arr)
+                answersArray = arr;
+            else
             {
-                var answersArray = new JsonArray();
-                foreach (var ans in request.Answers)
-                {
-                    answersArray.Add(JsonNode.Parse(JsonSerializer.Serialize(ans)));
-                }
+                answersArray = new JsonArray();
                 json["answers"] = answersArray;
             }
 
-            json["result"] = null;
+            foreach (var newAns in newAnswers)
+            {
+                var existingNode = answersArray
+                    .FirstOrDefault(x => x?["QuestionId"]?.GetValue<int>() == newAns.QuestionId);
+
+                // If found, update the answer
+                if (existingNode != null)
+                    answersArray.Remove(existingNode);
+                answersArray.Add(JsonNode.Parse(JsonSerializer.Serialize(newAns)));
+            }
+        }
+
+        private async Task<string> HandleSubmitAsync(JsonObject json, int testTypeId, int totalQuestions)
+        {
+            // 1. Extract answers
+            var answerIds = new List<int>();
+            if (json["answers"] is JsonArray arr)
+            {
+                foreach (var node in arr)
+                {
+                    var id = node?["AnswerId"]?.GetValue<int>();
+                    if (id.HasValue)
+                        answerIds.Add(id.Value);
+                }
+            }
+
+            if (!answerIds.Any())
+                throw new Exception("No answers to submit");
+
+            if (answerIds.Count < totalQuestions)
+                throw new Exception($"Not all questions have been answered: {answerIds.Count}/{totalQuestions}");
+
+            // 2. Load score mapping from DB
+            var scoringMap = await _unitOfWork.QuestionAnswers.GetScoringMapAsync(testTypeId);
+
+            // 3. Calculate total score
+            var scores = scoringMap
+                .Where(x => answerIds.Contains(x.AnswerId))
+                .GroupBy(x => x.ScoreKey)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.ScoreValue));
+
+            int GetScore(string scoreKey) => scores.TryGetValue(scoreKey, out int val) ? val : 0;
+            double GetPercent(int score1, int score2)
+            {
+                int total = score1 + score2;
+                return total == 0 ? 0 : Math.Round((double)score1 / total * 100, 1);
+            }
+
+            // 4. Compare to get result type
+            var sE = GetScore("E"); var sI = GetScore("I");
+            var sS = GetScore("S"); var sN = GetScore("N");
+            var sT = GetScore("T"); var sF = GetScore("F");
+            var sJ = GetScore("J"); var sP = GetScore("P");
+
+            var axis1 = sE >= sI ? "E" : "I";
+            var axis2 = sS >= sN ? "S" : "N";
+            var axis3 = sT >= sF ? "T" : "F";
+            var axis4 = sJ >= sP ? "J" : "P";
+
+            // Combine
+            var finalMbtiCode = $"{axis1}{axis2}{axis3}{axis4}";
+            var profile = MbtiContentStore.GetProfile(finalMbtiCode);
+
+            json["status"] = PersonalityTestStatus.COMPLETED.ToString();
+            json["completedAt"] = DateTime.UtcNow;
+            json["result"] = new JsonObject
+            {
+                ["mbtiCode"] = finalMbtiCode,
+                ["name"] = profile?.Name,
+                ["description"] = profile?.Description != null
+                    ? new JsonArray(profile.Description.Select(d => JsonValue.Create(d)).ToArray())
+                    : new JsonArray(),
+                ["breakdown"] = new JsonObject
+                {
+                    ["scores"] = new JsonObject
+                    {
+                        ["E"] = sE,
+                        ["I"] = sI,
+                        ["S"] = sS,
+                        ["N"] = sN,
+                        ["T"] = sT,
+                        ["F"] = sF,
+                        ["J"] = sJ,
+                        ["P"] = sP
+                    },
+
+                    ["percent"] = new JsonObject
+                    {
+                        ["E_percent"] = GetPercent(sE, sI),
+                        ["I_percent"] = GetPercent(sI, sE),
+                        ["S_percent"] = GetPercent(sS, sN),
+                        ["N_percent"] = GetPercent(sN, sS),
+                        ["T_percent"] = GetPercent(sT, sF),
+                        ["F_percent"] = GetPercent(sF, sT),
+                        ["J_percent"] = GetPercent(sJ, sP),
+                        ["P_percent"] = GetPercent(sP, sJ),
+                    }
+                },
+            };
+
+            return finalMbtiCode;
         }
 
         private async Task<bool> ValidateAnswers(SaveTestResultRequest request, int testTypeId)
