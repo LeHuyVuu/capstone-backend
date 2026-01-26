@@ -10,5 +10,6 @@ namespace capstone_backend.Data.Interfaces
         Task<int> GetCurrentVersionAsync(int testTypeId, CancellationToken ct = default);
         Task<List<Question>> GetAllByVersionAsync(int testTypeId, int version);
         Task<IEnumerable<Question>> GetAllQuestionsByTestTypeIdAsync(int testTypeId);
+        Task<Dictionary<int, HashSet<int>>> GetValidStructureAsync(int testTypeId);
     }
 }

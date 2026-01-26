@@ -15,7 +15,7 @@ namespace capstone_backend.Business.Services
 {
     public class PersonalityTestService : IPersonalityTestService
     {
-		private readonly IUnitOfWork _unitOfWork;
+        private readonly IUnitOfWork _unitOfWork;
 
         public PersonalityTestService(IUnitOfWork unitOfWork)
         {
@@ -35,6 +35,11 @@ namespace capstone_backend.Business.Services
                 var testType = await _unitOfWork.TestTypes.GetByIdForMemberAsync(testTypeId);
                 if (testType == null)
                     throw new Exception("Test type not found");
+
+                // Validate answers
+                var isValid = await ValidateAnswers(request, testTypeId);
+                if (!isValid)
+                    throw new Exception("Invalid answers submitted");
 
                 // Check if the member has already taken the test
                 var record = await _unitOfWork.PersonalityTests.GetByMemberAndTestTypeAsync(member.Id, testTypeId, PersonalityTestStatus.IN_PROGRESS.ToString());
@@ -113,6 +118,38 @@ namespace capstone_backend.Business.Services
             }
 
             json["result"] = null;
+        }
+
+        private async Task<bool> ValidateAnswers(SaveTestResultRequest request, int testTypeId)
+        {
+            if (request.Answers == null || !request.Answers.Any())
+                return false;
+
+            // 1. Check for duplicate question IDs
+            var answerIdsToCheck = new HashSet<int>();
+            var questionIdsToCheck = new HashSet<int>();
+            foreach (var ans in request.Answers)
+            {
+                if (!questionIdsToCheck.Add(ans.QuestionId))
+                    return false;
+
+                answerIdsToCheck.Add(ans.AnswerId);
+            }
+       
+            var validMap = await _unitOfWork.Questions.GetValidStructureAsync(testTypeId);
+            foreach (var ans in request.Answers)
+            {
+                // 2. Check question IDs belong to the test type
+                if (!validMap.ContainsKey(ans.QuestionId))
+                    return false;
+
+                // 3. Check answer IDs belong to the question IDs
+                var validAnswersForQuestion = validMap[ans.QuestionId];
+                if (!validAnswersForQuestion.Contains(ans.AnswerId))
+                    return false;
+            }
+
+            return true;
         }
     }
 }

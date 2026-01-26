@@ -61,5 +61,22 @@ namespace capstone_backend.Data.Repositories
                 .Where(q => q.TestTypeId == testTypeId && q.IsDeleted == false)
                 .MaxAsync(q => q.Version, ct) ?? 0;
         }
+
+        public async Task<Dictionary<int, HashSet<int>>> GetValidStructureAsync(int testTypeId)
+        {
+            var data = await _dbSet
+                .Where(q => q.TestTypeId == testTypeId && q.IsDeleted == false && q.IsActive == true)
+                .Select(q => new
+                {
+                    QuestionId = q.Id,
+                    AnswerIds = q.QuestionAnswers.Select(qa => qa.Id).ToList()
+                })
+                .ToListAsync();
+
+            return data.ToDictionary(
+                x => x.QuestionId,
+                x => x.AnswerIds.ToHashSet()
+            );
+        }
     }
 }
