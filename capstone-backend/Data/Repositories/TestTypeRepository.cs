@@ -19,6 +19,14 @@ namespace capstone_backend.Data.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<TestType>> GetAllActiveAsync()
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(t => t.IsDeleted == false && t.IsActive == true)
+                .ToListAsync();
+        }
+
         public async Task<TestType?> GetByIdAsync(int id)
         {
             return await _dbSet

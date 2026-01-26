@@ -11,10 +11,26 @@ namespace capstone_backend.Api.Controllers
     public class PersonalityTestController : BaseController
     {
         private readonly IQuestionService _questionService;
+        private readonly ITestTypeService _testTypeService;
 
-        public PersonalityTestController(IQuestionService questionService)
+        public PersonalityTestController(IQuestionService questionService, ITestTypeService testTypeService)
         {
             _questionService = questionService;
+            _testTypeService = testTypeService;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetTestTypes()
+        {
+            try
+            {
+                var result = await _testTypeService.GetAllActiveAsync();
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
         }
 
         [HttpGet("{testTypeId:int}/questions")]
@@ -22,7 +38,7 @@ namespace capstone_backend.Api.Controllers
         {
             try
             {
-                var result = _questionService.GetAllQuestionsForMemberAsync(testTypeId);
+                var result = await _questionService.GetAllQuestionsForMemberAsync(testTypeId);
                 return OkResponse(result);
             }
             catch (Exception ex)
