@@ -349,4 +349,88 @@ public class VenueLocationService : IVenueLocationService
         return $"{moodTypeName} - {personalityTypeName}";
     }
 
+    /// <summary>
+    /// Update venue opening hours for a specific day
+    /// Automatically updates is_closed based on current time
+    /// </summary>
+    public async Task<VenueOpeningHourResponse?> UpdateVenueOpeningHourAsync(UpdateVenueOpeningHourRequest request)
+    {
+        // Validate day range (2-8)
+        if (request.Day < 2 || request.Day > 8)
+        {
+            _logger.LogWarning("Invalid day value {Day}. Must be between 2-8", request.Day);
+            return null;
+        }
+
+        // Parse time strings
+        if (!TimeSpan.TryParse(request.OpenTime, out var openTime))
+        {
+            _logger.LogWarning("Invalid open time format: {OpenTime}", request.OpenTime);
+            return null;
+        }
+
+        if (!TimeSpan.TryParse(request.CloseTime, out var closeTime))
+        {
+            _logger.LogWarning("Invalid close time format: {CloseTime}", request.CloseTime);
+            return null;
+        }
+
+        try
+        {
+            var venueLocationId = request.VenueLocationId;
+            var day = request.Day; // Keep as integer
+            
+            // Query with integer day
+            var openingHour = await _unitOfWork.Context.Set<VenueOpeningHour>()
+                .Where(x => x.VenueLocationId == venueLocationId && x.Day == day)
+                .FirstOrDefaultAsync();
+
+            if (openingHour == null)
+            {
+                // Create new opening hour record
+                openingHour = new VenueOpeningHour
+                {
+                    VenueLocationId = request.VenueLocationId,
+                    Day = request.Day,
+                    OpenTime = openTime,
+                    CloseTime = closeTime,
+                    IsClosed = false
+                };
+
+                await _unitOfWork.Context.Set<VenueOpeningHour>().AddAsync(openingHour);
+            }
+            else
+            {
+                // Update existing opening hour record
+                openingHour.OpenTime = openTime;
+                openingHour.CloseTime = closeTime;
+                _unitOfWork.Context.Set<VenueOpeningHour>().Update(openingHour);
+            }
+
+            // Check current time and auto-update is_closed
+            var currentTimeVN = DateTime.UtcNow.AddHours(7); // Vietnam time (UTC+7)
+            var currentTime = currentTimeVN.TimeOfDay;
+            
+         
+
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Updated venue opening hour for venue {VenueId}, day {Day}", request.VenueLocationId, request.Day);
+
+            return new VenueOpeningHourResponse
+            {
+                Id = openingHour.Id,
+                VenueLocationId = openingHour.VenueLocationId,
+                Day = request.Day,
+                OpenTime = openingHour.OpenTime,
+                CloseTime = openingHour.CloseTime,
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating venue opening hour for venue {VenueId}", request.VenueLocationId);
+            return null;
+        }
+    }
+
 }

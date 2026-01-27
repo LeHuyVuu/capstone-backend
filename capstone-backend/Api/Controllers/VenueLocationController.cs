@@ -1,5 +1,7 @@
 using capstone_backend.Business.DTOs.VenueLocation;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Api.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace capstone_backend.Api.Controllers;
@@ -139,5 +141,37 @@ public class VenueLocationController : BaseController
         var personalityTypes = await _venueLocationService.GetAllCouplePersonalityTypesAsync();
 
         return OkResponse(personalityTypes, $"Retrieved {personalityTypes.Count} couple personality types");
+    }
+
+    /// <summary>
+    /// Update venue opening hours for a specific day.
+    /// Automatically updates is_closed based on current time.
+    /// Requires authentication - user must be the venue owner.
+    /// </summary>
+    /// <param name="request">Update venue opening hour request with venue ID, day (2-8), open time, and close time</param>
+    /// <returns>Updated venue opening hour information</returns>
+    [HttpPost("time/update")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<VenueOpeningHourResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> UpdateVenueOpeningHour([FromBody] UpdateVenueOpeningHourRequest request)
+    {
+        _logger.LogInformation("User updating venue opening hours for venue {VenueId}, day {Day}", request.VenueLocationId, request.Day);
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequestResponse("Invalid request data");
+        }
+
+        var result = await _venueLocationService.UpdateVenueOpeningHourAsync(request);
+
+        if (result == null)
+        {
+            return BadRequestResponse("Failed to update venue opening hours");
+        }
+
+        return OkResponse(result, "Venue opening hours updated successfully");
     }
 }
