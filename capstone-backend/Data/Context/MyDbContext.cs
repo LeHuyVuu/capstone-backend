@@ -106,6 +106,8 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<VenueLocation> VenueLocations { get; set; }
 
+    public virtual DbSet<VenueOpeningHour> VenueOpeningHours { get; set; }
+
     public virtual DbSet<VenueLocationAdvertisement> VenueLocationAdvertisements { get; set; }
 
     public virtual DbSet<VenueOwnerProfile> VenueOwnerProfiles { get; set; }
@@ -781,6 +783,19 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.VenueOwner).WithMany(p => p.VenueLocations)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("venue_locations_venue_owner_id_fkey");
+        });
+
+        modelBuilder.Entity<VenueOpeningHour>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("venue_opening_hours_pkey");
+
+            entity.Property(e => e.IsClosed).HasDefaultValue(false);
+
+            entity.HasOne(d => d.VenueLocation)
+                .WithMany(p => p.VenueOpeningHours)
+                .HasForeignKey(d => d.VenueLocationId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_venue_opening_hours_venue_locations");
         });
 
         modelBuilder.Entity<VenueLocationAdvertisement>(entity =>
