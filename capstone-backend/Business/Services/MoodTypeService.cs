@@ -124,7 +124,7 @@ public class MoodTypeService : IMoodTypeService
         {
             MoodTypeId = moodType.Id,
             MoodTypeName = moodType.Name,
-            IconUrl = moodType.IconUrl,
+            // IconUrl = moodType.IconUrl,
             UpdatedAt = memberProfile.UpdatedAt ?? DateTime.UtcNow
         };
     }
