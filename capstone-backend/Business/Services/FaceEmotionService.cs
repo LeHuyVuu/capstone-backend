@@ -143,7 +143,7 @@ public class FaceEmotionService
     
     
     
-    public string GetEmotionSentence(string emotion)
+    public static string GetEmotionSentence(string emotion)
     {
         return emotion switch
         {
@@ -159,7 +159,7 @@ public class FaceEmotionService
         };
     }
     
-    public string MapEmotionToVietnamese(string emotion)
+    public static string MapEmotionToVietnamese(string emotion)
     {
         return emotion switch
         {
