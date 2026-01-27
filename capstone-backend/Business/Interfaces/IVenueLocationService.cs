@@ -57,4 +57,12 @@ public interface IVenueLocationService
     /// </summary>
     /// <returns>List of couple personality types</returns>
     Task<List<CouplePersonalityTypeInfo>> GetAllCouplePersonalityTypesAsync();
+
+    /// <summary>
+    /// Update venue opening hours for a specific day
+    /// Automatically updates is_closed based on current time
+    /// </summary>
+    /// <param name="request">Update venue opening hour request</param>
+    /// <returns>Updated venue opening hour response</returns>
+    Task<VenueOpeningHourResponse?> UpdateVenueOpeningHourAsync(UpdateVenueOpeningHourRequest request);
 }

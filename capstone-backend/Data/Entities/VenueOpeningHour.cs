@@ -10,7 +10,7 @@ namespace capstone_backend.Data.Entities
         [Key]
         public int Id { get; set; }
         public int VenueLocationId { get; set; }
-        public string Day { get; set; } = null!;
+        public int Day { get; set; }
         public TimeSpan OpenTime { get; set; }
         public TimeSpan CloseTime { get; set; }
         public bool IsClosed { get; set; }

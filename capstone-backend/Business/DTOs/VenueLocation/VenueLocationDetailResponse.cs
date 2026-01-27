@@ -37,6 +37,9 @@ public class VenueLocationDetailResponse
 
     // Venue Owner Profile information
     public VenueOwnerProfileResponse? VenueOwner { get; set; }
+
+    // Venue opening hours for each day
+    public List<VenueOpeningHourResponse>? OpeningHours { get; set; }
 }
 
 /// <summary>
