@@ -37,7 +37,6 @@ public static class VenueContextBuilder
             sb.AppendLine($"\n[{i + 1}] {venue.Name}");
             sb.AppendLine($"Địa chỉ: {venue.Address}");
             sb.AppendLine($"Mô tả: {venue.Description}");
-            sb.AppendLine($"Điểm phù hợp: {score:F2}/100");
 
             var tags = new List<string>();
             if (venue.LocationTag?.CoupleMoodType?.Name != null)

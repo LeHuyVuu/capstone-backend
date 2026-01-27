@@ -6,7 +6,7 @@ namespace capstone_backend.Business.DTOs.Recommendation;
 public class RecommendationResponse
 {
     /// <summary>
-    /// List of recommended venues with scores
+    /// List of recommended venues
     /// </summary>
     public List<RecommendedVenue> Recommendations { get; set; } = new();
     
@@ -55,11 +55,6 @@ public class RecommendedVenue
     /// Venue description
     /// </summary>
     public string Description { get; set; } = string.Empty;
-    
-    /// <summary>
-    /// Overall recommendation score (0-100)
-    /// </summary>
-    public double Score { get; set; }
     
     /// <summary>
     /// Match reason from AI analysis
