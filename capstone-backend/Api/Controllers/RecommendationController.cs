@@ -280,31 +280,50 @@ Không truyền region/lat/lon → Search toàn quốc
 ```json
 {
   ""success"": true,
-  ""message"": ""Successfully generated 10 recommendations in 1250ms"",
+  ""message"": ""Successfully generated 20 recommendations in 5871ms"",
   ""code"": 200,
   ""data"": {
     ""recommendations"": [
       {
-        ""venueLocationId"": 123,
-        ""name"": ""Cafe Romance"",
-        ""address"": ""123 Trần Hưng Đạo, Hoàn Kiếm, Hà Nội"",
-        ""description"": ""Cozy cafe with natural lighting, perfect for couples"",
-        ""score"": 95.5,
-        ""matchReason"": ""Perfect for INFP personality - cozy, creative space with natural lighting. Great ambiance for romantic dates."",
-        ""averageRating"": 4.8,
-        ""reviewCount"": 1250,
-        ""coverImage"": ""https://..../cover.jpg"",
-        ""interiorImage"": ""https://..../interior.jpg"",
-        ""fullPageMenuImage"": ""https://..../menu.jpg"",
-        ""matchedTags"": [""Lãng mạn"", ""Yên tĩnh""]
+        ""venueLocationId"": 1,
+        ""name"": ""Cà phê Bên Sông Hàn"",
+        ""address"": ""12 Bạch Đằng, Hải Châu, Đà Nẵng"",
+        ""description"": ""Quán cà phê view sông, phù hợp đi dạo tối và trò chuyện."",
+        ""matchReason"": ""Phù hợp với sở thích của bạn"",
+        ""averageRating"": 5,
+        ""reviewCount"": 1,
+        ""coverImage"": null,
+        ""interiorImage"": null,
+        ""fullPageMenuImage"": null,
+        ""matchedTags"": [
+          ""CẢ HAI YÊN TĨNH"",
+          ""LÃNG MẠN""
+        ]
+      },
+      {
+        ""venueLocationId"": 3,
+        ""name"": ""Gốm & Trà Thảo Điền"",
+        ""address"": ""25 Xuân Thủy, Thảo Điền, Thủ Đức, TP.HCM"",
+        ""description"": ""Workshop gốm + trà, trải nghiệm mới, an toàn, dễ gắn kết."",
+        ""matchReason"": ""Phù hợp với sở thích của bạn"",
+        ""averageRating"": 5,
+        ""reviewCount"": 1,
+        ""coverImage"": null,
+        ""interiorImage"": null,
+        ""fullPageMenuImage"": null,
+        ""matchedTags"": [
+          ""HỨNG THÚ KHÁM PHÁ"",
+          ""VUI VẺ""
+        ]
       }
     ],
-    ""explanation"": ""Based on your INFP personality and romantic mood, these venues are perfect for a memorable date..."",
-    ""coupleMoodType"": ""Vui chung"",
-    ""personalityTags"": [""Creative"", ""Intimate"", ""Cozy""],
-    ""processingTimeMs"": 1250
+    ""explanation"": ""Dựa trên phân tích của chúng tôi, đây là những địa điểm phù hợp nhất cho bạn."",
+    ""coupleMoodType"": null,
+    ""personalityTags"": [],
+    ""processingTimeMs"": 5871
   },
-  ""traceId"": ""0HNK9V3M0L3QU:00000001""
+  ""traceId"": ""0HNITO4TEGVTE:00000001"",
+  ""timestamp"": ""2026-01-27T16:29:30.406611Z""
 }
 ```
 
@@ -318,18 +337,19 @@ Không truyền region/lat/lon → Search toàn quốc
 | `name` | string | Tên địa điểm |
 | `address` | string | Địa chỉ |
 | `description` | string | Mô tả ngắn |
-| `score` | double | Điểm match (0-100) |
 | `matchReason` | string | Lý do AI recommend |
-| `averageRating` | decimal | Rating trung bình |
+| `averageRating` | decimal? | Rating trung bình (null nếu không có review) |
 | `reviewCount` | int | Số review |
-| `coverImage` | string | Ảnh bìa |
-| `interiorImage` | string | Ảnh nội thất |
-| `fullPageMenuImage` | string | Ảnh menu |
+| `coverImage` | string? | Ảnh bìa (null nếu chưa có) |
+| `interiorImage` | string? | Ảnh nội thất (null nếu chưa có) |
+| `fullPageMenuImage` | string? | Ảnh menu (null nếu chưa có) |
 | `matchedTags` | array | Tags match (mood/personality) |
 | `explanation` | string | Giải thích tổng thể từ AI |
-| `coupleMoodType` | string | Tâm trạng cặp đôi detected |
-| `personalityTags` | array | Personality tags detected |
-| `processingTimeMs` | long | Thời gian xử lý |",
+| `coupleMoodType` | string? | Tâm trạng cặp đôi detected (null nếu không áp dụng) |
+| `personalityTags` | array | Personality tags detected (empty nếu không có) |
+| `processingTimeMs` | long | Thời gian xử lý (ms) |
+| `traceId` | string | Correlation ID cho debugging |
+| `timestamp` | string | Timestamp khi response được tạo (ISO 8601) |",
         OperationId = "GetRecommendations",
         Tags = new[] { "Recommendation" }
     )]

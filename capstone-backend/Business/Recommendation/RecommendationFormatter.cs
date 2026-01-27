@@ -24,7 +24,6 @@ public static class RecommendationFormatter
                 Name = venue.Name,
                 Address = venue.Address,
                 Description = venue.Description ?? "",
-                Score = Math.Round(rv.score, 2),
                 MatchReason = aiExplanations.ContainsKey(index) 
                     ? aiExplanations[index] 
                     : "Phù hợp với sở thích của bạn",
@@ -59,7 +58,6 @@ public static class RecommendationFormatter
             Name = venue.Name,
             Address = venue.Address,
             Description = venue.Description ?? "",
-            Score = 70.0,
             MatchReason = "Địa điểm phổ biến và được đánh giá cao",
             AverageRating = venue.Reviews?.Any() == true
                 ? (decimal)venue.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value)
