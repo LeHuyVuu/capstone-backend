@@ -72,7 +72,8 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
 builder.Services.AddAutoMapper(
     typeof(TestTypeProfile),
     typeof(QuestionProfile),
-    typeof(VenueLocationProfile)
+    typeof(VenueLocationProfile),
+    typeof(PersonalityTestProfile)
 );
 
 // 12. Add HttpContextAccessor

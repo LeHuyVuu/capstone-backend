@@ -6,5 +6,7 @@ namespace capstone_backend.Data.Interfaces
     public interface ITestTypeRepository : IGenericRepository<TestType>
     {
         public Task<TestType?> GetByNameAsync(string name);
+        Task<TestType?> GetByIdForMemberAsync(int id);
+        Task<IEnumerable<TestType>> GetAllActiveAsync();
     }
 }
