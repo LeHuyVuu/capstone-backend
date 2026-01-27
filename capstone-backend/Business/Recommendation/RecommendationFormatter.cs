@@ -32,7 +32,9 @@ public static class RecommendationFormatter
                     ? (decimal)venue.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value)
                     : null,
                 ReviewCount = venue.Reviews?.Count ?? 0,
-                Images = new List<string>(),
+                CoverImage = venue.CoverImage,
+                InteriorImage = venue.InteriorImage,
+                FullPageMenuImage = venue.FullPageMenuImage,
                 MatchedTags = venue.LocationTag != null
                     ? new List<string> 
                     { 
@@ -63,7 +65,9 @@ public static class RecommendationFormatter
                 ? (decimal)venue.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value)
                 : null,
             ReviewCount = venue.Reviews?.Count ?? 0,
-            Images = new List<string>(),
+            CoverImage = venue.CoverImage,
+            InteriorImage = venue.InteriorImage,
+            FullPageMenuImage = venue.FullPageMenuImage,
             MatchedTags = venue.LocationTag != null
                 ? new List<string>
                 {
