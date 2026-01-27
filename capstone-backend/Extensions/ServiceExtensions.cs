@@ -79,6 +79,7 @@ public static class ServiceExtensions
         services.AddScoped<IPersonalityTestRepository, PersonalityTestRepository>();
         services.AddScoped<IVenueLocationRepository, VenueLocationRepository>();
         services.AddScoped<ILocationTagRepository, LocationTagRepository>();
+        services.AddScoped<IDatePlanRepository, DatePlanRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -119,6 +120,7 @@ public static class ServiceExtensions
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IPersonalityTestService, PersonalityTestService>();
         services.AddScoped<IVenueLocationService, VenueLocationService>();
+        services.AddScoped<IDatePlanService, DatePlanService>();
 
         // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
         services.AddScoped<ILocationFollowerService, LocationFollowerService>();
