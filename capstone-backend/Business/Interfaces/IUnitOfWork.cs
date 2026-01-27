@@ -22,6 +22,9 @@ public interface IUnitOfWork : IDisposable
 
     IMemberMoodLogRepository MemberMoodLogs { get; }
 
+    IMoodTypeRepository MoodTypes { get; }
+
+    ICoupleProfileRepository CoupleProfiles { get; }
 
     ITestTypeRepository TestTypes { get; }
 
