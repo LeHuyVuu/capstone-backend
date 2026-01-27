@@ -26,7 +26,7 @@ public class VenueLocationService : IVenueLocationService
     }
 
     /// <summary>
-    /// Get venue location detail by ID including location tag and venue owner profile
+    /// Get venue location detail by ID including location tag, venue owner profile, and opening hours
     /// </summary>
     public async Task<VenueLocationDetailResponse?> GetVenueLocationDetailByIdAsync(int venueId)
     {
@@ -38,9 +38,30 @@ public class VenueLocationService : IVenueLocationService
             return null;
         }
 
-        _logger.LogInformation("Retrieved venue location detail for ID {VenueId}", venueId);
+        var response = _mapper.Map<VenueLocationDetailResponse>(venue);
 
-        return _mapper.Map<VenueLocationDetailResponse>(venue);
+        // Fetch opening hours for the venue
+        var openingHours = await _unitOfWork.Context.Set<VenueOpeningHour>()
+            .Where(x => x.VenueLocationId == venueId)
+            .OrderBy(x => x.Day)
+            .ToListAsync();
+
+        if (openingHours.Any())
+        {
+            response.OpeningHours = openingHours.Select(oh => new VenueOpeningHourResponse
+            {
+                Id = oh.Id,
+                VenueLocationId = oh.VenueLocationId,
+                Day = oh.Day,
+                OpenTime = oh.OpenTime,
+                CloseTime = oh.CloseTime,
+                IsClosed = oh.IsClosed
+            }).ToList();
+        }
+
+        _logger.LogInformation("Retrieved venue location detail for ID {VenueId} with {HourCount} opening hours", venueId, openingHours.Count);
+
+        return response;
     }
 
     /// <summary>
