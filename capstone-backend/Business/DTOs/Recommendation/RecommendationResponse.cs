@@ -76,10 +76,22 @@ public class RecommendedVenue
     /// </summary>
     public int ReviewCount { get; set; }
     
+
+
     /// <summary>
-    /// Venue images
+    /// Cover image for the venue
     /// </summary>
-    public List<string> Images { get; set; } = new();
+    public string? CoverImage { get; set; }
+
+    /// <summary>
+    /// Interior image of the venue
+    /// </summary>
+    public string? InteriorImage { get; set; }
+
+    /// <summary>
+    /// Full page menu image
+    /// </summary>
+    public string? FullPageMenuImage { get; set; }
     
     /// <summary>
     /// Matched location tags

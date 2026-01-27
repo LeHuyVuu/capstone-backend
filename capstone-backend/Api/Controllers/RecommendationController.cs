@@ -280,34 +280,56 @@ Không truyền region/lat/lon → Search toàn quốc
 ```json
 {
   ""success"": true,
+  ""message"": ""Successfully generated 10 recommendations in 1250ms"",
+  ""code"": 200,
   ""data"": {
     ""recommendations"": [
       {
-        ""venueId"": 123,
-        ""venueName"": ""Cafe Romance"",
-        ""matchScore"": 95,
-        ""aiReasoning"": ""Perfect for INFP personality - cozy, creative space with natural lighting..."",
-        ""category"": ""Cafe"",
+        ""venueLocationId"": 123,
+        ""name"": ""Cafe Romance"",
         ""address"": ""123 Trần Hưng Đạo, Hoàn Kiếm, Hà Nội"",
-        ""rating"": 4.8,
+        ""description"": ""Cozy cafe with natural lighting, perfect for couples"",
+        ""score"": 95.5,
+        ""matchReason"": ""Perfect for INFP personality - cozy, creative space with natural lighting. Great ambiance for romantic dates."",
+        ""averageRating"": 4.8,
         ""reviewCount"": 1250,
-        ""estimatedBudget"": 150000,
-        ""latitude"": 21.028511,
-        ""longitude"": 105.804817,
-        ""distance"": 2.3
+        ""coverImage"": ""https://..../cover.jpg"",
+        ""interiorImage"": ""https://..../interior.jpg"",
+        ""fullPageMenuImage"": ""https://..../menu.jpg"",
+        ""matchedTags"": [""Lãng mạn"", ""Yên tĩnh""]
       }
     ],
-    ""totalResults"": 10,
-    ""processingTimeMs"": 1250,
-    ""aiConfidence"": 0.92,
-    ""appliedFilters"": {
-      ""locationType"": ""GPS"",
-      ""radiusKm"": 5,
-      ""budgetLevel"": 2
-    }
-  }
+    ""explanation"": ""Based on your INFP personality and romantic mood, these venues are perfect for a memorable date..."",
+    ""coupleMoodType"": ""Vui chung"",
+    ""personalityTags"": [""Creative"", ""Intimate"", ""Cozy""],
+    ""processingTimeMs"": 1250
+  },
+  ""traceId"": ""0HNK9V3M0L3QU:00000001""
 }
-```",
+```
+
+---
+
+## 🎯 **Response Fields**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `venueLocationId` | int | ID của địa điểm |
+| `name` | string | Tên địa điểm |
+| `address` | string | Địa chỉ |
+| `description` | string | Mô tả ngắn |
+| `score` | double | Điểm match (0-100) |
+| `matchReason` | string | Lý do AI recommend |
+| `averageRating` | decimal | Rating trung bình |
+| `reviewCount` | int | Số review |
+| `coverImage` | string | Ảnh bìa |
+| `interiorImage` | string | Ảnh nội thất |
+| `fullPageMenuImage` | string | Ảnh menu |
+| `matchedTags` | array | Tags match (mood/personality) |
+| `explanation` | string | Giải thích tổng thể từ AI |
+| `coupleMoodType` | string | Tâm trạng cặp đôi detected |
+| `personalityTags` | array | Personality tags detected |
+| `processingTimeMs` | long | Thời gian xử lý |",
         OperationId = "GetRecommendations",
         Tags = new[] { "Recommendation" }
     )]

@@ -150,7 +150,7 @@ public class VenueLocationController : BaseController
     /// </summary>
     /// <param name="request">Update venue opening hour request with venue ID, day (2-8), open time, and close time</param>
     /// <returns>Updated venue opening hour information</returns>
-    [HttpPost("time/update")]
+    [HttpPost("opening-hours/update")]
     [Authorize]
     [ProducesResponseType(typeof(ApiResponse<VenueOpeningHourResponse>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
