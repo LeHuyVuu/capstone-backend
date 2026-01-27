@@ -95,7 +95,7 @@ public class MoodTypeService : IMoodTypeService
         {
             // Trong cùng ngày → UPDATE MoodTypeId
             todayLog.MoodTypeId = moodType.Id;
-            todayLog.UpdatedAt = nowVN; // Lưu giờ VN
+            todayLog.UpdatedAt = DateTime.UtcNow; // Luôn lưu UTC
             _unitOfWork.MemberMoodLogs.Update(todayLog);
             _logger.LogInformation($"🔄 Updated existing mood log for today VN (MoodType: {moodType.Name})");
         }
@@ -108,8 +108,8 @@ public class MoodTypeService : IMoodTypeService
                 MoodTypeId = moodType.Id,
                 ImageUrl = imageUrl,
                 IsPrivate = false,
-                CreatedAt = nowVN, // Lưu giờ VN
-                UpdatedAt = nowVN, // Lưu giờ VN
+                CreatedAt = DateTime.UtcNow, // Luôn lưu UTC
+                UpdatedAt = DateTime.UtcNow, // Luôn lưu UTC
                 IsDeleted = false
             });
             _logger.LogInformation($"➕ Created new mood log for today VN (MoodType: {moodType.Name})");
