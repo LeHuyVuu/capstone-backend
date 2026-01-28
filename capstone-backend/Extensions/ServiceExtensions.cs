@@ -125,6 +125,9 @@ public static class ServiceExtensions
         // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
         services.AddScoped<ILocationFollowerService, LocationFollowerService>();
 
+        // Register Subscription Package Service
+        services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
+
         return services;
     }
 
