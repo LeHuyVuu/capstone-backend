@@ -73,7 +73,8 @@ builder.Services.AddAutoMapper(
     typeof(TestTypeProfile),
     typeof(QuestionProfile),
     typeof(VenueLocationProfile),
-    typeof(PersonalityTestProfile)
+    typeof(PersonalityTestProfile),
+    typeof(DatePlanProfile)
 );
 
 // 12. Add HttpContextAccessor
