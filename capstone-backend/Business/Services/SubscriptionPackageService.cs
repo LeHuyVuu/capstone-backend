@@ -73,4 +73,58 @@ public class SubscriptionPackageService : ISubscriptionPackageService
             throw;
         }
     }
+
+    public async Task<SubscriptionPackageDto> UpdateSubscriptionPackageAsync(
+        int id, 
+        UpdateSubscriptionPackageRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("Updating subscription package with ID: {Id}", id);
+
+            // Find the existing package
+            var package = await _unitOfWork.Context.Set<SubscriptionPackage>()
+                .FirstOrDefaultAsync(p => p.Id == id && p.IsDeleted != true);
+
+            if (package == null)
+            {
+                throw new InvalidOperationException($"Subscription package with ID {id} not found or has been deleted");
+            }
+
+            // Update package properties
+            package.PackageName = request.PackageName;
+            package.Price = request.Price;
+            package.DurationDays = request.DurationDays;
+            package.Description = request.Description;
+            package.IsActive = request.IsActive;
+            package.UpdatedAt = DateTime.UtcNow;
+
+            // Save changes
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Successfully updated subscription package {Id}: {PackageName}", 
+                id, 
+                package.PackageName);
+
+            // Return updated package
+            return new SubscriptionPackageDto
+            {
+                Id = package.Id,
+                PackageName = package.PackageName,
+                Price = package.Price,
+                DurationDays = package.DurationDays,
+                Type = package.Type,
+                Description = package.Description,
+                IsActive = package.IsActive,
+                CreatedAt = package.CreatedAt,
+                UpdatedAt = package.UpdatedAt
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating subscription package with ID: {Id}", id);
+            throw;
+        }
+    }
 }
