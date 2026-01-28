@@ -97,4 +97,7 @@ public partial class VenueLocation
 
     [InverseProperty("Venues")]
     public virtual ICollection<Collection> Collections { get; set; } = new List<Collection>();
+
+    [InverseProperty("VenueLocation")]
+    public virtual ICollection<VenueOpeningHour> VenueOpeningHours { get; set; } = new List<VenueOpeningHour>();
 }

@@ -26,12 +26,15 @@ public class PersonalityMappingService : IPersonalityMappingService
 
         var tags = new HashSet<string>();
 
-        // Analyze both MBTI types
-        AnalyzeMbtiType(mbti1, tags);
-        AnalyzeMbtiType(mbti2, tags);
+        // Analyze both MBTI types (null-safe)
+        if (!string.IsNullOrEmpty(mbti1))
+            AnalyzeMbtiType(mbti1, tags);
+        if (!string.IsNullOrEmpty(mbti2))
+            AnalyzeMbtiType(mbti2, tags);
 
-        // Analyze couple compatibility
-        AnalyzeCoupleDynamics(mbti1, mbti2, tags);
+        // Analyze couple compatibility (only if both provided)
+        if (!string.IsNullOrEmpty(mbti1) && !string.IsNullOrEmpty(mbti2))
+            AnalyzeCoupleDynamics(mbti1, mbti2, tags);
 
         var result = tags.ToList();
         

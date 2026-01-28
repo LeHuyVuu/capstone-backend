@@ -1,16 +1,16 @@
 using capstone_backend.Business.DTOs.Recommendation;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Recommendation;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
-using System.Text;
-using System.Text.Json;
 using OpenAI.Chat;
 
 namespace capstone_backend.Business.Services;
 
 /// <summary>
 /// AI-powered recommendation service using OpenAI GPT-4o-mini with RAG pattern
+/// Orchestrates the recommendation flow by delegating to specialized helpers
 /// </summary>
 public class OpenAIRecommendationService : IRecommendationService
 {
@@ -59,8 +59,8 @@ public class OpenAIRecommendationService : IRecommendationService
         {
             // Phase 1-2: Parallel execution for AI parsing and mood lookup
             var parsedContextTask = !string.IsNullOrWhiteSpace(request.Query) 
-                ? ParseQueryWithAIAsync(request) 
-                : Task.FromResult(new ParsedQueryContext());
+                ? QueryParser.ParseQueryWithAIAsync(request, _chatClient, _logger) 
+                : Task.FromResult(new QueryParser.ParsedQueryContext());
 
             var coupleMoodTypeTask = GetCoupleMoodTypeAsync(request);
 
@@ -149,7 +149,12 @@ public class OpenAIRecommendationService : IRecommendationService
             );
 
             // Phase 6: Build context for OpenAI
-            var context = BuildVenueContext(rankedVenues, coupleMoodType, personalityTags, request.Query, parsedContext);
+            var context = VenueContextBuilder.BuildVenueContext(
+                rankedVenues,
+                coupleMoodType,
+                personalityTags,
+                request.Query,
+                parsedContext);
 
             // Phase 7: Call OpenAI for match reasoning (with timeout protection)
             var aiExplanationsTask = GetAIExplanationsWithTimeoutAsync(
@@ -165,33 +170,7 @@ public class OpenAIRecommendationService : IRecommendationService
             var aiExplanations = await aiExplanationsTask;
 
             // Phase 8: Build final response
-            var recommendations = rankedVenues.Select((rv, index) =>
-            {
-                var venue = rv.venue;
-                return new RecommendedVenue
-                {
-                    VenueLocationId = venue.Id,
-                    Name = venue.Name,
-                    Address = venue.Address,
-                    Description = venue.Description ?? "",
-                    Score = Math.Round(rv.score, 2),
-                    MatchReason = aiExplanations.ContainsKey(index) 
-                        ? aiExplanations[index] 
-                        : "Phù hợp với sở thích của bạn",
-                    AverageRating = venue.Reviews?.Any() == true
-                        ? (decimal)venue.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value)
-                        : null,
-                    ReviewCount = venue.Reviews?.Count ?? 0,
-                    Images = new List<string>(),
-                    MatchedTags = venue.LocationTag != null
-                        ? new List<string> 
-                        { 
-                            venue.LocationTag.CoupleMoodType?.Name!,
-                            venue.LocationTag.CouplePersonalityType?.Name!
-                        }.Where(name => !string.IsNullOrEmpty(name)).ToList()
-                        : new List<string>()
-                };
-            }).ToList();
+            var recommendations = RecommendationFormatter.FormatRecommendedVenues(rankedVenues, aiExplanations);
 
             stopwatch.Stop();
 
@@ -200,7 +179,7 @@ public class OpenAIRecommendationService : IRecommendationService
                 Recommendations = recommendations,
                 Explanation = aiExplanations.ContainsKey(-1) 
                     ? aiExplanations[-1] 
-                    : GenerateDefaultExplanation(coupleMoodType, personalityTags, request.Query, parsedContext),
+                    : ResponseFormatter.GenerateDefaultExplanation(coupleMoodType, personalityTags, request.Query, parsedContext),
                 CoupleMoodType = coupleMoodType,
                 PersonalityTags = personalityTags,
                 ProcessingTimeMs = stopwatch.ElapsedMilliseconds
@@ -312,62 +291,7 @@ public class OpenAIRecommendationService : IRecommendationService
     }
 
     /// <summary>
-    /// Builds context string for OpenAI from venues
-    /// </summary>
-    private string BuildVenueContext(
-        List<(Data.Entities.VenueLocation venue, double score)> rankedVenues,
-        string? coupleMoodType,
-        List<string> personalityTags,
-        string? userQuery,
-        ParsedQueryContext parsedContext)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("=== DANH SÁCH ĐỊA ĐIỂM ===");
-
-        if (!string.IsNullOrEmpty(userQuery))
-        {
-            sb.AppendLine($"YÊU CẦU CỦA NGƯỜI DÙNG: \"{userQuery}\"");
-            if (!string.IsNullOrEmpty(parsedContext.Intent))
-            {
-                sb.AppendLine($"Ý ĐỊNH PHÁT HIỆN: {parsedContext.Intent}");
-            }
-            sb.AppendLine();
-        }
-
-        for (int i = 0; i < rankedVenues.Count; i++)
-        {
-            var (venue, score) = rankedVenues[i];
-            sb.AppendLine($"\n[{i + 1}] {venue.Name}");
-            sb.AppendLine($"Địa chỉ: {venue.Address}");
-            sb.AppendLine($"Mô tả: {venue.Description}");
-            sb.AppendLine($"Điểm phù hợp: {score:F2}/100");
-
-            var tags = new List<string>();
-            if (venue.LocationTag?.CoupleMoodType?.Name != null)
-                tags.Add(venue.LocationTag.CoupleMoodType.Name);
-            if (venue.LocationTag?.CouplePersonalityType?.Name != null)
-                tags.Add(venue.LocationTag.CouplePersonalityType.Name);
-
-            if (tags.Any())
-            {
-                sb.AppendLine($"Tags: {string.Join(", ", tags)}");
-            }
-
-            var avgRating = venue.Reviews?.Any() == true
-                ? (decimal?)venue.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value)
-                : null;
-
-            if (avgRating.HasValue)
-            {
-                sb.AppendLine($"Đánh giá: {avgRating:F1}⭐ ({venue.Reviews!.Count} reviews)");
-            }
-        }
-
-        return sb.ToString();
-    }
-
-    /// <summary>
-    /// Calls OpenAI with timeout protection
+    /// Calls OpenAI with timeout protection and AI-powered explanations
     /// </summary>
     private async Task<Dictionary<int, string>> GetAIExplanationsWithTimeoutAsync(
         string venueContext,
@@ -378,8 +302,14 @@ public class OpenAIRecommendationService : IRecommendationService
         string? userQuery,
         int timeoutMs = 3000)
     {
-        var systemPrompt = BuildSystemPrompt();
-        var userPrompt = BuildUserPrompt(venueContext, coupleMoodType, personalityTags, mbti1, mbti2, userQuery);
+        var systemPrompt = PromptBuilder.BuildSystemPrompt();
+        var userPrompt = PromptBuilder.BuildUserPrompt(
+            venueContext,
+            coupleMoodType,
+            personalityTags,
+            mbti1,
+            mbti2,
+            userQuery);
 
         var messages = new List<ChatMessage>
         {
@@ -393,7 +323,7 @@ public class OpenAIRecommendationService : IRecommendationService
             var response = await _chatClient.CompleteChatAsync(messages, cancellationToken: cts.Token);
             var content = response.Value.Content[0].Text;
 
-            return ParseAIResponse(content);
+            return ResponseFormatter.ParseAIResponse(content);
         }
         catch (OperationCanceledException)
         {
@@ -405,237 +335,6 @@ public class OpenAIRecommendationService : IRecommendationService
             _logger.LogError(ex, "Error calling OpenAI API");
             return new Dictionary<int, string>();
         }
-    }
-
-    /// <summary>
-    /// Builds system prompt for OpenAI
-    /// </summary>
-    private string BuildSystemPrompt()
-    {
-        return @"Bạn là một chuyên gia tư vấn địa điểm hẹn hò và giải trí tại Việt Nam. 
-Nhiệm vụ của bạn là phân tích danh sách địa điểm đã được chấm điểm và giải thích tại sao mỗi địa điểm phù hợp với cặp đôi dựa trên:
-- Tính cách MBTI của họ
-- Trạng thái cảm xúc hiện tại (mood)
-- Loại mood cặp đôi (couple mood type)
-- Các đặc điểm tính cách (personality tags)
-
-Hãy trả lời theo định dạng:
-OVERVIEW: [Tổng quan về gợi ý - 2-3 câu]
-
-[1] [Lý do địa điểm 1 phù hợp - 1-2 câu ngắn gọn]
-[2] [Lý do địa điểm 2 phù hợp - 1-2 câu ngắn gọn]
-...
-
-Giữ câu trả lời ngắn gọn, thân thiện, và tập trung vào lý do phù hợp.";
-    }
-
-    /// <summary>
-    /// Builds user prompt for OpenAI
-    /// </summary>
-    private string BuildUserPrompt(
-        string venueContext,
-        string? coupleMoodType,
-        List<string> personalityTags,
-        string? mbti1,
-        string? mbti2,
-        string? userQuery)
-    {
-        var sb = new StringBuilder();
-        
-        if (!string.IsNullOrEmpty(userQuery))
-        {
-            sb.AppendLine($"=== YÊU CẦU CỦA NGƯỜI DÙNG ===");
-            sb.AppendLine($"\"{userQuery}\"");
-            sb.AppendLine();
-        }
-
-        sb.AppendLine("=== THÔNG TIN CẶP ĐÔI ===");
-
-        if (!string.IsNullOrEmpty(mbti1))
-        {
-            sb.AppendLine($"MBTI người 1: {mbti1}");
-        }
-
-        if (!string.IsNullOrEmpty(mbti2))
-        {
-            sb.AppendLine($"MBTI người 2: {mbti2}");
-        }
-
-        if (!string.IsNullOrEmpty(coupleMoodType))
-        {
-            sb.AppendLine($"Couple Mood: {coupleMoodType}");
-        }
-
-        if (personalityTags.Any())
-        {
-            sb.AppendLine($"Personality Tags: {string.Join(", ", personalityTags)}");
-        }
-
-        sb.AppendLine();
-        sb.AppendLine(venueContext);
-
-        return sb.ToString();
-    }
-
-    /// <summary>
-    /// Parses AI response into explanations dictionary
-    /// </summary>
-    private Dictionary<int, string> ParseAIResponse(string content)
-    {
-        var result = new Dictionary<int, string>();
-        var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-
-        string? overview = null;
-        foreach (var line in lines)
-        {
-            var trimmed = line.Trim();
-
-            // Extract overview
-            if (trimmed.StartsWith("OVERVIEW:", StringComparison.OrdinalIgnoreCase))
-            {
-                overview = trimmed.Substring("OVERVIEW:".Length).Trim();
-                continue;
-            }
-
-            // Extract individual venue explanations [1], [2], etc.
-            if (trimmed.StartsWith("[") && trimmed.Contains("]"))
-            {
-                var endIndex = trimmed.IndexOf(']');
-                if (endIndex > 0 && int.TryParse(trimmed.Substring(1, endIndex - 1), out int venueIndex))
-                {
-                    var explanation = trimmed.Substring(endIndex + 1).Trim();
-                    result[venueIndex - 1] = explanation; // Convert to 0-based index
-                }
-            }
-        }
-
-        // Store overview with key -1
-        if (!string.IsNullOrEmpty(overview))
-        {
-            result[-1] = overview;
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// Generates default explanation when AI is unavailable
-    /// </summary>
-    private string GenerateDefaultExplanation(string? coupleMoodType, List<string> personalityTags, string? query, ParsedQueryContext parsedContext)
-    {
-        var sb = new StringBuilder("Dựa trên phân tích của chúng tôi");
-
-        if (!string.IsNullOrEmpty(query))
-        {
-            sb.Append($" và yêu cầu \"{query}\" của bạn");
-        }
-
-        if (!string.IsNullOrEmpty(coupleMoodType))
-        {
-            sb.Append($", với trạng thái {coupleMoodType}");
-        }
-
-        if (personalityTags.Any())
-        {
-            sb.Append($" và các đặc điểm {string.Join(", ", personalityTags)}");
-        }
-
-        sb.Append(", đây là những địa điểm phù hợp nhất cho bạn.");
-
-        return sb.ToString();
-    }
-
-    /// <summary>
-    /// Context from natural language query parsing
-    /// </summary>
-    private class ParsedQueryContext
-    {
-        public string Intent { get; set; } = "";
-        public string? DetectedMood { get; set; }
-        public List<string> DetectedPersonalityTags { get; set; } = new();
-        public string? DetectedRegion { get; set; }
-    }
-
-    /// <summary>
-    /// Parses natural language query using AI
-    /// </summary>
-    private async Task<ParsedQueryContext> ParseQueryWithAIAsync(RecommendationRequest request)
-    {
-        var context = new ParsedQueryContext();
-
-        // Skip if query is empty or too short
-        if (string.IsNullOrWhiteSpace(request.Query) || request.Query.Length < 5)
-        {
-            return context;
-        }
-
-        try
-        {
-            var systemPrompt = @"Bạn là trợ lý phân tích ngôn ngữ tự nhiên cho hệ thống gợi ý địa điểm hẹn hò.
-Nhiệm vụ: Phân tích câu hỏi/yêu cầu của người dùng và trích xuất thông tin theo định dạng JSON.
-
-Trả về JSON với cấu trúc:
-{
-  ""intent"": ""<mô tả ý định>"",
-  ""mood"": ""<tâm trạng nếu có>"",
-  ""personalityTags"": [""<tag1>"", ""<tag2>""],
-  ""region"": ""<khu vực nếu có>""
-}
-
-Các tâm trạng có thể: Hạnh phúc, Lãng mạn, Phiêu lưu, An ủi, Thư giãn, Vui vẻ, Suy ngẫm, Năng động
-Các personality tags: Năng động, Yên tĩnh, Sáng tạo, Lãng mạn, Tự phát
-Khu vực: Hà Nội, TP.HCM, Đà Nẵng, etc.
-
-Ví dụ:
-Input: ""hôm nay anniversary thì đi đâu""
-Output: {""intent"": ""Tìm địa điểm kỷ niệm"", ""mood"": ""Lãng mạn"", ""personalityTags"": [""Lãng mạn""], ""region"": null}";
-
-            var userPrompt = $"Câu hỏi: \"{request.Query}\"";
-
-            var messages = new List<ChatMessage>
-            {
-                new SystemChatMessage(systemPrompt),
-                new UserChatMessage(userPrompt)
-            };
-
-            // Add timeout for parsing
-            using var cts = new CancellationTokenSource(2000); // Max 2s for parsing
-            var chatCompletion = await _chatClient.CompleteChatAsync(messages, cancellationToken: cts.Token);
-            
-            var responseText = chatCompletion.Value.Content[0].Text;
-            _logger.LogInformation($"[AI Parsing] Raw response: {responseText}");
-
-            // Parse JSON response
-            using var jsonDoc = JsonDocument.Parse(responseText);
-            var root = jsonDoc.RootElement;
-
-            if (root.TryGetProperty("intent", out var intentProp))
-                context.Intent = intentProp.GetString() ?? "";
-
-            if (root.TryGetProperty("mood", out var moodProp) && moodProp.ValueKind != JsonValueKind.Null)
-                context.DetectedMood = moodProp.GetString();
-
-            if (root.TryGetProperty("region", out var regionProp) && regionProp.ValueKind != JsonValueKind.Null)
-                context.DetectedRegion = regionProp.GetString();
-
-            if (root.TryGetProperty("personalityTags", out var tagsProp) && tagsProp.ValueKind == JsonValueKind.Array)
-            {
-                context.DetectedPersonalityTags = tagsProp.EnumerateArray()
-                    .Select(t => t.GetString())
-                    .Where(t => !string.IsNullOrEmpty(t))
-                    .Select(t => t!)
-                    .ToList();
-            }
-
-            _logger.LogInformation("Parsed query: Intent={Intent}, Mood={Mood}, Tags={Tags}",
-                context.Intent, context.DetectedMood, string.Join(",", context.DetectedPersonalityTags));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to parse query with AI, continuing with structured data");
-        }
-
-        return context;
     }
 
     /// <summary>
@@ -660,27 +359,7 @@ Output: {""intent"": ""Tìm địa điểm kỷ niệm"", ""mood"": ""Lãng mạ
                 };
             }
 
-            var recommendations = venues.Take(request.Limit).Select(venue => new RecommendedVenue
-            {
-                VenueLocationId = venue.Id,
-                Name = venue.Name,
-                Address = venue.Address,
-                Description = venue.Description ?? "",
-                Score = 70.0,
-                MatchReason = "Địa điểm phổ biến và được đánh giá cao",
-                AverageRating = venue.Reviews?.Any() == true
-                    ? (decimal)venue.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value)
-                    : null,
-                ReviewCount = venue.Reviews?.Count ?? 0,
-                Images = new List<string>(),
-                MatchedTags = venue.LocationTag != null
-                    ? new List<string>
-                    {
-                        venue.LocationTag.CoupleMoodType?.Name!,
-                        venue.LocationTag.CouplePersonalityType?.Name!
-                    }.Where(name => !string.IsNullOrEmpty(name)).ToList()
-                    : new List<string>()
-            }).ToList();
+            var recommendations = RecommendationFormatter.FormatFallbackVenues(venues, request.Limit);
 
             return new RecommendationResponse
             {
