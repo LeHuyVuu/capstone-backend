@@ -54,4 +54,44 @@ public class SubscriptionPackageController : BaseController
             return InternalServerErrorResponse("An error occurred while retrieving subscription packages");
         }
     }
+
+    /// <summary>
+    /// Update an existing subscription package
+    /// </summary>
+    /// <param name="id">Package ID to update</param>
+    /// <param name="request">Update request data</param>
+    /// <returns>Updated subscription package</returns>
+    /// <response code="200">Returns the updated subscription package</response>
+    /// <response code="400">If the request data is invalid</response>
+    /// <response code="404">If the package is not found</response>
+    /// <response code="401">If user is not authenticated</response>
+    /// <response code="500">If there was an internal server error</response>
+    [HttpPut("{id}")]
+    [Authorize(Roles = "ADMIN")]
+    public async Task<IActionResult> UpdateSubscriptionPackage(
+        [FromRoute] int id,
+        [FromBody] UpdateSubscriptionPackageRequest request)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequestResponse("Invalid request data");
+            }
+
+            var updatedPackage = await _subscriptionPackageService.UpdateSubscriptionPackageAsync(id, request);
+            
+            return OkResponse(updatedPackage, "Subscription package updated successfully");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Package not found or validation failed for ID: {Id}", id);
+            return NotFoundResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating subscription package with ID: {Id}", id);
+            return InternalServerErrorResponse("An error occurred while updating the subscription package");
+        }
+    }
 }
