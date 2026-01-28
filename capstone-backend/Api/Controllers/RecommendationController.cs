@@ -280,34 +280,76 @@ Không truyền region/lat/lon → Search toàn quốc
 ```json
 {
   ""success"": true,
+  ""message"": ""Successfully generated 20 recommendations in 5871ms"",
+  ""code"": 200,
   ""data"": {
     ""recommendations"": [
       {
-        ""venueId"": 123,
-        ""venueName"": ""Cafe Romance"",
-        ""matchScore"": 95,
-        ""aiReasoning"": ""Perfect for INFP personality - cozy, creative space with natural lighting..."",
-        ""category"": ""Cafe"",
-        ""address"": ""123 Trần Hưng Đạo, Hoàn Kiếm, Hà Nội"",
-        ""rating"": 4.8,
-        ""reviewCount"": 1250,
-        ""estimatedBudget"": 150000,
-        ""latitude"": 21.028511,
-        ""longitude"": 105.804817,
-        ""distance"": 2.3
+        ""venueLocationId"": 1,
+        ""name"": ""Cà phê Bên Sông Hàn"",
+        ""address"": ""12 Bạch Đằng, Hải Châu, Đà Nẵng"",
+        ""description"": ""Quán cà phê view sông, phù hợp đi dạo tối và trò chuyện."",
+        ""matchReason"": ""Phù hợp với sở thích của bạn"",
+        ""averageRating"": 5,
+        ""reviewCount"": 1,
+        ""coverImage"": null,
+        ""interiorImage"": null,
+        ""fullPageMenuImage"": null,
+        ""matchedTags"": [
+          ""CẢ HAI YÊN TĨNH"",
+          ""LÃNG MẠN""
+        ]
+      },
+      {
+        ""venueLocationId"": 3,
+        ""name"": ""Gốm & Trà Thảo Điền"",
+        ""address"": ""25 Xuân Thủy, Thảo Điền, Thủ Đức, TP.HCM"",
+        ""description"": ""Workshop gốm + trà, trải nghiệm mới, an toàn, dễ gắn kết."",
+        ""matchReason"": ""Phù hợp với sở thích của bạn"",
+        ""averageRating"": 5,
+        ""reviewCount"": 1,
+        ""coverImage"": null,
+        ""interiorImage"": null,
+        ""fullPageMenuImage"": null,
+        ""matchedTags"": [
+          ""HỨNG THÚ KHÁM PHÁ"",
+          ""VUI VẺ""
+        ]
       }
     ],
-    ""totalResults"": 10,
-    ""processingTimeMs"": 1250,
-    ""aiConfidence"": 0.92,
-    ""appliedFilters"": {
-      ""locationType"": ""GPS"",
-      ""radiusKm"": 5,
-      ""budgetLevel"": 2
-    }
-  }
+    ""explanation"": ""Dựa trên phân tích của chúng tôi, đây là những địa điểm phù hợp nhất cho bạn."",
+    ""coupleMoodType"": null,
+    ""personalityTags"": [],
+    ""processingTimeMs"": 5871
+  },
+  ""traceId"": ""0HNITO4TEGVTE:00000001"",
+  ""timestamp"": ""2026-01-27T16:29:30.406611Z""
 }
-```",
+```
+
+---
+
+## 🎯 **Response Fields**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `venueLocationId` | int | ID của địa điểm |
+| `name` | string | Tên địa điểm |
+| `address` | string | Địa chỉ |
+| `description` | string | Mô tả ngắn |
+| `matchReason` | string | Lý do AI recommend |
+| `averageRating` | decimal? | Rating trung bình (null nếu không có review) |
+| `reviewCount` | int | Số review |
+| `coverImage` | string? | Ảnh bìa (null nếu chưa có) |
+| `interiorImage` | string? | Ảnh nội thất (null nếu chưa có) |
+| `fullPageMenuImage` | string? | Ảnh menu (null nếu chưa có) |
+| `matchedTags` | array | Tags match (mood/personality) |
+| `explanation` | string | Giải thích tổng thể từ AI |
+| `coupleMoodType` | string? | Tâm trạng cặp đôi detected (null nếu không áp dụng) |
+| `personalityTags` | array | Personality tags detected (empty nếu không có) |
+| `processingTimeMs` | long | Thời gian xử lý (ms) |
+| `traceId` | string | Correlation ID cho debugging |
+| `timestamp` | string | Timestamp khi response được tạo (ISO 8601) |",
         OperationId = "GetRecommendations",
         Tags = new[] { "Recommendation" }
     )]

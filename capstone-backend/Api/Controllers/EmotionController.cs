@@ -108,12 +108,12 @@ public class EmotionController : BaseController
             var results = faces.Select(face =>
             {
                 var dominantEmotion = _emotionService.GetDominantEmotion(face);       // HAPPY, SAD,...
-                var dominantEmotionVi = _emotionService.MapEmotionToVietnamese(dominantEmotion);
+                var dominantEmotionVi = FaceEmotionService.MapEmotionToVietnamese(dominantEmotion);
 
                 return new FaceEmotionResponse
                 {
                     DominantEmotion = dominantEmotionVi,                              // Vui, Buồn,...
-                    EmotionSentence = _emotionService.GetEmotionSentence(dominantEmotion),
+                    EmotionSentence = FaceEmotionService.GetEmotionSentence(dominantEmotion),
                     AllEmotions = _emotionService.GetAllEmotions(face),
                     AgeRange = $"{face.AgeRange.Low}-{face.AgeRange.High}",
                     Gender = face.Gender?.Value ?? "Unknown",
