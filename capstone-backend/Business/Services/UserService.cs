@@ -3,6 +3,7 @@ using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.User;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Services;
 
@@ -159,7 +160,7 @@ public class UserService : IUserService
         };
 
         // Generate unique invite code
-        memberProfile.InviteCode = GenerateInviteCode();
+        memberProfile.InviteCode = await GenerateInviteCode();
 
         await _unitOfWork.Context.Set<MemberProfile>().AddAsync(memberProfile);
         await _unitOfWork.SaveChangesAsync();
@@ -169,15 +170,36 @@ public class UserService : IUserService
     }
 
     /// <summary>
-    /// Generate unique 6-character invite code
+    /// Generate unique 6-character invite code (checks database for uniqueness)
     /// </summary>
-    private string GenerateInviteCode()
+    private async Task<string> GenerateInviteCode()
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         var random = new Random();
-        return new string(Enumerable.Range(0, 6)
-            .Select(_ => chars[random.Next(chars.Length)])
-            .ToArray());
+        string inviteCode;
+        bool isUnique = false;
+        int attempts = 0;
+        const int maxAttempts = 10;
+
+        do
+        {
+            inviteCode = new string(Enumerable.Range(0, 6)
+                .Select(_ => chars[random.Next(chars.Length)])
+                .ToArray());
+
+            // Kiểm tra mã đã tồn tại trong database
+            var existingProfile = await _unitOfWork.Context.Set<MemberProfile>()
+                .FirstOrDefaultAsync(mp => mp.InviteCode == inviteCode);
+
+            isUnique = existingProfile == null;
+            attempts++;
+
+        } while (!isUnique && attempts < maxAttempts);
+
+        if (!isUnique)
+            throw new InvalidOperationException("Unable to generate unique invite code after multiple attempts");
+
+        return inviteCode;
     }
 
     /// <summary>
