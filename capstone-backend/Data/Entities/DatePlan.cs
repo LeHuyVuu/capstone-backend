@@ -6,12 +6,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
+[Index("OrganizerMemberId", Name = "idx_date_plans_organizer_member_id")]
 public partial class DatePlan
 {
     [Key]
     public int Id { get; set; }
 
     public int CoupleId { get; set; }
+
+    public int? OrganizerMemberId { get; set; }
 
     public string Title { get; set; } = null!;
 
@@ -20,6 +23,15 @@ public partial class DatePlan
     public DateTime? PlannedStartAt { get; set; }
 
     public DateTime? PlannedEndAt { get; set; }
+
+    public DateTime? CompletedAt { get; set; }
+
+    public int TotalCount { get; set; } = 0;
+
+    public int VisitedCount { get; set; } = 0;
+
+    [Precision(5, 4)]
+    public decimal CompletionRate { get; set; } = 0m;
 
     [Precision(18, 2)]
     public decimal? EstimatedBudget { get; set; }
@@ -38,4 +50,8 @@ public partial class DatePlan
 
     [InverseProperty("DatePlan")]
     public virtual ICollection<DatePlanItem> DatePlanItems { get; set; } = new List<DatePlanItem>();
+
+    [ForeignKey("OrganizerMemberId")]
+    [InverseProperty("MemberProfiles")]
+    public virtual MemberProfile? OrganizerMember { get; set; }
 }

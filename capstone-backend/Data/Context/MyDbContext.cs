@@ -399,6 +399,11 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.Couple).WithMany(p => p.DatePlans).HasConstraintName("date_plans_couple_id_fkey");
+            entity.HasOne(d => d.OrganizerMember)
+                .WithMany(p => p.MemberProfiles)
+                .HasForeignKey(d => d.OrganizerMemberId)
+                .HasConstraintName("fk_date_plans_organizer_member")
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<DatePlanItem>(entity =>

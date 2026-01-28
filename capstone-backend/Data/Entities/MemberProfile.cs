@@ -112,4 +112,7 @@ public partial class MemberProfile
 
     [InverseProperty("Member")]
     public virtual ICollection<VoucherItemMember> VoucherItemMembers { get; set; } = new List<VoucherItemMember>();
+
+    [InverseProperty("OrganizerMember")]
+    public virtual ICollection<DatePlan> MemberProfiles { get; set; } = new List<DatePlan>();
 }
