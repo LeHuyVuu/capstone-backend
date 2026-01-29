@@ -30,7 +30,7 @@ public interface IVenueLocationService
     /// <param name="request">Create venue location request</param>
     /// <param name="userId">User ID - will resolve to venue owner profile</param>
     /// <returns>Created venue location response</returns>
-    Task<VenueLocationDetailResponse> CreateVenueLocationAsync(CreateVenueLocationRequest request, int userId);
+    Task<VenueLocationCreateResponse> CreateVenueLocationAsync(CreateVenueLocationRequest request, int userId);
 
     /// <summary>
     /// Update venue location information
