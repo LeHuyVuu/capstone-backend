@@ -24,4 +24,6 @@ public class UpdateVenueOpeningHourRequest
     /// Closing time in format HH:mm (e.g., "23:00")
     /// </summary>
     public string CloseTime { get; set; } = null!;
+
+    public Boolean IsClosed { get; set; }
 }

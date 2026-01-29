@@ -415,7 +415,7 @@ public class VenueLocationService : IVenueLocationService
                     Day = request.Day,
                     OpenTime = openTime,
                     CloseTime = closeTime,
-                    IsClosed = false
+                    IsClosed = request.IsClosed,
                 };
 
                 await _unitOfWork.Context.Set<VenueOpeningHour>().AddAsync(openingHour);
@@ -428,11 +428,11 @@ public class VenueLocationService : IVenueLocationService
                 _unitOfWork.Context.Set<VenueOpeningHour>().Update(openingHour);
             }
 
-            // Check current time and auto-update is_closed
+            // Auto-update IsClosed based on current time
             var currentTimeVN = DateTime.UtcNow.AddHours(7); // Vietnam time (UTC+7)
             var currentTime = currentTimeVN.TimeOfDay;
-            
-         
+
+            openingHour.IsClosed = !(currentTime >= openTime && currentTime < closeTime);
 
             await _unitOfWork.SaveChangesAsync();
 
@@ -454,4 +454,67 @@ public class VenueLocationService : IVenueLocationService
         }
     }
 
+    /// <summary>
+    /// Automatically update IsClosed status for all venue opening hours based on current time
+    /// This method is called by Hangfire as a recurring job every minute
+    /// Only updates opening hours for TODAY
+    /// </summary>
+    public async Task UpdateAllVenuesIsClosedStatusAsync()
+    {
+        _logger.LogInformation("Starting automatic IsClosed status update for all venues");
+
+        var currentTimeVN = DateTime.UtcNow.AddHours(7); // Vietnam time (UTC+7)
+        var currentTime = currentTimeVN.TimeOfDay;
+        var todayDbFormat = ConvertDayOfWeekToDbFormat(currentTimeVN.DayOfWeek);
+
+        // ✨ Chỉ lấy opening_hours của HÔM NAY
+        var todayOpeningHours = await _unitOfWork.Context.Set<VenueOpeningHour>()
+            .Where(oh => oh.Day == todayDbFormat)  // Chỉ ngày hôm nay
+            .ToListAsync();
+
+        _logger.LogInformation($"Today's date: {currentTimeVN:yyyy-MM-dd HH:mm:ss}, Day of week (DB format): {todayDbFormat}, Current time (VN): {currentTime}");
+        _logger.LogInformation($"Found {todayOpeningHours.Count} opening hour records for today");
+
+        var updatedCount = 0;
+        foreach (var openingHour in todayOpeningHours)
+        {
+            bool isCurrentlyOpen = currentTime >= openingHour.OpenTime && currentTime < openingHour.CloseTime;
+            
+            // ✨ Nếu user đóng tạm trong giờ mở → Giữ nguyên, không cập nhật
+            if (openingHour.IsClosed && isCurrentlyOpen)
+            {
+                _logger.LogInformation($"Skipped Venue {openingHour.VenueLocationId}: User manually closed during opening hours");
+                continue;
+            }
+
+            // Tự động update dựa trên thời gian hiện tại
+            bool newIsClosed = !isCurrentlyOpen;
+            if (openingHour.IsClosed != newIsClosed)
+            {
+                openingHour.IsClosed = newIsClosed;
+                _logger.LogInformation($"Updated Venue {openingHour.VenueLocationId}: OpenTime={openingHour.OpenTime}, CloseTime={openingHour.CloseTime}, IsClosed={openingHour.IsClosed}, IsOpen={isCurrentlyOpen}");
+                updatedCount++;
+            }
+        }
+
+        _unitOfWork.Context.Set<VenueOpeningHour>().UpdateRange(todayOpeningHours);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation($"Completed automatic IsClosed status update. Updated {updatedCount} out of {todayOpeningHours.Count} opening hour records");
+    }
+
+    private int ConvertDayOfWeekToDbFormat(DayOfWeek dayOfWeek)
+    {
+        return dayOfWeek switch
+        {
+            DayOfWeek.Sunday => 8,
+            DayOfWeek.Monday => 2,
+            DayOfWeek.Tuesday => 3,
+            DayOfWeek.Wednesday => 4,
+            DayOfWeek.Thursday => 5,
+            DayOfWeek.Friday => 6,
+            DayOfWeek.Saturday => 7,
+            _ => 8
+        };
+    }
 }
