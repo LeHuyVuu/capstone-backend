@@ -65,4 +65,10 @@ public interface IVenueLocationService
     /// <param name="request">Update venue opening hour request</param>
     /// <returns>Updated venue opening hour response</returns>
     Task<VenueOpeningHourResponse?> UpdateVenueOpeningHourAsync(UpdateVenueOpeningHourRequest request);
+
+    /// <summary>
+    /// Automatically update IsClosed status for all venue opening hours based on current time
+    /// This method is called by Hangfire as a recurring job every minute
+    /// </summary>
+    Task UpdateAllVenuesIsClosedStatusAsync();
 }

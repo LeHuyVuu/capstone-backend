@@ -1,8 +1,10 @@
 using capstone_backend.Api.Middleware;
 using capstone_backend.Api.Models;
+using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Mappings;
 using capstone_backend.Extensions;
 using DotNetEnv;
+using Hangfire;
 using Scalar.AspNetCore;
 
 // Load environment variables from .env file
@@ -47,7 +49,10 @@ builder.Services.AddValidationFilter();
 // 8. CORS Configuration
 builder.Services.AddCorsConfiguration(builder.Configuration);
 
-// 9. Swagger/OpenAPI with detailed documentation
+// 9. Hangfire Configuration with PostgreSQL
+builder.Services.AddHangfireConfiguration(builder.Configuration);
+
+// 10. Swagger/OpenAPI with detailed documentation
 builder.Services.AddSwaggerConfiguration();
 
 // 10. Logging configuration
@@ -68,7 +73,8 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(optio
     options.ValueLengthLimit = int.MaxValue;
     options.MultipartHeadersLengthLimit = int.MaxValue;
 });
-// 11. Add Auto Mapper
+
+// 13. Add Auto Mapper
 builder.Services.AddAutoMapper(
     typeof(TestTypeProfile),
     typeof(QuestionProfile),
@@ -76,7 +82,7 @@ builder.Services.AddAutoMapper(
     typeof(PersonalityTestProfile)
 );
 
-// 12. Add HttpContextAccessor
+// 14. Add HttpContextAccessor
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
@@ -92,7 +98,8 @@ app.UseExceptionMiddleware();
 // 2. TraceId for request tracking
 app.UseTraceId();
 
-// 3. Swagger UI (available in all environments for testing)
+// 3. Setup Hangfire Dashboard
+app.UseHangfireDashboard();
 app.UseSwaggerConfiguration();
 
 // 3.1. Scalar - Đẹp nhất, hiện đại nhất (RECOMMENDED)
@@ -119,6 +126,25 @@ app.UseAuthorization();
 
 // 8. Map Controllers
 app.MapControllers();
+
+// ========================================
+// Configure Hangfire Recurring Jobs
+// ========================================
+var recurringJobManager = app.Services.GetRequiredService<IRecurringJobManager>();
+var serviceProvider = app.Services;
+
+using (var scope = serviceProvider.CreateScope())
+{
+    var venueLocationService = scope.ServiceProvider.GetRequiredService<IVenueLocationService>();
+    
+    // Cập nhật IsClosed status mỗi phút
+    recurringJobManager.AddOrUpdate(
+        "update-venue-closed-status",
+        () => venueLocationService.UpdateAllVenuesIsClosedStatusAsync(),
+        Cron.Minutely);
+    
+    app.Logger.LogInformation("[INFO] Hangfire recurring jobs configured");
+}
 
 // ========================================
 // Run Application
