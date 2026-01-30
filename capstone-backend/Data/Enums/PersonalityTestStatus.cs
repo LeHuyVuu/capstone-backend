@@ -4,6 +4,7 @@
     {
         IN_PROGRESS,
         COMPLETED,
-        ARCHIVED
+        ARCHIVED,
+        CANCELLED
     }
 }

@@ -9,6 +9,7 @@ using capstone_backend.Data.Enums;
 using CsvHelper;
 using CsvHelper.Configuration;
 using System.Globalization;
+using System.Text.Json.Nodes;
 
 namespace capstone_backend.Business.Services
 {
@@ -186,10 +187,15 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task<List<QuestionResponse>> GetAllQuestionsForMemberAsync(int testTypeId)
+        public async Task<List<TestQuestionResponse>> GetAllQuestionsForMemberAsync(int userId, int testTypeId, TestMode mode)
         {
             try
             {
+                // Check member existence
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member not found");
+
                 // Check test type existence
                 var testType = await _unitOfWork.TestTypes.GetByIdAsync(testTypeId);
                 if (testType == null)
@@ -199,18 +205,85 @@ namespace capstone_backend.Business.Services
                 if (version == null)
                     throw new Exception("Test type has no active version");
 
-                var questions = await _unitOfWork.Questions.GetAllQuestionsByTestTypeIdAsync(testTypeId);
+                var questions = await _unitOfWork.Questions.GetAllByVersionAsync(testTypeId, version.Value);
                 if (!questions.Any())
                     throw new Exception("Test type has no questions");
 
-                var response = _mapper.Map<List<QuestionResponse>>(questions);
+                var inProgressTest = await _unitOfWork.PersonalityTests
+                    .GetInProgressTestByUserAndTestTypeAsync(member.Id, testTypeId);
 
-                return response;
+                if (inProgressTest == null)
+                    return await BuildQuestionResponses(questions, null);
+
+                // If mode is new and have in-progress test, cancel it
+                if (mode == TestMode.NEW)
+                {
+                    var json = JsonObject.Parse(inProgressTest.ResultData);
+                    json["status"] = "CANCELLED";
+
+                    inProgressTest.ResultData = json.ToString();
+                    inProgressTest.IsDeleted = true;
+                    inProgressTest.UpdatedAt = DateTime.UtcNow;
+                    inProgressTest.Status = PersonalityTestStatus.CANCELLED.ToString();
+                    _unitOfWork.PersonalityTests.Update(inProgressTest);
+                    await _unitOfWork.SaveChangesAsync();
+                    return await BuildQuestionResponses(questions, null);
+                }
+
+                // Parse object
+                var resultData = JsonObject.Parse(inProgressTest.ResultData);
+                var answered = resultData["answers"].AsArray();
+
+                var selectedMap = answered == null
+                    ? new Dictionary<int, int>()
+                    : answered.ToDictionary(
+                        a => a["QuestionId"].GetValue<int>(),
+                        a => a["AnswerId"].GetValue<int>()
+                    );
+
+                return await BuildQuestionResponses(questions, selectedMap);
             }
             catch (Exception ex)
             {
                 throw;
             }
+        }
+
+        private async Task<List<TestQuestionResponse>> BuildQuestionResponses(List<Question> questions, Dictionary<int, int> selectedAnswerMap)
+        {
+            var questionIds = questions.Select(q => q.Id).ToList();
+
+            var answers = await _unitOfWork.QuestionAnswers
+                    .GetAllByQuestionIdsAsync(questionIds);
+
+            var answerGroups = answers
+                .GroupBy(a => a.QuestionId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var result = new List<TestQuestionResponse>();
+
+            foreach (var q in questions.OrderBy(q => q.OrderIndex))
+            {
+                var options = answerGroups[q.Id].Select(a => new TestAnswerOptionDto
+                {
+                    AnswerId = a.Id,
+                    Content = a.AnswerContent,
+                    ScoreKey = a.ScoreKey,
+                    ScoreValue = a.ScoreValue,
+                    IsSelected = selectedAnswerMap != null &&
+                                 selectedAnswerMap.TryGetValue(q.Id, out var selectedId) &&
+                                 selectedId == a.Id
+                }).ToList();
+
+                result.Add(new TestQuestionResponse
+                {
+                    QuestionId = q.Id,
+                    Content = q.Content,
+                    OrderIndex = q.OrderIndex.Value,
+                    Options = options
+                });          
+            }
+            return result;
         }
 
         private static List<QuestionImportRow> CsvReader(Stream csvStream)
