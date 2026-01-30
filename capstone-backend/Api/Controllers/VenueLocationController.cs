@@ -84,6 +84,11 @@ public class VenueLocationController : BaseController
             var venue = await _venueLocationService.CreateVenueLocationAsync(request, currentUserId.Value);
             return CreatedResponse(venue, "Venue location registered successfully");
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid operation registering venue location for user {UserId}", currentUserId);
+            return BadRequestResponse(ex.Message);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error registering venue location for user {UserId}", currentUserId);

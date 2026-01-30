@@ -6,6 +6,8 @@ using capstone_backend.Business.Services;
 using capstone_backend.Data.Repositories;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -441,6 +443,55 @@ public static class ServiceExtensions
                     .AllowCredentials();
             });
         });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Đăng ký Hangfire với PostgreSQL
+    /// Dùng để chạy background jobs như cập nhật IsClosed status
+    /// </summary>
+    public static IServiceCollection AddHangfireConfiguration(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
+        var dbPort = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
+        var dbName = Environment.GetEnvironmentVariable("DB_NAME");
+        var dbUser = Environment.GetEnvironmentVariable("DB_USER");
+        var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+
+        if (string.IsNullOrEmpty(dbHost) ||
+            string.IsNullOrEmpty(dbName) ||
+            string.IsNullOrEmpty(dbUser) ||
+            string.IsNullOrEmpty(dbPassword))
+        {
+            Console.WriteLine("[WARNING] Hangfire: Database environment variables not configured, skipping Hangfire setup");
+            return services;
+        }
+
+        var hangfireConnectionString =
+            $"Host={dbHost};" +
+            $"Port={dbPort};" +
+            $"Database={dbName};" +
+            $"Username={dbUser};" +
+            $"Password={dbPassword};";
+
+        services.AddHangfire(configuration =>
+        {
+            configuration
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UsePostgreSqlStorage(hangfireConnectionString);
+        });
+
+        services.AddHangfireServer(options =>
+        {
+            options.WorkerCount = Environment.ProcessorCount * 2;
+        });
+
+        Console.WriteLine("[INFO] Hangfire: Configured with PostgreSQL");
 
         return services;
     }

@@ -147,7 +147,7 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task<int> HandleTestAsync(int userId, int testTypeId, SaveTestResultRequest request)
+        public async Task<JsonObject> HandleTestAsync(int userId, int testTypeId, SaveTestResultRequest request)
         {
             try
             {
@@ -208,7 +208,13 @@ namespace capstone_backend.Business.Services
                     _unitOfWork.PersonalityTests.Update(record);
 
                 await _unitOfWork.SaveChangesAsync();
-                return record.Id;
+
+                // Clone and return
+                var jsonClone = json;
+                if (jsonClone.ContainsKey("answers"))
+                    jsonClone.Remove("answers");
+
+                return jsonClone;
             }
             catch (Exception ex)
             {
