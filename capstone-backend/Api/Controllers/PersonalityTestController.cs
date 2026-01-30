@@ -1,5 +1,6 @@
 ﻿using capstone_backend.Business.DTOs.PersonalityTest;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -97,11 +98,12 @@ namespace capstone_backend.Api.Controllers
         /// Get All Questions of 1 test type
         /// </summary>
         [HttpGet("{testTypeId:int}/questions")]
-        public async Task<IActionResult> GetQuestions(int testTypeId)
+        public async Task<IActionResult> GetQuestions(int testTypeId, [FromQuery] TestMode mode = TestMode.IN_PROGRESS)
         {
             try
             {
-                var result = await _questionService.GetAllQuestionsForMemberAsync(testTypeId);
+                var userId = GetCurrentUserId();
+                var result = await _questionService.GetAllQuestionsForMemberAsync(userId.Value, testTypeId, mode);
                 return OkResponse(result);
             }
             catch (Exception ex)
