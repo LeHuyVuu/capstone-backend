@@ -52,6 +52,8 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<DeviceToken> DeviceTokens { get; set; }
 
+    public virtual DbSet<Interaction> Interactions { get; set; }
+
     public virtual DbSet<Leaderboard> Leaderboards { get; set; }
 
     public virtual DbSet<LocationFollower> LocationFollowers { get; set; }
@@ -431,6 +433,18 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.User).WithMany(p => p.DeviceTokens).HasConstraintName("device_tokens_user_id_fkey");
+        });
+
+        modelBuilder.Entity<Interaction>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("interactions_pkey");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(d => d.Member)
+            .WithMany(p => p.Interactions)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("fk_interaction_member");
         });
 
         modelBuilder.Entity<Leaderboard>(entity =>
