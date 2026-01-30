@@ -8,5 +8,6 @@ namespace capstone_backend.Data.Interfaces
         Task<PersonalityTest?> GetByMemberAndTestTypeAsync(int memberId, int testTypeId, string status);
         Task<PersonalityTest?> GetByIdAndMemberIdAsync(int id, int memberId);
         Task<PersonalityTest?> GetCurrentPersonalityAsync(int memberId);
+        Task<PersonalityTest?> GetInProgressTestByUserAndTestTypeAsync(int memberId, int testTypeId);
     }
 }
