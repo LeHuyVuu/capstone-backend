@@ -11,5 +11,6 @@ namespace capstone_backend.Business.Interfaces
         Task<PagedResult<PersonalityTestResponse>> GetHistoryTests(int pageNumber, int pageSize, int userId);
         Task<PersonalityTestDetailResponse> GetTestHistoryDetailAsync(int id, int userId);
         Task<PersonalityTestResponse> GetCurrentPersonalityAsync(int userId);
+        Task<PersonalityTestStateResponse> CheckTestStateAsync(int userId, int testTypeId);
     }
 }

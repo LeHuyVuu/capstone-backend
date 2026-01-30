@@ -95,6 +95,24 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Check state of test
+        /// </summary>
+        [HttpGet("{testTypeId:int}/state")]
+        public async Task<IActionResult> CheckTestState(int testTypeId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _personalityTestService.CheckTestStateAsync(userId.Value, testTypeId);
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Get All Questions of 1 test type
         /// </summary>
         [HttpGet("{testTypeId:int}/questions")]
