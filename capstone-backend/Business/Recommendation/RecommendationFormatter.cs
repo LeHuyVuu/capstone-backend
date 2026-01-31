@@ -1,4 +1,5 @@
 using capstone_backend.Business.DTOs.Recommendation;
+using capstone_backend.Data.Entities;
 
 namespace capstone_backend.Business.Recommendation;
 
@@ -9,39 +10,35 @@ namespace capstone_backend.Business.Recommendation;
 public static class RecommendationFormatter
 {
     /// <summary>
-    /// Formats ranked venues into recommended venue objects
+    /// Formats venues into recommended venue objects with AI explanations
     /// </summary>
     public static List<RecommendedVenue> FormatRecommendedVenues(
-        List<(Data.Entities.VenueLocation venue, double score)> rankedVenues,
+        List<VenueLocation> venues,
         Dictionary<int, string> aiExplanations)
     {
-        return rankedVenues.Select((rv, index) =>
+        return venues.Select((venue, index) => new RecommendedVenue
         {
-            var venue = rv.venue;
-            return new RecommendedVenue
-            {
-                VenueLocationId = venue.Id,
-                Name = venue.Name,
-                Address = venue.Address,
-                Description = venue.Description ?? "",
-                MatchReason = aiExplanations.ContainsKey(index) 
-                    ? aiExplanations[index] 
-                    : "Phù hợp với sở thích của bạn",
-                AverageRating = venue.Reviews?.Any() == true
-                    ? (decimal)venue.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value)
-                    : null,
-                ReviewCount = venue.Reviews?.Count ?? 0,
-                CoverImage = venue.CoverImage,
-                InteriorImage = venue.InteriorImage,
-                FullPageMenuImage = venue.FullPageMenuImage,
-                MatchedTags = venue.LocationTag != null
-                    ? new List<string> 
-                    { 
-                        venue.LocationTag.CoupleMoodType?.Name!,
-                        venue.LocationTag.CouplePersonalityType?.Name!
-                    }.Where(name => !string.IsNullOrEmpty(name)).ToList()
-                    : new List<string>()
-            };
+            VenueLocationId = venue.Id,
+            Name = venue.Name,
+            Address = venue.Address,
+            Description = venue.Description ?? "",
+            MatchReason = aiExplanations.ContainsKey(index) 
+                ? aiExplanations[index] 
+                : "Phù hợp với sở thích của bạn",
+            AverageRating = venue.Reviews?.Any() == true
+                ? (decimal)venue.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value)
+                : null,
+            ReviewCount = venue.Reviews?.Count ?? 0,
+            CoverImage = venue.CoverImage,
+            InteriorImage = venue.InteriorImage,
+            FullPageMenuImage = venue.FullPageMenuImage,
+            MatchedTags = venue.LocationTag != null
+                ? new List<string> 
+                { 
+                    venue.LocationTag.CoupleMoodType?.Name!,
+                    venue.LocationTag.CouplePersonalityType?.Name!
+                }.Where(name => !string.IsNullOrEmpty(name)).ToList()
+                : new List<string>()
         }).ToList();
     }
 
@@ -49,7 +46,7 @@ public static class RecommendationFormatter
     /// Formats fallback venues when main recommendation logic fails
     /// </summary>
     public static List<RecommendedVenue> FormatFallbackVenues(
-        List<Data.Entities.VenueLocation> venues,
+        List<VenueLocation> venues,
         int limit)
     {
         return venues.Take(limit).Select(venue => new RecommendedVenue

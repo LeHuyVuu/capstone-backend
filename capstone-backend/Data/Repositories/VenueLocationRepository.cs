@@ -87,12 +87,12 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
 
     /// <summary>
     /// Get venues for recommendations with mood/personality filtering
-    /// OPTIMIZED: Geo-location based filtering using lat/lon bounding boxes or radius search
+    /// Supports: lat/lon radius search OR area (province/city) filtering
     /// </summary>
     public async Task<List<VenueLocation>> GetForRecommendationsAsync(
         string? coupleMoodType,
         List<string> personalityTags,
-        string? region,
+        string? area,
         decimal? latitude,
         decimal? longitude,
         decimal? radiusKm,
@@ -122,105 +122,13 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
                 v.Longitude >= minLon && v.Longitude <= maxLon
             );
         }
-        // PRIORITY 2: Region string with predefined bounding boxes
-        else if (!string.IsNullOrEmpty(region))
+        // PRIORITY 2: Filter by Area (province code) when no lat/lon
+        // Area is province code: "01" = Hà Nội, "79" = TP.HCM, "92" = Cần Thơ, etc.
+        else if (!string.IsNullOrEmpty(area))
         {
-            var normalizedRegion = region.Trim().ToLower();
-            
-            // Define bounding boxes for major regions (lat/lon ranges)
-            // Format: (minLat, maxLat, minLon, maxLon)
-            if (normalizedRegion.Contains("hà nội") || normalizedRegion.Contains("ha noi") || normalizedRegion.Contains("hanoi"))
-            {
-                // Hà Nội bounding box: 20.9°N - 21.3°N, 105.6°E - 106.0°E
-                query = query.Where(v => 
-                    v.Latitude != null && v.Longitude != null &&
-                    v.Latitude >= 20.9m && v.Latitude <= 21.3m &&
-                    v.Longitude >= 105.6m && v.Longitude <= 106.0m
-                );
-            }
-            else if (normalizedRegion.Contains("hồ chí minh") || normalizedRegion.Contains("hcm") || 
-                     normalizedRegion.Contains("tp.hcm") || normalizedRegion.Contains("sài gòn") ||
-                     normalizedRegion.Contains("saigon") || normalizedRegion.Contains("thủ đức"))
-            {
-                // TP.HCM + Thủ Đức bounding box: 10.6°N - 11.0°N, 106.4°E - 107.0°E
-                query = query.Where(v => 
-                    v.Latitude != null && v.Longitude != null &&
-                    v.Latitude >= 10.6m && v.Latitude <= 11.0m &&
-                    v.Longitude >= 106.4m && v.Longitude <= 107.0m
-                );
-            }
-            else if (normalizedRegion.Contains("đà nẵng") || normalizedRegion.Contains("da nang") || normalizedRegion.Contains("danang"))
-            {
-                // Đà Nẵng bounding box: 15.9°N - 16.2°N, 107.9°E - 108.3°E
-                query = query.Where(v => 
-                    v.Latitude != null && v.Longitude != null &&
-                    v.Latitude >= 15.9m && v.Latitude <= 16.2m &&
-                    v.Longitude >= 107.9m && v.Longitude <= 108.3m
-                );
-            }
-            else if (normalizedRegion.Contains("nha trang"))
-            {
-                // Nha Trang bounding box: 12.1°N - 12.4°N, 109.1°E - 109.3°E
-                query = query.Where(v => 
-                    v.Latitude != null && v.Longitude != null &&
-                    v.Latitude >= 12.1m && v.Latitude <= 12.4m &&
-                    v.Longitude >= 109.1m && v.Longitude <= 109.3m
-                );
-            }
-            else if (normalizedRegion.Contains("hải phòng") || normalizedRegion.Contains("hai phong"))
-            {
-                // Hải Phòng bounding box: 20.7°N - 20.9°N, 106.5°E - 106.8°E
-                query = query.Where(v => 
-                    v.Latitude != null && v.Longitude != null &&
-                    v.Latitude >= 20.7m && v.Latitude <= 20.9m &&
-                    v.Longitude >= 106.5m && v.Longitude <= 106.8m
-                );
-            }
-            else if (normalizedRegion.Contains("cần thơ") || normalizedRegion.Contains("can tho"))
-            {
-                // Cần Thơ bounding box: 10.0°N - 10.2°N, 105.7°E - 105.9°E
-                query = query.Where(v => 
-                    v.Latitude != null && v.Longitude != null &&
-                    v.Latitude >= 10.0m && v.Latitude <= 10.2m &&
-                    v.Longitude >= 105.7m && v.Longitude <= 105.9m
-                );
-            }
-            else if (normalizedRegion.Contains("huế") || normalizedRegion.Contains("hue"))
-            {
-                // Huế bounding box: 16.4°N - 16.5°N, 107.5°E - 107.7°E
-                query = query.Where(v => 
-                    v.Latitude != null && v.Longitude != null &&
-                    v.Latitude >= 16.4m && v.Latitude <= 16.5m &&
-                    v.Longitude >= 107.5m && v.Longitude <= 107.7m
-                );
-            }
-            else if (normalizedRegion.Contains("vũng tàu") || normalizedRegion.Contains("vung tau"))
-            {
-                // Vũng Tàu bounding box: 10.3°N - 10.5°N, 107.0°E - 107.2°E
-                query = query.Where(v => 
-                    v.Latitude != null && v.Longitude != null &&
-                    v.Latitude >= 10.3m && v.Latitude <= 10.5m &&
-                    v.Longitude >= 107.0m && v.Longitude <= 107.2m
-                );
-            }
-            else if (normalizedRegion.Contains("đà lạt") || normalizedRegion.Contains("da lat") || normalizedRegion.Contains("dalat"))
-            {
-                // Đà Lạt bounding box: 11.8°N - 12.0°N, 108.3°E - 108.5°E
-                query = query.Where(v => 
-                    v.Latitude != null && v.Longitude != null &&
-                    v.Latitude >= 11.8m && v.Latitude <= 12.0m &&
-                    v.Longitude >= 108.3m && v.Longitude <= 108.5m
-                );
-            }
-            else
-            {
-                // Fallback: Address string matching for unknown regions
-                query = query.Where(v => 
-                    v.Address.ToLower().Contains(normalizedRegion)
-                );
-            }
+            query = query.Where(v => v.Area == area);
         }
-
+       
         // Then apply mood/personality filters (if specified)
         if (!string.IsNullOrEmpty(coupleMoodType) || personalityTags.Any())
         {

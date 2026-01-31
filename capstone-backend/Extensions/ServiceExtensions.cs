@@ -106,7 +106,6 @@ public static class ServiceExtensions
         // Register AI Recommendation Services
         services.AddScoped<IMoodMappingService, MoodMappingService>();
         services.AddScoped<IPersonalityMappingService, PersonalityMappingService>();
-        services.AddScoped<IVenueScoringEngine, VenueScoringEngine>();
         services.AddScoped<IRecommendationService, OpenAIRecommendationService>();
 
         // Đăng ký AWS Rekognition Service để phân tích cảm xúc khuôn mặt

@@ -34,11 +34,11 @@ public interface IVenueLocationRepository : IGenericRepository<VenueLocation>
 
     /// <summary>
     /// Get venues for recommendations with filtering
-    /// Supports both region string and lat/lon geo-location filtering
+    /// Priority: lat/lon radius search > area (province code) filtering
     /// </summary>
     /// <param name="coupleMoodType">Couple mood type to filter</param>
     /// <param name="personalityTags">Personality tags to filter</param>
-    /// <param name="region">Region/address to filter (ignored if lat/lon provided)</param>
+    /// <param name="area">Province code (e.g. "01" = Hà Nội, "79" = TP.HCM, "92" = Cần Thơ) - used when lat/lon not provided</param>
     /// <param name="latitude">Latitude for geo-location search</param>
     /// <param name="longitude">Longitude for geo-location search</param>
     /// <param name="radiusKm">Search radius in kilometers</param>
@@ -47,7 +47,7 @@ public interface IVenueLocationRepository : IGenericRepository<VenueLocation>
     Task<List<VenueLocation>> GetForRecommendationsAsync(
         string? coupleMoodType,
         List<string> personalityTags,
-        string? region,
+        string? area,
         decimal? latitude,
         decimal? longitude,
         decimal? radiusKm,
