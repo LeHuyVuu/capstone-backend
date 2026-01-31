@@ -24,6 +24,14 @@ public interface IVenueLocationRepository : IGenericRepository<VenueLocation>
     Task<List<VenueLocation>> GetByVenueOwnerIdAsync(int venueOwnerId);
 
     /// <summary>
+    /// Get venue locations by venue owner ID with LocationTag details
+    /// Including CoupleMoodType and CouplePersonalityType information
+    /// </summary>
+    /// <param name="venueOwnerId">Venue owner ID</param>
+    /// <returns>List of venue locations with LocationTag details</returns>
+    Task<List<VenueLocation>> GetByVenueOwnerIdWithLocationTagAsync(int venueOwnerId);
+
+    /// <summary>
     /// Get reviews for a venue with member and user information
     /// </summary>
     /// <param name="venueId">Venue location ID</param>

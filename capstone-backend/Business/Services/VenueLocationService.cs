@@ -545,4 +545,79 @@ public class VenueLocationService : IVenueLocationService
             _ => 8
         };
     }
+
+    /// <summary>
+    /// Get all venue locations for a venue owner by user ID
+    /// Includes LocationTag details with CoupleMoodType and CouplePersonalityType
+    /// </summary>
+    public async Task<List<VenueOwnerVenueLocationResponse>> GetVenueLocationsByVenueOwnerAsync(int userId)
+    {
+        _logger.LogInformation("Getting venue locations for user {UserId}", userId);
+
+        // Find VenueOwnerProfile for the user using repository
+        var venueOwnerProfile = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(userId);
+
+        if (venueOwnerProfile == null)
+        {
+            _logger.LogWarning("User {UserId} does not have a venue owner profile", userId);
+            return new List<VenueOwnerVenueLocationResponse>();
+        }
+
+        _logger.LogInformation("Found venue owner profile ID {VenueOwnerProfileId} for user {UserId}", venueOwnerProfile.Id, userId);
+
+        // Get venue locations with LocationTag details
+        var venueLocations = await _unitOfWork.VenueLocations.GetByVenueOwnerIdWithLocationTagAsync(venueOwnerProfile.Id);
+
+        // Map to response DTOs
+        var responses = venueLocations.Select(v => new VenueOwnerVenueLocationResponse
+        {
+            Id = v.Id,
+            Name = v.Name,
+            Description = v.Description,
+            Address = v.Address,
+            Email = v.Email,
+            PhoneNumber = v.PhoneNumber,
+            WebsiteUrl = v.WebsiteUrl,
+            PriceMin = v.PriceMin,
+            PriceMax = v.PriceMax,
+            Latitude = v.Latitude,
+            Longitude = v.Longitude,
+            Area = v.Area,
+            AverageRating = v.AverageRating,
+            AvarageCost = v.AvarageCost,
+            ReviewCount = v.ReviewCount,
+            Status = v.Status,
+            CoverImage = v.CoverImage,
+            InteriorImage = v.InteriorImage,
+            Category = v.Category,
+            FullPageMenuImage = v.FullPageMenuImage,
+            IsOwnerVerified = v.IsOwnerVerified,
+            CreatedAt = v.CreatedAt,
+            UpdatedAt = v.UpdatedAt,
+            LocationTag = v.LocationTag != null ? new VenueOwnerLocationTagInfo
+            {
+                Id = v.LocationTag.Id,
+                TagName = GenerateTagName(v.LocationTag.CoupleMoodType?.Name, v.LocationTag.CouplePersonalityType?.Name),
+                DetailTag = v.LocationTag.DetailTag,
+                CoupleMoodType = v.LocationTag.CoupleMoodType != null ? new VenueOwnerCoupleMoodTypeInfo
+                {
+                    Id = v.LocationTag.CoupleMoodType.Id,
+                    Name = v.LocationTag.CoupleMoodType.Name,
+                    Description = v.LocationTag.CoupleMoodType.Description,
+                    IsActive = v.LocationTag.CoupleMoodType.IsActive
+                } : null,
+                CouplePersonalityType = v.LocationTag.CouplePersonalityType != null ? new VenueOwnerCouplePersonalityTypeInfo
+                {
+                    Id = v.LocationTag.CouplePersonalityType.Id,
+                    Name = v.LocationTag.CouplePersonalityType.Name,
+                    Description = v.LocationTag.CouplePersonalityType.Description,
+                    IsActive = v.LocationTag.CouplePersonalityType.IsActive
+                } : null
+            } : null
+        }).ToList();
+
+        _logger.LogInformation("Retrieved {Count} venue locations for venue owner profile ID {VenueOwnerProfileId}", responses.Count, venueOwnerProfile.Id);
+
+        return responses;
+    }
 }
