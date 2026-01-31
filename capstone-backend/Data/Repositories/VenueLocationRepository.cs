@@ -15,10 +15,12 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
     }
 
     /// <summary>
-    /// Get venue location by ID with all related entities (LocationTag, CoupleMoodType, CouplePersonalityType, VenueOwner)
+    /// Get venue location by ID with all related entities and opening hours for today
     /// </summary>
     public async Task<VenueLocation?> GetByIdWithDetailsAsync(int id)
     {
+        var todayDbFormat = GetTodayDayOfWeek();
+
         return await _dbSet
             .AsNoTracking()
             .Include(v => v.LocationTag)
@@ -26,8 +28,28 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
             .Include(v => v.LocationTag)
                 .ThenInclude(lt => lt!.CouplePersonalityType)
             .Include(v => v.VenueOwner)
+            .Include(v => v.VenueOpeningHours.Where(oh => oh.Day == todayDbFormat))
             .AsSplitQuery()
             .FirstOrDefaultAsync(v => v.Id == id && v.IsDeleted != true);
+    }
+
+    /// <summary>
+    /// Get today's day of week in database format (2=Monday, 3=Tuesday, ..., 8=Sunday)
+    /// </summary>
+    private static int GetTodayDayOfWeek()
+    {
+        var today = DateTime.UtcNow.AddHours(7).DayOfWeek;
+        return today switch
+        {
+            DayOfWeek.Sunday => 8,
+            DayOfWeek.Monday => 2,
+            DayOfWeek.Tuesday => 3,
+            DayOfWeek.Wednesday => 4,
+            DayOfWeek.Thursday => 5,
+            DayOfWeek.Friday => 6,
+            DayOfWeek.Saturday => 7,
+            _ => 8
+        };
     }
 
     /// <summary>

@@ -147,7 +147,7 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task<int> HandleTestAsync(int userId, int testTypeId, SaveTestResultRequest request)
+        public async Task<JsonObject> HandleTestAsync(int userId, int testTypeId, SaveTestResultRequest request)
         {
             try
             {
@@ -208,9 +208,63 @@ namespace capstone_backend.Business.Services
                     _unitOfWork.PersonalityTests.Update(record);
 
                 await _unitOfWork.SaveChangesAsync();
-                return record.Id;
+
+                // Clone and return
+                var jsonClone = json;
+                if (jsonClone.ContainsKey("answers"))
+                    jsonClone.Remove("answers");
+
+                return jsonClone;
             }
             catch (Exception ex)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<PersonalityTestStateResponse> CheckTestStateAsync(int userId, int testTypeId)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member profile not found");
+
+                var testType = await _unitOfWork.TestTypes.GetByIdForMemberAsync(testTypeId);
+                if (testType == null)
+                    throw new Exception("Test type not found");
+
+                var inProgressTest = await _unitOfWork.PersonalityTests.GetInProgressTestByUserAndTestTypeAsync(member.Id, testTypeId);
+                if (inProgressTest == null)
+                    return new PersonalityTestStateResponse
+                    {
+                        State = TestMode.NEW.ToString(),
+                        TestTypeId = testTypeId,
+                        CurrentQuestionIndex = 0,
+                        AnsweredCount = 0,
+                        TotalQuestions = 0,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                var json = JsonNode.Parse(inProgressTest.ResultData);
+                int answeredCount = 0;
+                if (json["answers"] is JsonArray arr)
+                {
+                    answeredCount = arr.Count;
+                }
+
+                return new PersonalityTestStateResponse
+                {
+                    State = TestMode.IN_PROGRESS.ToString(),
+                    TestTypeId = testTypeId,
+                    CurrentQuestionIndex = json["currentQuestionIndex"]?.GetValue<int>() ?? 0,
+                    AnsweredCount = answeredCount,
+                    TotalQuestions = testType.TotalQuestions.Value,
+                    UpdatedAt = inProgressTest.UpdatedAt.Value
+                };
+            }
+            catch (Exception)
             {
 
                 throw;
