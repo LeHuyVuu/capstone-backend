@@ -40,6 +40,8 @@ public interface IUnitOfWork : IDisposable
 
     IDatePlanRepository DatePlans { get; }
 
+    IDatePlanItemRepository DatePlanItems { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>

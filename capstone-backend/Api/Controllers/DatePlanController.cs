@@ -1,4 +1,5 @@
 ﻿using capstone_backend.Business.DTOs.DatePlan;
+using capstone_backend.Business.DTOs.DatePlanItem;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -81,6 +82,24 @@ namespace capstone_backend.Api.Controllers
                 var result = await _datePlanService.CreateDatePlanAsync(userId.Value, request);
 
                 return OkResponse(result, "Created date plan successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Add venue to Date Plan
+        /// </summary>
+        [HttpPost("{datePlanId:int}/items")]
+        public async Task<IActionResult> AddVenuesToDatePlan(int datePlanId, CreateDatePlanItemRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.AddVenuesToDatePlanAsync(userId.Value, datePlanId, request);
+                return OkResponse(result, "Added venues to date plan successfully");
             }
             catch (Exception ex)
             {

@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using capstone_backend.Business.DTOs.DatePlan;
+using capstone_backend.Business.DTOs.DatePlanItem;
 using capstone_backend.Data.Entities;
 
 namespace capstone_backend.Business.Mappings
@@ -11,6 +12,8 @@ namespace capstone_backend.Business.Mappings
             CreateMap<CreateDatePlanRequest, DatePlan>();
             CreateMap<DatePlan, DatePlanResponse>();
             CreateMap<DatePlan, DatePlanDetailResponse>();
+
+            CreateMap<DatePlanItemRequest, DatePlanItem>();
         }
     }
 }

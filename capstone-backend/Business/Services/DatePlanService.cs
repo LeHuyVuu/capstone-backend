@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.DatePlan;
+using capstone_backend.Business.DTOs.DatePlanItem;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
@@ -17,6 +18,46 @@ namespace capstone_backend.Business.Services
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+        }
+
+        public async Task<int> AddVenuesToDatePlanAsync(int value, int datePlanId, CreateDatePlanItemRequest request)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(value);
+                if (member == null)
+                    throw new Exception("Member not found");
+
+                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);    
+                if (couple == null)
+                    throw new Exception("Member does not belong to any couples");
+
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
+                if (datePlan == null)
+                    throw new Exception("Date plan not found");
+
+                // Snapshot
+                var venues = request.Venues ?? new List<DatePlanItemRequest>();
+                if (venues == null || !venues.Any())
+                    throw new Exception("Venues cannot be empty");
+
+                var items = venues.Select(v =>
+                {
+                    var item = _mapper.Map<DatePlanItem>(v);
+                    item.DatePlanId = datePlanId;
+                    item.Status = DatePlanItemStatus.PLANNED.ToString();
+
+                    return item;
+                }).ToList();
+
+                await _unitOfWork.DatePlanItems.AddRangeAsync(items);
+                return await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
         }
 
         public async Task<int> CreateDatePlanAsync(int userId, CreateDatePlanRequest request)
