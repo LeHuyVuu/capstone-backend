@@ -50,6 +50,25 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Get Detail Date Plan
+        /// </summary>
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetDetailDatePlan(int id)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.GetByIdAsync(id, userId.Value);
+                return OkResponse(result, "Fetched date plan detail successfully");
+            }
+            catch (Exception ex)
+            {
+
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Create Date Plan
         /// </summary>
         [HttpPost]

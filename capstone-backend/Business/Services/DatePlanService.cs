@@ -135,5 +135,32 @@ namespace capstone_backend.Business.Services
                 throw;
             }
         }
+
+        public async Task<DatePlanDetailResponse> GetByIdAsync(int datePlanId, int userId)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member not found");
+
+                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                if (couple == null)
+                    throw new Exception("Member does not belong to any couples");
+
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
+                if (datePlan == null)
+                    throw new Exception("Date plan not found");
+
+                var response = _mapper.Map<DatePlanDetailResponse>(datePlan);
+
+                return response;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
     }
 }
