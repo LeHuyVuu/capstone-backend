@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.DatePlan;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
@@ -51,6 +52,82 @@ namespace capstone_backend.Business.Services
 
                 await _unitOfWork.DatePlans.AddAsync(datePlan);
                 return await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<PagedResult<DatePlanResponse>> GetAllDatePlansByTimeAsync(int pageNumber, int pageSize, int userId, string time)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member not found");
+
+                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                if (couple == null)
+                    throw new Exception("Member does not belong to any couples");
+
+                var now = DateTime.UtcNow;
+                IEnumerable<DatePlan> items = Enumerable.Empty<DatePlan>();
+                var totalCount = 0;
+
+                switch (time)
+                {
+                    case "UPCOMING":
+                        (items, totalCount) = await _unitOfWork.DatePlans.GetPagedAsync(
+                                pageNumber,
+                                pageSize,
+                                dp => dp.CoupleId == couple.id &&
+                                      dp.IsDeleted == false &&
+                                      dp.Status != DatePlanStatus.CANCELLED.ToString() &&
+                                      ((dp.PlannedEndAt.HasValue && dp.PlannedEndAt >= now) ||
+                                        (dp.PlannedEndAt == null && dp.PlannedStartAt.HasValue && dp.PlannedStartAt >= now)
+                                      ),
+                                dp => dp.OrderBy(dp => dp.PlannedStartAt ?? dp.CreatedAt)
+                            );
+                        break;
+
+                    case "PAST":
+                        (items, totalCount) = await _unitOfWork.DatePlans.GetPagedAsync(
+                                pageNumber,
+                                pageSize,
+                                dp => dp.CoupleId == couple.id &&
+                                      dp.IsDeleted == false &&
+                                      dp.Status != DatePlanStatus.CANCELLED.ToString() &&
+                                      ((dp.PlannedEndAt.HasValue && dp.PlannedEndAt < now) ||
+                                        (dp.PlannedEndAt == null && dp.PlannedStartAt.HasValue && dp.PlannedStartAt < now)
+                                      ),
+                                dp => dp.OrderBy(dp => dp.PlannedStartAt ?? dp.CreatedAt)
+                            );
+                        break;
+
+                    case "ALL":
+                        (items, totalCount) = await _unitOfWork.DatePlans.GetPagedAsync(
+                                pageNumber,
+                                pageSize,
+                                dp => dp.CoupleId == couple.id &&
+                                      dp.IsDeleted == false &&
+                                      dp.Status != DatePlanStatus.CANCELLED.ToString(),
+                                dp => dp.OrderBy(dp => dp.PlannedStartAt ?? dp.CreatedAt)
+                            );
+                        break;
+
+                    default:
+                        break;
+                }
+
+                return new PagedResult<DatePlanResponse>()
+                {
+                    Items = _mapper.Map<List<DatePlanResponse>>(items),
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    TotalCount = totalCount
+                };
             }
             catch (Exception)
             {

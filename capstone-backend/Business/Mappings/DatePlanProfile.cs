@@ -9,6 +9,7 @@ namespace capstone_backend.Business.Mappings
         public DatePlanProfile()
         {
             CreateMap<CreateDatePlanRequest, DatePlan>();
+            CreateMap<DatePlan, DatePlanResponse>();
         }
     }
 }
