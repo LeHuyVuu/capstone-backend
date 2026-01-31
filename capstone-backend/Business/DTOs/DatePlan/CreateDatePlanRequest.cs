@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using capstone_backend.Business.DTOs.DatePlanItem;
+using System.ComponentModel.DataAnnotations;
 
 namespace capstone_backend.Business.DTOs.DatePlan
 {
