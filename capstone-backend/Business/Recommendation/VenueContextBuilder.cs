@@ -1,9 +1,10 @@
 using System.Text;
+using capstone_backend.Data.Entities;
 
 namespace capstone_backend.Business.Recommendation;
 
 /// <summary>
-/// Builds venue context for OpenAI from ranked venues
+/// Builds venue context for OpenAI from venues
 /// Static helper class for context construction
 /// </summary>
 public static class VenueContextBuilder
@@ -12,7 +13,7 @@ public static class VenueContextBuilder
     /// Builds context string for OpenAI from venues
     /// </summary>
     public static string BuildVenueContext(
-        List<(Data.Entities.VenueLocation venue, double score)> rankedVenues,
+        List<VenueLocation> venues,
         string? coupleMoodType,
         List<string> personalityTags,
         string? userQuery,
@@ -31,9 +32,9 @@ public static class VenueContextBuilder
             sb.AppendLine();
         }
 
-        for (int i = 0; i < rankedVenues.Count; i++)
+        for (int i = 0; i < venues.Count; i++)
         {
-            var (venue, score) = rankedVenues[i];
+            var venue = venues[i];
             sb.AppendLine($"\n[{i + 1}] {venue.Name}");
             sb.AppendLine($"Địa chỉ: {venue.Address}");
             sb.AppendLine($"Mô tả: {venue.Description}");

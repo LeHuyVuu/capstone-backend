@@ -48,6 +48,8 @@ public partial class VenueLocation
     [Precision(11, 8)]
     public decimal? Longitude { get; set; }
 
+    public string? Area { get; set; }
+
     [Precision(3, 2)]
     public decimal? AverageRating { get; set; }
 
@@ -61,6 +63,8 @@ public partial class VenueLocation
     public string? CoverImage { get; set; }
 
     public string? InteriorImage { get; set; }
+
+    public string? Category { get; set; }
 
     public string? FullPageMenuImage { get; set; }
 

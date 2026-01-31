@@ -364,8 +364,8 @@ Không truyền region/lat/lon → Search toàn quốc
         try
         {
             _logger.LogInformation(
-                "Recommendation request - Query: {Query}, MBTI: {Mbti}, Partner: {Partner}, Mood: {Mood}, Region: {Region}",
-                request.Query, request.MbtiType, request.PartnerMbtiType, request.MoodId, request.Region);
+                "Recommendation request - Query: {Query}, MBTI: {Mbti}, Partner: {Partner}, Mood: {Mood}, Area: {Area}",
+                request.Query, request.MbtiType, request.PartnerMbtiType, request.MoodId, request.Area);
 
             var result = await _recommendationService.GetRecommendationsAsync(request);
 
