@@ -62,6 +62,8 @@ public partial class VenueLocation
 
     public string? InteriorImage { get; set; }
 
+    public string? Category { get; set; }
+
     public string? FullPageMenuImage { get; set; }
 
     public bool? IsOwnerVerified { get; set; }

@@ -126,6 +126,8 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<WithdrawRequest> WithdrawRequests { get; set; }
 
+    public virtual DbSet<Category> Categories { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Accessory>(entity =>
@@ -926,6 +928,15 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.Wallet).WithMany(p => p.WithdrawRequests)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("withdraw_requests_wallet_id_fkey");
+        });
+
+
+        modelBuilder.Entity<Category>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("categories_pkey");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
         });
 
         OnModelCreatingPartial(modelBuilder);
