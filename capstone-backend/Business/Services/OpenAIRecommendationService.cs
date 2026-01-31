@@ -100,7 +100,7 @@ public class OpenAIRecommendationService : IRecommendationService
 
             // Phase 3: Query venues trực tiếp từ repo
             var hasFilters = !string.IsNullOrEmpty(coupleMoodType) || personalityTags.Any();
-            var venues = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
+            var venuesWithDistance = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
                 hasFilters ? coupleMoodType : null,
                 hasFilters ? personalityTags : new List<string>(),
                 searchArea,
@@ -109,11 +109,13 @@ public class OpenAIRecommendationService : IRecommendationService
                 request.RadiusKm,
                 request.Limit
             );
+            var venues = venuesWithDistance.Select(x => x.Venue).ToList();
+            var distanceMap = venuesWithDistance.ToDictionary(x => x.Venue.Id, x => x.DistanceKm);
 
             // Fallback: nếu có filter mà không đủ kết quả, query thêm không filter
             if (hasFilters && venues.Count < request.Limit)
             {
-                var additionalVenues = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
+                var additionalVenuesWithDistance = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
                     null,
                     new List<string>(),
                     searchArea,
@@ -124,11 +126,12 @@ public class OpenAIRecommendationService : IRecommendationService
                 );
 
                 var venueIds = new HashSet<int>(venues.Select(v => v.Id));
-                foreach (var venue in additionalVenues)
+                foreach (var (venue, distanceKm) in additionalVenuesWithDistance)
                 {
                     if (venueIds.Add(venue.Id))
                     {
                         venues.Add(venue);
+                        distanceMap[venue.Id] = distanceKm;
                     }
                 }
             }
@@ -166,7 +169,7 @@ public class OpenAIRecommendationService : IRecommendationService
             );
 
             // Phase 5: Build response
-            var recommendations = RecommendationFormatter.FormatRecommendedVenues(venues, aiExplanations);
+            var recommendations = RecommendationFormatter.FormatRecommendedVenues(venues, aiExplanations, distanceMap);
             stopwatch.Stop();
 
             return new RecommendationResponse
@@ -195,7 +198,7 @@ public class OpenAIRecommendationService : IRecommendationService
     {
         try
         {
-            var venues = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
+            var venuesWithDistance = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
                 null, 
                 new List<string>(), 
                 request.Area, 
@@ -204,6 +207,8 @@ public class OpenAIRecommendationService : IRecommendationService
                 request.RadiusKm, 
                 request.Limit
             );
+            var venues = venuesWithDistance.Select(x => x.Venue).ToList();
+            var distanceMap = venuesWithDistance.ToDictionary(x => x.Venue.Id, x => x.DistanceKm);
 
             if (!venues.Any())
             {
@@ -217,7 +222,7 @@ public class OpenAIRecommendationService : IRecommendationService
 
             return new RecommendationResponse
             {
-                Recommendations = RecommendationFormatter.FormatFallbackVenues(venues, request.Limit),
+                Recommendations = RecommendationFormatter.FormatFallbackVenues(venues, request.Limit, distanceMap),
                 Explanation = "Đây là những địa điểm phổ biến và được yêu thích nhất.",
                 ProcessingTimeMs = processingTimeMs
             };

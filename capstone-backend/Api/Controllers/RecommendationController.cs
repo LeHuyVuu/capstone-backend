@@ -286,9 +286,31 @@ Không truyền region/lat/lon → Search toàn quốc
     ""recommendations"": [
       {
         ""venueLocationId"": 1,
+        ""locationTagId"": 5,
+        ""venueOwnerId"": 10,
         ""name"": ""Cà phê Bên Sông Hàn"",
         ""address"": ""12 Bạch Đằng, Hải Châu, Đà Nẵng"",
         ""description"": ""Quán cà phê view sông, phù hợp đi dạo tối và trò chuyện."",
+        ""email"": ""contact@cafebensonghan.vn"",
+        ""phoneNumber"": ""0901234567"",
+        ""websiteUrl"": ""https://cafebensonghan.vn"",
+        ""openingTime"": ""2026-01-01T07:00:00"",
+        ""closingTime"": ""2026-01-01T22:00:00"",
+        ""isOpen"": true,
+        ""priceMin"": 25000,
+        ""priceMax"": 80000,
+        ""latitude"": 16.0544,
+        ""longitude"": 108.2022,
+        ""area"": ""Đà Nẵng"",
+        ""avarageCost"": 50000,
+        ""status"": ""ACTIVE"",
+        ""category"": ""Cafe"",
+        ""isOwnerVerified"": true,
+        ""createdAt"": ""2026-01-01T00:00:00"",
+        ""updatedAt"": ""2026-01-30T00:00:00"",
+        ""isDeleted"": false,
+        ""distance"": 2.35,
+        ""distanceText"": ""2.4 km"",
         ""matchReason"": ""Phù hợp với sở thích của bạn"",
         ""averageRating"": 5,
         ""reviewCount"": 1,
@@ -298,22 +320,6 @@ Không truyền region/lat/lon → Search toàn quốc
         ""matchedTags"": [
           ""CẢ HAI YÊN TĨNH"",
           ""LÃNG MẠN""
-        ]
-      },
-      {
-        ""venueLocationId"": 3,
-        ""name"": ""Gốm & Trà Thảo Điền"",
-        ""address"": ""25 Xuân Thủy, Thảo Điền, Thủ Đức, TP.HCM"",
-        ""description"": ""Workshop gốm + trà, trải nghiệm mới, an toàn, dễ gắn kết."",
-        ""matchReason"": ""Phù hợp với sở thích của bạn"",
-        ""averageRating"": 5,
-        ""reviewCount"": 1,
-        ""coverImage"": null,
-        ""interiorImage"": null,
-        ""fullPageMenuImage"": null,
-        ""matchedTags"": [
-          ""HỨNG THÚ KHÁM PHÁ"",
-          ""VUI VẺ""
         ]
       }
     ],
@@ -334,9 +340,31 @@ Không truyền region/lat/lon → Search toàn quốc
 | Field | Type | Description |
 |-------|------|-------------|
 | `venueLocationId` | int | ID của địa điểm |
+| `locationTagId` | int? | ID của location tag |
+| `venueOwnerId` | int | ID của chủ sở hữu venue |
 | `name` | string | Tên địa điểm |
 | `address` | string | Địa chỉ |
 | `description` | string | Mô tả ngắn |
+| `email` | string? | Email liên hệ |
+| `phoneNumber` | string? | Số điện thoại |
+| `websiteUrl` | string? | Website URL |
+| `openingTime` | datetime? | Giờ mở cửa |
+| `closingTime` | datetime? | Giờ đóng cửa |
+| `isOpen` | bool? | Trạng thái mở/đóng cửa |
+| `priceMin` | decimal? | Giá tối thiểu |
+| `priceMax` | decimal? | Giá tối đa |
+| `latitude` | decimal? | Vĩ độ GPS |
+| `longitude` | decimal? | Kinh độ GPS |
+| `area` | string? | Khu vực/Thành phố |
+| `avarageCost` | decimal? | Chi phí trung bình |
+| `status` | string? | Trạng thái venue |
+| `category` | string? | Danh mục venue |
+| `isOwnerVerified` | bool? | Chủ sở hữu đã xác minh |
+| `createdAt` | datetime? | Thời gian tạo |
+| `updatedAt` | datetime? | Thời gian cập nhật |
+| `isDeleted` | bool? | Đã xóa hay chưa |
+| `distance` | decimal? | Khoảng cách tính bằng km (null nếu không có lat/lon) |
+| `distanceText` | string? | Khoảng cách hiển thị (VD: ""500 m"" hoặc ""2.4 km"") |
 | `matchReason` | string | Lý do AI recommend |
 | `averageRating` | decimal? | Rating trung bình (null nếu không có review) |
 | `reviewCount` | int | Số review |

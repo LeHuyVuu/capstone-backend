@@ -88,8 +88,9 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
     /// <summary>
     /// Get venues for recommendations with mood/personality filtering
     /// Supports: lat/lon radius search OR area (province/city) filtering
+    /// Returns venues with distance calculated using Haversine formula
     /// </summary>
-    public async Task<List<VenueLocation>> GetForRecommendationsAsync(
+    public async Task<List<(VenueLocation Venue, decimal? DistanceKm)>> GetForRecommendationsAsync(
         string? coupleMoodType,
         List<string> personalityTags,
         string? area,
@@ -102,18 +103,20 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
             .AsNoTracking()
             .Where(v => v.IsDeleted != true);
 
+        bool hasGeoFilter = latitude.HasValue && longitude.HasValue;
+
         // PRIORITY 1: Direct lat/lon radius search (most accurate)
-        if (latitude.HasValue && longitude.HasValue)
+        if (hasGeoFilter)
         {
             // Calculate bounding box for faster query (approximate)
             // 1 degree latitude ≈ 111km, 1 degree longitude ≈ 111km * cos(latitude)
             var radius = radiusKm ?? 5m; // Default 5km
             var latDelta = radius / 111m;
-            var lonDelta = radius / (111m * (decimal)Math.Cos((double)latitude.Value * Math.PI / 180));
+            var lonDelta = radius / (111m * (decimal)Math.Cos((double)latitude!.Value * Math.PI / 180));
 
             var minLat = latitude.Value - latDelta;
             var maxLat = latitude.Value + latDelta;
-            var minLon = longitude.Value - lonDelta;
+            var minLon = longitude!.Value - lonDelta;
             var maxLon = longitude.Value + lonDelta;
 
             query = query.Where(v => 
@@ -160,9 +163,59 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
         // Always include reviews for rating calculation
         query = query.Include(v => v.Reviews);
 
-        return await query
-            .Take(limit)
+        // Fetch venues from database
+        var venues = await query
             .AsSplitQuery()
             .ToListAsync();
+
+        // Calculate distance and sort if geo filter is provided
+        if (hasGeoFilter)
+        {
+            var venuesWithDistance = venues
+                .Select(v => (
+                    Venue: v,
+                    DistanceKm: CalculateHaversineDistance(
+                        latitude!.Value, longitude!.Value,
+                        v.Latitude ?? 0, v.Longitude ?? 0
+                    )
+                ))
+                .Where(x => x.DistanceKm <= (radiusKm ?? 5m)) // Filter by actual distance
+                .OrderBy(x => x.DistanceKm) // Sort by distance (nearest first)
+                .Take(limit)
+                .Select(x => (x.Venue, (decimal?)x.DistanceKm))
+                .ToList();
+
+            return venuesWithDistance;
+        }
+
+        // No geo filter - return without distance
+        return venues
+            .Take(limit)
+            .Select(v => (v, (decimal?)null))
+            .ToList();
+    }
+
+
+    private static decimal CalculateHaversineDistance(decimal lat1, decimal lon1, decimal lat2, decimal lon2)
+    {
+        const double EarthRadiusKm = 6371.0;
+
+        var dLat = ToRadians((double)(lat2 - lat1));
+        var dLon = ToRadians((double)(lon2 - lon1));
+
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                Math.Cos(ToRadians((double)lat1)) * Math.Cos(ToRadians((double)lat2)) *
+                Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        var distance = EarthRadiusKm * c;
+
+        return (decimal)Math.Round(distance, 2);
+    }
+
+
+    private static double ToRadians(double degrees)
+    {
+        return degrees * Math.PI / 180;
     }
 }

@@ -35,6 +35,7 @@ public interface IVenueLocationRepository : IGenericRepository<VenueLocation>
     /// <summary>
     /// Get venues for recommendations with filtering
     /// Priority: lat/lon radius search > area (province code) filtering
+    /// Returns venues with calculated distance when lat/lon provided
     /// </summary>
     /// <param name="coupleMoodType">Couple mood type to filter</param>
     /// <param name="personalityTags">Personality tags to filter</param>
@@ -43,8 +44,8 @@ public interface IVenueLocationRepository : IGenericRepository<VenueLocation>
     /// <param name="longitude">Longitude for geo-location search</param>
     /// <param name="radiusKm">Search radius in kilometers</param>
     /// <param name="limit">Maximum number of results</param>
-    /// <returns>List of matching venues</returns>
-    Task<List<VenueLocation>> GetForRecommendationsAsync(
+    /// <returns>List of matching venues with distance (sorted by distance when lat/lon provided)</returns>
+    Task<List<(VenueLocation Venue, decimal? DistanceKm)>> GetForRecommendationsAsync(
         string? coupleMoodType,
         List<string> personalityTags,
         string? area,
