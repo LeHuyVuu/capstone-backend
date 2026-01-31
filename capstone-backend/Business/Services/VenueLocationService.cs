@@ -59,24 +59,6 @@ public class VenueLocationService : IVenueLocationService
     
     #endregion
 
-    /// <summary>
-    /// Deserialize JSON string to list of image URLs
-    /// </summary>
-    private static List<string>? DeserializeImages(string? json)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-            return null;
-        try
-        {
-            if (json.TrimStart().StartsWith("["))
-                return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json);
-            return new List<string> { json };
-        }
-        catch
-        {
-            return new List<string> { json };
-        }
-    }
 
     /// <summary>
     /// Get venue location detail by ID including location tag, venue owner profile, and today's opening hours
