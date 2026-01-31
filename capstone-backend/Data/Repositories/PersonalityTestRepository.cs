@@ -41,5 +41,12 @@ namespace capstone_backend.Data.Repositories
                 .OrderByDescending(pt => pt.TakenAt ?? pt.CreatedAt)
                 .FirstOrDefaultAsync();
         }
+
+        public Task<PersonalityTest?> GetInProgressTestByUserAndTestTypeAsync(int memberId, int testTypeId)
+        {
+            return _dbSet
+                .Where(pt => pt.MemberId == memberId && pt.TestTypeId == testTypeId && pt.IsDeleted == false && pt.Status == PersonalityTestStatus.IN_PROGRESS.ToString())
+                .FirstOrDefaultAsync();
+        }
     }
 }

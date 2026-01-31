@@ -1,5 +1,6 @@
 ﻿using capstone_backend.Business.DTOs.PersonalityTest;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -94,14 +95,33 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Get All Questions of 1 test type
+        /// Check state of test
         /// </summary>
-        [HttpGet("{testTypeId:int}/questions")]
-        public async Task<IActionResult> GetQuestions(int testTypeId)
+        [HttpGet("{testTypeId:int}/state")]
+        public async Task<IActionResult> CheckTestState(int testTypeId)
         {
             try
             {
-                var result = await _questionService.GetAllQuestionsForMemberAsync(testTypeId);
+                var userId = GetCurrentUserId();
+                var result = await _personalityTestService.CheckTestStateAsync(userId.Value, testTypeId);
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get All Questions of 1 test type
+        /// </summary>
+        [HttpGet("{testTypeId:int}/questions")]
+        public async Task<IActionResult> GetQuestions(int testTypeId, [FromQuery] TestMode mode = TestMode.IN_PROGRESS)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _questionService.GetAllQuestionsForMemberAsync(userId.Value, testTypeId, mode);
                 return OkResponse(result);
             }
             catch (Exception ex)

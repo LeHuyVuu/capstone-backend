@@ -84,6 +84,7 @@ public static class ServiceExtensions
         services.AddScoped<IVenueLocationRepository, VenueLocationRepository>();
         services.AddScoped<ILocationTagRepository, LocationTagRepository>();
         services.AddScoped<IDatePlanRepository, DatePlanRepository>();
+        services.AddScoped<IDatePlanItemRepository, DatePlanItemRepository>();
         services.AddScoped<IVenueOwnerProfileRepository, VenueOwnerProfileRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();

@@ -5,5 +5,6 @@ namespace capstone_backend.Data.Interfaces
 {
     public interface IDatePlanRepository : IGenericRepository<DatePlan>
     {
+        Task<DatePlan?> GetByIdAndCoupleIdAsync(int id, int coupleId, bool includeItems = false);
     }
 }

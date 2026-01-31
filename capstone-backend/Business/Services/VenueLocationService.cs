@@ -6,6 +6,7 @@ using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace capstone_backend.Business.Services;
 
@@ -24,6 +25,39 @@ public class VenueLocationService : IVenueLocationService
         _mapper = mapper;
         _logger = logger;
     }
+
+    #region Image JSON Helpers
+    
+    /// <summary>
+    /// Serialize list of image URLs to JSON string (max 5 images)
+    /// </summary>
+    private static string? SerializeImages(List<string>? images)
+    {
+        if (images == null || images.Count == 0)
+            return null;
+        return JsonSerializer.Serialize(images.Take(5).ToList());
+    }
+
+    /// <summary>
+    /// Deserialize JSON string to list of image URLs
+    /// </summary>
+    private static List<string>? DeserializeImages(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return null;
+        try
+        {
+            if (json.TrimStart().StartsWith("["))
+                return JsonSerializer.Deserialize<List<string>>(json);
+            return new List<string> { json };
+        }
+        catch (JsonException)
+        {
+            return new List<string> { json };
+        }
+    }
+    
+    #endregion
 
     /// <summary>
     /// Deserialize JSON string to list of image URLs
@@ -201,9 +235,9 @@ public class VenueLocationService : IVenueLocationService
             PriceMax = request.PriceMax,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
-            CoverImage = request.CoverImage,
-            InteriorImage = request.InteriorImage,
-            FullPageMenuImage = request.FullPageMenuImage,
+            CoverImage = SerializeImages(request.CoverImage),
+            InteriorImage = SerializeImages(request.InteriorImage),
+            FullPageMenuImage = SerializeImages(request.FullPageMenuImage),
             IsOwnerVerified = request.IsOwnerVerified ?? false,
             VenueOwnerId = venueOwnerProfile.Id,
             Status = "Active",
@@ -293,13 +327,13 @@ public class VenueLocationService : IVenueLocationService
             venue.Longitude = request.Longitude;
         
         if (request.CoverImage != null)
-            venue.CoverImage = request.CoverImage;
+            venue.CoverImage = SerializeImages(request.CoverImage);
         
         if (request.InteriorImage != null)
-            venue.InteriorImage = request.InteriorImage;
+            venue.InteriorImage = SerializeImages(request.InteriorImage);
         
         if (request.FullPageMenuImage != null)
-            venue.FullPageMenuImage = request.FullPageMenuImage;
+            venue.FullPageMenuImage = SerializeImages(request.FullPageMenuImage);
         
         if (request.IsOwnerVerified.HasValue)
             venue.IsOwnerVerified = request.IsOwnerVerified;
