@@ -26,6 +26,25 @@ public class VenueLocationService : IVenueLocationService
     }
 
     /// <summary>
+    /// Deserialize JSON string to list of image URLs
+    /// </summary>
+    private static List<string>? DeserializeImages(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return null;
+        try
+        {
+            if (json.TrimStart().StartsWith("["))
+                return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json);
+            return new List<string> { json };
+        }
+        catch
+        {
+            return new List<string> { json };
+        }
+    }
+
+    /// <summary>
     /// Get venue location detail by ID including location tag, venue owner profile, and today's opening hours
     /// </summary>
     public async Task<VenueLocationDetailResponse?> GetVenueLocationDetailByIdAsync(int venueId)
@@ -39,6 +58,11 @@ public class VenueLocationService : IVenueLocationService
         }
 
         var response = _mapper.Map<VenueLocationDetailResponse>(venue);
+
+        // Deserialize image JSON strings to arrays
+        response.CoverImage = DeserializeImages(venue.CoverImage);
+        response.InteriorImage = DeserializeImages(venue.InteriorImage);
+        response.FullPageMenuImage = DeserializeImages(venue.FullPageMenuImage);
 
         // Add today's opening hour info
         var todayOpeningHour = venue.VenueOpeningHours?.FirstOrDefault();
@@ -587,10 +611,10 @@ public class VenueLocationService : IVenueLocationService
             AvarageCost = v.AvarageCost,
             ReviewCount = v.ReviewCount,
             Status = v.Status,
-            CoverImage = v.CoverImage,
-            InteriorImage = v.InteriorImage,
+            CoverImage = DeserializeImages(v.CoverImage),
+            InteriorImage = DeserializeImages(v.InteriorImage),
             Category = v.Category,
-            FullPageMenuImage = v.FullPageMenuImage,
+            FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
             IsOwnerVerified = v.IsOwnerVerified,
             CreatedAt = v.CreatedAt,
             UpdatedAt = v.UpdatedAt,
