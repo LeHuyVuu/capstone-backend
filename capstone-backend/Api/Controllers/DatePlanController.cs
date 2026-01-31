@@ -32,8 +32,8 @@ namespace capstone_backend.Api.Controllers
         /// </remarks>
         [HttpGet]
         public async Task<IActionResult> GetDatePlans(
-            [FromQuery] DatePlanTime time = DatePlanTime.ALL, 
-            [FromQuery] int pageNumber = 1, 
+            [FromQuery] DatePlanTime time = DatePlanTime.ALL,
+            [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 5)
         {
             try
@@ -53,13 +53,13 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Get Detail Date Plan
         /// </summary>
-        [HttpGet("{id:int}")]
-        public async Task<IActionResult> GetDetailDatePlan(int id)
+        [HttpGet("{datePlanId:int}")]
+        public async Task<IActionResult> GetDetailDatePlan(int datePlanId)
         {
             try
             {
                 var userId = GetCurrentUserId();
-                var result = await _datePlanService.GetByIdAsync(id, userId.Value);
+                var result = await _datePlanService.GetByIdAsync(datePlanId, userId.Value);
                 return OkResponse(result, "Fetched date plan detail successfully");
             }
             catch (Exception ex)
@@ -106,5 +106,22 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Update Date Plan
+        /// </summary>
+        //[HttpPatch("{datePlanId:int}")]
+        //public async Task<IActionResult> UpdateDatePlan(int datePlanId)
+        //{
+        //    try
+        //    {
+
+        //        return OkResponse(null, "Updated date plan successfully");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequestResponse(ex.Message);
+        //    }
+        //}
     }
 }
