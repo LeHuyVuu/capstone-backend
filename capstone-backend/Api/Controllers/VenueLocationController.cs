@@ -43,6 +43,32 @@ public class VenueLocationController : BaseController
     }
 
     /// <summary>
+    /// Get all venue locations for the authenticated venue owner.
+    /// Requires VENUEOWNER role. User ID is extracted from JWT token (sub claim).
+    /// Returns venue locations with location tag details (couple mood type and couple personality type).
+    /// </summary>
+    /// <returns>List of venue locations owned by the authenticated user</returns>
+    [HttpGet("my-venues")]
+    [Authorize(Roles = "VENUEOWNER")]
+    [ProducesResponseType(typeof(ApiResponse<List<VenueOwnerVenueLocationResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    public async Task<IActionResult> GetMyVenueLocations()
+    {
+        var currentUserId = GetCurrentUserId();
+        if (!currentUserId.HasValue)
+        {
+            return UnauthorizedResponse("User not authenticated");
+        }
+
+        _logger.LogInformation("User {UserId} requesting their venue locations", currentUserId.Value);
+
+        var venues = await _venueLocationService.GetVenueLocationsByVenueOwnerAsync(currentUserId.Value);
+
+        return OkResponse(venues, $"Retrieved {venues.Count} venue locations");
+    }
+
+    /// <summary>
     /// Get reviews for a specific venue location.
     /// Returns reviews with member information (name, avatar) and like count.
     /// </summary>
@@ -83,6 +109,11 @@ public class VenueLocationController : BaseController
         {
             var venue = await _venueLocationService.CreateVenueLocationAsync(request, currentUserId.Value);
             return CreatedResponse(venue, "Venue location registered successfully");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid operation registering venue location for user {UserId}", currentUserId);
+            return BadRequestResponse(ex.Message);
         }
         catch (Exception ex)
         {

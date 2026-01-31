@@ -17,11 +17,6 @@ public class CreateVenueLocationRequest
 
     public string? WebsiteUrl { get; set; }
 
-    public DateTime? OpeningTime { get; set; }
-
-    public DateTime? ClosingTime { get; set; }
-
-    public bool? IsOpen { get; set; }
 
     public decimal? PriceMin { get; set; }
 

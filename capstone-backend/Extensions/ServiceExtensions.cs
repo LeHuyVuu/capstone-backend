@@ -6,6 +6,8 @@ using capstone_backend.Business.Services;
 using capstone_backend.Data.Repositories;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -81,6 +83,8 @@ public static class ServiceExtensions
         services.AddScoped<IPersonalityTestRepository, PersonalityTestRepository>();
         services.AddScoped<IVenueLocationRepository, VenueLocationRepository>();
         services.AddScoped<ILocationTagRepository, LocationTagRepository>();
+        services.AddScoped<IDatePlanRepository, DatePlanRepository>();
+        services.AddScoped<IVenueOwnerProfileRepository, VenueOwnerProfileRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -103,7 +107,6 @@ public static class ServiceExtensions
         // Register AI Recommendation Services
         services.AddScoped<IMoodMappingService, MoodMappingService>();
         services.AddScoped<IPersonalityMappingService, PersonalityMappingService>();
-        services.AddScoped<IVenueScoringEngine, VenueScoringEngine>();
         services.AddScoped<IRecommendationService, OpenAIRecommendationService>();
 
         // Đăng ký AWS Rekognition Service để phân tích cảm xúc khuôn mặt
@@ -121,9 +124,13 @@ public static class ServiceExtensions
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IPersonalityTestService, PersonalityTestService>();
         services.AddScoped<IVenueLocationService, VenueLocationService>();
+        services.AddScoped<IDatePlanService, DatePlanService>();
 
         // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
         services.AddScoped<ILocationFollowerService, LocationFollowerService>();
+
+        // Register Subscription Package Service
+        services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
 
         return services;
     }
@@ -436,6 +443,55 @@ public static class ServiceExtensions
                     .AllowCredentials();
             });
         });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Đăng ký Hangfire với PostgreSQL
+    /// Dùng để chạy background jobs như cập nhật IsClosed status
+    /// </summary>
+    public static IServiceCollection AddHangfireConfiguration(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var dbHost = Environment.GetEnvironmentVariable("DB_HOST");
+        var dbPort = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
+        var dbName = Environment.GetEnvironmentVariable("DB_NAME");
+        var dbUser = Environment.GetEnvironmentVariable("DB_USER");
+        var dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD");
+
+        if (string.IsNullOrEmpty(dbHost) ||
+            string.IsNullOrEmpty(dbName) ||
+            string.IsNullOrEmpty(dbUser) ||
+            string.IsNullOrEmpty(dbPassword))
+        {
+            Console.WriteLine("[WARNING] Hangfire: Database environment variables not configured, skipping Hangfire setup");
+            return services;
+        }
+
+        var hangfireConnectionString =
+            $"Host={dbHost};" +
+            $"Port={dbPort};" +
+            $"Database={dbName};" +
+            $"Username={dbUser};" +
+            $"Password={dbPassword};";
+
+        services.AddHangfire(configuration =>
+        {
+            configuration
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UsePostgreSqlStorage(hangfireConnectionString);
+        });
+
+        services.AddHangfireServer(options =>
+        {
+            options.WorkerCount = Environment.ProcessorCount * 2;
+        });
+
+        Console.WriteLine("[INFO] Hangfire: Configured with PostgreSQL");
 
         return services;
     }

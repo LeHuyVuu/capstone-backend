@@ -60,7 +60,7 @@ public class VenueLocationService : IVenueLocationService
     #endregion
 
     /// <summary>
-    /// Get venue location detail by ID including location tag, venue owner profile, and opening hours
+    /// Get venue location detail by ID including location tag, venue owner profile, and today's opening hours
     /// </summary>
     public async Task<VenueLocationDetailResponse?> GetVenueLocationDetailByIdAsync(int venueId)
     {
@@ -79,29 +79,54 @@ public class VenueLocationService : IVenueLocationService
         response.InteriorImage = DeserializeImages(venue.InteriorImage);
         response.FullPageMenuImage = DeserializeImages(venue.FullPageMenuImage);
 
-        // Fetch opening hours for the venue
-        var openingHours = await _unitOfWork.Context.Set<VenueOpeningHour>()
-            .Where(x => x.VenueLocationId == venueId)
-            .OrderBy(x => x.Day)
-            .ToListAsync();
-
-        if (openingHours.Any())
+        // Add today's opening hour info
+        var todayOpeningHour = venue.VenueOpeningHours?.FirstOrDefault();
+        if (todayOpeningHour != null)
         {
-            response.OpeningHours = openingHours.Select(oh => new VenueOpeningHourResponse
-            {
-                Id = oh.Id,
-                VenueLocationId = oh.VenueLocationId,
-                Day = oh.Day,
-                OpenTime = oh.OpenTime,
-                CloseTime = oh.CloseTime,
-                IsClosed = oh.IsClosed
-            }).ToList();
+            var currentTimeVN = DateTime.UtcNow.AddHours(7);
+            var currentTime = currentTimeVN.TimeOfDay;
+
+            response.TodayDayName = GetDayName(currentTimeVN.DayOfWeek);
+            response.TodayOpeningHour = _mapper.Map<TodayOpeningHourResponse>(todayOpeningHour);
+            response.TodayOpeningHour.Status = GetVenueStatus(todayOpeningHour, currentTime);
         }
 
-        _logger.LogInformation("Retrieved venue location detail for ID {VenueId} with {HourCount} opening hours", venueId, openingHours.Count);
+        _logger.LogInformation("Retrieved venue location detail for ID {VenueId}", venueId);
 
         return response;
     }
+
+    /// <summary>
+    /// Get venue open/close status (Đang mở cửa / Sắp mở cửa / Đã đóng cửa)
+    /// </summary>
+    private string GetVenueStatus(VenueOpeningHour oh, TimeSpan currentTime)
+    {
+        if (oh.IsClosed)
+            return "Đã đóng cửa";
+        
+        if (currentTime < oh.OpenTime)
+            return "Sắp mở cửa";
+        
+        if (currentTime >= oh.CloseTime)
+            return "Đã đóng cửa";
+        
+        return "Đang mở cửa";
+    }
+
+    /// <summary>
+    /// Get day name in Vietnamese
+    /// </summary>
+    private string GetDayName(DayOfWeek dayOfWeek) => dayOfWeek switch
+    {
+        DayOfWeek.Sunday => "Chủ nhật",
+        DayOfWeek.Monday => "Thứ 2",
+        DayOfWeek.Tuesday => "Thứ 3",
+        DayOfWeek.Wednesday => "Thứ 4",
+        DayOfWeek.Thursday => "Thứ 5",
+        DayOfWeek.Friday => "Thứ 6",
+        DayOfWeek.Saturday => "Thứ 7",
+        _ => "Unknown"
+    };
 
     /// <summary>
     /// Get reviews for a venue location with pagination
@@ -148,7 +173,7 @@ public class VenueLocationService : IVenueLocationService
     /// <summary>
     /// Create a new venue location with location tags
     /// </summary>
-    public async Task<VenueLocationDetailResponse> CreateVenueLocationAsync(CreateVenueLocationRequest request, int userId)
+    public async Task<VenueLocationCreateResponse> CreateVenueLocationAsync(CreateVenueLocationRequest request, int userId)
     {
         _logger.LogInformation("Creating new venue location: {VenueName} for user {UserId}", request.Name, userId);
 
@@ -164,6 +189,20 @@ public class VenueLocationService : IVenueLocationService
 
         _logger.LogInformation("Found venue owner profile ID {VenueOwnerProfileId} for user {UserId}", venueOwnerProfile.Id, userId);
 
+        // Check if venue with same name and address already exists for this owner
+        var existingVenue = await _unitOfWork.Context.Set<VenueLocation>()
+            .FirstOrDefaultAsync(v => v.VenueOwnerId == venueOwnerProfile.Id 
+                && v.Name == request.Name 
+                && v.Address == request.Address 
+                && v.IsDeleted != true);
+
+        if (existingVenue != null)
+        {
+            _logger.LogWarning("Venue location with name {VenueName} and address {Address} already exists for user {UserId}", 
+                request.Name, request.Address, userId);
+            throw new InvalidOperationException($"A venue with name '{request.Name}' at address '{request.Address}' already exists for your account.");
+        }
+
         // Create new venue location entity
         var venueLocation = new VenueLocation
         {
@@ -173,9 +212,6 @@ public class VenueLocationService : IVenueLocationService
             Email = request.Email,
             PhoneNumber = request.PhoneNumber,
             WebsiteUrl = request.WebsiteUrl,
-            OpeningTime = request.OpeningTime,
-            ClosingTime = request.ClosingTime,
-            IsOpen = request.IsOpen ?? false,
             PriceMin = request.PriceMin,
             PriceMax = request.PriceMax,
             Latitude = request.Latitude,
@@ -219,9 +255,8 @@ public class VenueLocationService : IVenueLocationService
 
         _logger.LogInformation("Venue location created successfully with ID {VenueId}", venueLocation.Id);
 
-        // Retrieve with details
-        return await GetVenueLocationDetailByIdAsync(venueLocation.Id) 
-            ?? throw new InvalidOperationException("Failed to retrieve created venue location");
+        // Map and return created venue location
+        return _mapper.Map<VenueLocationCreateResponse>(venueLocation);
     }
 
     /// <summary>
@@ -258,14 +293,7 @@ public class VenueLocationService : IVenueLocationService
         if (request.WebsiteUrl != null)
             venue.WebsiteUrl = request.WebsiteUrl;
         
-        if (request.OpeningTime.HasValue)
-            venue.OpeningTime = request.OpeningTime;
-        
-        if (request.ClosingTime.HasValue)
-            venue.ClosingTime = request.ClosingTime;
-        
-        if (request.IsOpen.HasValue)
-            venue.IsOpen = request.IsOpen;
+    
         
         if (request.PriceMin.HasValue)
             venue.PriceMin = request.PriceMin;
@@ -454,7 +482,7 @@ public class VenueLocationService : IVenueLocationService
                     Day = request.Day,
                     OpenTime = openTime,
                     CloseTime = closeTime,
-                    IsClosed = false
+                    IsClosed = request.IsClosed,
                 };
 
                 await _unitOfWork.Context.Set<VenueOpeningHour>().AddAsync(openingHour);
@@ -467,11 +495,11 @@ public class VenueLocationService : IVenueLocationService
                 _unitOfWork.Context.Set<VenueOpeningHour>().Update(openingHour);
             }
 
-            // Check current time and auto-update is_closed
+            // Auto-update IsClosed based on current time
             var currentTimeVN = DateTime.UtcNow.AddHours(7); // Vietnam time (UTC+7)
             var currentTime = currentTimeVN.TimeOfDay;
-            
-         
+
+            openingHour.IsClosed = !(currentTime >= openTime && currentTime < closeTime);
 
             await _unitOfWork.SaveChangesAsync();
 
@@ -493,4 +521,142 @@ public class VenueLocationService : IVenueLocationService
         }
     }
 
+    /// <summary>
+    /// Automatically update IsClosed status for all venue opening hours based on current time
+    /// This method is called by Hangfire as a recurring job every minute
+    /// Only updates opening hours for TODAY
+    /// </summary>
+    public async Task UpdateAllVenuesIsClosedStatusAsync()
+    {
+        _logger.LogInformation("Starting automatic IsClosed status update for all venues");
+
+        var currentTimeVN = DateTime.UtcNow.AddHours(7); // Vietnam time (UTC+7)
+        var currentTime = currentTimeVN.TimeOfDay;
+        var todayDbFormat = ConvertDayOfWeekToDbFormat(currentTimeVN.DayOfWeek);
+
+        // ✨ Chỉ lấy opening_hours của HÔM NAY
+        var todayOpeningHours = await _unitOfWork.Context.Set<VenueOpeningHour>()
+            .Where(oh => oh.Day == todayDbFormat)  // Chỉ ngày hôm nay
+            .ToListAsync();
+
+        _logger.LogInformation($"Today's date: {currentTimeVN:yyyy-MM-dd HH:mm:ss}, Day of week (DB format): {todayDbFormat}, Current time (VN): {currentTime}");
+        _logger.LogInformation($"Found {todayOpeningHours.Count} opening hour records for today");
+
+        var updatedCount = 0;
+        foreach (var openingHour in todayOpeningHours)
+        {
+            bool isCurrentlyOpen = currentTime >= openingHour.OpenTime && currentTime < openingHour.CloseTime;
+            
+            // ✨ Nếu user đóng tạm trong giờ mở → Giữ nguyên, không cập nhật
+            if (openingHour.IsClosed && isCurrentlyOpen)
+            {
+                _logger.LogInformation($"Skipped Venue {openingHour.VenueLocationId}: User manually closed during opening hours");
+                continue;
+            }
+
+            // Tự động update dựa trên thời gian hiện tại
+            bool newIsClosed = !isCurrentlyOpen;
+            if (openingHour.IsClosed != newIsClosed)
+            {
+                openingHour.IsClosed = newIsClosed;
+                _logger.LogInformation($"Updated Venue {openingHour.VenueLocationId}: OpenTime={openingHour.OpenTime}, CloseTime={openingHour.CloseTime}, IsClosed={openingHour.IsClosed}, IsOpen={isCurrentlyOpen}");
+                updatedCount++;
+            }
+        }
+
+        _unitOfWork.Context.Set<VenueOpeningHour>().UpdateRange(todayOpeningHours);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation($"Completed automatic IsClosed status update. Updated {updatedCount} out of {todayOpeningHours.Count} opening hour records");
+    }
+
+    private int ConvertDayOfWeekToDbFormat(DayOfWeek dayOfWeek)
+    {
+        return dayOfWeek switch
+        {
+            DayOfWeek.Sunday => 8,
+            DayOfWeek.Monday => 2,
+            DayOfWeek.Tuesday => 3,
+            DayOfWeek.Wednesday => 4,
+            DayOfWeek.Thursday => 5,
+            DayOfWeek.Friday => 6,
+            DayOfWeek.Saturday => 7,
+            _ => 8
+        };
+    }
+
+    /// <summary>
+    /// Get all venue locations for a venue owner by user ID
+    /// Includes LocationTag details with CoupleMoodType and CouplePersonalityType
+    /// </summary>
+    public async Task<List<VenueOwnerVenueLocationResponse>> GetVenueLocationsByVenueOwnerAsync(int userId)
+    {
+        _logger.LogInformation("Getting venue locations for user {UserId}", userId);
+
+        // Find VenueOwnerProfile for the user using repository
+        var venueOwnerProfile = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(userId);
+
+        if (venueOwnerProfile == null)
+        {
+            _logger.LogWarning("User {UserId} does not have a venue owner profile", userId);
+            return new List<VenueOwnerVenueLocationResponse>();
+        }
+
+        _logger.LogInformation("Found venue owner profile ID {VenueOwnerProfileId} for user {UserId}", venueOwnerProfile.Id, userId);
+
+        // Get venue locations with LocationTag details
+        var venueLocations = await _unitOfWork.VenueLocations.GetByVenueOwnerIdWithLocationTagAsync(venueOwnerProfile.Id);
+
+        // Map to response DTOs
+        var responses = venueLocations.Select(v => new VenueOwnerVenueLocationResponse
+        {
+            Id = v.Id,
+            Name = v.Name,
+            Description = v.Description,
+            Address = v.Address,
+            Email = v.Email,
+            PhoneNumber = v.PhoneNumber,
+            WebsiteUrl = v.WebsiteUrl,
+            PriceMin = v.PriceMin,
+            PriceMax = v.PriceMax,
+            Latitude = v.Latitude,
+            Longitude = v.Longitude,
+            Area = v.Area,
+            AverageRating = v.AverageRating,
+            AvarageCost = v.AvarageCost,
+            ReviewCount = v.ReviewCount,
+            Status = v.Status,
+            CoverImage = v.CoverImage,
+            InteriorImage = v.InteriorImage,
+            Category = v.Category,
+            FullPageMenuImage = v.FullPageMenuImage,
+            IsOwnerVerified = v.IsOwnerVerified,
+            CreatedAt = v.CreatedAt,
+            UpdatedAt = v.UpdatedAt,
+            LocationTag = v.LocationTag != null ? new VenueOwnerLocationTagInfo
+            {
+                Id = v.LocationTag.Id,
+                TagName = GenerateTagName(v.LocationTag.CoupleMoodType?.Name, v.LocationTag.CouplePersonalityType?.Name),
+                DetailTag = v.LocationTag.DetailTag,
+                CoupleMoodType = v.LocationTag.CoupleMoodType != null ? new VenueOwnerCoupleMoodTypeInfo
+                {
+                    Id = v.LocationTag.CoupleMoodType.Id,
+                    Name = v.LocationTag.CoupleMoodType.Name,
+                    Description = v.LocationTag.CoupleMoodType.Description,
+                    IsActive = v.LocationTag.CoupleMoodType.IsActive
+                } : null,
+                CouplePersonalityType = v.LocationTag.CouplePersonalityType != null ? new VenueOwnerCouplePersonalityTypeInfo
+                {
+                    Id = v.LocationTag.CouplePersonalityType.Id,
+                    Name = v.LocationTag.CouplePersonalityType.Name,
+                    Description = v.LocationTag.CouplePersonalityType.Description,
+                    IsActive = v.LocationTag.CouplePersonalityType.IsActive
+                } : null
+            } : null
+        }).ToList();
+
+        _logger.LogInformation("Retrieved {Count} venue locations for venue owner profile ID {VenueOwnerProfileId}", responses.Count, venueOwnerProfile.Id);
+
+        return responses;
+    }
 }

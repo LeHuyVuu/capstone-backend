@@ -30,7 +30,7 @@ public interface IVenueLocationService
     /// <param name="request">Create venue location request</param>
     /// <param name="userId">User ID - will resolve to venue owner profile</param>
     /// <returns>Created venue location response</returns>
-    Task<VenueLocationDetailResponse> CreateVenueLocationAsync(CreateVenueLocationRequest request, int userId);
+    Task<VenueLocationCreateResponse> CreateVenueLocationAsync(CreateVenueLocationRequest request, int userId);
 
     /// <summary>
     /// Update venue location information
@@ -65,4 +65,18 @@ public interface IVenueLocationService
     /// <param name="request">Update venue opening hour request</param>
     /// <returns>Updated venue opening hour response</returns>
     Task<VenueOpeningHourResponse?> UpdateVenueOpeningHourAsync(UpdateVenueOpeningHourRequest request);
+
+    /// <summary>
+    /// Automatically update IsClosed status for all venue opening hours based on current time
+    /// This method is called by Hangfire as a recurring job every minute
+    /// </summary>
+    Task UpdateAllVenuesIsClosedStatusAsync();
+
+    /// <summary>
+    /// Get all venue locations for a venue owner by user ID
+    /// Includes LocationTag details with CoupleMoodType and CouplePersonalityType
+    /// </summary>
+    /// <param name="userId">User ID from JWT token (sub claim)</param>
+    /// <returns>List of venue locations with LocationTag details</returns>
+    Task<List<VenueOwnerVenueLocationResponse>> GetVenueLocationsByVenueOwnerAsync(int userId);
 }

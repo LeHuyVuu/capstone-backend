@@ -15,6 +15,8 @@ public partial class LocationTag
 
     public int? CouplePersonalityTypeId { get; set; }
 
+    public string[]? DetailTag { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

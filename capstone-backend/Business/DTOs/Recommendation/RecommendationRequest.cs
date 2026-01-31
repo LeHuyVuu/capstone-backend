@@ -34,10 +34,11 @@ public class RecommendationRequest
     public int? PartnerMoodId { get; set; }
     
     /// <summary>
-    /// Optional: Preferred region/location for venue search
-    /// If Latitude/Longitude are provided, this will be ignored
+    /// Optional: Province code for location filtering
+    /// Examples: "01" = Hà Nội, "79" = TP.HCM, "92" = Cần Thơ, "48" = Đà Nẵng
+    /// Only used when Latitude/Longitude are NOT provided
     /// </summary>
-    public string? Region { get; set; }
+    public string? Area { get; set; }
     
     /// <summary>
     /// Latitude for geo-location search (use with Longitude)

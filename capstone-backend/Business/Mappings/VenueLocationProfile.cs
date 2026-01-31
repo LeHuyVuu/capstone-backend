@@ -19,6 +19,9 @@ public class VenueLocationProfile : Profile
             .ForMember(dest => dest.InteriorImage, opt => opt.Ignore())
             .ForMember(dest => dest.FullPageMenuImage, opt => opt.Ignore());
 
+        // VenueLocation entity to VenueLocationCreateResponse
+        CreateMap<VenueLocation, VenueLocationCreateResponse>();
+
         // LocationTag to LocationTagInfo with custom mapping for TagName
         CreateMap<LocationTag, LocationTagInfo>()
             .ForMember(dest => dest.TagName, opt => opt.MapFrom(src => 
@@ -41,6 +44,9 @@ public class VenueLocationProfile : Profile
 
         // Review to VenueReviewResponse
         CreateMap<Review, VenueReviewResponse>();
+
+        // VenueOpeningHour to TodayOpeningHourResponse
+        CreateMap<VenueOpeningHour, TodayOpeningHourResponse>();
     }
 
     /// <summary>

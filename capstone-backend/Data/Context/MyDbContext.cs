@@ -52,6 +52,8 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<DeviceToken> DeviceTokens { get; set; }
 
+    public virtual DbSet<Interaction> Interactions { get; set; }
+
     public virtual DbSet<Leaderboard> Leaderboards { get; set; }
 
     public virtual DbSet<LocationFollower> LocationFollowers { get; set; }
@@ -123,6 +125,8 @@ public partial class MyDbContext : DbContext
     public virtual DbSet<Wallet> Wallets { get; set; }
 
     public virtual DbSet<WithdrawRequest> WithdrawRequests { get; set; }
+
+    public virtual DbSet<Category> Categories { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -399,6 +403,11 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.Couple).WithMany(p => p.DatePlans).HasConstraintName("date_plans_couple_id_fkey");
+            entity.HasOne(d => d.OrganizerMember)
+                .WithMany(p => p.MemberProfiles)
+                .HasForeignKey(d => d.OrganizerMemberId)
+                .HasConstraintName("fk_date_plans_organizer_member")
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<DatePlanItem>(entity =>
@@ -426,6 +435,18 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.User).WithMany(p => p.DeviceTokens).HasConstraintName("device_tokens_user_id_fkey");
+        });
+
+        modelBuilder.Entity<Interaction>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("interactions_pkey");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(d => d.Member)
+            .WithMany(p => p.Interactions)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("fk_interaction_member");
         });
 
         modelBuilder.Entity<Leaderboard>(entity =>
@@ -907,6 +928,15 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.Wallet).WithMany(p => p.WithdrawRequests)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("withdraw_requests_wallet_id_fkey");
+        });
+
+
+        modelBuilder.Entity<Category>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("categories_pkey");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
         });
 
         OnModelCreatingPartial(modelBuilder);
