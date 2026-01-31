@@ -50,6 +50,10 @@ namespace capstone_backend.Business.Services
                     return item;
                 }).ToList();
 
+                // Update total venues in date plan
+                datePlan.TotalCount = (datePlan.TotalCount != 0 ? datePlan.TotalCount : 0) + items.Count;
+
+                _unitOfWork.DatePlans.Update(datePlan);
                 await _unitOfWork.DatePlanItems.AddRangeAsync(items);
                 return await _unitOfWork.SaveChangesAsync();
             }
