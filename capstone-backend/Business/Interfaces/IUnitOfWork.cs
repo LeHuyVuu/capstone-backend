@@ -42,6 +42,8 @@ public interface IUnitOfWork : IDisposable
 
     IVenueOwnerProfileRepository VenueOwnerProfiles { get; }
 
+    IDatePlanItemRepository DatePlanItems { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>

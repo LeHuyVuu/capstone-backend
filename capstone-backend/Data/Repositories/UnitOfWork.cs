@@ -27,6 +27,7 @@ public class UnitOfWork : IUnitOfWork
         IVenueLocationRepository venueLocationRepository,
         ILocationTagRepository locationTagRepository,
         IDatePlanRepository datePlanRepository,
+        IDatePlanItemRepository datePlanItemRepository,
         IVenueOwnerProfileRepository venueOwnerProfileRepository)
     {
         _context = context;
@@ -42,6 +43,7 @@ public class UnitOfWork : IUnitOfWork
         VenueLocations = venueLocationRepository;
         LocationTags = locationTagRepository;
         DatePlans = datePlanRepository;
+        DatePlanItems = datePlanItemRepository;
         VenueOwnerProfiles = venueOwnerProfileRepository;
     }
 
@@ -70,6 +72,8 @@ public class UnitOfWork : IUnitOfWork
     public ILocationTagRepository LocationTags { get; }
 
     public IDatePlanRepository DatePlans { get; }
+
+    public IDatePlanItemRepository DatePlanItems { get; }
 
     public IVenueOwnerProfileRepository VenueOwnerProfiles { get; }
 

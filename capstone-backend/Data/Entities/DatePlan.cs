@@ -20,6 +20,8 @@ public partial class DatePlan
 
     public string? Note { get; set; }
 
+    public int? Version { get; set; }
+
     public DateTime? PlannedStartAt { get; set; }
 
     public DateTime? PlannedEndAt { get; set; }
