@@ -193,7 +193,7 @@ namespace capstone_backend.Business.Services
                 if (couple == null)
                     throw new Exception("Member does not belong to any couples");
 
-                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id, true);
                 if (datePlan == null)
                     throw new Exception("Date plan not found");
 

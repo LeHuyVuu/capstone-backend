@@ -2,6 +2,7 @@
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Runtime.Intrinsics.Arm;
 
 namespace capstone_backend.Data.Repositories
 {
@@ -11,14 +12,29 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
-        public async Task<DatePlan?> GetByIdAndCoupleIdAsync(int id, int coupleId)
+        public async Task<DatePlan?> GetByIdAndCoupleIdAsync(int id, int coupleId, bool includeItems = false)
         {
-            return await _dbSet
+            //return await _dbSet
+            //    .Where(dp => dp.Id == id &&
+            //           dp.CoupleId == coupleId &&
+            //           dp.IsDeleted == false
+            //    )
+            //    .FirstOrDefaultAsync();
+            IQueryable<DatePlan> query = _dbSet
+                .AsNoTracking()
                 .Where(dp => dp.Id == id &&
                        dp.CoupleId == coupleId &&
                        dp.IsDeleted == false
-                )
-                .FirstOrDefaultAsync();
+                );
+
+            if (includeItems)
+            {
+                query = query
+                    .Include(dp => dp.DatePlanItems.Where(dpi => dpi.IsDeleted == false));
+            }
+
+            return await query.FirstOrDefaultAsync();
+
         }
     }
 }

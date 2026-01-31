@@ -11,9 +11,11 @@ namespace capstone_backend.Business.Mappings
         {
             CreateMap<CreateDatePlanRequest, DatePlan>();
             CreateMap<DatePlan, DatePlanResponse>();
-            CreateMap<DatePlan, DatePlanDetailResponse>();
+            CreateMap<DatePlan, DatePlanDetailResponse>()
+                .ForMember(dest => dest.Venues, opt => opt.MapFrom(src => src.DatePlanItems));
 
             CreateMap<DatePlanItemRequest, DatePlanItem>();
+            CreateMap<DatePlanItem, DatePlanItemResponse>();
         }
     }
 }

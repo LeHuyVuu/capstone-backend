@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using capstone_backend.Business.DTOs.DatePlanItem;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
 namespace capstone_backend.Business.DTOs.DatePlan
@@ -13,5 +14,6 @@ namespace capstone_backend.Business.DTOs.DatePlan
         public decimal CompletionRate { get; set; } = 0m;
         public DateTime? CompletedAt { get; set; }
         public DateTime? CreatedAt { get; set; }
+        public List<DatePlanItemResponse> Venues { get; set; } = new List<DatePlanItemResponse>();
     }
 }
