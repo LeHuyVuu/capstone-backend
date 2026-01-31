@@ -10,7 +10,7 @@ namespace capstone_backend.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "MEMBER")]
+    [Authorize(Roles = "MEMBER, member")]
     public class DatePlanController : BaseController
     {
         private readonly IDatePlanService _datePlanService;
@@ -110,18 +110,21 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Update Date Plan
         /// </summary>
-        //[HttpPatch("{datePlanId:int}")]
-        //public async Task<IActionResult> UpdateDatePlan(int datePlanId)
-        //{
-        //    try
-        //    {
-
-        //        return OkResponse(null, "Updated date plan successfully");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequestResponse(ex.Message);
-        //    }
-        //}
+        [HttpPatch("{datePlanId:int}")]
+        public async Task<IActionResult> UpdateDatePlan(int datePlanId,
+            [FromQuery] int version,
+            [FromBody] UpdateDatePlanRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.UpdateDatePlanAsync(userId.Value, datePlanId, version, request);
+                return OkResponse(result, "Updated date plan successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

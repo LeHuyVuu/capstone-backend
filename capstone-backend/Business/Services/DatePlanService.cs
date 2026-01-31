@@ -20,11 +20,11 @@ namespace capstone_backend.Business.Services
             _mapper = mapper;
         }
 
-        public async Task<int> AddVenuesToDatePlanAsync(int value, int datePlanId, CreateDatePlanItemRequest request)
+        public async Task<int> AddVenuesToDatePlanAsync(int userId, int datePlanId, CreateDatePlanItemRequest request)
         {
             try
             {
-                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(value);
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
                 if (member == null)
                     throw new Exception("Member not found");
 
@@ -94,6 +94,7 @@ namespace capstone_backend.Business.Services
                 datePlan.Status = DatePlanStatus.DRAFTED.ToString();
                 datePlan.PlannedStartAt = plannedStartAtUtc;
                 datePlan.PlannedEndAt = plannedEndAtUtc;
+                datePlan.Version = 1;
 
                 await _unitOfWork.DatePlans.AddAsync(datePlan);
                 return await _unitOfWork.SaveChangesAsync();
@@ -200,6 +201,79 @@ namespace capstone_backend.Business.Services
                 var response = _mapper.Map<DatePlanDetailResponse>(datePlan);
 
                 return response;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<DatePlanResponse> UpdateDatePlanAsync(int userId, int datePlanId, int version, UpdateDatePlanRequest request)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member not found");
+
+                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                if (couple == null)
+                    throw new Exception("Member does not belong to any couples");
+
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
+                if (datePlan == null)
+                    throw new Exception("Date plan not found");
+
+                // Check status
+                if (datePlan.Status != DatePlanStatus.DRAFTED.ToString() &&
+                    datePlan.Status != DatePlanStatus.PENDING.ToString())
+                    throw new Exception("Only date plans with status DRAFTED or PENDING can be updated");
+
+                // Concurrency check
+                if (datePlan.Version != version)
+                    throw new Exception("The date plan has been modified by another process. Please reload and try again.");
+
+                /// Validate
+                if (request.PlannedStartAt.HasValue)
+                    request.PlannedStartAt = DateTimeNormalizeUtil.NormalizeToUtc(request.PlannedStartAt.Value);
+
+                if (request.PlannedEndAt.HasValue)
+                    request.PlannedEndAt = DateTimeNormalizeUtil.NormalizeToUtc(request.PlannedEndAt.Value);
+
+                var newStart = request.PlannedStartAt ?? datePlan.PlannedStartAt;
+                var newEnd = request.PlannedEndAt ?? datePlan.PlannedEndAt;
+
+                if (newStart.HasValue && newEnd.HasValue && newEnd.Value < newStart.Value)
+                    throw new Exception("Planned end date must be greater than or equal to planned start date");
+
+                // Apply partial updates
+                if (!string.IsNullOrWhiteSpace(request.Title))
+                    datePlan.Title = request.Title.Trim();
+
+                if (request.Note != null)
+                    datePlan.Note = request.Note;
+
+                if (request.PlannedStartAt.HasValue)
+                    datePlan.PlannedStartAt = request.PlannedStartAt.Value;
+
+                if (request.PlannedEndAt.HasValue)
+                    datePlan.PlannedEndAt = request.PlannedEndAt.Value;
+
+                if (request.EstimatedBudget.HasValue)
+                    datePlan.EstimatedBudget = request.EstimatedBudget.Value;
+
+                datePlan.Version += 1;
+
+                _unitOfWork.DatePlans.Update(datePlan);
+                var check = await _unitOfWork.SaveChangesAsync();
+                if (check == 0)
+                    throw new Exception("Failed to update date plan");
+
+                var response = _mapper.Map<DatePlanResponse>(datePlan);
+
+                return response;
+
             }
             catch (Exception)
             {
