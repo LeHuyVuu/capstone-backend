@@ -62,6 +62,40 @@ namespace capstone_backend.Business.Services
             }
         }
 
+        public async Task<int> DeleteDatePlanItemAsync(int value, int datePlanItemId, int datePlanId)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(value);
+                if (member == null)
+                    throw new Exception("Member not found");
+
+                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                if (couple == null)
+                    throw new Exception("Member does not belong to any couples");
+
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
+                if (datePlan == null)
+                    throw new Exception("Date plan not found");
+
+                var datePlanItem = await _unitOfWork.DatePlanItems.GetByIdAndDatePlanIdAsync(datePlanItemId, datePlanId);
+                if (datePlanItem == null)
+                    throw new Exception("Date plan item not found");
+
+                datePlanItem.IsDeleted = true;
+                datePlan.TotalCount = datePlan.TotalCount > 0 ? datePlan.TotalCount - 1 : 0;
+                _unitOfWork.DatePlanItems.Update(datePlanItem);
+                _unitOfWork.DatePlans.Update(datePlan);
+
+                return await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
         public async Task<PagedResult<DatePlanItemResponse>> GetAllAsync(int pageNumber, int pageSize, int userId, int datePlanId)
         {
             try

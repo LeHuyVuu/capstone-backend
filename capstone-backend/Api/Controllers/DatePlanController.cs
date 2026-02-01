@@ -203,6 +203,34 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 var result = await _datePlanService.DeleteDatePlanAsync(userId.Value, datePlanId);
+                if (result <= 0)
+                {
+                    return BadRequestResponse("Failed to delete date plan");
+                }
+                return OkResponse(result, "Deleted date plan successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Delete Date Plan Item
+        /// </summary>
+        [HttpDelete("{datePlanId:int}/items/{datePlanItemId:int}")]
+        public async Task<IActionResult> DeleteDatePlanItem(
+            int datePlanId,
+            int datePlanItemId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanItemService.DeleteDatePlanItemAsync(userId.Value, datePlanItemId, datePlanId);
+                if (result <= 0)
+                {
+                    return BadRequestResponse("Failed to delete date plan item");
+                }
                 return OkResponse(result, "Deleted date plan successfully");
             }
             catch (Exception ex)
