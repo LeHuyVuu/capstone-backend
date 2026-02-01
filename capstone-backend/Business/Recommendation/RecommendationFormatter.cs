@@ -14,7 +14,6 @@ public static class RecommendationFormatter
     /// </summary>
     public static List<RecommendedVenue> FormatRecommendedVenues(
         List<VenueLocation> venues,
-        Dictionary<int, string> aiExplanations,
         Dictionary<int, decimal?> distanceMap)
     {
         return venues.Select((venue, index) => new RecommendedVenue
@@ -37,9 +36,6 @@ public static class RecommendationFormatter
             Category = venue.Category,
             Distance = distanceMap.TryGetValue(venue.Id, out var dist) ? dist : null,
             DistanceText = FormatDistanceText(distanceMap.TryGetValue(venue.Id, out var d) ? d : null),
-            MatchReason = aiExplanations.ContainsKey(index) 
-                ? aiExplanations[index] 
-                : "Phù hợp với sở thích của bạn",
             AverageRating = venue.Reviews?.Any() == true
                 ? (decimal)venue.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value)
                 : null,

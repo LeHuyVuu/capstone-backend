@@ -161,37 +161,16 @@ public class OpenAIRecommendationService : IRecommendationService
                     ProcessingTimeMs = stopwatch.ElapsedMilliseconds
                 };
             }
+     
 
-            // Phase 4: Build context và gọi OpenAI lấy explanations
-            var context = VenueContextBuilder.BuildVenueContext(
-                venues,
-                coupleMoodType,
-                personalityTags,
-                request.Query,
-                parsedContext);
-
-            // Sử dụng RecommendationAIInteraction để gọi AI
-            var aiExplanations = await RecommendationAIInteraction.GetExplanationsAsync(
-                _chatClient,
-                _logger,
-                context,
-                coupleMoodType,
-                personalityTags,
-                request.MbtiType,
-                request.PartnerMbtiType,
-                request.Query
-            );
-
+          
             // Phase 5: Build response
-            var recommendations = RecommendationFormatter.FormatRecommendedVenues(venues, aiExplanations, distanceMap);
+            var recommendations = RecommendationFormatter.FormatRecommendedVenues(venues, distanceMap);
             stopwatch.Stop();
 
             return new RecommendationResponse
             {
                 Recommendations = recommendations,
-                Explanation = aiExplanations.ContainsKey(-1) 
-                    ? aiExplanations[-1] 
-                    : ResponseFormatter.GenerateDefaultExplanation(coupleMoodType, personalityTags, request.Query, parsedContext),
                 CoupleMoodType = isSinglePerson ? null : coupleMoodType,
                 SingleMood = isSinglePerson ? coupleMoodType : null,
                 PersonalityTags = personalityTags,
