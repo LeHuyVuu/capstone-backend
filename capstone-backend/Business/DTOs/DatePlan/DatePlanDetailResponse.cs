@@ -14,6 +14,7 @@ namespace capstone_backend.Business.DTOs.DatePlan
         public decimal CompletionRate { get; set; } = 0m;
         public DateTime? CompletedAt { get; set; }
         public DateTime? CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
         public List<DatePlanItemResponse> Venues { get; set; } = new List<DatePlanItemResponse>();
     }
 }
