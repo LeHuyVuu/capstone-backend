@@ -173,7 +173,7 @@ namespace capstone_backend.Api.Controllers
         /// </summary>
         [HttpPatch("{datePlanId:int}/items/{datePlanItemId:int}")]
         public async Task<IActionResult> UpdateDatePlanItem(
-            int datePlanId, 
+            int datePlanId,
             int datePlanItemId,
             [FromQuery] int version,
             UpdateDatePlanItemRequest request
@@ -182,12 +182,31 @@ namespace capstone_backend.Api.Controllers
             try
             {
                 var userId = GetCurrentUserId();
-                var result = await _datePlanItemService.UpdateItemAsync(userId.Value, datePlanId, datePlanItemId, version,  request);
+                var result = await _datePlanItemService.UpdateItemAsync(userId.Value, datePlanId, datePlanItemId, version, request);
                 return OkResponse(result, "Updated date plan item successfully");
             }
             catch (Exception ex)
             {
 
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Delete Date Plan
+        /// </summary>
+        [HttpDelete("{datePlanId:int}")]
+        public async Task<IActionResult> DeleteDatePlan(
+            int datePlanId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.DeleteDatePlanAsync(userId.Value, datePlanId);
+                return OkResponse(result, "Deleted date plan successfully");
+            }
+            catch (Exception ex)
+            {
                 return BadRequestResponse(ex.Message);
             }
         }

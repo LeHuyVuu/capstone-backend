@@ -62,6 +62,47 @@ namespace capstone_backend.Business.Services
             }
         }
 
+        public async Task<int> DeleteDatePlanAsync(int userId, int datePlanId)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member not found");
+
+                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                if (couple == null)
+                    throw new Exception("Member does not belong to any couples");
+
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
+                if (datePlan == null)
+                    throw new Exception("Date plan not found");
+
+                // Check status
+                if (datePlan.Status != DatePlanStatus.DRAFTED.ToString() &&
+                    datePlan.Status != DatePlanStatus.PENDING.ToString())
+                    throw new Exception("Only date plans with status DRAFTED or PENDING can be deleted");
+
+                // Get items
+                var datePlanItems = await _unitOfWork.DatePlanItems.GetByDatePlanIdAsync(datePlan.Id);
+                datePlanItems = datePlanItems.Select(dpi =>
+                {
+                    dpi.IsDeleted = true;
+                    _unitOfWork.DatePlanItems.Update(dpi);
+                    return dpi;
+                }).ToList();
+
+                datePlan.IsDeleted = true;
+                _unitOfWork.DatePlans.Update(datePlan);
+                return await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
         public async Task<PagedResult<DatePlanResponse>> GetAllDatePlansByTimeAsync(int pageNumber, int pageSize, int userId, string time)
         {
             try

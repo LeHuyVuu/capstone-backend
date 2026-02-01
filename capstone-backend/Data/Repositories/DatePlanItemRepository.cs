@@ -11,6 +11,15 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<IEnumerable<DatePlanItem>> GetByDatePlanIdAsync(int datePlanId)
+        {
+            return await _dbSet
+                .Where(dpi => dpi.DatePlanId == datePlanId &&
+                       dpi.IsDeleted == false
+                )
+                .ToListAsync();
+        }
+
         public async Task<DatePlanItem?> GetByIdAndDatePlanIdAsync(int datePlanItemId, int datePlanId, bool includeItems = false)
         {
             IQueryable<DatePlanItem> query = _dbSet
