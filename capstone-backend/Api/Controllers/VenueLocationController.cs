@@ -205,4 +205,42 @@ public class VenueLocationController : BaseController
 
         return OkResponse(result, "Venue opening hours updated successfully");
     }
+    /// <summary>
+    /// Submit venue location to admin for approval.
+    /// Validates required fields before changing status to PENDING.
+    /// Requires authentication - user must be the venue owner.
+    /// </summary>
+    /// <param name="id">Venue location ID</param>
+    /// <returns>Submission result</returns>
+    [HttpPost("{id}/submit")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<VenueSubmissionResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> SubmitVenue(int id)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (!currentUserId.HasValue)
+        {
+            return UnauthorizedResponse("User not authenticated");
+        }
+        
+        _logger.LogInformation("User {UserId} submitting venue {VenueId} for approval", currentUserId, id);
+        
+        var result = await _venueLocationService.SubmitVenueToAdminAsync(id, currentUserId.Value);
+        
+        if (!result.IsSuccess)
+        {
+            if (result.Message == "Venue not found") return NotFoundResponse(result.Message);
+            if (result.Message == "Unauthorized access") return ForbiddenResponse(result.Message);
+            
+            // For validation errors, we return the result object so the client can see MissingFields
+            // Using OkResponse (200) but IsSuccess is false in the DTO
+            return OkResponse(result, result.Message);
+        }
+        
+        return OkResponse(result, "Venue submitted successfully");
+    }
 }

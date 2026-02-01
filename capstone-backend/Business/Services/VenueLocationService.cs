@@ -659,4 +659,106 @@ public class VenueLocationService : IVenueLocationService
 
         return responses;
     }
+    /// <summary>
+    /// Submit venue location to admin for approval
+    /// Validates required fields before changing status to PENDING
+    /// </summary>
+    public async Task<VenueSubmissionResult> SubmitVenueToAdminAsync(int venueId, int userId)
+    {
+        _logger.LogInformation("Submitting venue {VenueId} to admin for user {UserId}", venueId, userId);
+        
+        // 1. Get venue with details to check opening hours
+        var venue = await _unitOfWork.VenueLocations.GetByIdWithDetailsAsync(venueId);
+        
+        if (venue == null || venue.IsDeleted == true)
+        {
+             return new VenueSubmissionResult 
+             { 
+                 IsSuccess = false, 
+                 Message = "Venue not found" 
+             };
+        }
+
+        // 2. Validate Owner
+        var ownerProfile = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(userId);
+        if (ownerProfile == null || venue.VenueOwnerId != ownerProfile.Id)
+        {
+             _logger.LogWarning("User {UserId} attempted to submit venue {VenueId} but is not the owner", userId, venueId);
+             return new VenueSubmissionResult 
+             { 
+                 IsSuccess = false, 
+                 Message = "Unauthorized access" 
+             };
+        }
+
+        // 3. Check Status (Allow DRAFT or DRAFTED just in case)
+        if (venue.Status != "DRAFTED" && venue.Status != "DRAFT")
+        {
+             return new VenueSubmissionResult 
+             { 
+                 IsSuccess = false, 
+                 Message = $"Venue status is {venue.Status}, cannot submit. Only drafted venues can be submitted." 
+             };
+        }
+        
+        // 4. Validate Fields
+        var missingFields = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(venue.Name)) missingFields.Add("Name");
+        if (string.IsNullOrWhiteSpace(venue.Description)) missingFields.Add("Description");
+        if (string.IsNullOrWhiteSpace(venue.Address)) missingFields.Add("Address");
+        
+        // Check Images
+        var coverImages = DeserializeImages(venue.CoverImage);
+        if (coverImages == null || !coverImages.Any()) missingFields.Add("CoverImage");
+        
+        // Contact (Phone OR Email)
+        if (string.IsNullOrWhiteSpace(venue.PhoneNumber) && string.IsNullOrWhiteSpace(venue.Email))
+        {
+            missingFields.Add("Contact Info (Phone or Email)");
+        }
+        
+        // Location Tag
+        if (venue.LocationTagId == null) missingFields.Add("LocationTag");
+        
+        // Coordinates
+        if (venue.Latitude == null || venue.Longitude == null) 
+        {
+            missingFields.Add("Location Coordinates (Latitude or Longitude)");
+        }
+        
+        // Price
+        if (venue.PriceMin == null || venue.PriceMax == null) 
+        {
+            missingFields.Add("Price Range (Min/Max)");
+        }
+        
+        // Opening Hours
+      
+
+        if (missingFields.Any())
+        {
+            return new VenueSubmissionResult 
+            { 
+                IsSuccess = false, 
+                Message = "Please fill in all required fields before submitting.", 
+                MissingFields = missingFields 
+            };
+        }
+
+        // 5. Update Status
+        venue.Status = "PENDING";
+        venue.UpdatedAt = DateTime.UtcNow;
+        
+        _unitOfWork.VenueLocations.Update(venue);
+        await _unitOfWork.SaveChangesAsync();
+        
+        _logger.LogInformation("Venue {VenueId} submitted successfully, status changed to PENDING", venueId);
+        
+        return new VenueSubmissionResult 
+        { 
+            IsSuccess = true, 
+            Message = "Venue submitted successfully. Please wait for admin approval." 
+        };
+    }
 }

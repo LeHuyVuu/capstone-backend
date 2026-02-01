@@ -79,4 +79,13 @@ public interface IVenueLocationService
     /// <param name="userId">User ID from JWT token (sub claim)</param>
     /// <returns>List of venue locations with LocationTag details</returns>
     Task<List<VenueOwnerVenueLocationResponse>> GetVenueLocationsByVenueOwnerAsync(int userId);
+
+    /// <summary>
+    /// Submit venue location to admin for approval
+    /// Validates required fields before changing status to PENDING
+    /// </summary>
+    /// <param name="venueId">Venue location ID</param>
+    /// <param name="userId">User ID (owner)</param>
+    /// <returns>Submission result with success status and missing fields if any</returns>
+    Task<VenueSubmissionResult> SubmitVenueToAdminAsync(int venueId, int userId);
 }
