@@ -28,21 +28,13 @@ public static class RecommendationFormatter
             Email = venue.Email,
             PhoneNumber = venue.PhoneNumber,
             WebsiteUrl = venue.WebsiteUrl,
-            OpeningTime = venue.OpeningTime,
-            ClosingTime = venue.ClosingTime,
-            IsOpen = venue.IsOpen,
             PriceMin = venue.PriceMin,
             PriceMax = venue.PriceMax,
             Latitude = venue.Latitude,
             Longitude = venue.Longitude,
             Area = venue.Area,
             AvarageCost = venue.AvarageCost,
-            Status = venue.Status,
             Category = venue.Category,
-            IsOwnerVerified = venue.IsOwnerVerified,
-            CreatedAt = venue.CreatedAt,
-            UpdatedAt = venue.UpdatedAt,
-            IsDeleted = venue.IsDeleted,
             Distance = distanceMap.TryGetValue(venue.Id, out var dist) ? dist : null,
             DistanceText = FormatDistanceText(distanceMap.TryGetValue(venue.Id, out var d) ? d : null),
             MatchReason = aiExplanations.ContainsKey(index) 
@@ -52,9 +44,9 @@ public static class RecommendationFormatter
                 ? (decimal)venue.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value)
                 : null,
             ReviewCount = venue.Reviews?.Count ?? 0,
-            CoverImage = venue.CoverImage,
-            InteriorImage = venue.InteriorImage,
-            FullPageMenuImage = venue.FullPageMenuImage,
+            CoverImage = DeserializeImages(venue.CoverImage),
+            InteriorImage = DeserializeImages(venue.InteriorImage),
+            FullPageMenuImage = DeserializeImages(venue.FullPageMenuImage),
             MatchedTags = venue.LocationTag != null
                 ? new List<string> 
                 { 
@@ -84,21 +76,13 @@ public static class RecommendationFormatter
             Email = venue.Email,
             PhoneNumber = venue.PhoneNumber,
             WebsiteUrl = venue.WebsiteUrl,
-            OpeningTime = venue.OpeningTime,
-            ClosingTime = venue.ClosingTime,
-            IsOpen = venue.IsOpen,
             PriceMin = venue.PriceMin,
             PriceMax = venue.PriceMax,
             Latitude = venue.Latitude,
             Longitude = venue.Longitude,
             Area = venue.Area,
             AvarageCost = venue.AvarageCost,
-            Status = venue.Status,
             Category = venue.Category,
-            IsOwnerVerified = venue.IsOwnerVerified,
-            CreatedAt = venue.CreatedAt,
-            UpdatedAt = venue.UpdatedAt,
-            IsDeleted = venue.IsDeleted,
             Distance = distanceMap.TryGetValue(venue.Id, out var dist) ? dist : null,
             DistanceText = FormatDistanceText(distanceMap.TryGetValue(venue.Id, out var d) ? d : null),
             MatchReason = "Địa điểm phổ biến và được đánh giá cao",
@@ -106,9 +90,9 @@ public static class RecommendationFormatter
                 ? (decimal)venue.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value)
                 : null,
             ReviewCount = venue.Reviews?.Count ?? 0,
-            CoverImage = venue.CoverImage,
-            InteriorImage = venue.InteriorImage,
-            FullPageMenuImage = venue.FullPageMenuImage,
+            CoverImage = DeserializeImages(venue.CoverImage),
+            InteriorImage = DeserializeImages(venue.InteriorImage),
+            FullPageMenuImage = DeserializeImages(venue.FullPageMenuImage),
             MatchedTags = venue.LocationTag != null
                 ? new List<string>
                 {
@@ -117,6 +101,25 @@ public static class RecommendationFormatter
                 }.Where(name => !string.IsNullOrEmpty(name)).ToList()
                 : new List<string>()
         }).ToList();
+    }
+
+    /// <summary>
+    /// Deserialize JSON string to list of image URLs
+    /// </summary>
+    private static List<string> DeserializeImages(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return new List<string>();
+        try
+        {
+            if (json.TrimStart().StartsWith("["))
+                return System.Text.Json.JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+            return new List<string> { json };
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return new List<string> { json };
+        }
     }
 
     /// <summary>

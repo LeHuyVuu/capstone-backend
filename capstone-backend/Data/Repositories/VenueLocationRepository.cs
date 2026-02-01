@@ -111,11 +111,13 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
     public async Task<List<(VenueLocation Venue, decimal? DistanceKm)>> GetForRecommendationsAsync(
         string? coupleMoodType,
         List<string> personalityTags,
+        string? singleMoodName,
         string? area,
         decimal? latitude,
         decimal? longitude,
         decimal? radiusKm,
-        int limit)
+        int limit,
+        int? budgetLevel)
     {
         var query = _dbSet
             .AsNoTracking()
@@ -149,24 +151,53 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
         {
             query = query.Where(v => v.Area == area);
         }
+
+        // PRIORITY 3: Filter by Budget (Average Cost)
+        if (budgetLevel.HasValue)
+        {
+            query = budgetLevel.Value switch
+            {
+                1 => query.Where(v => v.AvarageCost < 200000),             // Low: < 200k
+                2 => query.Where(v => v.AvarageCost >= 200000 && v.AvarageCost <= 1000000), // Medium: 200k - 1m
+                3 => query.Where(v => v.AvarageCost > 1000000),            // High: > 1m
+                _ => query
+            };
+        }
        
         // Then apply mood/personality filters (if specified)
-        if (!string.IsNullOrEmpty(coupleMoodType) || personalityTags.Any())
+        bool hasFilters = !string.IsNullOrEmpty(coupleMoodType) || !string.IsNullOrEmpty(singleMoodName) || personalityTags.Any();
+        
+        if (hasFilters)
         {
             query = query
                 .Include(v => v.LocationTag!)
                     .ThenInclude(lt => lt!.CoupleMoodType)
                 .Include(v => v.LocationTag!)
                     .ThenInclude(lt => lt!.CouplePersonalityType)
-                .Where(v =>
-                    v.LocationTag != null && (
-                        (coupleMoodType != null && v.LocationTag.CoupleMoodType != null && 
-                         v.LocationTag.CoupleMoodType.Name == coupleMoodType) ||
-                        (personalityTags.Any() && v.LocationTag.CouplePersonalityType != null &&
-                         v.LocationTag.CouplePersonalityType.Name != null &&
-                         personalityTags.Contains(v.LocationTag.CouplePersonalityType.Name))
-                    )
+                .Where(v => v.LocationTag != null);
+
+            // Build filter conditions
+            if (!string.IsNullOrEmpty(singleMoodName))
+            {
+                // Single person: filter mood bằng DetailTag Contains
+                query = query.Where(v =>
+                    (v.LocationTag!.DetailTag != null && v.LocationTag.DetailTag.Contains(singleMoodName)) ||
+                    (personalityTags.Any() && v.LocationTag.CouplePersonalityType != null &&
+                     v.LocationTag.CouplePersonalityType.Name != null &&
+                     personalityTags.Contains(v.LocationTag.CouplePersonalityType.Name))
                 );
+            }
+            else if (!string.IsNullOrEmpty(coupleMoodType) || personalityTags.Any())
+            {
+                // Couple: filter mood bằng CoupleMoodType.Name
+                query = query.Where(v =>
+                    (coupleMoodType != null && v.LocationTag!.CoupleMoodType != null && 
+                     v.LocationTag.CoupleMoodType.Name == coupleMoodType) ||
+                    (personalityTags.Any() && v.LocationTag!.CouplePersonalityType != null &&
+                     v.LocationTag.CouplePersonalityType.Name != null &&
+                     personalityTags.Contains(v.LocationTag.CouplePersonalityType.Name))
+                );
+            }
         }
         else
         {

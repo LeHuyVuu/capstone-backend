@@ -19,6 +19,11 @@ public class RecommendationResponse
     /// Detected couple mood type based on input moods
     /// </summary>
     public string? CoupleMoodType { get; set; }
+
+    /// <summary>
+    /// Detected mood for single person
+    /// </summary>
+    public string? SingleMood { get; set; }
     
     /// <summary>
     /// Detected personality tags based on MBTI types
@@ -82,21 +87,6 @@ public class RecommendedVenue
     public string? WebsiteUrl { get; set; }
     
     /// <summary>
-    /// Opening time
-    /// </summary>
-    public DateTime? OpeningTime { get; set; }
-    
-    /// <summary>
-    /// Closing time
-    /// </summary>
-    public DateTime? ClosingTime { get; set; }
-    
-    /// <summary>
-    /// Whether venue is currently open
-    /// </summary>
-    public bool? IsOpen { get; set; }
-    
-    /// <summary>
     /// Minimum price
     /// </summary>
     public decimal? PriceMin { get; set; }
@@ -127,34 +117,9 @@ public class RecommendedVenue
     public decimal? AvarageCost { get; set; }
     
     /// <summary>
-    /// Venue status
-    /// </summary>
-    public string? Status { get; set; }
-    
-    /// <summary>
     /// Venue category
     /// </summary>
     public string? Category { get; set; }
-    
-    /// <summary>
-    /// Whether owner is verified
-    /// </summary>
-    public bool? IsOwnerVerified { get; set; }
-    
-    /// <summary>
-    /// Created timestamp
-    /// </summary>
-    public DateTime? CreatedAt { get; set; }
-    
-    /// <summary>
-    /// Updated timestamp
-    /// </summary>
-    public DateTime? UpdatedAt { get; set; }
-    
-    /// <summary>
-    /// Whether venue is deleted
-    /// </summary>
-    public bool? IsDeleted { get; set; }
     
     /// <summary>
     /// Distance from user's location in kilometers (null if no lat/lon provided)
@@ -182,19 +147,19 @@ public class RecommendedVenue
     public int ReviewCount { get; set; }
 
     /// <summary>
-    /// Cover image for the venue
+    /// Cover images for the venue
     /// </summary>
-    public string? CoverImage { get; set; }
+    public List<string> CoverImage { get; set; } = new();
 
     /// <summary>
-    /// Interior image of the venue
+    /// Interior images of the venue
     /// </summary>
-    public string? InteriorImage { get; set; }
+    public List<string> InteriorImage { get; set; } = new();
 
     /// <summary>
-    /// Full page menu image
+    /// Full page menu images
     /// </summary>
-    public string? FullPageMenuImage { get; set; }
+    public List<string> FullPageMenuImage { get; set; } = new();
     
     /// <summary>
     /// Matched location tags
