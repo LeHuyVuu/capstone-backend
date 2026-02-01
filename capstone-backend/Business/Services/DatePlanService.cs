@@ -20,50 +20,6 @@ namespace capstone_backend.Business.Services
             _mapper = mapper;
         }
 
-        public async Task<int> AddVenuesToDatePlanAsync(int userId, int datePlanId, CreateDatePlanItemRequest request)
-        {
-            try
-            {
-                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
-                if (member == null)
-                    throw new Exception("Member not found");
-
-                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);    
-                if (couple == null)
-                    throw new Exception("Member does not belong to any couples");
-
-                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
-                if (datePlan == null)
-                    throw new Exception("Date plan not found");
-
-                // Snapshot
-                var venues = request.Venues ?? new List<DatePlanItemRequest>();
-                if (venues == null || !venues.Any())
-                    throw new Exception("Venues cannot be empty");
-
-                var items = venues.Select(v =>
-                {
-                    var item = _mapper.Map<DatePlanItem>(v);
-                    item.DatePlanId = datePlanId;
-                    item.Status = DatePlanItemStatus.PLANNED.ToString();
-
-                    return item;
-                }).ToList();
-
-                // Update total venues in date plan
-                datePlan.TotalCount = (datePlan.TotalCount != 0 ? datePlan.TotalCount : 0) + items.Count;
-
-                _unitOfWork.DatePlans.Update(datePlan);
-                await _unitOfWork.DatePlanItems.AddRangeAsync(items);
-                return await _unitOfWork.SaveChangesAsync();
-            }
-            catch (Exception)
-            {
-
-                throw;
-            }
-        }
-
         public async Task<int> CreateDatePlanAsync(int userId, CreateDatePlanRequest request)
         {
             try
@@ -232,7 +188,7 @@ namespace capstone_backend.Business.Services
 
                 // Concurrency check
                 if (datePlan.Version != version)
-                    throw new Exception("The date plan has been modified by another process. Please reload and try again.");
+                    throw new Exception("The date plan has been modified by another process. Please reload and try again");
 
                 /// Validate
                 if (request.PlannedStartAt.HasValue)
@@ -267,7 +223,7 @@ namespace capstone_backend.Business.Services
 
                 _unitOfWork.DatePlans.Update(datePlan);
                 var check = await _unitOfWork.SaveChangesAsync();
-                if (check == 0)
+                if (check <= 0)
                     throw new Exception("Failed to update date plan");
 
                 var response = _mapper.Map<DatePlanResponse>(datePlan);

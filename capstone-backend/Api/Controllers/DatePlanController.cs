@@ -14,10 +14,12 @@ namespace capstone_backend.Api.Controllers
     public class DatePlanController : BaseController
     {
         private readonly IDatePlanService _datePlanService;
+        private readonly IDatePlanItemService _datePlanItemService;
 
-        public DatePlanController(IDatePlanService datePlanService)
+        public DatePlanController(IDatePlanService datePlanService, IDatePlanItemService datePlanItemService)
         {
             _datePlanService = datePlanService;
+            _datePlanItemService = datePlanItemService;
         }
 
         /// <summary>
@@ -98,7 +100,7 @@ namespace capstone_backend.Api.Controllers
             try
             {
                 var userId = GetCurrentUserId();
-                var result = await _datePlanService.AddVenuesToDatePlanAsync(userId.Value, datePlanId, request);
+                var result = await _datePlanItemService.AddVenuesToDatePlanAsync(userId.Value, datePlanId, request);
                 return OkResponse(result, "Added venues to date plan successfully");
             }
             catch (Exception ex)
@@ -123,6 +125,30 @@ namespace capstone_backend.Api.Controllers
             }
             catch (Exception ex)
             {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Update Date Plan Item
+        /// </summary>
+        [HttpPatch("{datePlanId:int}/items/{datePlanItemId:int}")]
+        public async Task<IActionResult> UpdateDatePlanItem(
+            int datePlanId, 
+            int datePlanItemId,
+            [FromQuery] int version,
+            UpdateDatePlanItemRequest request
+        )
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanItemService.UpdateItemAsync(userId.Value, datePlanId, datePlanItemId, version,  request);
+                return OkResponse(result, "Updated date plan item successfully");
+            }
+            catch (Exception ex)
+            {
+
                 return BadRequestResponse(ex.Message);
             }
         }

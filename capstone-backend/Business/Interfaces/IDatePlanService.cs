@@ -6,7 +6,6 @@ namespace capstone_backend.Business.Interfaces
 {
     public interface IDatePlanService
     {
-        Task<int> AddVenuesToDatePlanAsync(int userId, int datePlanId, CreateDatePlanItemRequest request);
         Task<int> CreateDatePlanAsync(int userId, CreateDatePlanRequest request);
         Task<PagedResult<DatePlanResponse>> GetAllDatePlansByTimeAsync(int pageNumber, int pageSize, int userId, string time);
         Task<DatePlanDetailResponse> GetByIdAsync(int datePlanId, int userId);
