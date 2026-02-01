@@ -88,4 +88,11 @@ public interface IVenueLocationService
     /// <param name="userId">User ID (owner)</param>
     /// <returns>Submission result with success status and missing fields if any</returns>
     Task<VenueSubmissionResult> SubmitVenueToAdminAsync(int venueId, int userId);
+    /// <summary>
+    /// Get pending venue locations for admin approval
+    /// </summary>
+    /// <param name="page">Page number</param>
+    /// <param name="pageSize">Page size</param>
+    /// <returns>Paged list of pending venues</returns>
+    Task<PagedResult<VenueOwnerVenueLocationResponse>> GetPendingVenuesAsync(int page, int pageSize);
 }

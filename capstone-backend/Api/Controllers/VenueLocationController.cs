@@ -1,6 +1,7 @@
 using capstone_backend.Business.DTOs.VenueLocation;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Api.Models;
+using capstone_backend.Business.DTOs.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -242,5 +243,26 @@ public class VenueLocationController : BaseController
         }
         
         return OkResponse(result, "Venue submitted successfully");
+    }
+    /// <summary>
+    /// Get pending venue locations for admin.
+    /// Requires ADMIN role.
+    /// Returns a paginated list of venues waiting for approval.
+    /// </summary>
+    /// <param name="page">Page number (default: 1)</param>
+    /// <param name="pageSize">Page size (default: 10)</param>
+    /// <returns>Paginated list of pending venues</returns>
+    [HttpGet("pending")]
+    [Authorize(Roles = "ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<VenueOwnerVenueLocationResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    public async Task<IActionResult> GetPendingVenues([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    {
+        _logger.LogInformation("Admin requesting pending venues list (Page {Page}, Size {PageSize})", page, pageSize);
+
+        var result = await _venueLocationService.GetPendingVenuesAsync(page, pageSize);
+
+        return OkResponse(result, $"Retrieved {result.Items.Count()} pending venues");
     }
 }

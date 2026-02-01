@@ -759,4 +759,70 @@ public class VenueLocationService : IVenueLocationService
             Message = "Venue submitted successfully. Please wait for admin approval." 
         };
     }
+    /// <summary>
+    /// Get pending venue locations for admin approval
+    /// </summary>
+    public async Task<PagedResult<VenueOwnerVenueLocationResponse>> GetPendingVenuesAsync(int page, int pageSize)
+    {
+        _logger.LogInformation("Retrieving pending venue locations (Page {Page}, Size {PageSize})", page, pageSize);
+
+        var (venues, totalCount) = await _unitOfWork.VenueLocations.GetPendingVenuesAsync(page, pageSize);
+
+        var responses = venues.Select(v => new VenueOwnerVenueLocationResponse
+        {
+            Id = v.Id,
+            Name = v.Name,
+            Description = v.Description,
+            Address = v.Address,
+            Email = v.Email,
+            PhoneNumber = v.PhoneNumber,
+            WebsiteUrl = v.WebsiteUrl,
+            PriceMin = v.PriceMin,
+            PriceMax = v.PriceMax,
+            Latitude = v.Latitude,
+            Longitude = v.Longitude,
+            Area = v.Area,
+            AverageRating = v.AverageRating,
+            AvarageCost = v.AvarageCost,
+            ReviewCount = v.ReviewCount,
+            Status = v.Status,
+            CoverImage = v.CoverImage,
+            InteriorImage = v.InteriorImage,
+            Category = v.Category,
+            FullPageMenuImage = v.FullPageMenuImage,
+            IsOwnerVerified = v.IsOwnerVerified,
+            CreatedAt = v.CreatedAt,
+            UpdatedAt = v.UpdatedAt,
+            LocationTag = v.LocationTag != null ? new VenueOwnerLocationTagInfo
+            {
+                Id = v.LocationTag.Id,
+                TagName = GenerateTagName(v.LocationTag.CoupleMoodType?.Name, v.LocationTag.CouplePersonalityType?.Name),
+                DetailTag = v.LocationTag.DetailTag,
+                CoupleMoodType = v.LocationTag.CoupleMoodType != null ? new VenueOwnerCoupleMoodTypeInfo
+                {
+                    Id = v.LocationTag.CoupleMoodType.Id,
+                    Name = v.LocationTag.CoupleMoodType.Name,
+                    Description = v.LocationTag.CoupleMoodType.Description,
+                    IsActive = v.LocationTag.CoupleMoodType.IsActive
+                } : null,
+                CouplePersonalityType = v.LocationTag.CouplePersonalityType != null ? new VenueOwnerCouplePersonalityTypeInfo
+                {
+                    Id = v.LocationTag.CouplePersonalityType.Id,
+                    Name = v.LocationTag.CouplePersonalityType.Name,
+                    Description = v.LocationTag.CouplePersonalityType.Description,
+                    IsActive = v.LocationTag.CouplePersonalityType.IsActive
+                } : null
+            } : null
+        }).ToList();
+
+        _logger.LogInformation("Retrieved {Count} pending venue locations", responses.Count);
+
+        return new PagedResult<VenueOwnerVenueLocationResponse>
+        {
+            Items = responses,
+            PageNumber = page,
+            PageSize = pageSize,
+            TotalCount = totalCount
+        };
+    }
 }
