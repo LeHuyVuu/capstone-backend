@@ -3,6 +3,7 @@ using capstone_backend.Business.DTOs.Recommendation;
 using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using capstone_backend.Data.Entities;
 
 namespace capstone_backend.Api.Controllers;
 
@@ -14,13 +15,16 @@ namespace capstone_backend.Api.Controllers;
 public class RecommendationController : BaseController
 {
     private readonly IRecommendationService _recommendationService;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<RecommendationController> _logger;
 
     public RecommendationController(
         IRecommendationService recommendationService,
+        IUnitOfWork unitOfWork,
         ILogger<RecommendationController> logger)
     {
         _recommendationService = recommendationService;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -391,13 +395,65 @@ Không truyền region/lat/lon → Search toàn quốc
     {
         try
         {
-            _logger.LogInformation(
-                "Recommendation request - Query: {Query}, MBTI: {Mbti}, Partner: {Partner}, Mood: {Mood}, Area: {Area}",
-                request.Query, request.MbtiType, request.PartnerMbtiType, request.MoodId, request.Area);
+           
 
+            var userId = GetCurrentUserId();
+            if (userId != null)
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId.Value);
+                if (member != null)
+                {
+                    if (string.IsNullOrEmpty(request.MbtiType))
+                    {
+                        var personality = await _unitOfWork.PersonalityTests.GetCurrentPersonalityAsync(member.Id);
+                        request.MbtiType = personality?.ResultCode;
+                    }
+
+                    if (request.MoodId == null)
+                    {
+                        var moods = await _unitOfWork.MemberMoodLogs.GetByMemberIdAsync(member.Id);
+                        request.MoodId = moods.OrderByDescending(m => m.CreatedAt).FirstOrDefault()?.MoodTypeId;
+                    }
+
+                    var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                    // Check if couple exists and status is "Active" (case-insensitive check is safer, but exact string as per Entity definition is useful)
+                    if (couple != null && string.Equals(couple.Status, "Active", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var partnerId = couple.MemberId1 == member.Id ? couple.MemberId2 : couple.MemberId1;
+                        var partner = await _unitOfWork.MembersProfile.GetByIdAsync(partnerId);
+                        
+                        if (partner != null)
+                        {
+                            if (string.IsNullOrEmpty(request.PartnerMbtiType))
+                            {
+                                var partnerPersonality = await _unitOfWork.PersonalityTests.GetCurrentPersonalityAsync(partner.Id);
+                                request.PartnerMbtiType = partnerPersonality?.ResultCode;
+                            }
+
+                            if (request.PartnerMoodId == null)
+                            {
+                                var partnerMoods = await _unitOfWork.MemberMoodLogs.GetByMemberIdAsync(partner.Id);
+                                request.PartnerMoodId = partnerMoods.OrderByDescending(m => m.CreatedAt).FirstOrDefault()?.MoodTypeId;
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            _logger.LogError(
+                "🔍 Recommendation Final Request:\n" +
+                "\tQuery:   {Query}\n" +
+                "\tUser:    {MbtiType} (Mood: {MoodId})\n" +
+                "\tPartner: {PartnerMbtiType} (Mood: {PartnerMoodId})\n" +
+                "\tContext: {Area} | {Latitude},{Longitude} | {RadiusKm}km | Budget: {BudgetLevel}",
+                request.Query, 
+                request.MbtiType, request.MoodId, 
+                request.PartnerMbtiType, request.PartnerMoodId, 
+                request.Area, request.Latitude, request.Longitude, request.RadiusKm, request.BudgetLevel);
             var result = await _recommendationService.GetRecommendationsAsync(request);
 
-            var message = result.Recommendations.Any()
+            var message = result.Recommendations.Any() 
                 ? $"Successfully generated {result.Recommendations.Count} recommendations in {result.ProcessingTimeMs}ms"
                 : "No venues found matching your criteria, but here are some general suggestions";
 
