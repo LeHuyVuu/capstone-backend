@@ -95,4 +95,10 @@ public interface IVenueLocationService
     /// <param name="pageSize">Page size</param>
     /// <returns>Paged list of pending venues</returns>
     Task<PagedResult<VenueOwnerVenueLocationResponse>> GetPendingVenuesAsync(int page, int pageSize);
+    /// <summary>
+    /// Approve or reject a venue location
+    /// </summary>
+    /// <param name="request">Approval request containing venue ID and status</param>
+    /// <returns>True if successful, False if failed</returns>
+    Task<VenueSubmissionResult> ApproveVenueAsync(VenueApprovalRequest request);
 }
