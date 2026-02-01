@@ -94,41 +94,57 @@ public class OpenAIRecommendationService : IRecommendationService
 
             var searchArea = request.Area ?? parsedContext.DetectedRegion;
 
+            // Xác định single person: không có PartnerMoodId và PartnerMbtiType
+            bool isSinglePerson = !request.PartnerMoodId.HasValue && string.IsNullOrEmpty(request.PartnerMbtiType);
+
             // Debug logging
             _logger.LogInformation($"[Recommendation] Lat/Lon: {request.Latitude}, {request.Longitude} | Area: {searchArea}");
-            _logger.LogInformation($"[Recommendation] Mood: {coupleMoodType} | Tags: {string.Join(", ", personalityTags)}");
+            _logger.LogInformation($"[Recommendation] Mood: {coupleMoodType} | Tags: {string.Join(", ", personalityTags)} | SinglePerson: {isSinglePerson}");
 
             // Phase 3: Query venues trực tiếp từ repo
             var hasFilters = !string.IsNullOrEmpty(coupleMoodType) || personalityTags.Any();
-            var venues = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
-                hasFilters ? coupleMoodType : null,
+            
+            // Khi single person: truyền mood vào singleMoodName để filter bằng DetailTag.Contains
+            // Khi couple: truyền mood vào coupleMoodType để filter bằng CoupleMoodType.Name
+            string? coupleMoodForFilter = isSinglePerson ? null : (hasFilters ? coupleMoodType : null);
+            string? singleMoodForFilter = isSinglePerson && hasFilters ? coupleMoodType : null;
+            
+            var venuesWithDistance = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
+                coupleMoodForFilter,
                 hasFilters ? personalityTags : new List<string>(),
+                singleMoodForFilter,
                 searchArea,
                 request.Latitude,
                 request.Longitude,
                 request.RadiusKm,
-                request.Limit
+                request.Limit,
+                request.BudgetLevel
             );
+            var venues = venuesWithDistance.Select(x => x.Venue).ToList();
+            var distanceMap = venuesWithDistance.ToDictionary(x => x.Venue.Id, x => x.DistanceKm);
 
             // Fallback: nếu có filter mà không đủ kết quả, query thêm không filter
             if (hasFilters && venues.Count < request.Limit)
             {
-                var additionalVenues = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
+                var additionalVenuesWithDistance = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
                     null,
                     new List<string>(),
+                    null,
                     searchArea,
                     request.Latitude,
                     request.Longitude,
                     request.RadiusKm,
-                    request.Limit - venues.Count
+                    request.Limit - venues.Count,
+                    request.BudgetLevel
                 );
 
                 var venueIds = new HashSet<int>(venues.Select(v => v.Id));
-                foreach (var venue in additionalVenues)
+                foreach (var (venue, distanceKm) in additionalVenuesWithDistance)
                 {
                     if (venueIds.Add(venue.Id))
                     {
                         venues.Add(venue);
+                        distanceMap[venue.Id] = distanceKm;
                     }
                 }
             }
@@ -139,7 +155,8 @@ public class OpenAIRecommendationService : IRecommendationService
                 {
                     Recommendations = new List<RecommendedVenue>(),
                     Explanation = "Xin lỗi, hiện tại chúng tôi chưa có đủ dữ liệu địa điểm. Vui lòng thử lại sau.",
-                    CoupleMoodType = coupleMoodType,
+                    CoupleMoodType = isSinglePerson ? null : coupleMoodType,
+                    SingleMood = isSinglePerson ? coupleMoodType : null,
                     PersonalityTags = personalityTags,
                     ProcessingTimeMs = stopwatch.ElapsedMilliseconds
                 };
@@ -166,7 +183,7 @@ public class OpenAIRecommendationService : IRecommendationService
             );
 
             // Phase 5: Build response
-            var recommendations = RecommendationFormatter.FormatRecommendedVenues(venues, aiExplanations);
+            var recommendations = RecommendationFormatter.FormatRecommendedVenues(venues, aiExplanations, distanceMap);
             stopwatch.Stop();
 
             return new RecommendationResponse
@@ -175,7 +192,8 @@ public class OpenAIRecommendationService : IRecommendationService
                 Explanation = aiExplanations.ContainsKey(-1) 
                     ? aiExplanations[-1] 
                     : ResponseFormatter.GenerateDefaultExplanation(coupleMoodType, personalityTags, request.Query, parsedContext),
-                CoupleMoodType = coupleMoodType,
+                CoupleMoodType = isSinglePerson ? null : coupleMoodType,
+                SingleMood = isSinglePerson ? coupleMoodType : null,
                 PersonalityTags = personalityTags,
                 ProcessingTimeMs = stopwatch.ElapsedMilliseconds
             };
@@ -195,15 +213,19 @@ public class OpenAIRecommendationService : IRecommendationService
     {
         try
         {
-            var venues = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
+            var venuesWithDistance = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
                 null, 
                 new List<string>(), 
+                null,
                 request.Area, 
                 request.Latitude, 
                 request.Longitude, 
                 request.RadiusKm, 
-                request.Limit
+                request.Limit,
+                request.BudgetLevel
             );
+            var venues = venuesWithDistance.Select(x => x.Venue).ToList();
+            var distanceMap = venuesWithDistance.ToDictionary(x => x.Venue.Id, x => x.DistanceKm);
 
             if (!venues.Any())
             {
@@ -217,7 +239,7 @@ public class OpenAIRecommendationService : IRecommendationService
 
             return new RecommendationResponse
             {
-                Recommendations = RecommendationFormatter.FormatFallbackVenues(venues, request.Limit),
+                Recommendations = RecommendationFormatter.FormatFallbackVenues(venues, request.Limit, distanceMap),
                 Explanation = "Đây là những địa điểm phổ biến và được yêu thích nhất.",
                 ProcessingTimeMs = processingTimeMs
             };

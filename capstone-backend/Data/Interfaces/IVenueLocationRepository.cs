@@ -43,23 +43,28 @@ public interface IVenueLocationRepository : IGenericRepository<VenueLocation>
     /// <summary>
     /// Get venues for recommendations with filtering
     /// Priority: lat/lon radius search > area (province code) filtering
+    /// Returns venues with calculated distance when lat/lon provided
     /// </summary>
-    /// <param name="coupleMoodType">Couple mood type to filter</param>
-    /// <param name="personalityTags">Personality tags to filter</param>
+    /// <param name="coupleMoodType">Couple mood type to filter (matches CoupleMoodType.Name)</param>
+    /// <param name="personalityTags">Personality tags to filter (matches CouplePersonalityType.Name)</param>
+    /// <param name="singleMoodName">Single person mood name to filter (matches DetailTag Contains) - used when only 1 person</param>
     /// <param name="area">Province code (e.g. "01" = Hà Nội, "79" = TP.HCM, "92" = Cần Thơ) - used when lat/lon not provided</param>
     /// <param name="latitude">Latitude for geo-location search</param>
     /// <param name="longitude">Longitude for geo-location search</param>
     /// <param name="radiusKm">Search radius in kilometers</param>
     /// <param name="limit">Maximum number of results</param>
-    /// <returns>List of matching venues</returns>
-    Task<List<VenueLocation>> GetForRecommendationsAsync(
+    /// <param name="budgetLevel">Budget level (1: Low < 200k, 2: Medium 200k-1m, 3: High > 1m) or custom logic</param>
+    /// <returns>List of matching venues with distance (sorted by distance when lat/lon provided)</returns>
+    Task<List<(VenueLocation Venue, decimal? DistanceKm)>> GetForRecommendationsAsync(
         string? coupleMoodType,
         List<string> personalityTags,
+        string? singleMoodName,
         string? area,
         decimal? latitude,
         decimal? longitude,
         decimal? radiusKm,
-        int limit);
+        int limit,
+        int? budgetLevel = null);
     /// <summary>
     /// Get pending venue locations for admin review
     /// </summary>

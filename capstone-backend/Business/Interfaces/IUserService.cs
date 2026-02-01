@@ -100,4 +100,14 @@ public interface IUserService
     /// <returns>True if deleted successfully, false if user not found</returns>
     Task<bool> DeleteUserAsync(
         int userId);
+
+    /// <summary>
+    /// Update venue owner specific profile information (CCCD, Business License)
+    /// </summary>
+    /// <param name="userId">User ID to update</param>
+    /// <param name="request">Update data</param>
+    /// <returns>Updated user response</returns>
+    Task<UserResponse?> UpdateDocumentVenueOwnerAsync(
+        int userId,
+        UpdateDocumentVenueOwnerRequest request);
 }
