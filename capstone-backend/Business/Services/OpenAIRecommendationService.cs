@@ -161,14 +161,7 @@ public class OpenAIRecommendationService : IRecommendationService
                     ProcessingTimeMs = stopwatch.ElapsedMilliseconds
                 };
             }
-
-            // Phase 4: Build context và gọi OpenAI lấy explanations
-            var context = VenueContextBuilder.BuildVenueContext(
-                venues,
-                coupleMoodType,
-                personalityTags,
-                request.Query,
-                parsedContext);
+     
 
           
             // Phase 5: Build response
