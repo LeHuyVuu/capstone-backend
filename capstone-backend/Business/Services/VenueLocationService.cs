@@ -59,6 +59,7 @@ public class VenueLocationService : IVenueLocationService
     
     #endregion
 
+
     /// <summary>
     /// Get venue location detail by ID including location tag, venue owner profile, and today's opening hours
     /// </summary>
@@ -626,10 +627,10 @@ public class VenueLocationService : IVenueLocationService
             AvarageCost = v.AvarageCost,
             ReviewCount = v.ReviewCount,
             Status = v.Status,
-            CoverImage = v.CoverImage,
-            InteriorImage = v.InteriorImage,
+            CoverImage = DeserializeImages(v.CoverImage),
+            InteriorImage = DeserializeImages(v.InteriorImage),
             Category = v.Category,
-            FullPageMenuImage = v.FullPageMenuImage,
+            FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
             IsOwnerVerified = v.IsOwnerVerified,
             CreatedAt = v.CreatedAt,
             UpdatedAt = v.UpdatedAt,

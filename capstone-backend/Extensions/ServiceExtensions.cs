@@ -3,6 +3,8 @@ using Amazon.Runtime;
 using capstone_backend.Api.Filters;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Services;
+using capstone_backend.Data.Context;
+using capstone_backend.Data.Interfaces;
 using capstone_backend.Data.Repositories;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -12,9 +14,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 using System.Text;
-using capstone_backend.Data.Context;
-using capstone_backend.Data.Interfaces;
 using System.Text.Json.Serialization;
 
 namespace capstone_backend.Extensions;
@@ -84,6 +85,7 @@ public static class ServiceExtensions
         services.AddScoped<IVenueLocationRepository, VenueLocationRepository>();
         services.AddScoped<ILocationTagRepository, LocationTagRepository>();
         services.AddScoped<IDatePlanRepository, DatePlanRepository>();
+        services.AddScoped<IDatePlanItemRepository, DatePlanItemRepository>();
         services.AddScoped<IVenueOwnerProfileRepository, VenueOwnerProfileRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -492,6 +494,51 @@ public static class ServiceExtensions
         });
 
         Console.WriteLine("[INFO] Hangfire: Configured with PostgreSQL");
+
+        return services;
+    }
+
+    /// <summary>
+    /// Register Redis Cache
+    /// </summary>
+    public static IServiceCollection AddRedisConfiguration(this IServiceCollection services)
+    {
+        // 1. Lấy config từ .env
+        var redisHost = Environment.GetEnvironmentVariable("REDIS_HOST");
+        var redisPort = Environment.GetEnvironmentVariable("REDIS_PORT") ?? "6379";
+        var redisPassword = Environment.GetEnvironmentVariable("REDIS_PASSWORD");
+        var redisConnStr = $"{redisHost}:{redisPort}";
+
+        // 2. Validate
+        if (string.IsNullOrWhiteSpace(redisConnStr) || string.IsNullOrEmpty(redisPassword))
+        {
+            Console.WriteLine("[WARNING] REDIS var not found in .env. Redis functionality will be disabled.");
+            return services;
+        }
+
+        try
+        {
+            var configuration = new ConfigurationOptions
+            {
+                EndPoints = { redisConnStr },
+                Password = string.IsNullOrEmpty(redisPassword) ? null : redisPassword,
+                AbortOnConnectFail = false,
+                ConnectRetry = 3,
+                ConnectTimeout = 5000,
+                SyncTimeout = 5000
+            };
+
+            services.AddSingleton<IConnectionMultiplexer>(sp =>
+                ConnectionMultiplexer.Connect(configuration));
+
+            services.AddSingleton<IRedisService, RedisService>();
+
+            Console.WriteLine($"[INFO] Redis connected: {configuration.EndPoints.FirstOrDefault()}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Redis connection failed: {ex.Message}");
+        }
 
         return services;
     }

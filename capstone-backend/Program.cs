@@ -25,8 +25,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Configure Services (Dependency Injection)
 // ========================================
 
-// 1. Database Context with PostgreSQL + EF Core
+// 1. Database Context with PostgreSQL + EF Core + Redis
 builder.Services.AddDatabaseContext(builder.Configuration);
+builder.Services.AddRedisConfiguration();
 
 // 2. HttpClient for external API calls
 builder.Services.AddHttpClient();
