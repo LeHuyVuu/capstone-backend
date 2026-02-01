@@ -1,11 +1,10 @@
-using capstone_backend.Business.DTOs.User;
-
 namespace capstone_backend.Business.DTOs.VenueLocation;
 
 /// <summary>
-/// Response model for venue location detail
+/// Response model for venue location list of a venue owner
+/// Contains venue information with location tag details (couple mood type and personality type)
 /// </summary>
-public class VenueLocationDetailResponse
+public class VenueOwnerVenueLocationResponse
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;
@@ -18,46 +17,49 @@ public class VenueLocationDetailResponse
     public decimal? PriceMax { get; set; }
     public decimal? Latitude { get; set; }
     public decimal? Longitude { get; set; }
+    public string? Area { get; set; }
     public decimal? AverageRating { get; set; }
     public decimal? AvarageCost { get; set; }
     public int? ReviewCount { get; set; }
     public string? Status { get; set; }
     public List<string>? CoverImage { get; set; }
     public List<string>? InteriorImage { get; set; }
+    public string? Category { get; set; }
     public List<string>? FullPageMenuImage { get; set; }
     public bool? IsOwnerVerified { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
-    // Location Tag information
-    public LocationTagInfo? LocationTag { get; set; }
-
-    // Venue Owner Profile information
-    public VenueOwnerProfileResponse? VenueOwner { get; set; }
-
-    // Today's opening hour info
-    public string? TodayDayName { get; set; }  // "Thứ 5", "Monday", v.v.
-    public TodayOpeningHourResponse? TodayOpeningHour { get; set; }
-
-    // Venue opening hours for each day
-    public List<VenueOpeningHourResponse>? OpeningHours { get; set; }
+    /// <summary>
+    /// Location Tag information including couple mood type and personality type
+    /// </summary>
+    public VenueOwnerLocationTagInfo? LocationTag { get; set; }
 }
 
 /// <summary>
-/// Location tag information including couple mood type and personality type
+/// Location tag information with full details for venue owner's venues
 /// </summary>
-public class LocationTagInfo
+public class VenueOwnerLocationTagInfo
 {
     public int Id { get; set; }
     public string? TagName { get; set; }
-    public CoupleMoodTypeInfo? CoupleMoodType { get; set; }
-    public CouplePersonalityTypeInfo? CouplePersonalityType { get; set; }
+    public string[]? DetailTag { get; set; }
+
+    /// <summary>
+    /// Couple mood type with full details
+    /// </summary>
+    public VenueOwnerCoupleMoodTypeInfo? CoupleMoodType { get; set; }
+
+    /// <summary>
+    /// Couple personality type with full details
+    /// </summary>
+    public VenueOwnerCouplePersonalityTypeInfo? CouplePersonalityType { get; set; }
 }
 
 /// <summary>
-/// Couple mood type information
+/// Couple mood type information for venue owner's venues
 /// </summary>
-public class CoupleMoodTypeInfo
+public class VenueOwnerCoupleMoodTypeInfo
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;
@@ -66,24 +68,12 @@ public class CoupleMoodTypeInfo
 }
 
 /// <summary>
-/// Couple personality type information
+/// Couple personality type information for venue owner's venues
 /// </summary>
-public class CouplePersonalityTypeInfo
+public class VenueOwnerCouplePersonalityTypeInfo
 {
     public int Id { get; set; }
     public string? Name { get; set; }
     public string? Description { get; set; }
     public bool? IsActive { get; set; }
-}
-
-/// <summary>
-/// Today's opening hour information
-/// </summary>
-public class TodayOpeningHourResponse
-{
-    public int Id { get; set; }
-    public TimeSpan OpenTime { get; set; }
-    public TimeSpan CloseTime { get; set; }
-    public bool IsClosed { get; set; }
-    public string Status { get; set; } = null!;  // "Đang mở cửa", "Sắp mở cửa", "Đã đóng cửa"
 }

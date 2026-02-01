@@ -71,4 +71,34 @@ public interface IVenueLocationService
     /// This method is called by Hangfire as a recurring job every minute
     /// </summary>
     Task UpdateAllVenuesIsClosedStatusAsync();
+
+    /// <summary>
+    /// Get all venue locations for a venue owner by user ID
+    /// Includes LocationTag details with CoupleMoodType and CouplePersonalityType
+    /// </summary>
+    /// <param name="userId">User ID from JWT token (sub claim)</param>
+    /// <returns>List of venue locations with LocationTag details</returns>
+    Task<List<VenueOwnerVenueLocationResponse>> GetVenueLocationsByVenueOwnerAsync(int userId);
+
+    /// <summary>
+    /// Submit venue location to admin for approval
+    /// Validates required fields before changing status to PENDING
+    /// </summary>
+    /// <param name="venueId">Venue location ID</param>
+    /// <param name="userId">User ID (owner)</param>
+    /// <returns>Submission result with success status and missing fields if any</returns>
+    Task<VenueSubmissionResult> SubmitVenueToAdminAsync(int venueId, int userId);
+    /// <summary>
+    /// Get pending venue locations for admin approval
+    /// </summary>
+    /// <param name="page">Page number</param>
+    /// <param name="pageSize">Page size</param>
+    /// <returns>Paged list of pending venues</returns>
+    Task<PagedResult<VenueOwnerVenueLocationResponse>> GetPendingVenuesAsync(int page, int pageSize);
+    /// <summary>
+    /// Approve or reject a venue location
+    /// </summary>
+    /// <param name="request">Approval request containing venue ID and status</param>
+    /// <returns>True if successful, False if failed</returns>
+    Task<VenueSubmissionResult> ApproveVenueAsync(VenueApprovalRequest request);
 }

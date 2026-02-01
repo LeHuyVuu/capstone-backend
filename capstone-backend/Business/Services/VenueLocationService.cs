@@ -6,6 +6,7 @@ using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace capstone_backend.Business.Services;
 
@@ -25,6 +26,40 @@ public class VenueLocationService : IVenueLocationService
         _logger = logger;
     }
 
+    #region Image JSON Helpers
+    
+    /// <summary>
+    /// Serialize list of image URLs to JSON string (max 5 images)
+    /// </summary>
+    private static string? SerializeImages(List<string>? images)
+    {
+        if (images == null || images.Count == 0)
+            return null;
+        return JsonSerializer.Serialize(images.Take(5).ToList());
+    }
+
+    /// <summary>
+    /// Deserialize JSON string to list of image URLs
+    /// </summary>
+    private static List<string>? DeserializeImages(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return null;
+        try
+        {
+            if (json.TrimStart().StartsWith("["))
+                return JsonSerializer.Deserialize<List<string>>(json);
+            return new List<string> { json };
+        }
+        catch (JsonException)
+        {
+            return new List<string> { json };
+        }
+    }
+    
+    #endregion
+
+
     /// <summary>
     /// Get venue location detail by ID including location tag, venue owner profile, and today's opening hours
     /// </summary>
@@ -39,6 +74,11 @@ public class VenueLocationService : IVenueLocationService
         }
 
         var response = _mapper.Map<VenueLocationDetailResponse>(venue);
+
+        // Deserialize image JSON strings to arrays
+        response.CoverImage = DeserializeImages(venue.CoverImage);
+        response.InteriorImage = DeserializeImages(venue.InteriorImage);
+        response.FullPageMenuImage = DeserializeImages(venue.FullPageMenuImage);
 
         // Add today's opening hour info
         var todayOpeningHour = venue.VenueOpeningHours?.FirstOrDefault();
@@ -177,12 +217,12 @@ public class VenueLocationService : IVenueLocationService
             PriceMax = request.PriceMax,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
-            CoverImage = request.CoverImage,
-            InteriorImage = request.InteriorImage,
-            FullPageMenuImage = request.FullPageMenuImage,
+            CoverImage = SerializeImages(request.CoverImage),
+            InteriorImage = SerializeImages(request.InteriorImage),
+            FullPageMenuImage = SerializeImages(request.FullPageMenuImage),
             IsOwnerVerified = request.IsOwnerVerified ?? false,
             VenueOwnerId = venueOwnerProfile.Id,
-            Status = "Active",
+            Status = "DRAFTED",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             IsDeleted = false,
@@ -269,13 +309,13 @@ public class VenueLocationService : IVenueLocationService
             venue.Longitude = request.Longitude;
         
         if (request.CoverImage != null)
-            venue.CoverImage = request.CoverImage;
+            venue.CoverImage = SerializeImages(request.CoverImage);
         
         if (request.InteriorImage != null)
-            venue.InteriorImage = request.InteriorImage;
+            venue.InteriorImage = SerializeImages(request.InteriorImage);
         
         if (request.FullPageMenuImage != null)
-            venue.FullPageMenuImage = request.FullPageMenuImage;
+            venue.FullPageMenuImage = SerializeImages(request.FullPageMenuImage);
         
         if (request.IsOwnerVerified.HasValue)
             venue.IsOwnerVerified = request.IsOwnerVerified;
@@ -544,5 +584,303 @@ public class VenueLocationService : IVenueLocationService
             DayOfWeek.Saturday => 7,
             _ => 8
         };
+    }
+
+    /// <summary>
+    /// Get all venue locations for a venue owner by user ID
+    /// Includes LocationTag details with CoupleMoodType and CouplePersonalityType
+    /// </summary>
+    public async Task<List<VenueOwnerVenueLocationResponse>> GetVenueLocationsByVenueOwnerAsync(int userId)
+    {
+        _logger.LogInformation("Getting venue locations for user {UserId}", userId);
+
+        // Find VenueOwnerProfile for the user using repository
+        var venueOwnerProfile = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(userId);
+
+        if (venueOwnerProfile == null)
+        {
+            _logger.LogWarning("User {UserId} does not have a venue owner profile", userId);
+            return new List<VenueOwnerVenueLocationResponse>();
+        }
+
+        _logger.LogInformation("Found venue owner profile ID {VenueOwnerProfileId} for user {UserId}", venueOwnerProfile.Id, userId);
+
+        // Get venue locations with LocationTag details
+        var venueLocations = await _unitOfWork.VenueLocations.GetByVenueOwnerIdWithLocationTagAsync(venueOwnerProfile.Id);
+
+        // Map to response DTOs
+        var responses = venueLocations.Select(v => new VenueOwnerVenueLocationResponse
+        {
+            Id = v.Id,
+            Name = v.Name,
+            Description = v.Description,
+            Address = v.Address,
+            Email = v.Email,
+            PhoneNumber = v.PhoneNumber,
+            WebsiteUrl = v.WebsiteUrl,
+            PriceMin = v.PriceMin,
+            PriceMax = v.PriceMax,
+            Latitude = v.Latitude,
+            Longitude = v.Longitude,
+            Area = v.Area,
+            AverageRating = v.AverageRating,
+            AvarageCost = v.AvarageCost,
+            ReviewCount = v.ReviewCount,
+            Status = v.Status,
+            CoverImage = DeserializeImages(v.CoverImage),
+            InteriorImage = DeserializeImages(v.InteriorImage),
+            Category = v.Category,
+            FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
+            IsOwnerVerified = v.IsOwnerVerified,
+            CreatedAt = v.CreatedAt,
+            UpdatedAt = v.UpdatedAt,
+            LocationTag = v.LocationTag != null ? new VenueOwnerLocationTagInfo
+            {
+                Id = v.LocationTag.Id,
+                TagName = GenerateTagName(v.LocationTag.CoupleMoodType?.Name, v.LocationTag.CouplePersonalityType?.Name),
+                DetailTag = v.LocationTag.DetailTag,
+                CoupleMoodType = v.LocationTag.CoupleMoodType != null ? new VenueOwnerCoupleMoodTypeInfo
+                {
+                    Id = v.LocationTag.CoupleMoodType.Id,
+                    Name = v.LocationTag.CoupleMoodType.Name,
+                    Description = v.LocationTag.CoupleMoodType.Description,
+                    IsActive = v.LocationTag.CoupleMoodType.IsActive
+                } : null,
+                CouplePersonalityType = v.LocationTag.CouplePersonalityType != null ? new VenueOwnerCouplePersonalityTypeInfo
+                {
+                    Id = v.LocationTag.CouplePersonalityType.Id,
+                    Name = v.LocationTag.CouplePersonalityType.Name,
+                    Description = v.LocationTag.CouplePersonalityType.Description,
+                    IsActive = v.LocationTag.CouplePersonalityType.IsActive
+                } : null
+            } : null
+        }).ToList();
+
+        _logger.LogInformation("Retrieved {Count} venue locations for venue owner profile ID {VenueOwnerProfileId}", responses.Count, venueOwnerProfile.Id);
+
+        return responses;
+    }
+    /// <summary>
+    /// Submit venue location to admin for approval
+    /// Validates required fields before changing status to PENDING
+    /// </summary>
+    public async Task<VenueSubmissionResult> SubmitVenueToAdminAsync(int venueId, int userId)
+    {
+        _logger.LogInformation("Submitting venue {VenueId} to admin for user {UserId}", venueId, userId);
+        
+        // 1. Get venue with details to check opening hours
+        var venue = await _unitOfWork.VenueLocations.GetByIdWithDetailsAsync(venueId);
+        
+        if (venue == null || venue.IsDeleted == true)
+        {
+             return new VenueSubmissionResult 
+             { 
+                 IsSuccess = false, 
+                 Message = "Venue not found" 
+             };
+        }
+
+        // 2. Validate Owner
+        var ownerProfile = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(userId);
+        if (ownerProfile == null || venue.VenueOwnerId != ownerProfile.Id)
+        {
+             _logger.LogWarning("User {UserId} attempted to submit venue {VenueId} but is not the owner", userId, venueId);
+             return new VenueSubmissionResult 
+             { 
+                 IsSuccess = false, 
+                 Message = "Unauthorized access" 
+             };
+        }
+
+        // 3. Check Status (Allow DRAFT or DRAFTED just in case)
+        if (venue.Status != "DRAFTED" && venue.Status != "DRAFT")
+        {
+             return new VenueSubmissionResult 
+             { 
+                 IsSuccess = false, 
+                 Message = $"Venue status is {venue.Status}, cannot submit. Only drafted venues can be submitted." 
+             };
+        }
+        
+        // 4. Validate Fields
+        var missingFields = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(venue.Name)) missingFields.Add("Name");
+        if (string.IsNullOrWhiteSpace(venue.Description)) missingFields.Add("Description");
+        if (string.IsNullOrWhiteSpace(venue.Address)) missingFields.Add("Address");
+        
+        // Check Images
+        var coverImages = DeserializeImages(venue.CoverImage);
+        if (coverImages == null || !coverImages.Any()) missingFields.Add("CoverImage");
+        
+        // Contact (Both Phone AND Email are required)
+        if (string.IsNullOrWhiteSpace(venue.PhoneNumber)) missingFields.Add("Phone Number");
+        if (string.IsNullOrWhiteSpace(venue.Email)) missingFields.Add("Email");
+        
+        // Location Tag
+        if (venue.LocationTagId == null) missingFields.Add("LocationTag");
+        
+        // Coordinates
+        if (venue.Latitude == null || venue.Longitude == null) 
+        {
+            missingFields.Add("Location Coordinates (Latitude or Longitude)");
+        }
+        
+        // Price
+        if (venue.PriceMin == null || venue.PriceMax == null) 
+        {
+            missingFields.Add("Price Range (Min/Max)");
+        }
+        
+        // Opening Hours
+      
+
+        if (missingFields.Any())
+        {
+            return new VenueSubmissionResult 
+            { 
+                IsSuccess = false, 
+                Message = "Please fill in all required fields before submitting.", 
+                MissingFields = missingFields 
+            };
+        }
+
+        // 5. Update Status
+        venue.Status = "PENDING";
+        venue.UpdatedAt = DateTime.UtcNow;
+        
+        _unitOfWork.VenueLocations.Update(venue);
+        await _unitOfWork.SaveChangesAsync();
+        
+        _logger.LogInformation("Venue {VenueId} submitted successfully, status changed to PENDING", venueId);
+        
+        return new VenueSubmissionResult 
+        { 
+            IsSuccess = true, 
+            Message = "Venue submitted successfully. Please wait for admin approval." 
+        };
+    }
+    /// <summary>
+    /// Get pending venue locations for admin approval
+    /// </summary>
+    public async Task<PagedResult<VenueOwnerVenueLocationResponse>> GetPendingVenuesAsync(int page, int pageSize)
+    {
+        _logger.LogInformation("Retrieving pending venue locations (Page {Page}, Size {PageSize})", page, pageSize);
+
+        var (venues, totalCount) = await _unitOfWork.VenueLocations.GetPendingVenuesAsync(page, pageSize);
+
+        var responses = venues.Select(v => new VenueOwnerVenueLocationResponse
+        {
+            Id = v.Id,
+            Name = v.Name,
+            Description = v.Description,
+            Address = v.Address,
+            Email = v.Email,
+            PhoneNumber = v.PhoneNumber,
+            WebsiteUrl = v.WebsiteUrl,
+            PriceMin = v.PriceMin,
+            PriceMax = v.PriceMax,
+            Latitude = v.Latitude,
+            Longitude = v.Longitude,
+            Area = v.Area,
+            AverageRating = v.AverageRating,
+            AvarageCost = v.AvarageCost,
+            ReviewCount = v.ReviewCount,
+            Status = v.Status,
+            CoverImage = DeserializeImages(v.CoverImage),
+            InteriorImage = DeserializeImages(v.InteriorImage),
+            Category = v.Category,
+            FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
+            IsOwnerVerified = v.IsOwnerVerified,
+            CreatedAt = v.CreatedAt,
+            UpdatedAt = v.UpdatedAt,
+            LocationTag = v.LocationTag != null ? new VenueOwnerLocationTagInfo
+            {
+                Id = v.LocationTag.Id,
+                TagName = GenerateTagName(v.LocationTag.CoupleMoodType?.Name, v.LocationTag.CouplePersonalityType?.Name),
+                DetailTag = v.LocationTag.DetailTag,
+                CoupleMoodType = v.LocationTag.CoupleMoodType != null ? new VenueOwnerCoupleMoodTypeInfo
+                {
+                    Id = v.LocationTag.CoupleMoodType.Id,
+                    Name = v.LocationTag.CoupleMoodType.Name,
+                    Description = v.LocationTag.CoupleMoodType.Description,
+                    IsActive = v.LocationTag.CoupleMoodType.IsActive
+                } : null,
+                CouplePersonalityType = v.LocationTag.CouplePersonalityType != null ? new VenueOwnerCouplePersonalityTypeInfo
+                {
+                    Id = v.LocationTag.CouplePersonalityType.Id,
+                    Name = v.LocationTag.CouplePersonalityType.Name,
+                    Description = v.LocationTag.CouplePersonalityType.Description,
+                    IsActive = v.LocationTag.CouplePersonalityType.IsActive
+                } : null
+            } : null
+        }).ToList();
+
+        _logger.LogInformation("Retrieved {Count} pending venue locations", responses.Count);
+
+        return new PagedResult<VenueOwnerVenueLocationResponse>
+        {
+            Items = responses,
+            PageNumber = page,
+            PageSize = pageSize,
+            TotalCount = totalCount
+        };
+
+        
+    }
+
+      /// <summary>
+    /// Approve or reject a venue location
+    /// Only allows status PENDING -> ACTIVE or PENDING -> DRAFTED
+    /// </summary>
+    public async Task<VenueSubmissionResult> ApproveVenueAsync(VenueApprovalRequest request)
+    {
+        _logger.LogInformation("Processing venue approval request for Venue {VenueId}, Status: {Status}", request.VenueId, request.Status);
+
+        // Validate Status
+        var status = request.Status?.ToUpper();
+        if (status != "ACTIVE" && status != "DRAFTED")
+        {
+            return new VenueSubmissionResult { IsSuccess = false, Message = "Invalid status. Only 'ACTIVE' or 'DRAFTED' are allowed." };
+        }
+
+        var venue = await _unitOfWork.VenueLocations.GetByIdAsync(request.VenueId);
+        
+        if (venue == null || venue.IsDeleted == true)
+        {
+            return new VenueSubmissionResult { IsSuccess = false, Message = "Venue not found" };
+        }
+
+        // Only allow PENDING venues to be approved/rejected
+        // Wait, user might want to ban an ACTIVE venue back to DRAFTED? 
+        // User request: "approve location" implies pending -> active. "reject" implies pending -> drafted.
+        // Let's strict check PENDING for now, unless user specified otherwise.
+        if (venue.Status != "PENDING")
+        {
+             return new VenueSubmissionResult { IsSuccess = false, Message = $"Cannot approve/reject venue with status '{venue.Status}'. Only 'PENDING' venues can be processed." };
+        }
+
+        venue.Status = status;
+        venue.UpdatedAt = DateTime.UtcNow;
+        
+        // Fix DateTime fields for PostgreSQL
+        if (venue.CreatedAt.HasValue && venue.CreatedAt.Value.Kind == DateTimeKind.Unspecified)
+            venue.CreatedAt = DateTime.SpecifyKind(venue.CreatedAt.Value, DateTimeKind.Utc);
+        if (venue.OpeningTime.HasValue && venue.OpeningTime.Value.Kind == DateTimeKind.Unspecified)
+            venue.OpeningTime = DateTime.SpecifyKind(venue.OpeningTime.Value, DateTimeKind.Utc);
+        if (venue.ClosingTime.HasValue && venue.ClosingTime.Value.Kind == DateTimeKind.Unspecified)
+            venue.ClosingTime = DateTime.SpecifyKind(venue.ClosingTime.Value, DateTimeKind.Utc);
+        // If rejected, maybe append reason to description or send notification (out of scope for now)
+        if (status == "DRAFTED" && !string.IsNullOrEmpty(request.Reason))
+        {
+            _logger.LogInformation("Venue {VenueId} rejected. Reason: {Reason}", request.VenueId, request.Reason);
+        }
+
+        _unitOfWork.VenueLocations.Update(venue);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("Venue {VenueId} status updated to {Status}", request.VenueId, status);
+
+        return new VenueSubmissionResult { IsSuccess = true, Message = $"Venue {status} successfully" };
     }
 }

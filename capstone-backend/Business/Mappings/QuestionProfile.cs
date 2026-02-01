@@ -12,6 +12,11 @@ namespace capstone_backend.Business.Mappings
             CreateMap<Question, QuestionResponse>()
                 .ForMember(dest => dest.Answers, opt => opt.MapFrom(src => src.QuestionAnswers));
             CreateMap<QuestionAnswer, QuestionAnswerResponse>();
+
+            // Dto v2
+            CreateMap<Question, TestQuestionResponse>()
+                .ForMember(dest => dest.Options, opt => opt.MapFrom(src => src.QuestionAnswers));
+            CreateMap<QuestionAnswer, TestAnswerOptionDto>();
         }
     }
 }

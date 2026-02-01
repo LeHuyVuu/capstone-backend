@@ -63,6 +63,24 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
     }
 
     /// <summary>
+    /// Get venue locations by venue owner ID with LocationTag details
+    /// Including CoupleMoodType and CouplePersonalityType information
+    /// </summary>
+    public async Task<List<VenueLocation>> GetByVenueOwnerIdWithLocationTagAsync(int venueOwnerId)
+    {
+        return await _dbSet
+            .AsNoTracking()
+            .Include(v => v.LocationTag)
+                .ThenInclude(lt => lt!.CoupleMoodType)
+            .Include(v => v.LocationTag)
+                .ThenInclude(lt => lt!.CouplePersonalityType)
+            .Where(v => v.VenueOwnerId == venueOwnerId && v.IsDeleted != true)
+            .OrderByDescending(v => v.CreatedAt)
+            .AsSplitQuery()
+            .ToListAsync();
+    }
+
+    /// <summary>
     /// Get reviews for a venue with member and user information
     /// </summary>
     public async Task<(List<Review> Reviews, int TotalCount)> GetReviewsByVenueIdAsync(int venueId, int page, int pageSize)
@@ -217,5 +235,30 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
     private static double ToRadians(double degrees)
     {
         return degrees * Math.PI / 180;
+    }
+    /// <summary>
+    /// Get pending venue locations for admin review
+    /// </summary>
+    public async Task<(List<VenueLocation> Venues, int TotalCount)> GetPendingVenuesAsync(int page, int pageSize)
+    {
+        var query = _dbSet
+            .AsNoTracking()
+            .Include(v => v.VenueOwner)
+            .Include(v => v.LocationTag)
+                .ThenInclude(lt => lt!.CoupleMoodType)
+            .Include(v => v.LocationTag)
+                .ThenInclude(lt => lt!.CouplePersonalityType)
+            .Where(v => v.Status == "PENDING" && v.IsDeleted != true);
+
+        var totalCount = await query.CountAsync();
+
+        var venues = await query
+            .OrderByDescending(v => v.UpdatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .AsSplitQuery()
+            .ToListAsync();
+
+        return (venues, totalCount);
     }
 }

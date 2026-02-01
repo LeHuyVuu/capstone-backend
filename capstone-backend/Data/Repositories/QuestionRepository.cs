@@ -47,8 +47,7 @@ namespace capstone_backend.Data.Repositories
                 .Include(q => q.QuestionAnswers
                     .Where(qa => qa.IsDeleted == false && qa.IsActive == true)
                 )
-                .ToListAsync();
-                
+                .ToListAsync();             
         }
 
         public async Task<List<VersionSummaryDto>> GetAllVersionsAsync(int testTypeId)

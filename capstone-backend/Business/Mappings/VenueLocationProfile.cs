@@ -13,7 +13,11 @@ public class VenueLocationProfile : Profile
     public VenueLocationProfile()
     {
         // VenueLocation entity to VenueLocationDetailResponse
-        CreateMap<VenueLocation, VenueLocationDetailResponse>();
+        // Ignore image fields - handled manually with JSON deserialize
+        CreateMap<VenueLocation, VenueLocationDetailResponse>()
+            .ForMember(dest => dest.CoverImage, opt => opt.Ignore())
+            .ForMember(dest => dest.InteriorImage, opt => opt.Ignore())
+            .ForMember(dest => dest.FullPageMenuImage, opt => opt.Ignore());
 
         // VenueLocation entity to VenueLocationCreateResponse
         CreateMap<VenueLocation, VenueLocationCreateResponse>();
