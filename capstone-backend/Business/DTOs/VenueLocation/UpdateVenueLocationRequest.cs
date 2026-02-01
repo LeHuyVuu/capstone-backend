@@ -26,19 +26,19 @@ public class UpdateVenueLocationRequest
     public decimal? Longitude { get; set; }
 
     /// <summary>
-    /// Cover image URL for the venue
+    /// Cover image URLs (max 5)
     /// </summary>
-    public string? CoverImage { get; set; }
+    public List<string>? CoverImage { get; set; }
 
     /// <summary>
-    /// Interior image URL for the venue
+    /// Interior image URLs (max 5)
     /// </summary>
-    public string? InteriorImage { get; set; }
+    public List<string>? InteriorImage { get; set; }
 
     /// <summary>
-    /// Full-page menu image URL for the venue
+    /// Menu image URLs (max 5)
     /// </summary>
-    public string? FullPageMenuImage { get; set; }
+    public List<string>? FullPageMenuImage { get; set; }
 
     /// <summary>
     /// Indicates if the venue owner is verified

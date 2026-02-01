@@ -183,4 +183,29 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
             .AsSplitQuery()
             .ToListAsync();
     }
+    /// <summary>
+    /// Get pending venue locations for admin review
+    /// </summary>
+    public async Task<(List<VenueLocation> Venues, int TotalCount)> GetPendingVenuesAsync(int page, int pageSize)
+    {
+        var query = _dbSet
+            .AsNoTracking()
+            .Include(v => v.VenueOwner)
+            .Include(v => v.LocationTag)
+                .ThenInclude(lt => lt!.CoupleMoodType)
+            .Include(v => v.LocationTag)
+                .ThenInclude(lt => lt!.CouplePersonalityType)
+            .Where(v => v.Status == "PENDING" && v.IsDeleted != true);
+
+        var totalCount = await query.CountAsync();
+
+        var venues = await query
+            .OrderByDescending(v => v.UpdatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .AsSplitQuery()
+            .ToListAsync();
+
+        return (venues, totalCount);
+    }
 }

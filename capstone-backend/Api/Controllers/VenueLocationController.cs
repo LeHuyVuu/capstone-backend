@@ -1,6 +1,7 @@
 using capstone_backend.Business.DTOs.VenueLocation;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Api.Models;
+using capstone_backend.Business.DTOs.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -204,5 +205,98 @@ public class VenueLocationController : BaseController
         }
 
         return OkResponse(result, "Venue opening hours updated successfully");
+    }
+    /// <summary>
+    /// Submit venue location to admin for approval.
+    /// Validates required fields before changing status to PENDING.
+    /// Requires authentication - user must be the venue owner.
+    /// </summary>
+    /// <param name="id">Venue location ID</param>
+    /// <returns>Submission result</returns>
+    [HttpPost("{id}/submit")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<VenueSubmissionResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> SubmitVenue(int id)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (!currentUserId.HasValue)
+        {
+            return UnauthorizedResponse("User not authenticated");
+        }
+        
+        _logger.LogInformation("User {UserId} submitting venue {VenueId} for approval", currentUserId, id);
+        
+        var result = await _venueLocationService.SubmitVenueToAdminAsync(id, currentUserId.Value);
+        
+        if (!result.IsSuccess)
+        {
+            if (result.Message == "Venue not found") return NotFoundResponse(result.Message);
+            if (result.Message == "Unauthorized access") return ForbiddenResponse(result.Message);
+            
+            // For validation errors, we return the result object so the client can see MissingFields
+            // Using OkResponse (200) but IsSuccess is false in the DTO
+            return OkResponse(result, result.Message);
+        }
+        
+        return OkResponse(result, "Venue submitted successfully");
+    }
+    /// <summary>
+    /// Get pending venue locations for admin.
+    /// Requires ADMIN role.
+    /// Returns a paginated list of venues waiting for approval.
+    /// </summary>
+    /// <param name="page">Page number (default: 1)</param>
+    /// <param name="pageSize">Page size (default: 10)</param>
+    /// <returns>Paginated list of pending venues</returns>
+    [HttpGet("pending")]
+    [Authorize(Roles = "ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<VenueOwnerVenueLocationResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    public async Task<IActionResult> GetPendingVenues([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    {
+        _logger.LogInformation("Admin requesting pending venues list (Page {Page}, Size {PageSize})", page, pageSize);
+
+        var result = await _venueLocationService.GetPendingVenuesAsync(page, pageSize);
+
+        return OkResponse(result, $"Retrieved {result.Items.Count()} pending venues");
+    }
+
+    /// <summary>
+    /// Approve or reject a venue location.
+    /// Requires ADMIN role.
+    /// Accepted statuses: "ACTIVE" (Approve) or "DRAFTED" (Reject).
+    /// </summary>
+    /// <param name="request">Approval request</param>
+    /// <returns>Result of operation</returns>
+    [HttpPost("approve")]
+    [Authorize(Roles = "ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<VenueSubmissionResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> ApproveVenue([FromBody] VenueApprovalRequest request)
+    {
+        _logger.LogInformation("Admin processing approval for venue {VenueId}, Status: {Status}", request.VenueId, request.Status);
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequestResponse("Invalid request data");
+        }
+
+        var result = await _venueLocationService.ApproveVenueAsync(request);
+
+        if (!result.IsSuccess)
+        {
+            if (result.Message == "Venue not found") return NotFoundResponse(result.Message);
+            return BadRequestResponse(result.Message);
+        }
+
+        return OkResponse(result, result.Message);
     }
 }
