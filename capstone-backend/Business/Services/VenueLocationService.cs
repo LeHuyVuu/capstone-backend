@@ -712,11 +712,9 @@ public class VenueLocationService : IVenueLocationService
         var coverImages = DeserializeImages(venue.CoverImage);
         if (coverImages == null || !coverImages.Any()) missingFields.Add("CoverImage");
         
-        // Contact (Phone OR Email)
-        if (string.IsNullOrWhiteSpace(venue.PhoneNumber) && string.IsNullOrWhiteSpace(venue.Email))
-        {
-            missingFields.Add("Contact Info (Phone or Email)");
-        }
+        // Contact (Both Phone AND Email are required)
+        if (string.IsNullOrWhiteSpace(venue.PhoneNumber)) missingFields.Add("Phone Number");
+        if (string.IsNullOrWhiteSpace(venue.Email)) missingFields.Add("Email");
         
         // Location Tag
         if (venue.LocationTagId == null) missingFields.Add("LocationTag");
