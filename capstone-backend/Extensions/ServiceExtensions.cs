@@ -127,6 +127,7 @@ public static class ServiceExtensions
         services.AddScoped<IPersonalityTestService, PersonalityTestService>();
         services.AddScoped<IVenueLocationService, VenueLocationService>();
         services.AddScoped<IDatePlanService, DatePlanService>();
+        services.AddScoped<IDatePlanItemService, DatePlanItemService>();
 
         // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
         services.AddScoped<ILocationFollowerService, LocationFollowerService>();

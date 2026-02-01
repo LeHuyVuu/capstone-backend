@@ -115,7 +115,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Delete Test Type (Admin only)
         /// </summary>
-        [HttpPatch("{id:int}/delete")]
+        [HttpDelete("{id:int}/delete")]
         public async Task<IActionResult> DeleteTestType(int id)
         {
             try
