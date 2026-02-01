@@ -265,4 +265,38 @@ public class VenueLocationController : BaseController
 
         return OkResponse(result, $"Retrieved {result.Items.Count()} pending venues");
     }
+
+    /// <summary>
+    /// Approve or reject a venue location.
+    /// Requires ADMIN role.
+    /// Accepted statuses: "ACTIVE" (Approve) or "DRAFTED" (Reject).
+    /// </summary>
+    /// <param name="request">Approval request</param>
+    /// <returns>Result of operation</returns>
+    [HttpPost("approve")]
+    [Authorize(Roles = "ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<VenueSubmissionResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> ApproveVenue([FromBody] VenueApprovalRequest request)
+    {
+        _logger.LogInformation("Admin processing approval for venue {VenueId}, Status: {Status}", request.VenueId, request.Status);
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequestResponse("Invalid request data");
+        }
+
+        var result = await _venueLocationService.ApproveVenueAsync(request);
+
+        if (!result.IsSuccess)
+        {
+            if (result.Message == "Venue not found") return NotFoundResponse(result.Message);
+            return BadRequestResponse(result.Message);
+        }
+
+        return OkResponse(result, result.Message);
+    }
 }

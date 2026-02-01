@@ -825,5 +825,62 @@ public class VenueLocationService : IVenueLocationService
             PageSize = pageSize,
             TotalCount = totalCount
         };
+
+        
+    }
+
+      /// <summary>
+    /// Approve or reject a venue location
+    /// Only allows status PENDING -> ACTIVE or PENDING -> DRAFTED
+    /// </summary>
+    public async Task<VenueSubmissionResult> ApproveVenueAsync(VenueApprovalRequest request)
+    {
+        _logger.LogInformation("Processing venue approval request for Venue {VenueId}, Status: {Status}", request.VenueId, request.Status);
+
+        // Validate Status
+        var status = request.Status?.ToUpper();
+        if (status != "ACTIVE" && status != "DRAFTED")
+        {
+            return new VenueSubmissionResult { IsSuccess = false, Message = "Invalid status. Only 'ACTIVE' or 'DRAFTED' are allowed." };
+        }
+
+        var venue = await _unitOfWork.VenueLocations.GetByIdAsync(request.VenueId);
+        
+        if (venue == null || venue.IsDeleted == true)
+        {
+            return new VenueSubmissionResult { IsSuccess = false, Message = "Venue not found" };
+        }
+
+        // Only allow PENDING venues to be approved/rejected
+        // Wait, user might want to ban an ACTIVE venue back to DRAFTED? 
+        // User request: "approve location" implies pending -> active. "reject" implies pending -> drafted.
+        // Let's strict check PENDING for now, unless user specified otherwise.
+        if (venue.Status != "PENDING")
+        {
+             return new VenueSubmissionResult { IsSuccess = false, Message = $"Cannot approve/reject venue with status '{venue.Status}'. Only 'PENDING' venues can be processed." };
+        }
+
+        venue.Status = status;
+        venue.UpdatedAt = DateTime.UtcNow;
+        
+        // Fix DateTime fields for PostgreSQL
+        if (venue.CreatedAt.HasValue && venue.CreatedAt.Value.Kind == DateTimeKind.Unspecified)
+            venue.CreatedAt = DateTime.SpecifyKind(venue.CreatedAt.Value, DateTimeKind.Utc);
+        if (venue.OpeningTime.HasValue && venue.OpeningTime.Value.Kind == DateTimeKind.Unspecified)
+            venue.OpeningTime = DateTime.SpecifyKind(venue.OpeningTime.Value, DateTimeKind.Utc);
+        if (venue.ClosingTime.HasValue && venue.ClosingTime.Value.Kind == DateTimeKind.Unspecified)
+            venue.ClosingTime = DateTime.SpecifyKind(venue.ClosingTime.Value, DateTimeKind.Utc);
+        // If rejected, maybe append reason to description or send notification (out of scope for now)
+        if (status == "DRAFTED" && !string.IsNullOrEmpty(request.Reason))
+        {
+            _logger.LogInformation("Venue {VenueId} rejected. Reason: {Reason}", request.VenueId, request.Reason);
+        }
+
+        _unitOfWork.VenueLocations.Update(venue);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("Venue {VenueId} status updated to {Status}", request.VenueId, status);
+
+        return new VenueSubmissionResult { IsSuccess = true, Message = $"Venue {status} successfully" };
     }
 }
