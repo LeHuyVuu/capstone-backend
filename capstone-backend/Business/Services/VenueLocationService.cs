@@ -222,7 +222,7 @@ public class VenueLocationService : IVenueLocationService
             FullPageMenuImage = SerializeImages(request.FullPageMenuImage),
             IsOwnerVerified = request.IsOwnerVerified ?? false,
             VenueOwnerId = venueOwnerProfile.Id,
-            Status = "Active",
+            Status = "DRAFTED",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             IsDeleted = false,
