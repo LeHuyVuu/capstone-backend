@@ -30,7 +30,7 @@ namespace capstone_backend.Data.Repositories
             if (includeItems)
             {
                 query = query
-                    .Include(dp => dp.DatePlanItems.Where(dpi => dpi.IsDeleted == false));
+                    .Include(dp => dp.DatePlanItems.Where(dpi => dpi.IsDeleted == false).OrderBy(dpi => dpi.OrderIndex));
             }
 
             return await query.FirstOrDefaultAsync();
