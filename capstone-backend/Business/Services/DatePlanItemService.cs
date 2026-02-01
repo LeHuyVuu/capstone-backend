@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.DatePlanItem;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
@@ -53,6 +54,44 @@ namespace capstone_backend.Business.Services
                 _unitOfWork.DatePlans.Update(datePlan);
                 await _unitOfWork.DatePlanItems.AddRangeAsync(items);
                 return await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<PagedResult<DatePlanItemResponse>> GetAllAsync(int pageNumber, int pageSize, int userId, int datePlanId)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member not found");
+
+                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                if (couple == null)
+                    throw new Exception("Member does not belong to any couples");
+
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
+                if (datePlan == null)
+                    throw new Exception("Date plan not found");
+
+                var (datePlanItems, totalCount) = await _unitOfWork.DatePlanItems.GetPagedAsync(
+                        pageNumber,
+                        pageSize,
+                        dpi => dpi.DatePlanId == datePlanId && dpi.IsDeleted == false,
+                        dpi => dpi.OrderBy(dpi => dpi.OrderIndex)
+                    );
+
+                return new PagedResult<DatePlanItemResponse>
+                {
+                    Items = _mapper.Map<List<DatePlanItemResponse>>(datePlanItems),
+                    TotalCount = totalCount,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize
+                };
             }
             catch (Exception)
             {

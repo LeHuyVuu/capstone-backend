@@ -53,6 +53,27 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Get All Date Plans Items
+        /// </summary>
+        [HttpGet("{datePlanId:int}/items")]
+        public async Task<IActionResult> GetDatePlanItems(
+            int datePlanId,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 5)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanItemService.GetAllAsync(pageNumber, pageSize, userId.Value, datePlanId);
+                return OkResponse(result, "Fetched date plan items successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Get Detail Date Plan
         /// </summary>
         [HttpGet("{datePlanId:int}")]
