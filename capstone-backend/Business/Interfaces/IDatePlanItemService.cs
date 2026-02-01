@@ -7,5 +7,6 @@ namespace capstone_backend.Business.Interfaces
     {
         Task<int> AddVenuesToDatePlanAsync(int userId, int datePlanId, CreateDatePlanItemRequest request);
         Task<DatePlanItemResponse> UpdateItemAsync(int userId, int datePlanId, int version, int datePlanItemId, UpdateDatePlanItemRequest request);
+        Task<DatePlanItemResponse> GetDetailDatePlanItemAsync(int userId, int datePlanItemId, int datePlanId);
     }
 }

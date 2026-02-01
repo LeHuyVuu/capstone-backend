@@ -61,6 +61,36 @@ namespace capstone_backend.Business.Services
             }
         }
 
+        public async Task<DatePlanItemResponse> GetDetailDatePlanItemAsync(int userId, int datePlanItemId, int datePlanId)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member not found");
+
+                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                if (couple == null)
+                    throw new Exception("Member does not belong to any couples");
+
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
+                if (datePlan == null)
+                    throw new Exception("Date plan not found");
+
+                var datePlanItem = await _unitOfWork.DatePlanItems.GetByIdAndDatePlanIdAsync(datePlanItemId, datePlanId);
+                if (datePlanItem == null)
+                    throw new Exception("Date plan item not found");
+
+                var response = _mapper.Map<DatePlanItemResponse>(datePlanItem);
+                return response;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
         public async Task<DatePlanItemResponse> UpdateItemAsync(int userId, int datePlanId, int datePlanItemId, int version, UpdateDatePlanItemRequest request)
         {
             try
