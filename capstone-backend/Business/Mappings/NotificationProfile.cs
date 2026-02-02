@@ -8,7 +8,8 @@ namespace capstone_backend.Business.Mappings
     {
         public NotificationProfile()
         {
-            CreateMap<CreateNotificationRequest, Notification>();
+            CreateMap<NotificationRequest, Notification>();
+            CreateMap<Notification, NotificationResponse>();
         }
     }
 }

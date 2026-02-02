@@ -4,6 +4,7 @@ namespace capstone_backend.Business.Interfaces
 {
     public interface INotificationService
     {
-        Task<int> CreateNotificationService(CreateNotificationRequest request);
+        Task<NotificationResponse> CreateNotificationService(NotificationRequest request);
+        Task SendNotificationAsync(NotificationRequest request);
     }
 }

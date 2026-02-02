@@ -3,6 +3,7 @@ using capstone_backend.Api.Models;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Mappings;
 using capstone_backend.Extensions;
+using capstone_backend.Hubs;
 using DotNetEnv;
 using Hangfire;
 using Scalar.AspNetCore;
@@ -89,6 +90,9 @@ builder.Services.AddAutoMapper(
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
+// 15. Add SignalR
+builder.Services.AddSignalR();
+
 var app = builder.Build();
 
 // ========================================
@@ -156,5 +160,8 @@ app.UseStaticFiles();
 // ========================================
 
 app.Logger.LogInformation("Application starting...");
+
+// Hubs
+app.MapHub<NotificationHub>("/hub/notifications");
 
 app.Run();

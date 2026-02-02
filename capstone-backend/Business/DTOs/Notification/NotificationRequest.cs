@@ -2,7 +2,7 @@
 
 namespace capstone_backend.Business.DTOs.Notification
 {
-    public class CreateNotificationRequest
+    public class NotificationRequest
     {
         /// <example>
         /// Test Notification

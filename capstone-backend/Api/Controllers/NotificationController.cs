@@ -25,7 +25,7 @@ namespace capstone_backend.Api.Controllers
         {
             try
             {
-                var request = new CreateNotificationRequest
+                var request = new NotificationRequest
                 {
                     Title = "Test Notification",
                     Message = "This is a test notification message.",
@@ -33,8 +33,8 @@ namespace capstone_backend.Api.Controllers
                     Type = NotificationType.SYSTEM.ToString()
                 };
 
-                var result = await _notificationService.CreateNotificationService(request);
-                return Ok(result);
+                await _notificationService.SendNotificationAsync(request);
+                return Ok();
             }
             catch (Exception ex)
             {
