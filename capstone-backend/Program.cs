@@ -93,6 +93,9 @@ builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 // 15. Add SignalR
 builder.Services.AddSignalR();
 
+// 16. Add Firebase
+builder.Services.AddFireBaseConfiguration();
+
 var app = builder.Build();
 
 // ========================================
