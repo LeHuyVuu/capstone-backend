@@ -47,12 +47,18 @@ public class CreateVenueLocationRequest
     public bool? IsOwnerVerified { get; set; }
 
     /// <summary>
-    /// Couple mood type ID to determine location tag
+    /// List of tag combinations (mood + personality pairs)
+    /// Each combination will find corresponding LocationTag in database
+    /// Example: [{ coupleMoodTypeId: 2, couplePersonalityTypeId: 1 }]
     /// </summary>
-    public int? CoupleMoodTypeId { get; set; }
+    public List<VenueTagRequest>? VenueTags { get; set; }
+}
 
-    /// <summary>
-    /// Couple personality type ID to determine location tag
-    /// </summary>
-    public int? CouplePersonalityTypeId { get; set; }
+/// <summary>
+/// Represents a tag combination for venue (Mood + Personality)
+/// </summary>
+public class VenueTagRequest
+{
+    public int CoupleMoodTypeId { get; set; }
+    public int CouplePersonalityTypeId { get; set; }
 }

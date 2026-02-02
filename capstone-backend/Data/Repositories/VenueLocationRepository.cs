@@ -23,10 +23,12 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
 
         return await _dbSet
             .AsNoTracking()
-            .Include(v => v.LocationTag)
-                .ThenInclude(lt => lt!.CoupleMoodType)
-            .Include(v => v.LocationTag)
-                .ThenInclude(lt => lt!.CouplePersonalityType)
+            .Include(v => v.VenueLocationTags)
+                .ThenInclude(vlt => vlt.LocationTag)
+                    .ThenInclude(lt => lt!.CoupleMoodType)
+            .Include(v => v.VenueLocationTags)
+                .ThenInclude(vlt => vlt.LocationTag)
+                    .ThenInclude(lt => lt!.CouplePersonalityType)
             .Include(v => v.VenueOwner)
             .Include(v => v.VenueOpeningHours.Where(oh => oh.Day == todayDbFormat))
             .AsSplitQuery()
@@ -70,10 +72,12 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
     {
         return await _dbSet
             .AsNoTracking()
-            .Include(v => v.LocationTag)
-                .ThenInclude(lt => lt!.CoupleMoodType)
-            .Include(v => v.LocationTag)
-                .ThenInclude(lt => lt!.CouplePersonalityType)
+            .Include(v => v.VenueLocationTags)
+                .ThenInclude(vlt => vlt.LocationTag)
+                    .ThenInclude(lt => lt!.CoupleMoodType)
+            .Include(v => v.VenueLocationTags)
+                .ThenInclude(vlt => vlt.LocationTag)
+                    .ThenInclude(lt => lt!.CouplePersonalityType)
             .Where(v => v.VenueOwnerId == venueOwnerId && v.IsDeleted != true)
             .OrderByDescending(v => v.CreatedAt)
             .AsSplitQuery()
@@ -121,7 +125,7 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
     {
         var query = _dbSet
             .AsNoTracking()
-            .Where(v => v.IsDeleted != true);
+            .Where(v => v.IsDeleted != true && v.Status == "ACTIVE");
 
         bool hasGeoFilter = latitude.HasValue && longitude.HasValue;
 
@@ -170,32 +174,38 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
         if (hasFilters)
         {
             query = query
-                .Include(v => v.LocationTag!)
-                    .ThenInclude(lt => lt!.CoupleMoodType)
-                .Include(v => v.LocationTag!)
-                    .ThenInclude(lt => lt!.CouplePersonalityType)
-                .Where(v => v.LocationTag != null);
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt!.CoupleMoodType)
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt!.CouplePersonalityType)
+                .Where(v => v.VenueLocationTags.Any());
 
             // Build filter conditions
             if (!string.IsNullOrEmpty(singleMoodName))
             {
                 // Single person: filter mood bằng DetailTag Contains
                 query = query.Where(v =>
-                    (v.LocationTag!.DetailTag != null && v.LocationTag.DetailTag.Contains(singleMoodName)) ||
-                    (personalityTags.Any() && v.LocationTag.CouplePersonalityType != null &&
-                     v.LocationTag.CouplePersonalityType.Name != null &&
-                     personalityTags.Contains(v.LocationTag.CouplePersonalityType.Name))
+                    v.VenueLocationTags.Any(vlt => 
+                        (vlt.LocationTag.DetailTag != null && vlt.LocationTag.DetailTag.Contains(singleMoodName)) ||
+                        (personalityTags.Any() && vlt.LocationTag.CouplePersonalityType != null &&
+                         vlt.LocationTag.CouplePersonalityType.Name != null &&
+                         personalityTags.Contains(vlt.LocationTag.CouplePersonalityType.Name))
+                    )
                 );
             }
             else if (!string.IsNullOrEmpty(coupleMoodType) || personalityTags.Any())
             {
                 // Couple: filter mood bằng CoupleMoodType.Name
                 query = query.Where(v =>
-                    (coupleMoodType != null && v.LocationTag!.CoupleMoodType != null && 
-                     v.LocationTag.CoupleMoodType.Name == coupleMoodType) ||
-                    (personalityTags.Any() && v.LocationTag!.CouplePersonalityType != null &&
-                     v.LocationTag.CouplePersonalityType.Name != null &&
-                     personalityTags.Contains(v.LocationTag.CouplePersonalityType.Name))
+                    v.VenueLocationTags.Any(vlt => 
+                        (coupleMoodType != null && vlt.LocationTag.CoupleMoodType != null && 
+                         vlt.LocationTag.CoupleMoodType.Name == coupleMoodType) ||
+                        (personalityTags.Any() && vlt.LocationTag.CouplePersonalityType != null &&
+                         vlt.LocationTag.CouplePersonalityType.Name != null &&
+                         personalityTags.Contains(vlt.LocationTag.CouplePersonalityType.Name))
+                    )
                 );
             }
         }
@@ -203,10 +213,12 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
         {
             // No filters - include relationships for display
             query = query
-                .Include(v => v.LocationTag!)
-                    .ThenInclude(lt => lt!.CoupleMoodType)
-                .Include(v => v.LocationTag!)
-                    .ThenInclude(lt => lt!.CouplePersonalityType);
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt!.CoupleMoodType)
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt!.CouplePersonalityType);
         }
 
         // Always include reviews for rating calculation
@@ -275,10 +287,12 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
         var query = _dbSet
             .AsNoTracking()
             .Include(v => v.VenueOwner)
-            .Include(v => v.LocationTag)
-                .ThenInclude(lt => lt!.CoupleMoodType)
-            .Include(v => v.LocationTag)
-                .ThenInclude(lt => lt!.CouplePersonalityType)
+            .Include(v => v.VenueLocationTags)
+                .ThenInclude(vlt => vlt.LocationTag)
+                    .ThenInclude(lt => lt!.CoupleMoodType)
+            .Include(v => v.VenueLocationTags)
+                .ThenInclude(vlt => vlt.LocationTag)
+                    .ThenInclude(lt => lt!.CouplePersonalityType)
             .Where(v => v.Status == "PENDING" && v.IsDeleted != true);
 
         var totalCount = await query.CountAsync();

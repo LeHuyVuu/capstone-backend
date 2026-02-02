@@ -29,8 +29,8 @@ public class VenueLocationDetailResponse
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
-    // Location Tag information
-    public LocationTagInfo? LocationTag { get; set; }
+    // Location Tags information (many-to-many)
+    public List<LocationTagInfo>? LocationTags { get; set; }
 
     // Venue Owner Profile information
     public VenueOwnerProfileResponse? VenueOwner { get; set; }

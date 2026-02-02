@@ -19,7 +19,7 @@ public static class RecommendationFormatter
         return venues.Select((venue, index) => new RecommendedVenue
         {
             VenueLocationId = venue.Id,
-            LocationTagId = venue.LocationTagId,
+            LocationTagId = venue.VenueLocationTags.FirstOrDefault(vlt => vlt.IsDeleted != true)?.LocationTagId,
             VenueOwnerId = venue.VenueOwnerId,
             Name = venue.Name,
             Address = venue.Address,
@@ -43,13 +43,16 @@ public static class RecommendationFormatter
             CoverImage = DeserializeImages(venue.CoverImage),
             InteriorImage = DeserializeImages(venue.InteriorImage),
             FullPageMenuImage = DeserializeImages(venue.FullPageMenuImage),
-            MatchedTags = venue.LocationTag != null
-                ? new List<string> 
+            MatchedTags = venue.VenueLocationTags
+                .Where(vlt => vlt.LocationTag != null && vlt.IsDeleted != true)
+                .SelectMany(vlt => new[] 
                 { 
-                    venue.LocationTag.CoupleMoodType?.Name!,
-                    venue.LocationTag.CouplePersonalityType?.Name!
-                }.Where(name => !string.IsNullOrEmpty(name)).ToList()
-                : new List<string>()
+                    vlt.LocationTag.CoupleMoodType?.Name,
+                    vlt.LocationTag.CouplePersonalityType?.Name
+                })
+                .Where(name => !string.IsNullOrEmpty(name))
+                .Distinct()
+                .ToList()!
         }).ToList();
     }
 
@@ -64,7 +67,7 @@ public static class RecommendationFormatter
         return venues.Take(limit).Select(venue => new RecommendedVenue
         {
             VenueLocationId = venue.Id,
-            LocationTagId = venue.LocationTagId,
+            LocationTagId = venue.VenueLocationTags.FirstOrDefault(vlt => vlt.IsDeleted != true)?.LocationTagId,
             VenueOwnerId = venue.VenueOwnerId,
             Name = venue.Name,
             Address = venue.Address,
@@ -89,13 +92,16 @@ public static class RecommendationFormatter
             CoverImage = DeserializeImages(venue.CoverImage),
             InteriorImage = DeserializeImages(venue.InteriorImage),
             FullPageMenuImage = DeserializeImages(venue.FullPageMenuImage),
-            MatchedTags = venue.LocationTag != null
-                ? new List<string>
+            MatchedTags = venue.VenueLocationTags
+                .Where(vlt => vlt.LocationTag != null && vlt.IsDeleted != true)
+                .SelectMany(vlt => new[]
                 {
-                    venue.LocationTag.CoupleMoodType?.Name!,
-                    venue.LocationTag.CouplePersonalityType?.Name!
-                }.Where(name => !string.IsNullOrEmpty(name)).ToList()
-                : new List<string>()
+                    vlt.LocationTag.CoupleMoodType?.Name,
+                    vlt.LocationTag.CouplePersonalityType?.Name
+                })
+                .Where(name => !string.IsNullOrEmpty(name))
+                .Distinct()
+                .ToList()!
         }).ToList();
     }
 

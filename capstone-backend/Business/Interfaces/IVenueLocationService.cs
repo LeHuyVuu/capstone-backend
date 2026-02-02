@@ -101,4 +101,12 @@ public interface IVenueLocationService
     /// <param name="request">Approval request containing venue ID and status</param>
     /// <returns>True if successful, False if failed</returns>
     Task<VenueSubmissionResult> ApproveVenueAsync(VenueApprovalRequest request);
+
+    /// <summary>
+    /// Delete (soft delete) a location tag from venue
+    /// </summary>
+    /// <param name="venueId">Venue location ID</param>
+    /// <param name="locationTagId">Location tag ID to delete</param>
+    /// <returns>True if successful, False if not found or cannot delete</returns>
+    Task<bool> DeleteVenueLocationTagAsync(int venueId, int locationTagId);
 }
