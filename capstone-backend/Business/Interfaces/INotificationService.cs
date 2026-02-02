@@ -6,5 +6,6 @@ namespace capstone_backend.Business.Interfaces
     {
         Task<NotificationResponse> CreateNotificationService(NotificationRequest request);
         Task SendNotificationAsync(NotificationRequest request);
+        Task SendNotificationAsyncV2(string token);
     }
 }

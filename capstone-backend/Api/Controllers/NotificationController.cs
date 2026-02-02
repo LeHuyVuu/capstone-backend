@@ -41,5 +41,23 @@ namespace capstone_backend.Api.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
             }
         }
+
+        /// <summary>
+        /// Test Push Notification
+        /// </summary>
+        [HttpPost("push")]
+        public async Task<IActionResult> SendNotificationV2([FromQuery] string token)
+        {
+            try
+            {
+               
+                await _notificationService.SendNotificationAsyncV2(token);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+        }
     }
 }

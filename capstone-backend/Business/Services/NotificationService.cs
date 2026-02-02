@@ -12,12 +12,14 @@ namespace capstone_backend.Business.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly IFcmService _fcmService;
 
-        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext)
+        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IFcmService fcmService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _hubContext = hubContext;
+            _fcmService = fcmService;
         }
 
         public async Task<NotificationResponse> CreateNotificationService(NotificationRequest request)
@@ -53,6 +55,25 @@ namespace capstone_backend.Business.Services
 
                 // 2. Send notification
                 await _hubContext.Clients.Group($"User_{request.UserId}").SendAsync("ReceiveNotification", notificationRes);
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task SendNotificationAsyncV2(string token)
+        {
+            try
+            {
+                var request = new SendNotificationRequest
+                {
+                    Token = token,
+                    Title = "Test Notification",
+                    Body = "This is a test notification message."
+                };
+                await _fcmService.SendNotificationAsync(request);
             }
             catch (Exception)
             {
