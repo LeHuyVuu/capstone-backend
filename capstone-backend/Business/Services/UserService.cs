@@ -48,7 +48,7 @@ public class UserService : IUserService
         var gender = memberProfile?.Gender ?? string.Empty;
 
         // Generate JWT tokens
-        var role = user.Role ?? "member";
+        var role = user.Role ?? "MEMBER";
         var fullName = user.DisplayName ?? string.Empty;
         var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, role, fullName);
         var refreshToken = _jwtService.GenerateRefreshToken();
@@ -57,7 +57,7 @@ public class UserService : IUserService
         // CometChat integration: Ensure user exists and generate auth token
         string cometChatUid = string.Empty;
         string cometChatAuthToken = string.Empty;
-        if (user.Role == "member")
+        if (user.Role == "MEMBER")
         {
             try
             {
