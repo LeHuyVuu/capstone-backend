@@ -44,4 +44,11 @@ public class UpdateVenueLocationRequest
     /// Indicates if the venue owner is verified
     /// </summary>
     public bool? IsOwnerVerified { get; set; }
+
+    /// <summary>
+    /// List of tag combinations (mood + personality pairs) to update
+    /// If provided, will replace all existing tags with new ones
+    /// Example: [{ coupleMoodTypeId: 2, couplePersonalityTypeId: 1 }]
+    /// </summary>
+    public List<VenueTagRequest>? VenueTags { get; set; }
 }

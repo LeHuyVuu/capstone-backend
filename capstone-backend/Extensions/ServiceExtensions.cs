@@ -128,6 +128,7 @@ public static class ServiceExtensions
         services.AddScoped<IVenueLocationService, VenueLocationService>();
         services.AddScoped<IDatePlanService, DatePlanService>();
         services.AddScoped<IDatePlanItemService, DatePlanItemService>();
+        services.AddScoped<IMbtiContentService, MbtiContentService>();
 
         // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
         services.AddScoped<ILocationFollowerService, LocationFollowerService>();

@@ -36,14 +36,12 @@ public class EmotionController : BaseController
     /// <response code="400">File ảnh không hợp lệ hoặc không có khuôn mặt</response>
     /// <response code="401">Chưa xác thực hoặc token không hợp lệ</response>
     /// <response code="500">Lỗi khi gọi AWS Rekognition</response>
-    /// <remarks>
-   
-    /// </remarks>
     [HttpPost("analyze")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ApiResponse<List<FaceEmotionResponse>>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [Authorize]
     public async Task<IActionResult> AnalyzeEmotion(IFormFile image)
     {
         var startTime = DateTime.UtcNow;
@@ -128,7 +126,7 @@ public class EmotionController : BaseController
                 };
             }).ToList();
 
-            // Cập nhật MoodTypesId vào MemberProfile dựa trên emotion đầu tiên
+            // Cập nhật MoodTypesId vào MemberProfile và tạo MemberMoodLog
             if (results.Count > 0)
             {
                 var userId = GetCurrentUserId();
@@ -139,10 +137,7 @@ public class EmotionController : BaseController
                         var firstEmotion = _emotionService.GetDominantEmotion(faces[0]); // HAPPY, SAD, ...
                         
                         // Query MoodType dựa trên emotion name
-                        var moodType = await _unitOfWork.Context.MoodTypes
-                            .FirstOrDefaultAsync(m => m.Name.ToUpper() == firstEmotion.ToUpper() 
-                                                    && m.IsDeleted != true 
-                                                    && m.IsActive == true);
+                        var moodType = await _unitOfWork.MoodTypes.GetByNameAsync(firstEmotion.ToUpper());
 
                         if (moodType != null)
                         {
@@ -151,14 +146,30 @@ public class EmotionController : BaseController
                             
                             if (memberProfile != null)
                             {
-                                // Cập nhật MoodTypesId
+                                // 1. Cập nhật MemberProfile (ghi đè)
                                 memberProfile.MoodTypesId = moodType.Id;
                                 memberProfile.UpdatedAt = DateTime.UtcNow;
                                 
                                 _unitOfWork.MembersProfile.Update(memberProfile);
+                                
+                                // 2. Tạo record mới trong MemberMoodLog
+                                var moodLog = new capstone_backend.Data.Entities.MemberMoodLog
+                                {
+                                    MemberId = memberProfile.Id,
+                                    MoodTypeId = moodType.Id,
+                                    Reason = "Face emotion analysis",
+                                    Note = $"Detected: {firstEmotion} - {results[0].EmotionSentence}",
+                                    ImageUrl = null, // Có thể lưu URL ảnh nếu upload lên cloud
+                                    IsPrivate = true,
+                                    CreatedAt = DateTime.UtcNow,
+                                    UpdatedAt = DateTime.UtcNow,
+                                    IsDeleted = false
+                                };
+                                
+                                await _unitOfWork.MemberMoodLogs.AddAsync(moodLog);
                                 await _unitOfWork.SaveChangesAsync();
                                 
-                                _logger.LogInformation($"✅ Đã cập nhật MoodTypesId={moodType.Id} ({moodType.Name}) cho UserId={userId.Value}");
+                                _logger.LogInformation($"✅ Đã cập nhật MoodTypesId={moodType.Id} ({moodType.Name}) và tạo MoodLog cho MemberId={memberProfile.Id}");
                             }
                         }
                         else
@@ -169,7 +180,7 @@ public class EmotionController : BaseController
                     catch (Exception ex)
                     {
                         // Log lỗi nhưng vẫn trả về kết quả emotion
-                        _logger.LogError(ex, "❌ Lỗi khi cập nhật MoodTypesId");
+                        _logger.LogError(ex, "❌ Lỗi khi cập nhật MoodTypesId và MoodLog");
                     }
                 }
             }

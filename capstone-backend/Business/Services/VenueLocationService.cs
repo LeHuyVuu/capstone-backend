@@ -230,23 +230,40 @@ public class VenueLocationService : IVenueLocationService
             ReviewCount = 0
         };
 
-        // Find and set location tag based on couple mood type and personality type IDs
-        if (request.CoupleMoodTypeId.HasValue || request.CouplePersonalityTypeId.HasValue)
+        // Process multiple tag combinations (many-to-many)
+        if (request.VenueTags != null && request.VenueTags.Any())
         {
-            var locationTag = await _unitOfWork.LocationTags.GetByMoodAndPersonalityTypeIdsAsync(
-                request.CoupleMoodTypeId, 
-                request.CouplePersonalityTypeId);
+            var venueLocationTags = new List<VenueLocationTag>();
 
-            if (locationTag != null)
+            foreach (var tagRequest in request.VenueTags)
             {
-                venueLocation.LocationTagId = locationTag.Id;
-                _logger.LogInformation("Found location tag ID {LocationTagId} for couple mood type {CoupleMoodTypeId} and personality type {CouplePersonalityTypeId}",
-                    locationTag.Id, request.CoupleMoodTypeId, request.CouplePersonalityTypeId);
+                // Find LocationTag based on CoupleMoodTypeId + CouplePersonalityTypeId
+                var locationTag = await _unitOfWork.LocationTags.GetByMoodAndPersonalityTypeIdsAsync(
+                    tagRequest.CoupleMoodTypeId, 
+                    tagRequest.CouplePersonalityTypeId);
+
+                if (locationTag != null)
+                {
+                    venueLocationTags.Add(new VenueLocationTag
+                    {
+                        LocationTagId = locationTag.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    });
+                    _logger.LogInformation("Found location tag ID {LocationTagId} for mood {MoodId} and personality {PersonalityId}",
+                        locationTag.Id, tagRequest.CoupleMoodTypeId, tagRequest.CouplePersonalityTypeId);
+                }
+                else
+                {
+                    _logger.LogWarning("No location tag found for mood {MoodId} and personality {PersonalityId}",
+                        tagRequest.CoupleMoodTypeId, tagRequest.CouplePersonalityTypeId);
+                }
             }
-            else
+
+            if (venueLocationTags.Any())
             {
-                _logger.LogWarning("No location tag found for couple mood type {CoupleMoodTypeId} and personality type {CouplePersonalityTypeId}",
-                    request.CoupleMoodTypeId, request.CouplePersonalityTypeId);
+                venueLocation.VenueLocationTags = venueLocationTags;
+                _logger.LogInformation("Added {Count} location tags to venue", venueLocationTags.Count);
             }
         }
 
@@ -319,6 +336,63 @@ public class VenueLocationService : IVenueLocationService
         
         if (request.IsOwnerVerified.HasValue)
             venue.IsOwnerVerified = request.IsOwnerVerified;
+
+        // Update venue tags if provided (soft delete old, restore or add new)
+        if (request.VenueTags != null)
+        {
+            // Soft delete all existing active tags
+            var existingTags = await _unitOfWork.Context.Set<VenueLocationTag>()
+                .Where(vlt => vlt.VenueLocationId == id && vlt.IsDeleted != true)
+                .ToListAsync();
+            
+            foreach (var tag in existingTags)
+            {
+                tag.IsDeleted = true;
+            }
+            _logger.LogInformation("Soft deleted {Count} existing tags for venue {VenueId}", existingTags.Count, id);
+
+            // Add or restore tags
+            if (request.VenueTags.Any())
+            {
+                foreach (var tagRequest in request.VenueTags)
+                {
+                    var locationTag = await _unitOfWork.LocationTags.GetByMoodAndPersonalityTypeIdsAsync(
+                        tagRequest.CoupleMoodTypeId,
+                        tagRequest.CouplePersonalityTypeId);
+
+                    if (locationTag != null)
+                    {
+                        // Check if tag already exists (maybe soft deleted)
+                        var existingVenueTag = await _unitOfWork.Context.Set<VenueLocationTag>()
+                            .FirstOrDefaultAsync(vlt => vlt.VenueLocationId == id && vlt.LocationTagId == locationTag.Id);
+
+                        if (existingVenueTag != null)
+                        {
+                            // Restore soft-deleted tag
+                            existingVenueTag.IsDeleted = false;
+                            _logger.LogInformation("Restored tag {TagId} for venue {VenueId}", locationTag.Id, id);
+                        }
+                        else
+                        {
+                            // Create new tag
+                            await _unitOfWork.Context.Set<VenueLocationTag>().AddAsync(new VenueLocationTag
+                            {
+                                VenueLocationId = id,
+                                LocationTagId = locationTag.Id,
+                                CreatedAt = DateTime.UtcNow,
+                                IsDeleted = false
+                            });
+                            _logger.LogInformation("Added new tag {TagId} for venue {VenueId}", locationTag.Id, id);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No location tag found for mood {MoodId} and personality {PersonalityId}",
+                            tagRequest.CoupleMoodTypeId, tagRequest.CouplePersonalityTypeId);
+                    }
+                }
+            }
+        }
 
         venue.UpdatedAt = DateTime.UtcNow;
 
@@ -634,26 +708,7 @@ public class VenueLocationService : IVenueLocationService
             IsOwnerVerified = v.IsOwnerVerified,
             CreatedAt = v.CreatedAt,
             UpdatedAt = v.UpdatedAt,
-            LocationTag = v.LocationTag != null ? new VenueOwnerLocationTagInfo
-            {
-                Id = v.LocationTag.Id,
-                TagName = GenerateTagName(v.LocationTag.CoupleMoodType?.Name, v.LocationTag.CouplePersonalityType?.Name),
-                DetailTag = v.LocationTag.DetailTag,
-                CoupleMoodType = v.LocationTag.CoupleMoodType != null ? new VenueOwnerCoupleMoodTypeInfo
-                {
-                    Id = v.LocationTag.CoupleMoodType.Id,
-                    Name = v.LocationTag.CoupleMoodType.Name,
-                    Description = v.LocationTag.CoupleMoodType.Description,
-                    IsActive = v.LocationTag.CoupleMoodType.IsActive
-                } : null,
-                CouplePersonalityType = v.LocationTag.CouplePersonalityType != null ? new VenueOwnerCouplePersonalityTypeInfo
-                {
-                    Id = v.LocationTag.CouplePersonalityType.Id,
-                    Name = v.LocationTag.CouplePersonalityType.Name,
-                    Description = v.LocationTag.CouplePersonalityType.Description,
-                    IsActive = v.LocationTag.CouplePersonalityType.IsActive
-                } : null
-            } : null
+            LocationTags = CreateLocationTagsInfo(v)
         }).ToList();
 
         _logger.LogInformation("Retrieved {Count} venue locations for venue owner profile ID {VenueOwnerProfileId}", responses.Count, venueOwnerProfile.Id);
@@ -717,8 +772,8 @@ public class VenueLocationService : IVenueLocationService
         if (string.IsNullOrWhiteSpace(venue.PhoneNumber)) missingFields.Add("Phone Number");
         if (string.IsNullOrWhiteSpace(venue.Email)) missingFields.Add("Email");
         
-        // Location Tag
-        if (venue.LocationTagId == null) missingFields.Add("LocationTag");
+        // Location Tag - kiểm tra có ít nhất 1 tag
+        if (!venue.VenueLocationTags.Any()) missingFields.Add("LocationTag");
         
         // Coordinates
         if (venue.Latitude == null || venue.Longitude == null) 
@@ -794,26 +849,7 @@ public class VenueLocationService : IVenueLocationService
             IsOwnerVerified = v.IsOwnerVerified,
             CreatedAt = v.CreatedAt,
             UpdatedAt = v.UpdatedAt,
-            LocationTag = v.LocationTag != null ? new VenueOwnerLocationTagInfo
-            {
-                Id = v.LocationTag.Id,
-                TagName = GenerateTagName(v.LocationTag.CoupleMoodType?.Name, v.LocationTag.CouplePersonalityType?.Name),
-                DetailTag = v.LocationTag.DetailTag,
-                CoupleMoodType = v.LocationTag.CoupleMoodType != null ? new VenueOwnerCoupleMoodTypeInfo
-                {
-                    Id = v.LocationTag.CoupleMoodType.Id,
-                    Name = v.LocationTag.CoupleMoodType.Name,
-                    Description = v.LocationTag.CoupleMoodType.Description,
-                    IsActive = v.LocationTag.CoupleMoodType.IsActive
-                } : null,
-                CouplePersonalityType = v.LocationTag.CouplePersonalityType != null ? new VenueOwnerCouplePersonalityTypeInfo
-                {
-                    Id = v.LocationTag.CouplePersonalityType.Id,
-                    Name = v.LocationTag.CouplePersonalityType.Name,
-                    Description = v.LocationTag.CouplePersonalityType.Description,
-                    IsActive = v.LocationTag.CouplePersonalityType.IsActive
-                } : null
-            } : null
+            LocationTags = CreateLocationTagsInfo(v)
         }).ToList();
 
         _logger.LogInformation("Retrieved {Count} pending venue locations", responses.Count);
@@ -866,10 +902,6 @@ public class VenueLocationService : IVenueLocationService
         // Fix DateTime fields for PostgreSQL
         if (venue.CreatedAt.HasValue && venue.CreatedAt.Value.Kind == DateTimeKind.Unspecified)
             venue.CreatedAt = DateTime.SpecifyKind(venue.CreatedAt.Value, DateTimeKind.Utc);
-        if (venue.OpeningTime.HasValue && venue.OpeningTime.Value.Kind == DateTimeKind.Unspecified)
-            venue.OpeningTime = DateTime.SpecifyKind(venue.OpeningTime.Value, DateTimeKind.Utc);
-        if (venue.ClosingTime.HasValue && venue.ClosingTime.Value.Kind == DateTimeKind.Unspecified)
-            venue.ClosingTime = DateTime.SpecifyKind(venue.ClosingTime.Value, DateTimeKind.Utc);
         // If rejected, maybe append reason to description or send notification (out of scope for now)
         if (status == "DRAFTED" && !string.IsNullOrEmpty(request.Reason))
         {
@@ -882,5 +914,83 @@ public class VenueLocationService : IVenueLocationService
         _logger.LogInformation("Venue {VenueId} status updated to {Status}", request.VenueId, status);
 
         return new VenueSubmissionResult { IsSuccess = true, Message = $"Venue {status} successfully" };
+    }
+
+    /// <summary>
+    /// Helper method to create list of VenueOwnerLocationTagInfo from VenueLocation (many-to-many)
+    /// </summary>
+    private List<VenueOwnerLocationTagInfo>? CreateLocationTagsInfo(VenueLocation venue)
+    {
+        if (venue.VenueLocationTags == null || !venue.VenueLocationTags.Any())
+            return null;
+
+        return venue.VenueLocationTags
+            .Where(vlt => vlt.LocationTag != null && vlt.IsDeleted != true)
+            .Select(vlt => new VenueOwnerLocationTagInfo
+            {
+                Id = vlt.LocationTag!.Id,
+                TagName = GenerateTagName(vlt.LocationTag.CoupleMoodType?.Name, vlt.LocationTag.CouplePersonalityType?.Name),
+                DetailTag = vlt.LocationTag.DetailTag,
+                CoupleMoodType = vlt.LocationTag.CoupleMoodType != null ? new VenueOwnerCoupleMoodTypeInfo
+                {
+                    Id = vlt.LocationTag.CoupleMoodType.Id,
+                    Name = vlt.LocationTag.CoupleMoodType.Name,
+                    Description = vlt.LocationTag.CoupleMoodType.Description,
+                    IsActive = vlt.LocationTag.CoupleMoodType.IsActive
+                } : null,
+                CouplePersonalityType = vlt.LocationTag.CouplePersonalityType != null ? new VenueOwnerCouplePersonalityTypeInfo
+                {
+                    Id = vlt.LocationTag.CouplePersonalityType.Id,
+                    Name = vlt.LocationTag.CouplePersonalityType.Name,
+                    Description = vlt.LocationTag.CouplePersonalityType.Description,
+                    IsActive = vlt.LocationTag.CouplePersonalityType.IsActive
+                } : null
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Delete (soft delete) a location tag from venue
+    /// Venue must have at least 2 active tags to allow deletion
+    /// </summary>
+    public async Task<bool> DeleteVenueLocationTagAsync(int venueId, int locationTagId)
+    {
+        _logger.LogInformation("Attempting to delete tag {TagId} from venue {VenueId}", locationTagId, venueId);
+
+        // Check if venue exists
+        var venue = await _unitOfWork.VenueLocations.GetByIdAsync(venueId);
+        if (venue == null || venue.IsDeleted == true)
+        {
+            _logger.LogWarning("Venue {VenueId} not found or deleted", venueId);
+            return false;
+        }
+
+        // Get all active tags for this venue
+        var activeTags = await _unitOfWork.Context.Set<VenueLocationTag>()
+            .Where(vlt => vlt.VenueLocationId == venueId && vlt.IsDeleted != true)
+            .ToListAsync();
+
+        // Check if venue has at least 2 tags (cannot delete last tag)
+        if (activeTags.Count <= 1)
+        {
+            _logger.LogWarning("Cannot delete last tag from venue {VenueId}", venueId);
+            return false;
+        }
+
+        // Find the tag to delete
+        var tagToDelete = activeTags.FirstOrDefault(vlt => vlt.LocationTagId == locationTagId);
+        if (tagToDelete == null)
+        {
+            _logger.LogWarning("Tag {TagId} not found for venue {VenueId}", locationTagId, venueId);
+            return false;
+        }
+
+        // Soft delete
+        tagToDelete.IsDeleted = true;
+
+        await _unitOfWork.SaveChangesAsync();
+        _logger.LogInformation("Soft deleted tag {TagId} from venue {VenueId}", locationTagId, venueId);
+
+        return true;
     }
 }

@@ -124,6 +124,29 @@ public class VenueLocationController : BaseController
     }
 
     /// <summary>
+    /// Delete (soft delete) a location tag from venue.
+    /// Venue must have at least 2 tags to allow deletion.
+    /// </summary>
+    /// <param name="venueId">Venue location ID</param>
+    /// <param name="locationTagId">Location tag ID to delete</param>
+    /// <returns>Success status</returns>
+    [HttpDelete("{venueId}/tags/{locationTagId}")]
+    [Authorize]
+    public async Task<IActionResult> DeleteVenueLocationTag(int venueId, int locationTagId)
+    {
+        _logger.LogInformation("Deleting tag {TagId} from venue {VenueId}", locationTagId, venueId);
+
+        var result = await _venueLocationService.DeleteVenueLocationTagAsync(venueId, locationTagId);
+
+        if (!result)
+        {
+            return NotFoundResponse("Tag not found for this venue or cannot delete last tag");
+        }
+
+        return OkResponse(true, "Tag deleted successfully");
+    }
+
+    /// <summary>
     /// Update venue location information.
     /// Requires authentication - user must be the venue owner.
     /// </summary>

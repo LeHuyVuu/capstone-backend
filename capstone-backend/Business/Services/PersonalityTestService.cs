@@ -23,11 +23,13 @@ namespace capstone_backend.Business.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IMbtiContentService _mbtiContentService;
 
-        public PersonalityTestService(IUnitOfWork unitOfWork, IMapper mapper)
+        public PersonalityTestService(IUnitOfWork unitOfWork, IMapper mapper, IMbtiContentService mbtiContentService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _mbtiContentService = mbtiContentService;
         }
 
         public async Task<PagedResult<PersonalityTestResponse>> GetHistoryTests(int pageNumber, int pageSize, int userId)
@@ -213,6 +215,18 @@ namespace capstone_backend.Business.Services
                 var jsonClone = json;
                 if (jsonClone.ContainsKey("answers"))
                     jsonClone.Remove("answers");
+
+                if (request.Action == TestAction.SUBMIT && !string.IsNullOrEmpty(record.ResultCode))
+                {
+                    var mbtiInfo = _mbtiContentService.GetResult(record.ResultCode);
+
+                    if (mbtiInfo != null)
+                    {
+                        jsonClone["resultTitle"] = mbtiInfo.Name;
+                        jsonClone["resultReason"] = mbtiInfo.Description;
+                        jsonClone["resultImage"] = mbtiInfo.ImageUrl;
+                    }
+                }
 
                 return jsonClone;
             }

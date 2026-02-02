@@ -148,6 +148,8 @@ using (var scope = serviceProvider.CreateScope())
     app.Logger.LogInformation("[INFO] Hangfire recurring jobs configured");
 }
 
+app.UseStaticFiles();
+
 // ========================================
 // Run Application
 // ========================================

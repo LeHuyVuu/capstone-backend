@@ -40,10 +40,11 @@ public static class VenueContextBuilder
             sb.AppendLine($"Mô tả: {venue.Description}");
 
             var tags = new List<string>();
-            if (venue.LocationTag?.CoupleMoodType?.Name != null)
-                tags.Add(venue.LocationTag.CoupleMoodType.Name);
-            if (venue.LocationTag?.CouplePersonalityType?.Name != null)
-                tags.Add(venue.LocationTag.CouplePersonalityType.Name);
+            var firstTag = venue.VenueLocationTags.FirstOrDefault()?.LocationTag;
+            if (firstTag?.CoupleMoodType?.Name != null)
+                tags.Add(firstTag.CoupleMoodType.Name);
+            if (firstTag?.CouplePersonalityType?.Name != null)
+                tags.Add(firstTag.CouplePersonalityType.Name);
 
             if (tags.Any())
             {
