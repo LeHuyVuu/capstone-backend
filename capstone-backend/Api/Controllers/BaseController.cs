@@ -44,6 +44,9 @@ public abstract class BaseController : ControllerBase
     protected IActionResult BadRequestResponse(string message = "Bad request")
         => BadRequest(ApiResponse<object>.Error(message, 400, GetTraceId()));
 
+    protected IActionResult BadRequestResponse<T>(T data, string message = "Bad request")
+        => BadRequest(ApiResponse<object>.ErrorData(data, message, 400, GetTraceId()));
+
     protected IActionResult NotFoundResponse(string message = "Not found")
         => NotFound(ApiResponse<object>.Error(message, 404, GetTraceId()));
 

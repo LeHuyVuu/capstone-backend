@@ -6,8 +6,10 @@ using capstone_backend.Business.Services;
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Interfaces;
 using capstone_backend.Data.Repositories;
+using FirebaseAdmin;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Google.Apis.Auth.OAuth2;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -16,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace capstone_backend.Extensions;
@@ -87,6 +90,8 @@ public static class ServiceExtensions
         services.AddScoped<IDatePlanRepository, DatePlanRepository>();
         services.AddScoped<IDatePlanItemRepository, DatePlanItemRepository>();
         services.AddScoped<IVenueOwnerProfileRepository, VenueOwnerProfileRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IDeviceTokenRepository, DeviceTokenRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -129,6 +134,8 @@ public static class ServiceExtensions
         services.AddScoped<IDatePlanService, DatePlanService>();
         services.AddScoped<IDatePlanItemService, DatePlanItemService>();
         services.AddScoped<IMbtiContentService, MbtiContentService>();
+        services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IDeviceTokenService, DeviceTokenService>();
 
         // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
         services.AddScoped<ILocationFollowerService, LocationFollowerService>();
@@ -543,5 +550,63 @@ public static class ServiceExtensions
         }
 
         return services;
+    }
+
+    // Register Firebase Service
+    public static IServiceCollection AddFireBaseConfiguration(this IServiceCollection services)
+    {
+        var type = Environment.GetEnvironmentVariable("FIREBASE_TYPE");
+        var tokenUri = Environment.GetEnvironmentVariable("FIREBASE_TOKEN_URI");
+
+        var projectId = Environment.GetEnvironmentVariable("FIREBASE_PROJECT_ID");
+        var privateKey = Environment.GetEnvironmentVariable("FIREBASE_PRIVATE_KEY");
+        var clientEmail = Environment.GetEnvironmentVariable("FIREBASE_CLIENT_EMAIL");
+
+        if (string.IsNullOrWhiteSpace(projectId) ||
+            string.IsNullOrWhiteSpace(privateKey) ||
+            string.IsNullOrWhiteSpace(clientEmail))
+        {
+            Console.WriteLine("[WARNING] Firebase: Environment variables not configured, skipping Firebase setup");
+            return services;
+        }
+
+        try
+        {
+            // Only init if instance not exists
+            if (FirebaseApp.DefaultInstance == null)
+            {
+                var credentialJson = JsonSerializer.Serialize(new
+                {
+                    type = type,
+                    project_id = projectId,
+                    private_key = privateKey.Replace("\\n", "\n"),
+                    client_email = clientEmail,
+                    token_uri = tokenUri
+                });
+
+                var credential = GoogleCredential.FromJson(credentialJson);
+
+                FirebaseApp.Create(new AppOptions
+                {
+                    Credential = credential,
+                    ProjectId = projectId
+                });
+
+                Console.WriteLine($"[INFO] Firebase initialized for project: {projectId}");
+            }
+            else
+            {
+                Console.WriteLine("[INFO] Firebase already initialized");
+            }
+
+            services.AddSingleton<IFcmService, FcmService>();
+
+            return services;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Firebase initialization failed: {ex.Message}");
+            throw;
+        }
     }
 }

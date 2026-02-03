@@ -28,7 +28,9 @@ public class UnitOfWork : IUnitOfWork
         ILocationTagRepository locationTagRepository,
         IDatePlanRepository datePlanRepository,
         IDatePlanItemRepository datePlanItemRepository,
-        IVenueOwnerProfileRepository venueOwnerProfileRepository)
+        IVenueOwnerProfileRepository venueOwnerProfileRepository,
+        INotificationRepository notificationRepository,
+        IDeviceTokenRepository deviceTokenRepository)
     {
         _context = context;
         Users = userRepository;
@@ -45,6 +47,8 @@ public class UnitOfWork : IUnitOfWork
         DatePlans = datePlanRepository;
         DatePlanItems = datePlanItemRepository;
         VenueOwnerProfiles = venueOwnerProfileRepository;
+        Notifications = notificationRepository;
+        DeviceTokens = deviceTokenRepository;
     }
 
     public MyDbContext Context => _context;
@@ -76,6 +80,10 @@ public class UnitOfWork : IUnitOfWork
     public IDatePlanItemRepository DatePlanItems { get; }
 
     public IVenueOwnerProfileRepository VenueOwnerProfiles { get; }
+
+    public INotificationRepository Notifications { get; }
+
+    public IDeviceTokenRepository DeviceTokens { get; }
 
     public async Task<int> SaveChangesAsync()
     {

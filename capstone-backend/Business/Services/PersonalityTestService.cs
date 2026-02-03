@@ -3,6 +3,7 @@ using AutoMapper.Execution;
 using Azure.Core;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.PersonalityTest;
+using capstone_backend.Business.Exceptions;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
@@ -164,10 +165,19 @@ namespace capstone_backend.Business.Services
                     throw new Exception("Test type not found");
 
                 // Validate answers
+                var unAnsweredQuestions = 0;
                 if (request.Answers != null && request.Answers.Any())
                 {
-                    if (!await ValidateAnswers(request, testTypeId))
-                        throw new Exception("Invalid answers submitted");
+                    var invalidQuestionId = await ValidateAnswers(request, testTypeId);
+                    if (invalidQuestionId != 0)
+                        throw new BadRequestException("Invalid answers submitted",
+                            "400")
+                        {
+                            Data =
+                            {
+                                ["invalidQuestionIds"] = new int[] { invalidQuestionId }
+                            }
+                        };
                 }
 
                 // Check if the member has already taken the test
@@ -336,21 +346,42 @@ namespace capstone_backend.Business.Services
         {
             // 1. Extract answers
             var answerIds = new List<int>();
+            var questionIds = new List<int>();
+
             if (json["answers"] is JsonArray arr)
             {
                 foreach (var node in arr)
                 {
                     var id = node?["AnswerId"]?.GetValue<int>();
-                    if (id.HasValue)
+                    var qId = node?["QuestionId"]?.GetValue<int>();
+                    if (qId.HasValue && id.HasValue)
+                    {
+                        questionIds.Add(qId.Value);
                         answerIds.Add(id.Value);
+                    }
                 }
             }
+
+            var allQuestions = await _unitOfWork.Questions.GetAllQuestionsByTestTypeIdAsync(testTypeId);
+            var missingQuestionIds = allQuestions
+                .Where(q => !questionIds.Contains(q.Id))
+                .ToList();
 
             if (!answerIds.Any())
                 throw new Exception("No answers to submit");
 
-            if (answerIds.Count < totalQuestions)
-                throw new Exception($"Not all questions have been answered: {answerIds.Count}/{totalQuestions}");
+            if (missingQuestionIds.Any())
+            {
+                throw new BadRequestException(
+                    $"Not all questions answered: {answerIds.Count}/{totalQuestions}",
+                    "400")
+                {
+                    Data =
+                    {
+                        ["invalidQuestionIds"] = missingQuestionIds.Select(q => q.Id).ToList()
+                    }
+                };
+            }
 
             // 2. Load score mapping from DB
             var scoringMap = await _unitOfWork.QuestionAnswers.GetScoringMapAsync(testTypeId);
@@ -423,10 +454,10 @@ namespace capstone_backend.Business.Services
             return finalMbtiCode;
         }
 
-        private async Task<bool> ValidateAnswers(SaveTestResultRequest request, int testTypeId)
+        private async Task<int> ValidateAnswers(SaveTestResultRequest request, int testTypeId)
         {
             if (request.Answers == null || !request.Answers.Any())
-                return false;
+                return -1;
 
             // 1. Check for duplicate question IDs
             var answerIdsToCheck = new HashSet<int>();
@@ -434,7 +465,7 @@ namespace capstone_backend.Business.Services
             foreach (var ans in request.Answers)
             {
                 if (!questionIdsToCheck.Add(ans.QuestionId))
-                    return false;
+                    return ans.QuestionId;
 
                 answerIdsToCheck.Add(ans.AnswerId);
             }
@@ -444,15 +475,15 @@ namespace capstone_backend.Business.Services
             {
                 // 2. Check question IDs belong to the test type
                 if (!validMap.ContainsKey(ans.QuestionId))
-                    return false;
+                    return ans.QuestionId;
 
                 // 3. Check answer IDs belong to the question IDs
                 var validAnswersForQuestion = validMap[ans.QuestionId];
                 if (!validAnswersForQuestion.Contains(ans.AnswerId))
-                    return false;
+                    return ans.QuestionId;
             }
 
-            return true;
+            return 0;
         }
     }
 }

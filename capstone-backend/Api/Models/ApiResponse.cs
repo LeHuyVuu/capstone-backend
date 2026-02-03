@@ -65,4 +65,15 @@ public class ApiResponse<T>
             TraceId = traceId
         };
     }
+
+    public static ApiResponse<T> ErrorData(T? data, string message, int code = 500, string? traceId = null)
+    {
+        return new ApiResponse<T>
+        {
+            Message = message,
+            Code = code,
+            Data = data,
+            TraceId = traceId
+        };
+    }
 }
