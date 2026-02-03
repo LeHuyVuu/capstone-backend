@@ -87,6 +87,7 @@ public static class ServiceExtensions
         services.AddScoped<IDatePlanRepository, DatePlanRepository>();
         services.AddScoped<IDatePlanItemRepository, DatePlanItemRepository>();
         services.AddScoped<IVenueOwnerProfileRepository, VenueOwnerProfileRepository>();
+        services.AddScoped<IDeviceTokenRepository, DeviceTokenRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -129,6 +130,7 @@ public static class ServiceExtensions
         services.AddScoped<IDatePlanService, DatePlanService>();
         services.AddScoped<IDatePlanItemService, DatePlanItemService>();
         services.AddScoped<IMbtiContentService, MbtiContentService>();
+        services.AddScoped<IDeviceTokenService, DeviceTokenService>();
 
         // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
         services.AddScoped<ILocationFollowerService, LocationFollowerService>();
