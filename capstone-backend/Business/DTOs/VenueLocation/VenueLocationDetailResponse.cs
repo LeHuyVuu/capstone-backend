@@ -21,6 +21,7 @@ public class VenueLocationDetailResponse
     public decimal? AverageRating { get; set; }
     public decimal? AvarageCost { get; set; }
     public int? ReviewCount { get; set; }
+    public int? FavoriteCount { get; set; }
     public string? Status { get; set; }
     public List<string>? CoverImage { get; set; }
     public List<string>? InteriorImage { get; set; }
