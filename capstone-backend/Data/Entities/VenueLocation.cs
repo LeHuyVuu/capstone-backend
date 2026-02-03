@@ -49,6 +49,7 @@ public partial class VenueLocation
     public decimal? AvarageCost { get; set; }
 
     public int? ReviewCount { get; set; }
+    public int? FavoriteCount { get; set; }
 
     public string? Status { get; set; }
 
