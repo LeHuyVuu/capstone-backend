@@ -78,6 +78,7 @@ public class UserService : IUserService
             ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes),
             CometChatUid = cometChatUid,
             CometChatAuthToken = cometChatAuthToken,
+            AvartarUrl = user.AvatarUrl,
             Gender = gender
         };
     }
