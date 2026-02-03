@@ -427,15 +427,11 @@ public class VenueLocationService : IVenueLocationService
                 {
                     Id = lt.CoupleMoodType.Id,
                     Name = lt.CoupleMoodType.Name,
-                    Description = lt.CoupleMoodType.Description,
-                    IsActive = lt.CoupleMoodType.IsActive
                 } : null,
                 CouplePersonalityType = lt.CouplePersonalityType != null ? new CouplePersonalityTypeInfo
                 {
                     Id = lt.CouplePersonalityType.Id,
                     Name = lt.CouplePersonalityType.Name,
-                    Description = lt.CouplePersonalityType.Description,
-                    IsActive = lt.CouplePersonalityType.IsActive
                 } : null
             })
             .ToList();
@@ -462,8 +458,6 @@ public class VenueLocationService : IVenueLocationService
             {
                 Id = mt.Id,
                 Name = mt.Name,
-                Description = mt.Description,
-                IsActive = mt.IsActive
             })
             .ToList();
     }
@@ -486,8 +480,6 @@ public class VenueLocationService : IVenueLocationService
             {
                 Id = pt.Id,
                 Name = pt.Name,
-                Description = pt.Description,
-                IsActive = pt.IsActive
             })
             .ToList();
     }

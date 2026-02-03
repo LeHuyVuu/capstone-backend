@@ -20,29 +20,37 @@ public class VenueLocationProfile : Profile
             .ForMember(dest => dest.FullPageMenuImage, opt => opt.Ignore())
             .AfterMap((src, dest) =>
             {
-                // Map ALL LocationTags from VenueLocationTags collection (many-to-many)
+                // Map và gom nhóm LocationTags thành CoupleMoodTypes và CouplePersonalityTypes riêng biệt
                 if (src.VenueLocationTags != null && src.VenueLocationTags.Any())
                 {
-                    dest.LocationTags = src.VenueLocationTags
+                    var locationTags = src.VenueLocationTags
                         .Where(vlt => vlt.LocationTag != null && vlt.IsDeleted != true)
-                        .Select(vlt => new LocationTagInfo
+                        .Select(vlt => vlt.LocationTag!)
+                        .ToList();
+
+                    // Gom nhóm CoupleMoodTypes (loại bỏ trùng lặp)
+                    dest.CoupleMoodTypes = locationTags
+                        .Where(lt => lt.CoupleMoodType != null)
+                        .Select(lt => lt.CoupleMoodType!)
+                        .GroupBy(mt => mt.Id)
+                        .Select(g => g.First())
+                        .Select(mt => new CoupleMoodTypeInfo
                         {
-                            Id = vlt.LocationTag!.Id,
-                            TagName = GenerateTagName(vlt.LocationTag.CoupleMoodType?.Name, vlt.LocationTag.CouplePersonalityType?.Name),
-                            CoupleMoodType = vlt.LocationTag.CoupleMoodType != null ? new CoupleMoodTypeInfo
-                            {
-                                Id = vlt.LocationTag.CoupleMoodType.Id,
-                                Name = vlt.LocationTag.CoupleMoodType.Name,
-                                Description = vlt.LocationTag.CoupleMoodType.Description,
-                                IsActive = vlt.LocationTag.CoupleMoodType.IsActive
-                            } : null,
-                            CouplePersonalityType = vlt.LocationTag.CouplePersonalityType != null ? new CouplePersonalityTypeInfo
-                            {
-                                Id = vlt.LocationTag.CouplePersonalityType.Id,
-                                Name = vlt.LocationTag.CouplePersonalityType.Name,
-                                Description = vlt.LocationTag.CouplePersonalityType.Description,
-                                IsActive = vlt.LocationTag.CouplePersonalityType.IsActive
-                            } : null
+                            Id = mt.Id,
+                            Name = mt.Name,
+                        })
+                        .ToList();
+
+                    // Gom nhóm CouplePersonalityTypes (loại bỏ trùng lặp)
+                    dest.CouplePersonalityTypes = locationTags
+                        .Where(lt => lt.CouplePersonalityType != null)
+                        .Select(lt => lt.CouplePersonalityType!)
+                        .GroupBy(pt => pt.Id)
+                        .Select(g => g.First())
+                        .Select(pt => new CouplePersonalityTypeInfo
+                        {
+                            Id = pt.Id,
+                            Name = pt.Name,
                         })
                         .ToList();
                 }
