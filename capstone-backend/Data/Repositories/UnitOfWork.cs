@@ -29,6 +29,7 @@ public class UnitOfWork : IUnitOfWork
         IDatePlanRepository datePlanRepository,
         IDatePlanItemRepository datePlanItemRepository,
         IVenueOwnerProfileRepository venueOwnerProfileRepository,
+        INotificationRepository notificationRepository)
         IDeviceTokenRepository deviceTokenRepository)
     {
         _context = context;
@@ -46,6 +47,7 @@ public class UnitOfWork : IUnitOfWork
         DatePlans = datePlanRepository;
         DatePlanItems = datePlanItemRepository;
         VenueOwnerProfiles = venueOwnerProfileRepository;
+        Notifications = notificationRepository;
         DeviceTokens = deviceTokenRepository;
     }
 
@@ -78,6 +80,8 @@ public class UnitOfWork : IUnitOfWork
     public IDatePlanItemRepository DatePlanItems { get; }
 
     public IVenueOwnerProfileRepository VenueOwnerProfiles { get; }
+
+    public INotificationRepository Notifications { get; }
 
     public IDeviceTokenRepository DeviceTokens { get; }
 
