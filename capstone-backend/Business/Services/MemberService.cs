@@ -46,12 +46,14 @@ public class MemberService : IMemberService
             throw new InvalidOperationException("Couple profile already exists for these members");
 
         // 5. Tạo couple profile mới
-        // member_id_1 = người được mời (người nam có invite code)
-        // member_id_2 = người gọi API (người nữ nhập invite code)
+        // Đảm bảo member_id_1 < member_id_2 để thỏa constraint ck_member_order
+        var smallerId = Math.Min(partnerMemberProfile.Id, currentMemberProfile.Id);
+        var largerId = Math.Max(partnerMemberProfile.Id, currentMemberProfile.Id);
+        
         var coupleProfile = new CoupleProfile
         {
-            MemberId1 = partnerMemberProfile.Id,
-            MemberId2 = currentMemberProfile.Id,
+            MemberId1 = smallerId,
+            MemberId2 = largerId,
             CoupleName = $"{partnerMemberProfile.FullName} ❤️ {currentMemberProfile.FullName}",
             StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
             Status = "ACTIVE",
@@ -78,6 +80,9 @@ public class MemberService : IMemberService
             coupleProfile.id, partnerMemberProfile.Id, currentMemberProfile.Id);
 
         // 7. Trả về response
+        var member1 = smallerId == partnerMemberProfile.Id ? partnerMemberProfile : currentMemberProfile;
+        var member2 = largerId == partnerMemberProfile.Id ? partnerMemberProfile : currentMemberProfile;
+        
         return new CoupleProfileResponse
         {
             Id = coupleProfile.id,
@@ -88,8 +93,8 @@ public class MemberService : IMemberService
             AniversaryDate = coupleProfile.AniversaryDate,
             Status = coupleProfile.Status,
             CreatedAt = coupleProfile.CreatedAt ?? DateTime.UtcNow,
-            Member1Name = partnerMemberProfile.FullName,
-            Member2Name = currentMemberProfile.FullName
+            Member1Name = member1.FullName,
+            Member2Name = member2.FullName
         };
     }
 }
