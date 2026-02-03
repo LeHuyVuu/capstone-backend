@@ -47,7 +47,7 @@ public class UserService : IUserService
         Console.Write(memberProfile);
         var gender = memberProfile?.Gender ?? string.Empty;
 
-        // Generate JWT tokens
+        // Generate  JWT tokens
         var role = user.Role ?? "MEMBER";
         var fullName = user.DisplayName ?? string.Empty;
         var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, role, fullName);
