@@ -29,7 +29,7 @@ public class UnitOfWork : IUnitOfWork
         IDatePlanRepository datePlanRepository,
         IDatePlanItemRepository datePlanItemRepository,
         IVenueOwnerProfileRepository venueOwnerProfileRepository,
-        INotificationRepository notificationRepository)
+        INotificationRepository notificationRepository,
         IDeviceTokenRepository deviceTokenRepository)
     {
         _context = context;
