@@ -32,9 +32,6 @@ namespace capstone_backend.Business.Services
                         Priority = Priority.High,
                         Notification = new AndroidNotification
                         {
-                            Title = request.Title, 
-                            Body = request.Body,   
-                            ImageUrl = request.ImageUrl,
                             Sound = "default",
                             ChannelId = "default",
                             Icon = "ic_notification",
