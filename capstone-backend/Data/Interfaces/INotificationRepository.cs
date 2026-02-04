@@ -7,5 +7,6 @@ namespace capstone_backend.Data.Interfaces
     {
         Task<Notification?> GetByIdAndUserIdAsync(int notificationId, int userId);
         Task<IEnumerable<Notification>> GetUnreadNotificationsByUserIdAsync(int userId);
+        Task<(int total, int unread)> GetNotificationStatsByUserIdAsync(int userId);
     }
 }

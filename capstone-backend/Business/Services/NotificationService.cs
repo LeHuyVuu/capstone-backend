@@ -152,7 +152,18 @@ namespace capstone_backend.Business.Services
                 }
 
                 // 2. Send notification
-                await _hubContext.Clients.Group($"User_{request.UserId}").SendAsync(NotificationEvents.NotificationReceived, notificationRes);
+                var (total, unread) = await _unitOfWork.Notifications.GetNotificationStatsByUserIdAsync(request.UserId);
+                var noti = new NotificationReceived()
+                {
+                    Notification = notificationRes,
+                    Stats = new NotificationStats()
+                    {
+                        Total = total,
+                        Unread = unread
+                    }
+                };
+
+                await _hubContext.Clients.Group($"User_{request.UserId}").SendAsync(NotificationEvents.NotificationReceived, noti);
             }
             catch (Exception)
             {
