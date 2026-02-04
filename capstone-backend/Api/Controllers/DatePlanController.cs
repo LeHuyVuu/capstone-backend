@@ -119,7 +119,20 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Start Date Plan
         /// </summary>
-        
+        [HttpPatch("{datePlanId:int}/start")]
+        public async Task<IActionResult> StartDatePlan(int datePlanId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.StartDatePlanAsync(userId.Value, datePlanId);
+                return OkResponse(result, "Started date plan successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
 
         /// <summary>
         /// Create Date Plan
