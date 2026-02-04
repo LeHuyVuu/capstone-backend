@@ -10,5 +10,13 @@ namespace capstone_backend.Data.Repositories
         public NotificationRepository(MyDbContext context) : base(context)
         {
         }
+
+        public async Task<Notification?> GetByIdAndUserIdAsync(int notificationId, int userId)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(n => n.Id == notificationId && n.UserId == userId)
+                .FirstOrDefaultAsync();
+        }
     }
 }

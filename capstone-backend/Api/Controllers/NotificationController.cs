@@ -42,6 +42,24 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Mark Notification as Read
+        /// </summary>
+        [HttpPatch("{notificationId:int}/read")]
+        public async Task<IActionResult> MarkNotificationAsRead(int notificationId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _notificationService.MarkReadAsync(notificationId, userId.Value);
+                return OkResponse(result, "Marked notification as read successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Test Create Notification
         /// </summary>
         [HttpPost]

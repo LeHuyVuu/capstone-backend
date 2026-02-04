@@ -2,6 +2,7 @@
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Notification;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Contracts.SignalR;
 using capstone_backend.Data.Entities;
 using capstone_backend.Hubs;
 using Microsoft.AspNetCore.SignalR;
@@ -72,6 +73,38 @@ namespace capstone_backend.Business.Services
             }
         }
 
+        public async Task<int> MarkReadAsync(int notificationId, int userId)
+        {
+            try
+            {
+                var notification = await _unitOfWork.Notifications.GetByIdAndUserIdAsync(notificationId, userId);
+                if (notification == null)
+                    throw new Exception("Notification not found.");
+
+                if (notification.IsRead == true)
+                    return 0;
+
+                notification.IsRead = true;
+                _unitOfWork.Notifications.Update(notification);
+
+                var isSuccess = await _unitOfWork.SaveChangesAsync();
+
+                // Send real-time update to client
+                if (isSuccess > 0)
+                {
+                    await _hubContext.Clients.Group($"User_{userId}").SendAsync(NotificationEvents.NotificationRead, notificationId);
+                    return isSuccess;
+                }
+
+                return 0;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
         public async Task SendNotificationAsync(NotificationRequest request)
         {
             try
@@ -84,7 +117,7 @@ namespace capstone_backend.Business.Services
                 }
 
                 // 2. Send notification
-                await _hubContext.Clients.Group($"User_{request.UserId}").SendAsync("ReceiveNotification", notificationRes);
+                await _hubContext.Clients.Group($"User_{request.UserId}").SendAsync(NotificationEvents.NotificationReceived, notificationRes);
             }
             catch (Exception)
             {
