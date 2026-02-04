@@ -613,7 +613,8 @@ public static class ServiceExtensions
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Firebase initialization failed: {ex.Message}");
-            throw;
         }
+
+        return services;
     }
 }
