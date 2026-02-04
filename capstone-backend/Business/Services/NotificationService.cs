@@ -12,9 +12,9 @@ namespace capstone_backend.Business.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IHubContext<NotificationHub> _hubContext;
-        private readonly IFcmService _fcmService;
+        private readonly IFcmService? _fcmService;
 
-        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IFcmService fcmService)
+        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IFcmService? fcmService = null)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -73,6 +73,12 @@ namespace capstone_backend.Business.Services
                     Title = "Test Notification",
                     Body = "This is a test notification message."
                 };
+               
+                if (_fcmService == null)
+                {
+                    throw new Exception("FCM Service is not available.");
+                }
+
                 await _fcmService.SendNotificationAsync(request);
             }
             catch (Exception)
