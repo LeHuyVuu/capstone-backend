@@ -92,6 +92,7 @@ public static class ServiceExtensions
         services.AddScoped<IVenueOwnerProfileRepository, VenueOwnerProfileRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IDeviceTokenRepository, DeviceTokenRepository>();
+        services.AddScoped<IReviewRepository, ReviewRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 

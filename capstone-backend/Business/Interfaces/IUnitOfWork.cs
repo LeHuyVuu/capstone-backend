@@ -48,6 +48,8 @@ public interface IUnitOfWork : IDisposable
 
     IDeviceTokenRepository DeviceTokens { get; }
 
+    IReviewRepository Reviews { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>

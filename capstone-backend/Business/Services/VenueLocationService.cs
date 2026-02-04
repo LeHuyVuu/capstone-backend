@@ -132,10 +132,15 @@ public class VenueLocationService : IVenueLocationService
     /// <summary>
     /// Get reviews for a venue location with pagination
     /// </summary>
-    public async Task<PagedResult<VenueReviewResponse>> GetReviewsByVenueIdAsync(int venueId, int page = 1, int pageSize = 10)
+    public async Task<VenueReviewsWithSummaryResponse> GetReviewsByVenueIdAsync(int venueId, int page = 1, int pageSize = 10)
     {
-        var (reviews, totalCount) = await _unitOfWork.VenueLocations.GetReviewsByVenueIdAsync(venueId, page, pageSize);
+        // Lấy danh sách reviews (có phân trang)
+        var (reviews, totalCount) = await _unitOfWork.Reviews.GetReviewsByVenueIdAsync(venueId, page, pageSize);
 
+        // Lấy tất cả ratings để tính summary
+        var allRatings = await _unitOfWork.Reviews.GetAllRatingsByVenueIdAsync(venueId);
+
+        // Map reviews sang VenueReviewResponse
         var reviewResponses = reviews.Select(r => 
         {
             var response = _mapper.Map<VenueReviewResponse>(r);
@@ -156,19 +161,61 @@ public class VenueLocationService : IVenueLocationService
                 };
             }
 
+            // TODO: ImageUrls và IsMatched sẽ được thêm sau khi database có columns tương ứng
+            // response.ImageUrls = ...
+            // response.MatchedTag = ...
+
             return response;
         }).ToList();
 
-        _logger.LogInformation("Retrieved {Count} reviews for venue {VenueId} (Page {Page}/{TotalPages})", 
-            reviewResponses.Count, venueId, page, Math.Ceiling(totalCount / (double)pageSize));
+        // Tính summary statistics
+        var summary = CalculateReviewSummary(allRatings);
 
-        return new PagedResult<VenueReviewResponse>
+        _logger.LogInformation("Retrieved {Count} reviews for venue {VenueId} (Page {Page}/{TotalPages}) - Average Rating: {AvgRating}", 
+            reviewResponses.Count, venueId, page, (int)Math.Ceiling(totalCount / (double)pageSize), summary.AverageRating);
+
+        return new VenueReviewsWithSummaryResponse
         {
-            Items = reviewResponses,
-            PageNumber = page,
-            PageSize = pageSize,
-            TotalCount = totalCount
+            Summary = summary,
+            Reviews = new PagedResult<VenueReviewResponse>
+            {
+                Items = reviewResponses,
+                PageNumber = page,
+                PageSize = pageSize,
+                TotalCount = totalCount
+            }
         };
+    }
+
+    /// <summary>
+    /// Tính toán review summary từ danh sách ratings
+    /// </summary>
+    private ReviewSummary CalculateReviewSummary(List<int> ratings)
+    {
+        var summary = new ReviewSummary
+        {
+            TotalReviews = ratings.Count,
+            AverageRating = ratings.Any() ? (decimal)ratings.Average() : 0m,
+            Ratings = new List<RatingDistribution>()
+        };
+
+        // Tính phân bố ratings từ 5 sao xuống 1 sao
+        for (int star = 5; star >= 1; star--)
+        {
+            var count = ratings.Count(r => r == star);
+            var percent = summary.TotalReviews > 0 
+                ? Math.Round((decimal)count / summary.TotalReviews * 100, 2) 
+                : 0m;
+
+            summary.Ratings.Add(new RatingDistribution
+            {
+                Star = star,
+                Count = count,
+                Percent = percent
+            });
+        }
+
+        return summary;
     }
 
     /// <summary>
