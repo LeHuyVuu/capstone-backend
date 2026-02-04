@@ -50,6 +50,8 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<DatePlanItem> DatePlanItems { get; set; }
 
+    public virtual DbSet<DatePlanJob> DatePlanJobs { get; set; }
+
     public virtual DbSet<DeviceToken> DeviceTokens { get; set; }
 
     public virtual DbSet<Interaction> Interactions { get; set; }
