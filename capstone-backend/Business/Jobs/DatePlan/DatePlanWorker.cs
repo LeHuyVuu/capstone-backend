@@ -2,9 +2,10 @@
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Enums;
 using Hangfire;
+using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Jobs.DatePlan
-{
+{    
     public class DatePlanWorker : IDatePlanWorker
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -14,6 +15,25 @@ namespace capstone_backend.Business.Jobs.DatePlan
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+        }
+
+        [JobDisplayName("End DatePlan #{0}")]
+        public async Task EndDatePlanAsync(int datePlanId)
+        {
+            var plan = await _unitOfWork.DatePlans.GetByIdAsync(datePlanId);
+
+            if (plan != null && plan.Status == DatePlanStatus.IN_PROGRESS.ToString())
+            {
+                _logger.LogInformation($"[END] Ending DatePlan #{datePlanId}");
+
+                plan.Status = DatePlanStatus.COMPLETED.ToString();
+
+                // todo: notify users
+
+                await CleanupJobAsync(datePlanId, DatePlanJobType.END.ToString());
+
+                await _unitOfWork.SaveChangesAsync();
+            }
         }
 
         [JobDisplayName("Start DatePlan #{0}")]

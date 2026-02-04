@@ -3,5 +3,6 @@
     public interface IDatePlanWorker
     {
         Task StartDatePlanAsync(int datePlanId);
+        Task EndDatePlanAsync(int datePlanId);
     }
 }

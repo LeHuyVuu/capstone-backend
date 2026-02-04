@@ -315,21 +315,37 @@ namespace capstone_backend.Business.Services
                 datePlan.Status = DatePlanStatus.SCHEDULED.ToString();
                 _unitOfWork.DatePlans.Update(datePlan);
 
-                if (datePlan.PlannedStartAt > DateTime.UtcNow)
+                if (datePlan.PlannedStartAt > DateTime.UtcNow && datePlan.PlannedEndAt > DateTime.UtcNow)
                 {
-                    string jobId = BackgroundJob.Schedule<IDatePlanWorker>(
+                    var jobs = new List<DatePlanJob>();
+
+                    string jobStartId = BackgroundJob.Schedule<IDatePlanWorker>(
                         w => w.StartDatePlanAsync(datePlan.Id),
                         datePlan.PlannedStartAt.Value);
 
                     // Save job
-                    var datePlanJob = new DatePlanJob
+                    var dateStartPlanJob = new DatePlanJob
                     {
                         DatePlanId = datePlan.Id,
-                        JobId = jobId,
+                        JobId = jobStartId,
                         JobType = DatePlanJobType.START.ToString()
                     };
+                    jobs.Add(dateStartPlanJob);
 
-                    await _unitOfWork.DatePlanJobs.AddAsync(datePlanJob);
+                    string jobEndId = BackgroundJob.Schedule<IDatePlanWorker>(
+                        w => w.EndDatePlanAsync(datePlan.Id),
+                        datePlan.PlannedEndAt.Value);
+
+                    // Save job
+                    var dateEndPlanJob = new DatePlanJob
+                    {
+                        DatePlanId = datePlan.Id,
+                        JobId = jobEndId,
+                        JobType = DatePlanJobType.END.ToString()
+                    };
+                    jobs.Add(dateEndPlanJob);
+
+                    await _unitOfWork.DatePlanJobs.AddRangeAsync(jobs);
                 }
 
                 return await _unitOfWork.SaveChangesAsync();
