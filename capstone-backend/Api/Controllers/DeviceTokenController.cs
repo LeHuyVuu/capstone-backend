@@ -21,14 +21,33 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Register device for push notifications
         /// </summary>
-        [HttpPost("register")]
+        [HttpPost]
         public async Task<IActionResult> RegisterDevice([FromBody] RegisterDeviceTokenRequest request)
         {
             try
             {
                 var userId = GetCurrentUserId();
                 var result = await _deviceTokenService.RegisterDeviceTokenAsync(userId.Value, request);
+
                 return OkResponse(result, "Registered device successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Unregister device from push notifications
+        /// </summary>
+        [HttpDelete]
+        public async Task<IActionResult> UnregisterDevice([FromBody] UnregisterDeviceTokenRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _deviceTokenService.DeleteDeviceTokenAsync(userId.Value, request.Token);
+                return OkResponse(result, "Unregistered device successfully");
             }
             catch (Exception ex)
             {
