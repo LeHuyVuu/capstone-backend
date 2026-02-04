@@ -430,6 +430,16 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("date_plan_items_venue_location_id_fkey");
         });
 
+        modelBuilder.Entity<DatePlanJob>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("date_plan_jobs_pkey");
+
+            entity.HasOne(j => j.DatePlan)
+                  .WithMany(dp => dp.DatePlanJobs)
+                  .HasConstraintName("fk_date_plan_jobs_date_plans_date_plan_id")
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<DeviceToken>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("device_tokens_pkey");

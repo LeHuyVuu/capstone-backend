@@ -30,7 +30,8 @@ public class UnitOfWork : IUnitOfWork
         IDatePlanItemRepository datePlanItemRepository,
         IVenueOwnerProfileRepository venueOwnerProfileRepository,
         INotificationRepository notificationRepository,
-        IDeviceTokenRepository deviceTokenRepository)
+        IDeviceTokenRepository deviceTokenRepository,
+        IDatePlanJobRepository datePlanJobRepository)
     {
         _context = context;
         Users = userRepository;
@@ -49,6 +50,7 @@ public class UnitOfWork : IUnitOfWork
         VenueOwnerProfiles = venueOwnerProfileRepository;
         Notifications = notificationRepository;
         DeviceTokens = deviceTokenRepository;
+        DatePlanJobs = datePlanJobRepository;
     }
 
     public MyDbContext Context => _context;
@@ -84,6 +86,8 @@ public class UnitOfWork : IUnitOfWork
     public INotificationRepository Notifications { get; }
 
     public IDeviceTokenRepository DeviceTokens { get; }
+
+    public IDatePlanJobRepository DatePlanJobs { get; set; }
 
     public async Task<int> SaveChangesAsync()
     {

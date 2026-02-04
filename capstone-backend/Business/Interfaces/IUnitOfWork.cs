@@ -48,6 +48,8 @@ public interface IUnitOfWork : IDisposable
 
     IDeviceTokenRepository DeviceTokens { get; }
 
+    IDatePlanJobRepository DatePlanJobs { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>

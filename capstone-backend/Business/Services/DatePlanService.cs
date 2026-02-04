@@ -3,9 +3,11 @@ using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.DatePlan;
 using capstone_backend.Business.DTOs.DatePlanItem;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
+using Hangfire;
 
 namespace capstone_backend.Business.Services
 {
@@ -312,6 +314,24 @@ namespace capstone_backend.Business.Services
                 // Start date plan
                 datePlan.Status = DatePlanStatus.SCHEDULED.ToString();
                 _unitOfWork.DatePlans.Update(datePlan);
+
+                if (datePlan.PlannedStartAt > DateTime.UtcNow)
+                {
+                    string jobId = BackgroundJob.Schedule<IDatePlanWorker>(
+                        w => w.StartDatePlanAsync(datePlan.Id),
+                        datePlan.PlannedStartAt.Value);
+
+                    // Save job
+                    var datePlanJob = new DatePlanJob
+                    {
+                        DatePlanId = datePlan.Id,
+                        JobId = jobId,
+                        JobType = DatePlanJobType.START.ToString()
+                    };
+
+                    await _unitOfWork.DatePlanJobs.AddAsync(datePlanJob);
+                }
+
                 return await _unitOfWork.SaveChangesAsync();
             }
             catch (Exception)
