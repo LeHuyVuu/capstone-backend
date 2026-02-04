@@ -1,4 +1,5 @@
-﻿using capstone_backend.Business.DTOs.Notification;
+﻿using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Business.DTOs.Notification;
 
 namespace capstone_backend.Business.Interfaces
 {
@@ -7,5 +8,6 @@ namespace capstone_backend.Business.Interfaces
         Task<NotificationResponse> CreateNotificationService(NotificationRequest request);
         Task SendNotificationAsync(NotificationRequest request);
         Task SendNotificationAsyncV2(string token);
+        Task<PagedResult<NotificationResponse>> GetNotificationsByUserIdAsync(int userId, int pageNumber = 1, int pageSize = 10);
     }
 }

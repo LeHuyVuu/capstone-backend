@@ -21,6 +21,24 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Get Notifications for Current User
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetNotifications([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var notifications = await _notificationService.GetNotificationsByUserIdAsync(userId.Value, pageNumber, pageSize);
+                return OkResponse(notifications);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Test Create Notification
         /// </summary>
         [HttpPost]

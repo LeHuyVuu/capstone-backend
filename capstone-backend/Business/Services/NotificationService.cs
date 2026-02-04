@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Notification;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
@@ -34,6 +35,35 @@ namespace capstone_backend.Business.Services
                 var response = _mapper.Map<NotificationResponse>(notification);
 
                 return response;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<PagedResult<NotificationResponse>> GetNotificationsByUserIdAsync(int userId, int pageNumber = 1, int pageSize = 10)
+        {
+            try
+            {
+                var (notification, totalCount) = await _unitOfWork.Notifications.GetPagedAsync(
+                        pageNumber,
+                        pageSize,
+                        n => n.UserId == userId,
+                        n => n.OrderByDescending(x => x.CreatedAt)
+                    );
+
+                var response = _mapper.Map<List<NotificationResponse>>(notification);
+
+                return new PagedResult<NotificationResponse>
+                {
+                    Items = response,
+                    TotalCount = totalCount,
+                    PageSize = pageSize,
+                    PageNumber = pageNumber
+                };
+
             }
             catch (Exception)
             {
