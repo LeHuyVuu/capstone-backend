@@ -14,12 +14,12 @@ namespace capstone_backend.Business.Services
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly IFcmService? _fcmService;
 
-        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IFcmService? fcmService = null)
+        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IServiceProvider serviceProvider)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _hubContext = hubContext;
-            _fcmService = fcmService;
+            _fcmService = serviceProvider.GetService<IFcmService>();
         }
 
         public async Task<NotificationResponse> CreateNotificationService(NotificationRequest request)
@@ -76,7 +76,8 @@ namespace capstone_backend.Business.Services
                
                 if (_fcmService == null)
                 {
-                    throw new Exception("FCM Service is not available.");
+                    Console.WriteLine("[WARNING] FCM Service not configured. Skip push notification.");
+                    return;
                 }
 
                 await _fcmService.SendNotificationAsync(request);
