@@ -43,14 +43,14 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task<PagedResult<NotificationResponse>> GetNotificationsByUserIdAsync(int userId, int pageNumber = 1, int pageSize = 10)
+        public async Task<PagedResult<NotificationResponse>> GetNotificationsByUserIdAsync(int userId, string type, int pageNumber = 1, int pageSize = 10)
         {
             try
             {
                 var (notification, totalCount) = await _unitOfWork.Notifications.GetPagedAsync(
                         pageNumber,
                         pageSize,
-                        n => n.UserId == userId,
+                        n => n.UserId == userId && n.Type == type,
                         n => n.OrderByDescending(x => x.CreatedAt)
                     );
 

@@ -8,6 +8,6 @@ namespace capstone_backend.Business.Interfaces
         Task<NotificationResponse> CreateNotificationService(NotificationRequest request);
         Task SendNotificationAsync(NotificationRequest request);
         Task SendNotificationAsyncV2(string token);
-        Task<PagedResult<NotificationResponse>> GetNotificationsByUserIdAsync(int userId, int pageNumber = 1, int pageSize = 10);
+        Task<PagedResult<NotificationResponse>> GetNotificationsByUserIdAsync(int userId, string type, int pageNumber = 1, int pageSize = 10);
     }
 }

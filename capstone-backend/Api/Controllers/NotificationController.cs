@@ -23,13 +23,16 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Get Notifications for Current User
         /// </summary>
+        /// <remarks>
+        /// Notification Type: MOOD, TEST, LOCATION, PAIRING, CHAT, SYSTEM (default)
+        /// </remarks>
         [HttpGet]
-        public async Task<IActionResult> GetNotifications([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetNotifications([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, [FromQuery] NotificationType type = NotificationType.SYSTEM)
         {
             try
             {
                 var userId = GetCurrentUserId();
-                var notifications = await _notificationService.GetNotificationsByUserIdAsync(userId.Value, pageNumber, pageSize);
+                var notifications = await _notificationService.GetNotificationsByUserIdAsync(userId.Value, type.ToString(), pageNumber, pageSize);
                 return OkResponse(notifications);
             }
             catch (Exception ex)
