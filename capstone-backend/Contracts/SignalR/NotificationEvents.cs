@@ -4,5 +4,6 @@
     {
         public const string NotificationReceived = "notification.received";
         public const string NotificationRead = "notification.read";
+        public const string NotificationReadAll = "notification.read.all";
     }
 }

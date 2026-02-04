@@ -60,6 +60,24 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Mark All Notifications as Read
+        /// </summary>
+        [HttpPatch("read-all")]
+        public async Task<IActionResult> MarkAllNotificationsAsRead()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _notificationService.MarkReadAllAsync(userId.Value);
+                return OkResponse(result, "Marked all notifications as read successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Test Create Notification
         /// </summary>
         [HttpPost]

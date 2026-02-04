@@ -5,6 +5,7 @@ using capstone_backend.Business.Interfaces;
 using capstone_backend.Contracts.SignalR;
 using capstone_backend.Data.Entities;
 using capstone_backend.Hubs;
+using Hangfire.Logging.LogProviders;
 using Microsoft.AspNetCore.SignalR;
 
 namespace capstone_backend.Business.Services
@@ -65,6 +66,40 @@ namespace capstone_backend.Business.Services
                     PageNumber = pageNumber
                 };
 
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<int> MarkReadAllAsync(int userId)
+        {
+            try
+            {
+                var notifications = await _unitOfWork.Notifications.GetUnreadNotificationsByUserIdAsync(userId);
+                if (notifications == null || !notifications.Any())
+                    return 0;
+
+                notifications.Select(n =>
+                {
+                    n.IsRead = true;
+
+                    return n;
+                }).ToList();
+
+                _unitOfWork.Notifications.UpdateRange(notifications);
+                var isSuccess = await _unitOfWork.SaveChangesAsync();
+
+                // Send real-time update to client
+                if (isSuccess > 0)
+                {
+                    await _hubContext.Clients.Group($"User_{userId}").SendAsync(NotificationEvents.NotificationReadAll);
+                    return isSuccess;
+                }
+
+                return 0;
             }
             catch (Exception)
             {

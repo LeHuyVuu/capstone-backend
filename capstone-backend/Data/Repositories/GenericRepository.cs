@@ -93,4 +93,12 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         _dbSet.Attach(entity);
         _context.Entry(entity).State = EntityState.Modified;
     }
+
+    public void UpdateRange(IEnumerable<T> entities)
+    {
+        if (entities == null)
+            throw new ArgumentNullException(nameof(entities));
+
+        _dbSet.UpdateRange(entities);
+    }
 }

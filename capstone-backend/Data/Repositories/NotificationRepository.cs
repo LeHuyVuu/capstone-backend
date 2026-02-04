@@ -18,5 +18,13 @@ namespace capstone_backend.Data.Repositories
                 .Where(n => n.Id == notificationId && n.UserId == userId)
                 .FirstOrDefaultAsync();
         }
+
+        public async Task<IEnumerable<Notification>> GetUnreadNotificationsByUserIdAsync(int userId)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(n => n.UserId == userId && n.IsRead == false)
+                .ToListAsync();
+        }
     }
 }
