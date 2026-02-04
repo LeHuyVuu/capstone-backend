@@ -21,6 +21,7 @@ public class VenueLocationDetailResponse
     public decimal? AverageRating { get; set; }
     public decimal? AvarageCost { get; set; }
     public int? ReviewCount { get; set; }
+    public int? FavoriteCount { get; set; }
     public string? Status { get; set; }
     public List<string>? CoverImage { get; set; }
     public List<string>? InteriorImage { get; set; }
@@ -29,8 +30,9 @@ public class VenueLocationDetailResponse
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
-    // Location Tag information
-    public LocationTagInfo? LocationTag { get; set; }
+    // Location Tags information - grouped by mood and personality types
+    public List<CoupleMoodTypeInfo>? CoupleMoodTypes { get; set; }
+    public List<CouplePersonalityTypeInfo>? CouplePersonalityTypes { get; set; }
 
     // Venue Owner Profile information
     public VenueOwnerProfileResponse? VenueOwner { get; set; }
@@ -61,8 +63,7 @@ public class CoupleMoodTypeInfo
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;
-    public string? Description { get; set; }
-    public bool? IsActive { get; set; }
+
 }
 
 /// <summary>
@@ -72,8 +73,7 @@ public class CouplePersonalityTypeInfo
 {
     public int Id { get; set; }
     public string? Name { get; set; }
-    public string? Description { get; set; }
-    public bool? IsActive { get; set; }
+
 }
 
 /// <summary>

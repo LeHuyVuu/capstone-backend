@@ -23,10 +23,12 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
 
         return await _dbSet
             .AsNoTracking()
-            .Include(v => v.LocationTag)
-                .ThenInclude(lt => lt!.CoupleMoodType)
-            .Include(v => v.LocationTag)
-                .ThenInclude(lt => lt!.CouplePersonalityType)
+            .Include(v => v.VenueLocationTags)
+                .ThenInclude(vlt => vlt.LocationTag)
+                    .ThenInclude(lt => lt!.CoupleMoodType)
+            .Include(v => v.VenueLocationTags)
+                .ThenInclude(vlt => vlt.LocationTag)
+                    .ThenInclude(lt => lt!.CouplePersonalityType)
             .Include(v => v.VenueOwner)
             .Include(v => v.VenueOpeningHours.Where(oh => oh.Day == todayDbFormat))
             .AsSplitQuery()
@@ -70,10 +72,12 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
     {
         return await _dbSet
             .AsNoTracking()
-            .Include(v => v.LocationTag)
-                .ThenInclude(lt => lt!.CoupleMoodType)
-            .Include(v => v.LocationTag)
-                .ThenInclude(lt => lt!.CouplePersonalityType)
+            .Include(v => v.VenueLocationTags)
+                .ThenInclude(vlt => vlt.LocationTag)
+                    .ThenInclude(lt => lt!.CoupleMoodType)
+            .Include(v => v.VenueLocationTags)
+                .ThenInclude(vlt => vlt.LocationTag)
+                    .ThenInclude(lt => lt!.CouplePersonalityType)
             .Where(v => v.VenueOwnerId == venueOwnerId && v.IsDeleted != true)
             .OrderByDescending(v => v.CreatedAt)
             .AsSplitQuery()
@@ -106,32 +110,37 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
     /// <summary>
     /// Get venues for recommendations with mood/personality filtering
     /// Supports: lat/lon radius search OR area (province/city) filtering
+    /// Returns venues with distance calculated using Haversine formula
     /// </summary>
-    public async Task<List<VenueLocation>> GetForRecommendationsAsync(
+    public async Task<List<(VenueLocation Venue, decimal? DistanceKm)>> GetForRecommendationsAsync(
         string? coupleMoodType,
         List<string> personalityTags,
+        string? singleMoodName,
         string? area,
         decimal? latitude,
         decimal? longitude,
         decimal? radiusKm,
-        int limit)
+        int limit,
+        int? budgetLevel)
     {
         var query = _dbSet
             .AsNoTracking()
-            .Where(v => v.IsDeleted != true);
+            .Where(v => v.IsDeleted != true && v.Status == "ACTIVE");
+
+        bool hasGeoFilter = latitude.HasValue && longitude.HasValue;
 
         // PRIORITY 1: Direct lat/lon radius search (most accurate)
-        if (latitude.HasValue && longitude.HasValue)
+        if (hasGeoFilter)
         {
             // Calculate bounding box for faster query (approximate)
             // 1 degree latitude ≈ 111km, 1 degree longitude ≈ 111km * cos(latitude)
             var radius = radiusKm ?? 5m; // Default 5km
             var latDelta = radius / 111m;
-            var lonDelta = radius / (111m * (decimal)Math.Cos((double)latitude.Value * Math.PI / 180));
+            var lonDelta = radius / (111m * (decimal)Math.Cos((double)latitude!.Value * Math.PI / 180));
 
             var minLat = latitude.Value - latDelta;
             var maxLat = latitude.Value + latDelta;
-            var minLon = longitude.Value - lonDelta;
+            var minLon = longitude!.Value - lonDelta;
             var maxLon = longitude.Value + lonDelta;
 
             query = query.Where(v => 
@@ -146,42 +155,129 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
         {
             query = query.Where(v => v.Area == area);
         }
+
+        // PRIORITY 3: Filter by Budget (Average Cost)
+        if (budgetLevel.HasValue)
+        {
+            query = budgetLevel.Value switch
+            {
+                1 => query.Where(v => v.AvarageCost < 200000),             // Low: < 200k
+                2 => query.Where(v => v.AvarageCost >= 200000 && v.AvarageCost <= 1000000), // Medium: 200k - 1m
+                3 => query.Where(v => v.AvarageCost > 1000000),            // High: > 1m
+                _ => query
+            };
+        }
        
         // Then apply mood/personality filters (if specified)
-        if (!string.IsNullOrEmpty(coupleMoodType) || personalityTags.Any())
+        bool hasFilters = !string.IsNullOrEmpty(coupleMoodType) || !string.IsNullOrEmpty(singleMoodName) || personalityTags.Any();
+        
+        if (hasFilters)
         {
             query = query
-                .Include(v => v.LocationTag!)
-                    .ThenInclude(lt => lt!.CoupleMoodType)
-                .Include(v => v.LocationTag!)
-                    .ThenInclude(lt => lt!.CouplePersonalityType)
-                .Where(v =>
-                    v.LocationTag != null && (
-                        (coupleMoodType != null && v.LocationTag.CoupleMoodType != null && 
-                         v.LocationTag.CoupleMoodType.Name == coupleMoodType) ||
-                        (personalityTags.Any() && v.LocationTag.CouplePersonalityType != null &&
-                         v.LocationTag.CouplePersonalityType.Name != null &&
-                         personalityTags.Contains(v.LocationTag.CouplePersonalityType.Name))
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt!.CoupleMoodType)
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt!.CouplePersonalityType)
+                .Where(v => v.VenueLocationTags.Any());
+
+            // Build filter conditions
+            if (!string.IsNullOrEmpty(singleMoodName))
+            {
+                // Single person: filter mood bằng DetailTag Contains
+                query = query.Where(v =>
+                    v.VenueLocationTags.Any(vlt => 
+                        (vlt.LocationTag.DetailTag != null && vlt.LocationTag.DetailTag.Contains(singleMoodName)) ||
+                        (personalityTags.Any() && vlt.LocationTag.CouplePersonalityType != null &&
+                         vlt.LocationTag.CouplePersonalityType.Name != null &&
+                         personalityTags.Contains(vlt.LocationTag.CouplePersonalityType.Name))
                     )
                 );
+            }
+            else if (!string.IsNullOrEmpty(coupleMoodType) || personalityTags.Any())
+            {
+                // Couple: filter mood bằng CoupleMoodType.Name
+                query = query.Where(v =>
+                    v.VenueLocationTags.Any(vlt => 
+                        (coupleMoodType != null && vlt.LocationTag.CoupleMoodType != null && 
+                         vlt.LocationTag.CoupleMoodType.Name == coupleMoodType) ||
+                        (personalityTags.Any() && vlt.LocationTag.CouplePersonalityType != null &&
+                         vlt.LocationTag.CouplePersonalityType.Name != null &&
+                         personalityTags.Contains(vlt.LocationTag.CouplePersonalityType.Name))
+                    )
+                );
+            }
         }
         else
         {
             // No filters - include relationships for display
             query = query
-                .Include(v => v.LocationTag!)
-                    .ThenInclude(lt => lt!.CoupleMoodType)
-                .Include(v => v.LocationTag!)
-                    .ThenInclude(lt => lt!.CouplePersonalityType);
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt!.CoupleMoodType)
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt!.CouplePersonalityType);
         }
 
         // Always include reviews for rating calculation
         query = query.Include(v => v.Reviews);
 
-        return await query
-            .Take(limit)
+        // Fetch venues from database
+        var venues = await query
             .AsSplitQuery()
             .ToListAsync();
+
+        // Calculate distance and sort if geo filter is provided
+        if (hasGeoFilter)
+        {
+            var venuesWithDistance = venues
+                .Select(v => (
+                    Venue: v,
+                    DistanceKm: CalculateHaversineDistance(
+                        latitude!.Value, longitude!.Value,
+                        v.Latitude ?? 0, v.Longitude ?? 0
+                    )
+                ))
+                .Where(x => x.DistanceKm <= (radiusKm ?? 5m)) // Filter by actual distance
+                .OrderBy(x => x.DistanceKm) // Sort by distance (nearest first)
+                .Take(limit)
+                .Select(x => (x.Venue, (decimal?)x.DistanceKm))
+                .ToList();
+
+            return venuesWithDistance;
+        }
+
+        // No geo filter - return without distance
+        return venues
+            .Take(limit)
+            .Select(v => (v, (decimal?)null))
+            .ToList();
+    }
+
+
+    private static decimal CalculateHaversineDistance(decimal lat1, decimal lon1, decimal lat2, decimal lon2)
+    {
+        const double EarthRadiusKm = 6371.0;
+
+        var dLat = ToRadians((double)(lat2 - lat1));
+        var dLon = ToRadians((double)(lon2 - lon1));
+
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                Math.Cos(ToRadians((double)lat1)) * Math.Cos(ToRadians((double)lat2)) *
+                Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        var distance = EarthRadiusKm * c;
+
+        return (decimal)Math.Round(distance, 2);
+    }
+
+
+    private static double ToRadians(double degrees)
+    {
+        return degrees * Math.PI / 180;
     }
     /// <summary>
     /// Get pending venue locations for admin review
@@ -191,10 +287,12 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
         var query = _dbSet
             .AsNoTracking()
             .Include(v => v.VenueOwner)
-            .Include(v => v.LocationTag)
-                .ThenInclude(lt => lt!.CoupleMoodType)
-            .Include(v => v.LocationTag)
-                .ThenInclude(lt => lt!.CouplePersonalityType)
+            .Include(v => v.VenueLocationTags)
+                .ThenInclude(vlt => vlt.LocationTag)
+                    .ThenInclude(lt => lt!.CoupleMoodType)
+            .Include(v => v.VenueLocationTags)
+                .ThenInclude(vlt => vlt.LocationTag)
+                    .ThenInclude(lt => lt!.CouplePersonalityType)
             .Where(v => v.Status == "PENDING" && v.IsDeleted != true);
 
         var totalCount = await query.CountAsync();

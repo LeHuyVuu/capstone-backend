@@ -19,6 +19,11 @@ public class RecommendationResponse
     /// Detected couple mood type based on input moods
     /// </summary>
     public string? CoupleMoodType { get; set; }
+
+    /// <summary>
+    /// Detected mood for single person
+    /// </summary>
+    public string? SingleMood { get; set; }
     
     /// <summary>
     /// Detected personality tags based on MBTI types
@@ -42,6 +47,16 @@ public class RecommendedVenue
     public int VenueLocationId { get; set; }
     
     /// <summary>
+    /// Location tag ID
+    /// </summary>
+    public int? LocationTagId { get; set; }
+    
+    /// <summary>
+    /// Venue owner ID
+    /// </summary>
+    public int VenueOwnerId { get; set; }
+    
+    /// <summary>
     /// Venue name
     /// </summary>
     public string Name { get; set; } = string.Empty;
@@ -57,6 +72,66 @@ public class RecommendedVenue
     public string Description { get; set; } = string.Empty;
     
     /// <summary>
+    /// Venue email
+    /// </summary>
+    public string? Email { get; set; }
+    
+    /// <summary>
+    /// Venue phone number
+    /// </summary>
+    public string? PhoneNumber { get; set; }
+    
+    /// <summary>
+    /// Venue website URL
+    /// </summary>
+    public string? WebsiteUrl { get; set; }
+    
+    /// <summary>
+    /// Minimum price
+    /// </summary>
+    public decimal? PriceMin { get; set; }
+    
+    /// <summary>
+    /// Maximum price
+    /// </summary>
+    public decimal? PriceMax { get; set; }
+    
+    /// <summary>
+    /// Venue latitude
+    /// </summary>
+    public decimal? Latitude { get; set; }
+    
+    /// <summary>
+    /// Venue longitude
+    /// </summary>
+    public decimal? Longitude { get; set; }
+    
+    /// <summary>
+    /// Venue area/region
+    /// </summary>
+    public string? Area { get; set; }
+    
+    /// <summary>
+    /// Average cost per person
+    /// </summary>
+    public decimal? AvarageCost { get; set; }
+    
+    /// <summary>
+    /// Venue category
+    /// </summary>
+    public string? Category { get; set; }
+    
+    /// <summary>
+    /// Distance from user's location in kilometers (null if no lat/lon provided)
+    /// </summary>
+    public decimal? Distance { get; set; }
+    
+    /// <summary>
+    /// Formatted distance text (e.g., "500 m" or "2.3 km")
+    /// </summary>
+    public string? DistanceText { get; set; }
+    
+    /// <summary>
     /// Match reason from AI analysis
     /// </summary>
     public string MatchReason { get; set; } = string.Empty;
@@ -70,23 +145,21 @@ public class RecommendedVenue
     /// Total number of reviews
     /// </summary>
     public int ReviewCount { get; set; }
-    
-
 
     /// <summary>
-    /// Cover image for the venue
+    /// Cover images for the venue
     /// </summary>
-    public string? CoverImage { get; set; }
+    public List<string> CoverImage { get; set; } = new();
 
     /// <summary>
-    /// Interior image of the venue
+    /// Interior images of the venue
     /// </summary>
-    public string? InteriorImage { get; set; }
+    public List<string> InteriorImage { get; set; } = new();
 
     /// <summary>
-    /// Full page menu image
+    /// Full page menu images
     /// </summary>
-    public string? FullPageMenuImage { get; set; }
+    public List<string> FullPageMenuImage { get; set; } = new();
     
     /// <summary>
     /// Matched location tags

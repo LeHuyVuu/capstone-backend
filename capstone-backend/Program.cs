@@ -3,6 +3,7 @@ using capstone_backend.Api.Models;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Mappings;
 using capstone_backend.Extensions;
+using capstone_backend.Hubs;
 using DotNetEnv;
 using Hangfire;
 using Scalar.AspNetCore;
@@ -81,12 +82,19 @@ builder.Services.AddAutoMapper(
     typeof(QuestionProfile),
     typeof(VenueLocationProfile),
     typeof(PersonalityTestProfile),
-    typeof(DatePlanProfile)
+    typeof(DatePlanProfile),
+    typeof(NotificationProfile)
 );
 
 // 14. Add HttpContextAccessor
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+
+// 15. Add SignalR
+builder.Services.AddSignalR();
+
+// 16. Add Firebase
+builder.Services.AddFireBaseConfiguration();
 
 var app = builder.Build();
 
@@ -148,10 +156,15 @@ using (var scope = serviceProvider.CreateScope())
     app.Logger.LogInformation("[INFO] Hangfire recurring jobs configured");
 }
 
+app.UseStaticFiles();
+
 // ========================================
 // Run Application
 // ========================================
 
 app.Logger.LogInformation("Application starting...");
+
+// Hubs
+app.MapHub<NotificationHub>("/hubs/notification");
 
 app.Run();

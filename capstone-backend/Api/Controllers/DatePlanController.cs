@@ -41,9 +41,15 @@ namespace capstone_backend.Api.Controllers
             try
             {
                 var userId = GetCurrentUserId();
-                var result = await _datePlanService.GetAllDatePlansByTimeAsync(pageNumber, pageSize, userId.Value, time.ToString());
+                var (result, totalUpcoming) = await _datePlanService.GetAllDatePlansByTimeAsync(pageNumber, pageSize, userId.Value, time.ToString());
 
-                return OkResponse(result, "Fetched date plans successfully");
+                var customReponse = new DatePlanPagedResponse
+                {
+                    PagedResult = result,
+                    TotalUpcoming = totalUpcoming
+                };
+
+                return OkResponse(customReponse, "Fetched date plans successfully");
             }
             catch (Exception ex)
             {
@@ -109,6 +115,11 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Start Date Plan
+        /// </summary>
+        
 
         /// <summary>
         /// Create Date Plan

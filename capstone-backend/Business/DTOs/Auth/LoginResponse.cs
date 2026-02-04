@@ -34,4 +34,6 @@ public class LoginResponse
 
         public string Gender { get; set; } = string.Empty;
 
+        public string? AvartarUrl { get; set; }
+
 }

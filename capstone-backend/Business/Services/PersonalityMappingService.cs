@@ -4,6 +4,7 @@ namespace capstone_backend.Business.Services;
 
 /// <summary>
 /// Service for mapping MBTI personality types to couple personality tags
+/// Uses Keirsey Temperament Sorter (NF, SP, SJ, NT) logic
 /// </summary>
 public class PersonalityMappingService : IPersonalityMappingService
 {
@@ -12,8 +13,7 @@ public class PersonalityMappingService : IPersonalityMappingService
     private static readonly object _cacheLock = new();
 
     /// <summary>
-    /// Maps two MBTI types to personality tags for couple recommendations
-    /// Returns up to 5 personality tags based on MBTI characteristics
+    /// Maps MBTI types to a single personality tag based on Keirsey Rules
     /// </summary>
     public List<string> GetPersonalityTags(string mbti1, string mbti2)
     {
@@ -26,19 +26,9 @@ public class PersonalityMappingService : IPersonalityMappingService
             return cachedTags;
         }
 
-        var tags = new HashSet<string>();
-
-        // Analyze both MBTI types (null-safe)
-        if (!string.IsNullOrEmpty(mbti1))
-            AnalyzeMbtiType(mbti1, tags);
-        if (!string.IsNullOrEmpty(mbti2))
-            AnalyzeMbtiType(mbti2, tags);
-
-        // Analyze couple compatibility (only if both provided)
-        if (!string.IsNullOrEmpty(mbti1) && !string.IsNullOrEmpty(mbti2))
-            AnalyzeCoupleDynamics(mbti1, mbti2, tags);
-
-        var result = tags.ToList();
+        // Determine the single most appropriate tag
+        string selectedTag = DetermineTag(mbti1, mbti2);
+        var result = new List<string> { selectedTag };
         
         // Store in cache (thread-safe)
         lock (_cacheLock)
@@ -53,120 +43,86 @@ public class PersonalityMappingService : IPersonalityMappingService
     }
 
     /// <summary>
-    /// Analyzes a single MBTI type and adds relevant tags
-    /// Maps to 5 database personality types: LÃNG MẠN, VUI VẺ, THƯ THÁI, HÒA GIẢI, PHIÊU LƯU
+    /// Core logic to determine the tag based on Single or Couple rules
     /// </summary>
-    private void AnalyzeMbtiType(string mbti, HashSet<string> tags)
+    private string DetermineTag(string mbti1, string mbti2)
     {
-        if (string.IsNullOrEmpty(mbti) || mbti.Length != 4)
-            return;
-
-        mbti = mbti.ToUpper();
-
-        // E/I - Energy orientation
-        if (mbti[0] == 'E')
+        // 1. CASE SINGLE: Only mbti1 is provided
+        if (!string.IsNullOrEmpty(mbti1) && string.IsNullOrEmpty(mbti2))
         {
-            tags.Add("VUI VẺ"); // Extroverted - Outgoing/Cheerful
-        }
-        else if (mbti[0] == 'I')
-        {
-            tags.Add("THƯ THÁI"); // Introverted - Calm/Relaxed
+             if (mbti1.Length < 4) return "HÒA GIẢI"; // Fallback
+             return MapGroupToTag(GetKeirseyGroup(mbti1.ToUpper()));
         }
 
-        // S/N - Information gathering
-        if (mbti[1] == 'S')
+        // 2. CASE COUPLE: Both are provided
+        if (!string.IsNullOrEmpty(mbti1) && !string.IsNullOrEmpty(mbti2))
         {
-            tags.Add("THƯ THÁI"); // Sensing - Practical, grounded
-        }
-        else if (mbti[1] == 'N')
-        {
-            tags.Add("PHIÊU LƯU"); // Intuitive - Adventurous/Exploratory
+            if (mbti1.Length < 4 || mbti2.Length < 4) return "HÒA GIẢI"; // Fallback
+
+            mbti1 = mbti1.ToUpper();
+            mbti2 = mbti2.ToUpper();
+
+            // RULE 1 (Priority): High Energy Couple (Both are Extroverts) -> VUI VẺ
+            if (mbti1[0] == 'E' && mbti2[0] == 'E') 
+                return "VUI VẺ";
+
+            // RULE 2: Check Keirsey Temperament Groups
+            string group1 = GetKeirseyGroup(mbti1);
+            string group2 = GetKeirseyGroup(mbti2);
+
+            // If same group, map to that group's characteristic
+            if (group1 == group2)
+            {
+                return MapGroupToTag(group1);
+            }
+
+            // RULE 3: Mixed groups or Rational Logic (NT + NT) -> HÒA GIẢI
+            // NT group (Rationals) prefer Logic/Debate -> HÒA GIẢI fits best among options
+            return "HÒA GIẢI";
         }
 
-        // T/F - Decision making
-        if (mbti[2] == 'T')
-        {
-            tags.Add("HÒA GIẢI"); // Thinking - Logical, problem-solving
-        }
-        else if (mbti[2] == 'F')
-        {
-            tags.Add("LÃNG MẠN"); // Feeling - Romantic/Emotional
-        }
-
-        // J/P - Lifestyle orientation
-        if (mbti[3] == 'J')
-        {
-            tags.Add("THƯ THÁI"); // Judging - Organized, structured
-        }
-        else if (mbti[3] == 'P')
-        {
-            tags.Add("PHIÊU LƯU"); // Perceiving - Spontaneous, adventurous
-        }
+        return "HÒA GIẢI"; // Default safe fallback
     }
 
     /// <summary>
-    /// Analyzes couple dynamics based on MBTI combination
-    /// Maps to 5 database personality types: LÃNG MẠN, VUI VẺ, THƯ THÁI, HÒA GIẢI, PHIÊU LƯU
+    /// Classifies MBTI into 4 Keirsey Temperaments: NF, NT, SP, SJ
     /// </summary>
-    private void AnalyzeCoupleDynamics(string mbti1, string mbti2, HashSet<string> tags)
+    private string GetKeirseyGroup(string mbti)
     {
-        if (string.IsNullOrEmpty(mbti1) || string.IsNullOrEmpty(mbti2))
-            return;
+        // Safety check
+        if (string.IsNullOrEmpty(mbti) || mbti.Length < 4) return "UNKNOWN";
 
-        mbti1 = mbti1.ToUpper();
-        mbti2 = mbti2.ToUpper();
+        bool isN = mbti[1] == 'N'; // Intuition
+        bool isS = mbti[1] == 'S'; // Sensing
 
-        // Both extroverted - highly active couple
-        if (mbti1[0] == 'E' && mbti2[0] == 'E')
-        {
-            tags.Add("VUI VẺ");
-        }
+        // NF: Idealists (Mơ mộng) - Intuition + Feeling
+        if (isN && mbti[2] == 'F') return "NF"; 
+        
+        // NT: Rationals (Lý trí) - Intuition + Thinking
+        if (isN && mbti[2] == 'T') return "NT"; 
+        
+        // SJ: Guardians (Ổn định) - Sensing + Judging
+        if (isS && mbti[3] == 'J') return "SJ"; 
+        
+        // SP: Artisans (Trải nghiệm) - Sensing + Perceiving
+        if (isS && mbti[3] == 'P') return "SP"; 
 
-        // Both introverted - prefer quiet activities
-        if (mbti1[0] == 'I' && mbti2[0] == 'I')
-        {
-            tags.Add("THƯ THÁI");
-        }
-
-        // Mix of E and I - balanced activities
-        if ((mbti1[0] == 'E' && mbti2[0] == 'I') || (mbti1[0] == 'I' && mbti2[0] == 'E'))
-        {
-            tags.Add("HÒA GIẢI"); // Need balance/harmony
-        }
-
-        // Both feeling types - emotional/romantic couple
-        if (mbti1[2] == 'F' && mbti2[2] == 'F')
-        {
-            tags.Add("LÃNG MẠN");
-        }
-
-        // Both perceiving - spontaneous couple
-        if (mbti1[3] == 'P' && mbti2[3] == 'P')
-        {
-            tags.Add("PHIÊU LƯU");
-        }
-
-        // Both intuitive - adventurous couple
-        if (mbti1[1] == 'N' && mbti2[1] == 'N')
-        {
-            tags.Add("PHIÊU LƯU");
-        }
-
-        // Opposite types in some dimensions - need harmony
-        int differences = 0;
-        for (int i = 0; i < 4; i++)
-        {
-            if (mbti1[i] != mbti2[i])
-                differences++;
-        }
-
-        // If they have 2-3 differences, they need harmony/compromise
-        if (differences >= 2 && differences <= 3)
-        {
-            tags.Add("HÒA GIẢI"); // Need harmony
-        }
+        return "UNKNOWN";
     }
 
-   
+    /// <summary>
+    /// Maps Keirsey Group directly to database Tags
+    /// </summary>
+    private string MapGroupToTag(string group)
+    {
+        return group switch
+        {
+            "NF" => "LÃNG MẠN", // Idealists -> Romantic
+            "SP" => "PHIÊU LƯU", // Artisans -> Adventurous
+            "SJ" => "THƯ THÁI", // Guardians -> Relaxed/Stable
+            "NT" => "HÒA GIẢI", // Rationals -> Harmony/Logic resolution
+            _ => "HÒA GIẢI"
+        };
+    }
 }
 

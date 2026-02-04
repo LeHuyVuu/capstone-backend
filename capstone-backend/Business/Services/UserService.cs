@@ -47,8 +47,8 @@ public class UserService : IUserService
         Console.Write(memberProfile);
         var gender = memberProfile?.Gender ?? string.Empty;
 
-        // Generate JWT tokens
-        var role = user.Role ?? "member";
+        // Generate  JWT tokens
+        var role = user.Role ?? "MEMBER";
         var fullName = user.DisplayName ?? string.Empty;
         var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, role, fullName);
         var refreshToken = _jwtService.GenerateRefreshToken();
@@ -57,7 +57,7 @@ public class UserService : IUserService
         // CometChat integration: Ensure user exists and generate auth token
         string cometChatUid = string.Empty;
         string cometChatAuthToken = string.Empty;
-        if (user.Role == "member")
+        if (user.Role == "MEMBER")
         {
             try
             {
@@ -78,6 +78,7 @@ public class UserService : IUserService
             ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes),
             CometChatUid = cometChatUid,
             CometChatAuthToken = cometChatAuthToken,
+            AvartarUrl = user.AvatarUrl,
             Gender = gender
         };
     }
@@ -367,6 +368,33 @@ public class UserService : IUserService
         return true;
     }
 
+    public async Task<UserResponse?> UpdateDocumentVenueOwnerAsync(
+        int userId, UpdateDocumentVenueOwnerRequest request)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user == null) return null;
+
+        // Ensure user has VenueOwner role (case-insensitive check)
+        if (!string.Equals(user.Role, "VENUEOWNER", StringComparison.OrdinalIgnoreCase) && 
+            !string.Equals(user.Role, "VenueOwner", StringComparison.OrdinalIgnoreCase))
+        {
+            // If strictly enforcing role here, we could return null or throw. 
+            // For now, allow update if the user exists, but typically this is for venue owners.
+            // Let's enforce it to match the requirement "chỉ role venue owner mới được"
+             throw new UnauthorizedAccessException("Only venue owners can update this profile.");
+        }
+
+        user.CitizenIdFrontUrl = request.CitizenIdFrontUrl;
+        user.CitizenIdBackUrl = request.CitizenIdBackUrl;
+        user.BusinessLicenseUrl = request.BusinessLicenseUrl;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        _unitOfWork.Users.Update(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        return MapToUserResponse(user);
+    }
+
     /// <summary>
     /// Convert user_account entity to UserResponse DTO
     /// </summary>
@@ -408,7 +436,10 @@ public class UserService : IUserService
                 BusinessName = venueOwnerProfile.BusinessName,
                 PhoneNumber = venueOwnerProfile.PhoneNumber,
                 Email = venueOwnerProfile.Email,
-                Address = venueOwnerProfile.Address
+                Address = venueOwnerProfile.Address,
+                CitizenIdFrontUrl = user.CitizenIdFrontUrl,
+                CitizenIdBackUrl = user.CitizenIdBackUrl,
+                BusinessLicenseUrl = user.BusinessLicenseUrl
             } : null
         };
     }

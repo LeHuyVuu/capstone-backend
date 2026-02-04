@@ -1,0 +1,82 @@
+﻿{
+  "ISTJ": {
+    "name": "Người Trách Nhiệm (The Logistician)",
+    "reason": "Kết quả này cho thấy bạn là người hướng nội, ưa thích sự ổn định và logic. Trong tình yêu, bạn không hành động theo cảm hứng nhất thời mà luôn cân nhắc kỹ lưỡng dựa trên thực tế. Bạn thuộc nhóm này vì bạn coi trọng lời hứa, đề cao trách nhiệm và thể hiện tình cảm thông qua hành động cụ thể thay vì những lời nói hoa mỹ.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/istj.svg"
+  },
+  "ISFJ": {
+    "name": "Người Nuôi Dưỡng (The Defender)",
+    "reason": "Bạn nhận được kết quả này vì bạn sở hữu trái tim ấm áp, hướng nội nhưng lại vô cùng quan tâm đến người khác. Bạn nhạy cảm với nhu cầu của đối phương và luôn đặt sự hài hòa lên hàng đầu. Trong mối quan hệ, bạn là người gìn giữ, chăm sóc và luôn mong muốn một sự gắn kết lâu dài, an toàn.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/isfj.svg"
+  },
+  "INFJ": {
+    "name": "Người Che Chở (The Advocate)",
+    "reason": "Kết quả này phản ánh bạn là một người có trực giác sâu sắc và sống giàu tình cảm. Bạn không tìm kiếm những mối quan hệ hời hợt; bạn khao khát sự kết nối ở tầng sâu tâm hồn (Soulmate). Bạn thuộc nhóm này vì bạn có khả năng thấu cảm đặc biệt, luôn nhìn thấy tiềm năng tốt đẹp ở người yêu và muốn cùng họ phát triển.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/infj.svg"
+  },
+  "INTJ": {
+    "name": "Nhà Kiến Trúc Sư (The Architect)",
+    "reason": "Bạn là mẫu người lý trí, độc lập và có tầm nhìn xa. Kết quả này cho thấy trong tình yêu, bạn không để cảm xúc lấn át lý trí mà luôn có chiến lược rõ ràng cho tương lai của cả hai. Bạn thuộc nhóm này vì bạn đề cao sự thông minh, sự trung thực tuyệt đối và mong muốn một mối quan hệ giúp cả hai cùng tiến bộ.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/intj.svg"
+  },
+  "ISTP": {
+    "name": "Thợ Thủ Công (The Virtuoso)",
+    "reason": "Kết quả này chỉ ra rằng bạn là người thực tế, yêu tự do và thích hành động hơn lời nói. Bạn không thích sự ràng buộc quá mức hay những màn kịch tính (drama) trong tình cảm. Bạn thuộc nhóm này vì bạn tiếp cận tình yêu một cách bình thản, tôn trọng không gian riêng và giải quyết vấn đề một cách trực diện, logic.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/istp.svg"
+  },
+  "ISFP": {
+    "name": "Người Nghệ Sĩ (The Adventurer)",
+    "reason": "Bạn là người sống thiên về cảm xúc, trân trọng cái đẹp và sự hòa hợp. Kết quả này cho thấy bạn yêu một cách nhẹ nhàng, không áp đặt và luôn muốn tận hưởng từng khoảnh khắc hiện tại. Bạn thuộc nhóm này vì bạn có tâm hồn nhạy cảm, tinh tế và luôn muốn mang lại sự bình yên, ngọt ngào cho người mình yêu.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/isfp.svg"
+  },
+  "INFP": {
+    "name": "Người Hòa Giải (The Mediator)",
+    "reason": "Kết quả này cho thấy bạn là một người lý tưởng hóa, sống nội tâm và coi trọng các giá trị đạo đức. Trong tình yêu, bạn khao khát một sự kết nối hoàn hảo và chân thành. Bạn thuộc nhóm này vì bạn luôn nhìn đời qua lăng kính màu hồng, giàu lòng trắc ẩn và sẵn sàng hy sinh vì người mình yêu thương.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/infp.svg"
+  },
+  "INTP": {
+    "name": "Nhà Tư Duy (The Logician)",
+    "reason": "Bạn sở hữu tư duy logic sắc bén và trí tò mò vô hạn. Kết quả này phản ánh rằng trong tình yêu, bạn tìm kiếm sự kết nối về trí tuệ hơn là những cảm xúc sến súa thông thường. Bạn thuộc nhóm này vì bạn là người chân thật, không thích sự giả tạo và luôn muốn hiểu rõ bản chất của mối quan hệ dưới góc độ lý trí.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/intp.svg"
+  },
+  "ESTP": {
+    "name": "Người Thực Thi (The Entrepreneur)",
+    "reason": "Bạn là người hướng ngoại, năng động và sống hết mình cho hiện tại. Kết quả này cho thấy bạn thích sự kịch tính, vui vẻ và những trải nghiệm thực tế cùng người yêu. Bạn thuộc nhóm này vì bạn giải quyết vấn đề rất nhanh, không thích sự chờ đợi và luôn muốn là người chủ động tạo lửa cho mối quan hệ.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/estp.svg"
+  },
+  "ESFP": {
+    "name": "Người Trình Diễn (The Entertainer)",
+    "reason": "Kết quả này cho thấy bạn là tâm điểm của niềm vui, sống thiên về cảm xúc và thích sự chú ý. Trong tình yêu, bạn muốn mọi thứ phải rực rỡ và nồng nhiệt. Bạn thuộc nhóm này vì bạn cực kỳ hào phóng, thích thể hiện tình cảm công khai và luôn muốn làm cho người yêu cười vui vẻ mỗi ngày.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/esfp.svg"
+  },
+  "ENFP": {
+    "name": "Người Truyền Cảm Hứng (The Campaigner)",
+    "reason": "Bạn là người nhiệt huyết, giàu trí tưởng tượng và hướng ngoại. Kết quả này phản ánh khao khát của bạn về một tình yêu đầy màu sắc và ý nghĩa sâu sắc. Bạn thuộc nhóm này vì bạn có trực giác mạnh mẽ, luôn tò mò về tâm hồn đối phương và muốn cùng nhau khám phá mọi khả năng của cuộc sống.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/enfp.svg"
+  },
+  "ENTP": {
+    "name": "Người Tranh Biện (The Debater)",
+    "reason": "Kết quả này cho thấy bạn thông minh, sắc sảo và thích sự đổi mới. Trong tình yêu, bạn không chấp nhận sự nhàm chán hay lối mòn. Bạn thuộc nhóm này vì bạn thích thách thức trí tuệ của đối phương, luôn tìm cách cải thiện mối quan hệ và coi tranh luận là cách để hai người hiểu nhau hơn.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/entp.svg"
+  },
+  "ESTJ": {
+    "name": "Người Điều Hành (The Executive)",
+    "reason": "Bạn là người thực tế, quyết đoán và coi trọng các giá trị truyền thống. Kết quả này cho thấy bạn yêu bằng trách nhiệm và sự cam kết rõ ràng. Bạn thuộc nhóm này vì bạn muốn xây dựng một mối quan hệ vững chắc, có trật tự, nơi bạn có thể che chở và cùng người yêu xây dựng tương lai ổn định.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/estj.svg"
+  },
+  "ESFJ": {
+    "name": "Người Quan Tâm (The Consul)",
+    "reason": "Kết quả này chỉ ra rằng bạn là người hướng ngoại, giàu tình cảm và rất coi trọng sự hòa hợp. Trong tình yêu, bạn là người chăm sóc tận tụy và luôn muốn làm hài lòng đối phương. Bạn thuộc nhóm này vì bạn yêu thích sự gắn kết, các giá trị gia đình và luôn nỗ lực để giữ cho mối quan hệ luôn ấm êm, hạnh phúc.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/esfj.svg"
+  },
+  "ENFJ": {
+    "name": "Người Chỉ Dẫn (The Protagonist)",
+    "reason": "Bạn là người có sức hút, ấm áp và luôn muốn giúp đỡ người khác. Kết quả này cho thấy trong tình yêu, bạn đóng vai trò là người truyền cảm hứng và nâng đỡ tinh thần cho đối phương. Bạn thuộc nhóm này vì bạn có khả năng thấu cảm tuyệt vời, luôn chủ động vun đắp tình cảm và hướng tới một mối quan hệ cùng nhau phát triển.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/enfj.svg"
+  },
+  "ENTJ": {
+    "name": "Người Chỉ Huy (The Commander)",
+    "reason": "Bạn là người mạnh mẽ, quyết đoán và có tố chất lãnh đạo bẩm sinh. Kết quả này cho thấy bạn tiếp cận tình yêu với sự nghiêm túc và tham vọng. Bạn thuộc nhóm này vì bạn muốn một mối quan hệ 'quyền lực', nơi cả hai là những người bạn đồng hành thông minh, cùng chí hướng và cùng nhau chinh phục những mục tiêu lớn.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/entj.svg"
+  }
+}

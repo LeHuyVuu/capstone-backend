@@ -32,5 +32,5 @@ public partial class LocationTag
     public virtual CouplePersonalityType? CouplePersonalityType { get; set; }
 
     [InverseProperty("LocationTag")]
-    public virtual ICollection<VenueLocation> VenueLocations { get; set; } = new List<VenueLocation>();
+    public virtual ICollection<VenueLocationTag> VenueLocationTags { get; set; } = new List<VenueLocationTag>();
 }

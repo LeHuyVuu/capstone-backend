@@ -44,6 +44,10 @@ public interface IUnitOfWork : IDisposable
 
     IDatePlanItemRepository DatePlanItems { get; }
 
+    INotificationRepository Notifications { get; }
+
+    IDeviceTokenRepository DeviceTokens { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>

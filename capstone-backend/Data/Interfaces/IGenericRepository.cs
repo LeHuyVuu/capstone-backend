@@ -12,6 +12,7 @@ namespace capstone_backend.Business.Interfaces
         Task AddAsync(T entity);
         Task AddRangeAsync(IEnumerable<T> entities);
         void Update(T entity);
+        void UpdateRange(IEnumerable<T> entities);
         void Delete(T entity);
 
         Task<int> CountAsync(Expression<Func<T, bool>>? filter = null);
