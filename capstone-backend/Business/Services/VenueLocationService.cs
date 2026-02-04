@@ -161,9 +161,21 @@ public class VenueLocationService : IVenueLocationService
                 };
             }
 
-            // TODO: ImageUrls và IsMatched sẽ được thêm sau khi database có columns tương ứng
-            // response.ImageUrls = ...
-            // response.MatchedTag = ...
+            // Parse ImageUrls từ JSON string sang List<string>
+            if (!string.IsNullOrEmpty(r.ImageUrls))
+            {
+                try
+                {
+                    response.ImageUrls = System.Text.Json.JsonSerializer.Deserialize<List<string>>(r.ImageUrls);
+                }
+                catch
+                {
+                    response.ImageUrls = new List<string>();
+                }
+            }
+
+            // Set MatchedTag bằng tiếng Việt
+            response.MatchedTag = r.IsMatched == true ? "Phù hợp" : "Không phù hợp";
 
             return response;
         }).ToList();
