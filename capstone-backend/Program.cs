@@ -165,6 +165,6 @@ app.UseStaticFiles();
 app.Logger.LogInformation("Application starting...");
 
 // Hubs
-app.MapHub<NotificationHub>("/hub/notifications");
+app.MapHub<NotificationHub>("/hubs/notification");
 
 app.Run();
