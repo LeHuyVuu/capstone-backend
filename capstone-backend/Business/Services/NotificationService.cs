@@ -13,14 +13,14 @@ namespace capstone_backend.Business.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IHubContext<NotificationHub> _hubContext;
-        private readonly IFcmService _fcmService;
+        private readonly IFcmService? _fcmService;
 
-        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IFcmService fcmService)
+        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IServiceProvider serviceProvider)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _hubContext = hubContext;
-            _fcmService = fcmService;
+            _fcmService = serviceProvider.GetService<IFcmService>();
         }
 
         public async Task<NotificationResponse> CreateNotificationService(NotificationRequest request)
@@ -103,6 +103,13 @@ namespace capstone_backend.Business.Services
                     Title = "Test Notification",
                     Body = "This is a test notification message."
                 };
+               
+                if (_fcmService == null)
+                {
+                    Console.WriteLine("[WARNING] FCM Service not configured. Skip push notification.");
+                    return;
+                }
+
                 await _fcmService.SendNotificationAsync(request);
             }
             catch (Exception)

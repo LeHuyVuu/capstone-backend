@@ -572,6 +572,13 @@ public static class ServiceExtensions
 
         try
         {
+            // Check if config is valid
+            if (string.IsNullOrWhiteSpace(projectId) || string.IsNullOrWhiteSpace(privateKey))
+            {
+                Console.WriteLine("[WARNING] Firebase config missing. FCM will be disabled.");
+                return services;
+            }
+
             // Only init if instance not exists
             if (FirebaseApp.DefaultInstance == null)
             {
@@ -606,7 +613,8 @@ public static class ServiceExtensions
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Firebase initialization failed: {ex.Message}");
-            throw;
         }
+
+        return services;
     }
 }
