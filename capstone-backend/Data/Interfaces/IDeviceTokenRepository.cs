@@ -5,5 +5,6 @@ namespace capstone_backend.Data.Interfaces
 {
     public interface IDeviceTokenRepository : IGenericRepository<DeviceToken>
     {
+        Task<DeviceToken?> GetByTokenAsync(string token);
     }
 }
