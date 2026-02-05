@@ -414,7 +414,7 @@ namespace capstone_backend.Business.Services
                     throw new Exception("Invalid action or date plan status");
                 }
 
-                _unitOfWork.DatePlans.Update(datePlan);
+                    _unitOfWork.DatePlans.Update(datePlan);
                 return await _unitOfWork.SaveChangesAsync();
             }
             catch (Exception)
