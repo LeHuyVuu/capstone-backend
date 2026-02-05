@@ -23,12 +23,6 @@ public partial class DatePlanItem
 
     public string? Note { get; set; }
 
-    public string Status { get; set; } = null!;
-
-    public DateTime? VisitedAt { get; set; }
-
-    public DateTime? SkippedAt { get; set; }
-
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

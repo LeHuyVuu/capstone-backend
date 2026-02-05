@@ -43,13 +43,9 @@ namespace capstone_backend.Business.Services
                 {
                     var item = _mapper.Map<DatePlanItem>(v);
                     item.DatePlanId = datePlanId;
-                    item.Status = DatePlanItemStatus.PLANNED.ToString();
 
                     return item;
                 }).ToList();
-
-                // Update total venues in date plan
-                datePlan.TotalCount = (datePlan.TotalCount != 0 ? datePlan.TotalCount : 0) + items.Count;
 
                 _unitOfWork.DatePlans.Update(datePlan);
                 await _unitOfWork.DatePlanItems.AddRangeAsync(items);
@@ -83,7 +79,6 @@ namespace capstone_backend.Business.Services
                     throw new Exception("Date plan item not found");
 
                 datePlanItem.IsDeleted = true;
-                datePlan.TotalCount = datePlan.TotalCount > 0 ? datePlan.TotalCount - 1 : 0;
                 _unitOfWork.DatePlanItems.Update(datePlanItem);
                 _unitOfWork.DatePlans.Update(datePlan);
 

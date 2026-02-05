@@ -28,13 +28,6 @@ public partial class DatePlan
 
     public DateTime? CompletedAt { get; set; }
 
-    public int TotalCount { get; set; } = 0;
-
-    public int VisitedCount { get; set; } = 0;
-
-    [Precision(5, 4)]
-    public decimal CompletionRate { get; set; } = 0m;
-
     [Precision(18, 2)]
     public decimal? EstimatedBudget { get; set; }
 
