@@ -378,5 +378,51 @@ namespace capstone_backend.Business.Services
                 throw;
             }
         }
+
+        public async Task<int> ActionDatePlanAsync(int userId, int datePlanId, DatePlanAction action)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member not found");
+
+                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                if (couple == null)
+                    throw new Exception("Member does not belong to any couples");
+
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
+                if (datePlan == null)
+                    throw new Exception("Date plan not found");
+
+                if (action == DatePlanAction.SEND)
+                {
+                    // Check if whose is organizer
+                    if (datePlan.OrganizerMemberId != member.Id)
+                        throw new Exception("Only the organizer can send the date plan");
+                    datePlan.Status = DatePlanStatus.PENDING.ToString();
+                }
+                else if (action == DatePlanAction.ACCEPT)
+                {
+                    if (datePlan.OrganizerMemberId == member.Id)
+                        throw new Exception("The organizer cannot accept the date plan");
+                    datePlan.Status = DatePlanStatus.SCHEDULED.ToString();
+                }
+                else if (action == DatePlanAction.REJECT)
+                {
+                    if (datePlan.OrganizerMemberId == member.Id)
+                        throw new Exception("The organizer cannot reject the date plan");
+                    datePlan.Status = DatePlanStatus.DRAFTED.ToString();
+                }
+
+                _unitOfWork.DatePlans.Update(datePlan);
+                return await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }      
     }
 }

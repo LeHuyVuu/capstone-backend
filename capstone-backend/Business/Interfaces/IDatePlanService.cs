@@ -1,6 +1,7 @@
 ﻿using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.DatePlan;
 using capstone_backend.Business.DTOs.DatePlanItem;
+using capstone_backend.Data.Enums;
 
 namespace capstone_backend.Business.Interfaces
 {
@@ -12,5 +13,6 @@ namespace capstone_backend.Business.Interfaces
         Task<DatePlanResponse> UpdateDatePlanAsync(int userId, int datePlanId, int version, UpdateDatePlanRequest request);
         Task<int> DeleteDatePlanAsync(int userId, int datePlanId);
         Task<int> StartDatePlanAsync(int userId, int datePlanId);
+        Task<int> ActionDatePlanAsync(int userId, int datePlanId, DatePlanAction action);
     }
 }
