@@ -5,6 +5,7 @@
         SEND,
         REJECT,
         ACCEPT,
-        CANCEL
+        CANCEL,
+        COMPLETE
     }
 }

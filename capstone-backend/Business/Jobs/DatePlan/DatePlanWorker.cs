@@ -33,22 +33,22 @@ namespace capstone_backend.Business.Jobs.DatePlan
 
             if (plan != null && plan.Status == DatePlanStatus.IN_PROGRESS.ToString())
             {
-                _logger.LogInformation($"[END] Ending DatePlan #{datePlanId}");
+                _logger.LogInformation($"[SOFT END] Ending DatePlan #{datePlanId}");
 
-                plan.Status = DatePlanStatus.COMPLETED.ToString();
+                //plan.Status = DatePlanStatus.COMPLETED.ToString();
 
                 // todo: notify users
                 var (userId1, userId2) = await _unitOfWork.CoupleProfiles.GetCoupleUserIdsAsync(plan.CoupleId);
 
                 await SendNotificationAsync(
                     new List<int> { userId1, userId2 },
-                    NotificationTemplate.DatePlan.TitelDatePlanEnded,
-                    NotificationTemplate.DatePlan.GetDatePlanEndedBody(plan.Title),
+                    NotificationTemplate.DatePlan.TitleDatePlanSoftEnded,
+                    NotificationTemplate.DatePlan.GetDatePlanSoftEndedBody(plan.Title),
                     plan);
 
                 await CleanupJobAsync(datePlanId, DatePlanJobType.END.ToString());
 
-                await _unitOfWork.SaveChangesAsync();
+                //await _unitOfWork.SaveChangesAsync();
             }
         }
 
@@ -180,6 +180,51 @@ namespace capstone_backend.Business.Jobs.DatePlan
                 };
                 await _fcmService.SendMultiNotificationAsync(tokens, pushRequest);
             }
+        }
+
+        [JobDisplayName("Auto Close Expired DatePlans")]
+        public async Task AutoCloseExpiredDatePlanAsync()
+        {
+            var thresholdTime = DateTime.UtcNow.AddHours(-1);
+
+            var expiredPlans = await _unitOfWork.DatePlans.GetAllExpiredPlansAsync(thresholdTime);
+
+            if (!expiredPlans.Any())
+            {
+                _logger.LogInformation("[AUTO CLOSE] No expired DatePlans found.");
+                return;
+            }
+
+            foreach (var plan in expiredPlans)
+            {
+                try
+                {
+                    if (plan.Status != DatePlanStatus.IN_PROGRESS.ToString())
+                    {
+                        _logger.LogInformation($"[AUTO CLOSE] Skipping DatePlan #{plan.Id} as its status is {plan.Status}");
+                        continue;
+                    }
+                    plan.Status = DatePlanStatus.COMPLETED.ToString();
+                    plan.CompletedAt = DateTime.UtcNow;
+
+                    // Notify users
+                    var (userId1, userId2) = await _unitOfWork.CoupleProfiles.GetCoupleUserIdsAsync(plan.CoupleId);
+                    await SendNotificationAsync(
+                        new List<int> { userId1, userId2 },
+                        NotificationTemplate.DatePlan.TitleDatePlanAutoClosed,
+                        NotificationTemplate.DatePlan.GetDatePlanAutoClosedBody(plan.Title),
+                        plan);
+
+                    await CleanupAllJobsAsync(plan.Id);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"[AUTO CLOSE] Error while auto closing DatePlan #{plan.Id}");
+                }
+            }
+
+            _unitOfWork.DatePlans.UpdateRange(expiredPlans);
+            await _unitOfWork.SaveChangesAsync();
         }
     }
 }

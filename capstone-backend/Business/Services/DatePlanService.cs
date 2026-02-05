@@ -409,6 +409,15 @@ namespace capstone_backend.Business.Services
                     // Remove jobs
                     await _datePlanWorker.CleanupAllJobsAsync(datePlan.Id);
                 }
+                else if (action == DatePlanAction.COMPLETE && datePlan.Status == DatePlanStatus.IN_PROGRESS.ToString())
+                {
+                    if (datePlan.OrganizerMemberId != member.Id)
+                        throw new Exception("Only the organizer can complete the date plan");
+                    datePlan.Status = DatePlanStatus.COMPLETED.ToString();
+                    datePlan.CompletedAt = DateTime.UtcNow;
+                    // Remove jobs
+                    await _datePlanWorker.CleanupAllJobsAsync(datePlan.Id);
+                }
                 else
                 {
                     throw new Exception("Invalid action or date plan status");
