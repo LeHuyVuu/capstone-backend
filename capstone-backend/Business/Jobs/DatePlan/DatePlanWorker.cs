@@ -2,10 +2,12 @@
 using capstone_backend.Business.Common;
 using capstone_backend.Business.DTOs.Notification;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using static capstone_backend.Business.Common.NotificationTemplate;
 
 namespace capstone_backend.Business.Jobs.DatePlan
 {    
@@ -36,6 +38,13 @@ namespace capstone_backend.Business.Jobs.DatePlan
                 plan.Status = DatePlanStatus.COMPLETED.ToString();
 
                 // todo: notify users
+                var (userId1, userId2) = await _unitOfWork.CoupleProfiles.GetCoupleUserIdsAsync(plan.CoupleId);
+
+                await SendNotificationAsync(
+                    new List<int> { userId1, userId2 },
+                    NotificationTemplate.DatePlan.TitelDatePlanEnded,
+                    NotificationTemplate.DatePlan.GetDatePlanEndedBody(plan.Title),
+                    plan);
 
                 await CleanupJobAsync(datePlanId, DatePlanJobType.END.ToString());
 
@@ -70,35 +79,11 @@ namespace capstone_backend.Business.Jobs.DatePlan
                 // Send realtime notification to couple members
                 var (userId1, userId2) = await _unitOfWork.CoupleProfiles.GetCoupleUserIdsAsync(plan.CoupleId);
 
-                var request = new NotificationRequest
-                {
-                    Title = title,
-                    Message = body,
-                    Type = NotificationType.SYSTEM.ToString(),
-                    ReferenceId = datePlanId,
-                    ReferenceType = ReferenceType.DATE_PLAN.ToString()
-                };
-
-                await _notificationService.SendNotificationUsersAsync(new List<int> { userId1, userId2 }, request);
-
-                // Send push notification via FCM
-                if (_fcmService != null)
-                {
-                    var tokens = await _unitOfWork.DeviceTokens.GetByCoupleId(plan.CoupleId);
-                    var data = new Dictionary<string, string>
-                    {
-                        { NotificationKeys.Type, NotificationType.SYSTEM.ToString() },
-                        { NotificationKeys.RefId, datePlanId.ToString() },
-                        { NotificationKeys.RefType, ReferenceType.DATE_PLAN.ToString() }
-                    };
-                    var pushRequest = new SendNotificationRequest
-                    {
-                        Title = title,
-                        Body = body,
-                        Data = data
-                    };
-                    await _fcmService.SendMultiNotificationAsync(tokens, pushRequest);
-                }
+                await SendNotificationAsync(
+                    new List<int> { userId1, userId2 },
+                    title,
+                    body,
+                    plan);
 
                 await CleanupJobAsync(datePlanId, DatePlanJobType.END.ToString());
             }
@@ -116,6 +101,13 @@ namespace capstone_backend.Business.Jobs.DatePlan
                 plan.Status = DatePlanStatus.IN_PROGRESS.ToString();
 
                 // todo: notify users
+                var (userId1, userId2) = await _unitOfWork.CoupleProfiles.GetCoupleUserIdsAsync(plan.CoupleId);
+                
+                await SendNotificationAsync(
+                    new List<int> { userId1, userId2 },
+                    NotificationTemplate.DatePlan.TitleDatePlanStarted,
+                    NotificationTemplate.DatePlan.GetDatePlanStartedBody(plan.Title),
+                    plan);
 
                 await CleanupJobAsync(datePlanId, DatePlanJobType.START.ToString());
 
@@ -132,6 +124,44 @@ namespace capstone_backend.Business.Jobs.DatePlan
             {
                 _unitOfWork.DatePlanJobs.Delete(job);
                 await _unitOfWork.SaveChangesAsync();
+            }
+        }
+
+        // Send notification to users
+        private async Task SendNotificationAsync(
+            List<int> userIds,
+            string title,
+            string body,
+            Data.Entities.DatePlan plan)
+        {
+            var request = new NotificationRequest
+            {
+                Title = title,
+                Message = body,
+                Type = NotificationType.SYSTEM.ToString(),
+                ReferenceId = plan.Id,
+                ReferenceType = ReferenceType.DATE_PLAN.ToString()
+            };
+
+            await _notificationService.SendNotificationUsersAsync(userIds, request);
+
+            // Send push notification via FCM
+            if (_fcmService != null)
+            {
+                var tokens = await _unitOfWork.DeviceTokens.GetByCoupleId(plan.CoupleId);
+                var data = new Dictionary<string, string>
+                    {
+                        { NotificationKeys.Type, NotificationType.SYSTEM.ToString() },
+                        { NotificationKeys.RefId, plan.Id.ToString() },
+                        { NotificationKeys.RefType, ReferenceType.DATE_PLAN.ToString() }
+                    };
+                var pushRequest = new SendNotificationRequest
+                {
+                    Title = title,
+                    Body = body,
+                    Data = data
+                };
+                await _fcmService.SendMultiNotificationAsync(tokens, pushRequest);
             }
         }
     }

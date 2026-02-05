@@ -13,11 +13,13 @@ namespace capstone_backend.Api.Controllers
     [Authorize]
     public class NotificationController : BaseController
     {
-        private readonly INotificationService _notificationService;       
+        private readonly INotificationService _notificationService;
+        private readonly IFcmService _fcmService;
 
-        public NotificationController(INotificationService notificationService)
+        public NotificationController(INotificationService notificationService, IFcmService fcmService)
         {
             _notificationService = notificationService;
+            _fcmService = fcmService;
         }
 
         /// <summary>
@@ -111,8 +113,14 @@ namespace capstone_backend.Api.Controllers
         {
             try
             {
-               
-                
+
+                await _fcmService.SendNotificationAsync(token, new SendNotificationRequest
+                {
+                    Title = "Test Push Notification",
+                    Body = "This is a test push notification message.",
+                    ImageUrl = "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/system/logo.png"
+
+                });
 
                 return OkResponse();
             }
