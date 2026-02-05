@@ -1,6 +1,9 @@
 ﻿
+using capstone_backend.Business.Common;
+using capstone_backend.Business.DTOs.Notification;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Enums;
+using capstone_backend.Extensions.Common;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,12 +12,16 @@ namespace capstone_backend.Business.Jobs.DatePlan
     public class DatePlanWorker : IDatePlanWorker
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IFcmService? _fcmService;
+        private readonly INotificationService _notificationService;
         private readonly ILogger<DatePlanWorker> _logger;
 
-        public DatePlanWorker(IUnitOfWork unitOfWork, ILogger<DatePlanWorker> logger)
+        public DatePlanWorker(IUnitOfWork unitOfWork, ILogger<DatePlanWorker> logger, IServiceProvider serviceProvider, INotificationService notificationService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _fcmService = serviceProvider.GetService<IFcmService>();
+            _notificationService = notificationService;
         }
 
         [JobDisplayName("End DatePlan #{0}")]
@@ -37,9 +44,64 @@ namespace capstone_backend.Business.Jobs.DatePlan
         }
 
         [JobDisplayName("Reminder for DatePlan #{0}")]
-        public Task SendReminderAsync(int datePlanId)
+        public async Task SendReminderAsync(int datePlanId, string type)
         {
+            var plan = await _unitOfWork.DatePlans.GetByIdAsync(datePlanId);
 
+            if (plan != null && plan.Status == DatePlanStatus.SCHEDULED.ToString())
+            {
+                _logger.LogInformation($"[REMINDER] Sending reminder for DatePlan #{datePlanId}");
+
+                string title = "";
+                string body = "";
+                TimeOnly time = TimeOnly.FromDateTime(TimezoneUtil.ToVietNamTime(plan.PlannedStartAt.Value));
+
+                if (type == "DAY")
+                {
+                    title = NotificationTemplate.DatePlan.TitleReminder1Day;
+                    body = NotificationTemplate.DatePlan.GetReminder1DayBody(plan.Title, time);
+                }
+                else if (type == "HOUR")
+                {
+                    title = NotificationTemplate.DatePlan.TitleReminder1Hour;
+                    body = NotificationTemplate.DatePlan.GetReminder1HourBody(plan.Title, time);
+                }
+
+                // Send realtime notification to couple members
+                var (userId1, userId2) = await _unitOfWork.CoupleProfiles.GetCoupleUserIdsAsync(plan.CoupleId);
+
+                var request = new NotificationRequest
+                {
+                    Title = title,
+                    Message = body,
+                    Type = NotificationType.SYSTEM.ToString(),
+                    ReferenceId = datePlanId,
+                    ReferenceType = ReferenceType.DATE_PLAN.ToString()
+                };
+
+                await _notificationService.SendNotificationUsersAsync(new List<int> { userId1, userId2 }, request);
+
+                // Send push notification via FCM
+                if (_fcmService != null)
+                {
+                    var tokens = await _unitOfWork.DeviceTokens.GetByCoupleId(plan.CoupleId);
+                    var data = new Dictionary<string, string>
+                    {
+                        { NotificationKeys.Type, NotificationType.SYSTEM.ToString() },
+                        { NotificationKeys.RefId, datePlanId.ToString() },
+                        { NotificationKeys.RefType, ReferenceType.DATE_PLAN.ToString() }
+                    };
+                    var pushRequest = new SendNotificationRequest
+                    {
+                        Title = title,
+                        Body = body,
+                        Data = data
+                    };
+                    await _fcmService.SendMultiNotificationAsync(tokens, pushRequest);
+                }
+
+                await CleanupJobAsync(datePlanId, DatePlanJobType.END.ToString());
+            }
         }
 
         [JobDisplayName("Start DatePlan #{0}")]

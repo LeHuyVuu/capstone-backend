@@ -345,6 +345,28 @@ namespace capstone_backend.Business.Services
                     };
                     jobs.Add(dateEndPlanJob);
 
+                    string jobReminderId = BackgroundJob.Schedule<IDatePlanWorker>(
+                        w => w.SendReminderAsync(datePlan.Id, "DAY"),
+                        datePlan.PlannedStartAt.Value.AddMinutes(-8));
+                    
+                    jobs.Add(new DatePlanJob
+                    {
+                        DatePlanId = datePlan.Id,
+                        JobId = jobReminderId,
+                        JobType = DatePlanJobType.REMINDER.ToString()
+                    });
+
+                    string jobReminder2Id = BackgroundJob.Schedule<IDatePlanWorker>(
+                        w => w.SendReminderAsync(datePlan.Id, "HOUR"),
+                        datePlan.PlannedStartAt.Value.AddMinutes(-5));
+
+                    jobs.Add(new DatePlanJob
+                    {
+                        DatePlanId = datePlan.Id,
+                        JobId = jobReminderId,
+                        JobType = DatePlanJobType.REMINDER.ToString()
+                    });
+
                     await _unitOfWork.DatePlanJobs.AddRangeAsync(jobs);
                 }
 

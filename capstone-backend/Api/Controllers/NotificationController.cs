@@ -91,11 +91,10 @@ namespace capstone_backend.Api.Controllers
                 {
                     Title = "Test Notification",
                     Message = "This is a test notification message.",
-                    UserId = userId.Value,
                     Type = NotificationType.SYSTEM.ToString()
                 };
 
-                await _notificationService.SendNotificationAsync(request);
+                await _notificationService.SendNotificationAsync(userId.Value, request);
                 return OkResponse();
             }
             catch (Exception ex)
@@ -113,7 +112,8 @@ namespace capstone_backend.Api.Controllers
             try
             {
                
-                await _notificationService.SendNotificationAsyncV2(token);
+                
+
                 return OkResponse();
             }
             catch (Exception ex)

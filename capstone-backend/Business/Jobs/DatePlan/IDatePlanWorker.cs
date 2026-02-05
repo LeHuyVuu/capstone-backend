@@ -4,6 +4,6 @@
     {
         Task StartDatePlanAsync(int datePlanId);
         Task EndDatePlanAsync(int datePlanId);
-        Task SendReminderAsync(int datePlanId);
+        Task SendReminderAsync(int datePlanId, string type);
     }
 }
