@@ -163,6 +163,7 @@ namespace capstone_backend.Business.Services
                     }
                 };
 
+                // 3. Send real-time update to client
                 await _hubContext.Clients.Group($"User_{request.UserId}").SendAsync(NotificationEvents.NotificationReceived, noti);
             }
             catch (Exception)
@@ -172,17 +173,10 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task SendNotificationAsyncV2(string token)
+        public async Task SendPushNotificationAsync(string token, SendNotificationRequest request)
         {
             try
-            {
-                var request = new SendNotificationRequest
-                {
-                    Token = token,
-                    Title = "Test Notification",
-                    Body = "This is a test notification message."
-                };
-               
+            {  
                 if (_fcmService == null)
                 {
                     Console.WriteLine("[WARNING] FCM Service not configured. Skip push notification.");

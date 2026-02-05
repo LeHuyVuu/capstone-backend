@@ -36,6 +36,12 @@ namespace capstone_backend.Business.Jobs.DatePlan
             }
         }
 
+        [JobDisplayName("Reminder for DatePlan #{0}")]
+        public Task SendReminderAsync(int datePlanId)
+        {
+
+        }
+
         [JobDisplayName("Start DatePlan #{0}")]
         public async Task StartDatePlanAsync(int datePlanId)
         {
