@@ -11,12 +11,20 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
-        public async Task<DatePlanJob?> GetByDatePlanIdAndJobType(int datePlanId, string jobType)
+        public async Task<DatePlanJob?> GetByDatePlanIdAndJobTypeAsync(int datePlanId, string jobType)
         {
             return await _dbSet
                 .AsNoTracking()
                 .Where(dpj => dpj.DatePlanId == datePlanId && dpj.JobType == jobType)
                 .FirstOrDefaultAsync();
+        }
+
+        public async Task<IEnumerable<DatePlanJob>> GetAllByDatePlanIdAsync(int datePlanId)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(dpj => dpj.DatePlanId == datePlanId)
+                .ToListAsync();
         }
     }
 }
