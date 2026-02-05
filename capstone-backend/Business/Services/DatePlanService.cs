@@ -402,7 +402,7 @@ namespace capstone_backend.Business.Services
                         throw new Exception("Only the organizer can send the date plan");
                     datePlan.Status = DatePlanStatus.PENDING.ToString();
                 }
-                else if (action == DatePlanAction.ACCEPT)
+                else if (action == DatePlanAction.ACCEPT && datePlan.Status == DatePlanStatus.PENDING.ToString())
                 {
                     if (datePlan.OrganizerMemberId == member.Id)
                         throw new Exception("The organizer cannot accept the date plan");
@@ -414,8 +414,12 @@ namespace capstone_backend.Business.Services
                         throw new Exception("The organizer cannot reject the date plan");
                     datePlan.Status = DatePlanStatus.DRAFTED.ToString();
                 }
+                else
+                {
+                    throw new Exception("Invalid action or date plan status");
+                }
 
-                _unitOfWork.DatePlans.Update(datePlan);
+                    _unitOfWork.DatePlans.Update(datePlan);
                 return await _unitOfWork.SaveChangesAsync();
             }
             catch (Exception)
