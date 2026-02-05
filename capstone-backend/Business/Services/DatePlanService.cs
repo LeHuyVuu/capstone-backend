@@ -328,7 +328,7 @@ namespace capstone_backend.Business.Services
 
                     string jobReminderId = BackgroundJob.Schedule<IDatePlanWorker>(
                         w => w.SendReminderAsync(datePlan.Id, "DAY"),
-                        datePlan.PlannedStartAt.Value.AddMinutes(-8));
+                        datePlan.PlannedStartAt.Value.AddDays(-1));
                     
                     jobs.Add(new DatePlanJob
                     {
@@ -339,7 +339,7 @@ namespace capstone_backend.Business.Services
 
                     string jobReminder2Id = BackgroundJob.Schedule<IDatePlanWorker>(
                         w => w.SendReminderAsync(datePlan.Id, "HOUR"),
-                        datePlan.PlannedStartAt.Value.AddMinutes(-5));
+                        datePlan.PlannedStartAt.Value.AddHours(-1));
 
                     jobs.Add(new DatePlanJob
                     {
