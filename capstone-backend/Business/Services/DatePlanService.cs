@@ -291,29 +291,10 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task<int> StartDatePlanAsync(int userId, int datePlanId)
+        private async Task<int> StartDatePlanAsync(DatePlan datePlan)
         {
             try
             {
-                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
-                if (member == null)
-                    throw new Exception("Member not found");
-
-                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
-                if (couple == null)
-                    throw new Exception("Member does not belong to any couples");
-
-                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
-                if (datePlan == null)
-                    throw new Exception("Date plan not found");
-
-                // Check status
-                if (datePlan.Status != DatePlanStatus.PENDING.ToString())
-                    throw new Exception("Only date plans with status PENDING can be started");
-
-                // Start date plan
-                datePlan.Status = DatePlanStatus.SCHEDULED.ToString();
-                _unitOfWork.DatePlans.Update(datePlan);
 
                 if (datePlan.PlannedStartAt > DateTime.UtcNow && datePlan.PlannedEndAt > DateTime.UtcNow)
                 {
@@ -347,7 +328,7 @@ namespace capstone_backend.Business.Services
 
                     string jobReminderId = BackgroundJob.Schedule<IDatePlanWorker>(
                         w => w.SendReminderAsync(datePlan.Id, "DAY"),
-                        datePlan.PlannedStartAt.Value.AddMinutes(-8));
+                        datePlan.PlannedStartAt.Value.AddDays(-1));
                     
                     jobs.Add(new DatePlanJob
                     {
@@ -358,7 +339,7 @@ namespace capstone_backend.Business.Services
 
                     string jobReminder2Id = BackgroundJob.Schedule<IDatePlanWorker>(
                         w => w.SendReminderAsync(datePlan.Id, "HOUR"),
-                        datePlan.PlannedStartAt.Value.AddMinutes(-5));
+                        datePlan.PlannedStartAt.Value.AddHours(-1));
 
                     jobs.Add(new DatePlanJob
                     {
@@ -402,11 +383,14 @@ namespace capstone_backend.Business.Services
                         throw new Exception("Only the organizer can send the date plan");
                     datePlan.Status = DatePlanStatus.PENDING.ToString();
                 }
-                else if (action == DatePlanAction.ACCEPT)
+                else if (action == DatePlanAction.ACCEPT && datePlan.Status == DatePlanStatus.PENDING.ToString())
                 {
                     if (datePlan.OrganizerMemberId == member.Id)
                         throw new Exception("The organizer cannot accept the date plan");
                     datePlan.Status = DatePlanStatus.SCHEDULED.ToString();
+
+                    // Start date plan jobs
+                    await StartDatePlanAsync(datePlan);
                 }
                 else if (action == DatePlanAction.REJECT)
                 {
@@ -414,8 +398,12 @@ namespace capstone_backend.Business.Services
                         throw new Exception("The organizer cannot reject the date plan");
                     datePlan.Status = DatePlanStatus.DRAFTED.ToString();
                 }
+                else
+                {
+                    throw new Exception("Invalid action or date plan status");
+                }
 
-                _unitOfWork.DatePlans.Update(datePlan);
+                    _unitOfWork.DatePlans.Update(datePlan);
                 return await _unitOfWork.SaveChangesAsync();
             }
             catch (Exception)

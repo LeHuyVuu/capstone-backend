@@ -94,6 +94,7 @@ public static class ServiceExtensions
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IDeviceTokenRepository, DeviceTokenRepository>();
         services.AddScoped<IDatePlanJobRepository, DatePlanJobRepository>();
+        services.AddScoped<IReviewRepository, ReviewRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 

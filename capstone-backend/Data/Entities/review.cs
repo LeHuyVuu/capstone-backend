@@ -32,6 +32,10 @@ public partial class Review
 
     public DateTime? UpdatedAt { get; set; }
 
+    public string? ImageUrls { get; set; }
+
+    public bool? IsMatched { get; set; }
+
     public bool? IsDeleted { get; set; }
 
     [ForeignKey("MemberId")]

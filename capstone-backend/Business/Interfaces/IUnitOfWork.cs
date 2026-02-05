@@ -50,6 +50,8 @@ public interface IUnitOfWork : IDisposable
 
     IDatePlanJobRepository DatePlanJobs { get; }
 
+    IReviewRepository Reviews { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>

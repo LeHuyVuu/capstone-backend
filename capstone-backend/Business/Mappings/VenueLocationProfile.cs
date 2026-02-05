@@ -80,7 +80,16 @@ public class VenueLocationProfile : Profile
         CreateMap<VenueOwnerProfile, VenueOwnerProfileResponse>();
 
         // Review to VenueReviewResponse
-        CreateMap<Review, VenueReviewResponse>();
+        // Ignore ImageUrls và MatchedTag - xử lý thủ công trong service
+        CreateMap<Review, VenueReviewResponse>()
+            .ForMember(dest => dest.ImageUrls, opt => opt.Ignore())
+            .ForMember(dest => dest.MatchedTag, opt => opt.Ignore());
+
+        // MemberProfile to ReviewMemberInfo
+        CreateMap<MemberProfile, ReviewMemberInfo>()
+            .ForMember(dest => dest.DisplayName, opt => opt.MapFrom(src => src.User != null ? src.User.DisplayName : null))
+            .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.User != null ? src.User.AvatarUrl : null))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User != null ? src.User.Email : null));
 
         // MemberProfile to ReviewMemberInfo
         CreateMap<MemberProfile, ReviewMemberInfo>()

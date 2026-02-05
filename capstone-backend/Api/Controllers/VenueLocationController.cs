@@ -70,21 +70,23 @@ public class VenueLocationController : BaseController
     }
 
     /// <summary>
-    /// Get reviews for a specific venue location.
-    /// Returns reviews with member information (name, avatar) and like count.
+    /// Get reviews for a specific venue location with summary statistics.
+    /// Returns:
+    /// - Summary: Average rating, total reviews, rating distribution (5-1 stars with count and percentage)
+    /// - Reviews: Paginated list with member info (name, avatar), attached images, and matched tag in Vietnamese
     /// </summary>
     /// <param name="id">Venue location ID</param>
     /// <param name="page">Page number (default: 1)</param>
     /// <param name="pageSize">Page size (default: 10)</param>
-    /// <returns>Paginated list of reviews</returns>
+    /// <returns>Reviews with summary and paginated list</returns>
     [HttpGet("{id}/reviews")]
     public async Task<IActionResult> GetReviewsByVenueId(int id, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         _logger.LogInformation("Requesting reviews for venue ID: {VenueId}, Page: {Page}, PageSize: {PageSize}", id, page, pageSize);
 
-        var reviews = await _venueLocationService.GetReviewsByVenueIdAsync(id, page, pageSize);
+        var response = await _venueLocationService.GetReviewsByVenueIdAsync(id, page, pageSize);
 
-        return OkResponse(reviews, $"Retrieved {reviews.Items.Count()} reviews for venue location");
+        return OkResponse(response, $"Retrieved {response.Reviews.Items.Count()} reviews with summary for venue location");
     }
 
     /// <summary>
