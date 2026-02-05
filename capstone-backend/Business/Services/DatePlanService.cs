@@ -291,29 +291,10 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task<int> StartDatePlanAsync(int userId, int datePlanId)
+        private async Task<int> StartDatePlanAsync(DatePlan datePlan)
         {
             try
             {
-                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
-                if (member == null)
-                    throw new Exception("Member not found");
-
-                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
-                if (couple == null)
-                    throw new Exception("Member does not belong to any couples");
-
-                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
-                if (datePlan == null)
-                    throw new Exception("Date plan not found");
-
-                // Check status
-                if (datePlan.Status != DatePlanStatus.PENDING.ToString())
-                    throw new Exception("Only date plans with status PENDING can be started");
-
-                // Start date plan
-                datePlan.Status = DatePlanStatus.SCHEDULED.ToString();
-                _unitOfWork.DatePlans.Update(datePlan);
 
                 if (datePlan.PlannedStartAt > DateTime.UtcNow && datePlan.PlannedEndAt > DateTime.UtcNow)
                 {
@@ -407,6 +388,9 @@ namespace capstone_backend.Business.Services
                     if (datePlan.OrganizerMemberId == member.Id)
                         throw new Exception("The organizer cannot accept the date plan");
                     datePlan.Status = DatePlanStatus.SCHEDULED.ToString();
+
+                    // Start date plan jobs
+                    await StartDatePlanAsync(datePlan);
                 }
                 else if (action == DatePlanAction.REJECT)
                 {
