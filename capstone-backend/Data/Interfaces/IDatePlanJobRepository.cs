@@ -5,6 +5,7 @@ namespace capstone_backend.Data.Interfaces
 {
     public interface IDatePlanJobRepository : IGenericRepository<DatePlanJob>
     {
-        Task<DatePlanJob?> GetByDatePlanIdAndJobType(int datePlanId, string jobType);
+        Task<DatePlanJob?> GetByDatePlanIdAndJobTypeAsync(int datePlanId, string jobType);
+        Task<IEnumerable<DatePlanJob>> GetAllByDatePlanIdAsync(int datePlanId);
     }
 }

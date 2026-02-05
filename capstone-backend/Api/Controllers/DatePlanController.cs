@@ -171,6 +171,24 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Cancel Date Plan
+        /// </summary>
+        [HttpPatch("{datePlanId:int}/cancel")]
+        public async Task<IActionResult> CancelDatePlanToCoupleMember(int datePlanId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.ActionDatePlanAsync(userId.Value, datePlanId, DatePlanAction.CANCEL);
+                return OkResponse(result, "Cancelled date plan to couple member successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Create Date Plan
         /// </summary>
         [HttpPost]
