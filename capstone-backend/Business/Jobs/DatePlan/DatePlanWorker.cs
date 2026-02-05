@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using static capstone_backend.Business.Common.NotificationTemplate;
 
 namespace capstone_backend.Business.Jobs.DatePlan
-{    
+{
     public class DatePlanWorker : IDatePlanWorker
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -85,7 +85,7 @@ namespace capstone_backend.Business.Jobs.DatePlan
                     body,
                     plan);
 
-                await CleanupJobAsync(datePlanId, DatePlanJobType.END.ToString());
+                await CleanupJobAsync(datePlanId, DatePlanJobType.REMINDER.ToString());
             }
         }
 
@@ -102,7 +102,7 @@ namespace capstone_backend.Business.Jobs.DatePlan
 
                 // todo: notify users
                 var (userId1, userId2) = await _unitOfWork.CoupleProfiles.GetCoupleUserIdsAsync(plan.CoupleId);
-                
+
                 await SendNotificationAsync(
                     new List<int> { userId1, userId2 },
                     NotificationTemplate.DatePlan.TitleDatePlanStarted,
@@ -118,11 +118,28 @@ namespace capstone_backend.Business.Jobs.DatePlan
         // Clean up done date plans
         private async Task CleanupJobAsync(int datePlanId, string jobType)
         {
-            var job = await _unitOfWork.DatePlanJobs.GetByDatePlanIdAndJobType(datePlanId, jobType);
+            var job = await _unitOfWork.DatePlanJobs.GetByDatePlanIdAndJobTypeAsync(datePlanId, jobType);
 
             if (job != null)
             {
                 _unitOfWork.DatePlanJobs.Delete(job);
+                await _unitOfWork.SaveChangesAsync();
+            }
+        }
+
+        // Clean up all jobs soon related to a date plan
+        public async Task CleanupAllJobsAsync(int datePlanId)
+        {
+            var jobs = await _unitOfWork.DatePlanJobs.GetAllByDatePlanIdAsync(datePlanId);
+
+            foreach (var job in jobs)
+            {
+                BackgroundJob.Delete(job.JobId);
+            }
+
+            if (jobs != null && jobs.Any())
+            {
+                _unitOfWork.DatePlanJobs.DeleteRange(jobs);
                 await _unitOfWork.SaveChangesAsync();
             }
         }

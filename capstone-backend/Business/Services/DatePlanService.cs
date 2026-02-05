@@ -14,12 +14,14 @@ namespace capstone_backend.Business.Services
     public class DatePlanService : IDatePlanService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IDatePlanWorker _datePlanWorker;
         private readonly IMapper _mapper;
 
-        public DatePlanService(IUnitOfWork unitOfWork, IMapper mapper)
+        public DatePlanService(IUnitOfWork unitOfWork, IMapper mapper, IDatePlanWorker datePlanWorker)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _datePlanWorker = datePlanWorker;
         }
 
         public async Task<int> CreateDatePlanAsync(int userId, CreateDatePlanRequest request)
@@ -344,7 +346,7 @@ namespace capstone_backend.Business.Services
                     jobs.Add(new DatePlanJob
                     {
                         DatePlanId = datePlan.Id,
-                        JobId = jobReminderId,
+                        JobId = jobReminder2Id,
                         JobType = DatePlanJobType.REMINDER.ToString()
                     });
 
@@ -397,6 +399,15 @@ namespace capstone_backend.Business.Services
                     if (datePlan.OrganizerMemberId == member.Id)
                         throw new Exception("The organizer cannot reject the date plan");
                     datePlan.Status = DatePlanStatus.DRAFTED.ToString();
+                }
+                else if (action == DatePlanAction.CANCEL && (datePlan.Status == DatePlanStatus.SCHEDULED.ToString() || datePlan.Status == DatePlanStatus.IN_PROGRESS.ToString()))
+                {
+                    if (datePlan.OrganizerMemberId != member.Id)
+                        throw new Exception("Only the organizer can cancel the date plan");
+                    datePlan.Status = DatePlanStatus.CANCELLED.ToString();
+
+                    // Remove jobs
+                    await _datePlanWorker.CleanupAllJobsAsync(datePlan.Id);
                 }
                 else
                 {

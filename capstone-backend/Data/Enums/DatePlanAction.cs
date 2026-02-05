@@ -5,5 +5,6 @@
         SEND,
         REJECT,
         ACCEPT,
+        CANCEL
     }
 }
