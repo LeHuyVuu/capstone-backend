@@ -13,7 +13,7 @@ public partial class DeviceToken
 
     public int UserId { get; set; }
 
-    public string TokenHash { get; set; } = null!;
+    public string Token { get; set; } = null!;
 
     public string? Platform { get; set; }
 

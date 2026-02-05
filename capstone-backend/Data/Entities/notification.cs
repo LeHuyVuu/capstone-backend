@@ -21,6 +21,8 @@ public partial class Notification
 
     public int? ReferenceId { get; set; }
 
+    public string? ReferenceType { get; set; }
+
     public bool? IsRead { get; set; }
 
     public DateTime? CreatedAt { get; set; }

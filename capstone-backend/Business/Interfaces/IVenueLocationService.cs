@@ -21,8 +21,8 @@ public interface IVenueLocationService
     /// <param name="venueId">Venue location ID</param>
     /// <param name="page">Page number (default: 1)</param>
     /// <param name="pageSize">Page size (default: 10)</param>
-    /// <returns>Paged list of reviews with member information and like count</returns>
-    Task<PagedResult<VenueReviewResponse>> GetReviewsByVenueIdAsync(int venueId, int page = 1, int pageSize = 10);
+    /// <returns>Reviews with summary (average rating, total reviews, rating distribution) and paginated list</returns>
+    Task<VenueReviewsWithSummaryResponse> GetReviewsByVenueIdAsync(int venueId, int page = 1, int pageSize = 10);
 
     /// <summary>
     /// Create a new venue location with location tags
@@ -101,4 +101,12 @@ public interface IVenueLocationService
     /// <param name="request">Approval request containing venue ID and status</param>
     /// <returns>True if successful, False if failed</returns>
     Task<VenueSubmissionResult> ApproveVenueAsync(VenueApprovalRequest request);
+
+    /// <summary>
+    /// Delete (soft delete) a location tag from venue
+    /// </summary>
+    /// <param name="venueId">Venue location ID</param>
+    /// <param name="locationTagId">Location tag ID to delete</param>
+    /// <returns>True if successful, False if not found or cannot delete</returns>
+    Task<bool> DeleteVenueLocationTagAsync(int venueId, int locationTagId);
 }

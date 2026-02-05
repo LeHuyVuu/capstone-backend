@@ -154,11 +154,12 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 var result = await _personalityTestService.HandleTestAsync(GetCurrentUserId().Value, testTypeId, request);
+
                 return OkResponse(result, "Test submitted successfully");
             }
             catch (Exception ex)
             {
-                return BadRequestResponse(ex.Message);
+                return BadRequestResponse(ex.Data, ex.Message);
             }
         }
     }

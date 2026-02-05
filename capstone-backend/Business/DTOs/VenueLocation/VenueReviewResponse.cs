@@ -18,6 +18,16 @@ public class VenueReviewResponse
 
     // Member information (người viết review)
     public ReviewMemberInfo? Member { get; set; }
+
+    /// <summary>
+    /// Danh sách ảnh đính kèm trong review
+    /// </summary>
+    public List<string>? ImageUrls { get; set; }
+
+    /// <summary>
+    /// Tag matched hoặc not matched bằng tiếng Việt
+    /// </summary>
+    public string? MatchedTag { get; set; }
 }
 
 /// <summary>
@@ -35,4 +45,46 @@ public class ReviewMemberInfo
     public string? DisplayName { get; set; }
     public string? AvatarUrl { get; set; }
     public string? Email { get; set; }
+}
+
+/// <summary>
+/// Tóm tắt đánh giá cho venue
+/// </summary>
+public class ReviewSummary
+{
+    /// <summary>
+    /// Rating trung bình
+    /// </summary>
+    public decimal AverageRating { get; set; }
+
+    /// <summary>
+    /// Tổng số reviews
+    /// </summary>
+    public int TotalReviews { get; set; }
+
+    /// <summary>
+    /// Phân bố rating theo số sao
+    /// </summary>
+    public List<RatingDistribution> Ratings { get; set; } = new();
+}
+
+/// <summary>
+/// Phân bố rating theo số sao
+/// </summary>
+public class RatingDistribution
+{
+    /// <summary>
+    /// Số sao (1-5)
+    /// </summary>
+    public int Star { get; set; }
+
+    /// <summary>
+    /// Số lượng reviews có rating này
+    /// </summary>
+    public int Count { get; set; }
+
+    /// <summary>
+    /// Phần trăm reviews có rating này
+    /// </summary>
+    public decimal Percent { get; set; }
 }

@@ -28,6 +28,11 @@ public partial class UserAccount
     public bool? IsActive { get; set; }
 
     public bool? IsVerified { get; set; }
+    public string? CitizenIdFrontUrl { get; set; }
+
+    public string? CitizenIdBackUrl { get; set; }
+
+    public string? BusinessLicenseUrl { get; set; }
 
     public DateTime? LastLoginAt { get; set; }
 

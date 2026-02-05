@@ -108,6 +108,8 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<VenueLocation> VenueLocations { get; set; }
 
+    public virtual DbSet<VenueLocationTag> VenueLocationTags { get; set; }
+
     public virtual DbSet<VenueOpeningHour> VenueOpeningHours { get; set; }
 
     public virtual DbSet<VenueLocationAdvertisement> VenueLocationAdvertisements { get; set; }
@@ -794,16 +796,42 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsOwnerVerified).HasDefaultValue(false).HasColumnName("is_owner_verified");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
-            entity.Property(e => e.IsOpen).HasDefaultValue(true);
             entity.Property(e => e.PriceMin).HasDefaultValueSql("0");
             entity.Property(e => e.ReviewCount).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.LocationTag).WithMany(p => p.VenueLocations).HasConstraintName("venue_locations_location_tag_id_fkey");
-
             entity.HasOne(d => d.VenueOwner).WithMany(p => p.VenueLocations)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("venue_locations_venue_owner_id_fkey");
+        });
+
+        modelBuilder.Entity<VenueLocationTag>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("venue_location_tags_pkey");
+
+            entity.ToTable("venue_location_tags");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.VenueLocationId).HasColumnName("venue_location_id");
+            entity.Property(e => e.LocationTagId).HasColumnName("location_tag_id");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()").HasColumnName("created_at");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false).HasColumnName("is_deleted");
+
+            entity.HasOne(d => d.VenueLocation)
+                .WithMany(p => p.VenueLocationTags)
+                .HasForeignKey(d => d.VenueLocationId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_venue_location_tags_venue_location");
+
+            entity.HasOne(d => d.LocationTag)
+                .WithMany(p => p.VenueLocationTags)
+                .HasForeignKey(d => d.LocationTagId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_venue_location_tags_location_tag");
+
+            entity.HasIndex(e => new { e.VenueLocationId, e.LocationTagId })
+                .IsUnique()
+                .HasDatabaseName("idx_venue_location_tag_unique");
         });
 
         modelBuilder.Entity<VenueOpeningHour>(entity =>

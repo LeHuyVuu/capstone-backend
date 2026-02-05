@@ -31,9 +31,9 @@ public class VenueOwnerVenueLocationResponse
     public DateTime? UpdatedAt { get; set; }
 
     /// <summary>
-    /// Location Tag information including couple mood type and personality type
+    /// Location Tags information including couple mood type and personality type (many-to-many)
     /// </summary>
-    public VenueOwnerLocationTagInfo? LocationTag { get; set; }
+    public List<VenueOwnerLocationTagInfo>? LocationTags { get; set; }
 }
 
 /// <summary>

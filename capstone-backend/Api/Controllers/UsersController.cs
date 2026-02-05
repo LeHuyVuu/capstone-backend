@@ -74,4 +74,24 @@ public class UsersController : BaseController
         if (!success) return NotFoundResponse();
         return OkResponse<object?>(null, "Deleted successfully");
     }
+
+    // Update venue owner profile info (CCCD, Business License)
+    [HttpPut("venue-owner/documents")]
+    [Authorize(Roles = "VENUEOWNER")]
+    public async Task<IActionResult> UpdateDocumentVenueOwner([FromBody] UpdateDocumentVenueOwnerRequest request)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null) return UnauthorizedResponse();
+
+        try 
+        {
+            var user = await _userService.UpdateDocumentVenueOwnerAsync(userId.Value, request);
+            if (user == null) return NotFoundResponse();
+            return OkResponse(user);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+             return ForbiddenResponse(ex.Message);
+        }
+    }
 }

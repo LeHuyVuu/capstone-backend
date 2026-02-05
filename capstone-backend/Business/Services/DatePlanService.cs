@@ -103,7 +103,7 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task<PagedResult<DatePlanResponse>> GetAllDatePlansByTimeAsync(int pageNumber, int pageSize, int userId, string time)
+        public async Task<(PagedResult<DatePlanResponse>, int totalUpcoming)> GetAllDatePlansByTimeAsync(int pageNumber, int pageSize, int userId, string time)
         {
             try
             {
@@ -164,13 +164,23 @@ namespace capstone_backend.Business.Services
                         break;
                 }
 
-                return new PagedResult<DatePlanResponse>()
+                // Count total upcoming
+                var totalUpcoming = await _unitOfWork.DatePlans.CountAsync(dp =>
+                    dp.CoupleId == couple.id &&
+                    dp.IsDeleted == false &&
+                    dp.Status != DatePlanStatus.CANCELLED.ToString() &&
+                    ((dp.PlannedEndAt.HasValue && dp.PlannedEndAt >= now) ||
+                        (dp.PlannedEndAt == null && dp.PlannedStartAt.HasValue && dp.PlannedStartAt >= now)
+                    )
+                );
+
+                return (new PagedResult<DatePlanResponse>()
                 {
                     Items = _mapper.Map<List<DatePlanResponse>>(items),
                     PageNumber = pageNumber,
                     PageSize = pageSize,
                     TotalCount = totalCount
-                };
+                }, totalUpcoming);
             }
             catch (Exception)
             {

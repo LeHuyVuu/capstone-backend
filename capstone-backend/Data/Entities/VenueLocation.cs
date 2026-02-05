@@ -14,8 +14,6 @@ public partial class VenueLocation
     [Key]
     public int Id { get; set; }
 
-    public int? LocationTagId { get; set; }
-
     public int VenueOwnerId { get; set; }
 
     public string Name { get; set; } = null!;
@@ -29,12 +27,6 @@ public partial class VenueLocation
     public string? PhoneNumber { get; set; }
 
     public string? WebsiteUrl { get; set; }
-
-    public DateTime? OpeningTime { get; set; }
-
-    public DateTime? ClosingTime { get; set; }
-
-    public bool? IsOpen { get; set; }
 
     [Precision(18, 2)]
     public decimal? PriceMin { get; set; }
@@ -57,6 +49,7 @@ public partial class VenueLocation
     public decimal? AvarageCost { get; set; }
 
     public int? ReviewCount { get; set; }
+    public int? FavoriteCount { get; set; }
 
     public string? Status { get; set; }
 
@@ -82,10 +75,6 @@ public partial class VenueLocation
     [InverseProperty("VenueLocation")]
     public virtual ICollection<DatePlanItem> DatePlanItems { get; set; } = new List<DatePlanItem>();
 
-    [ForeignKey("LocationTagId")]
-    [InverseProperty("VenueLocations")]
-    public virtual LocationTag? LocationTag { get; set; }
-
     [InverseProperty("Venue")]
     public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
 
@@ -104,4 +93,7 @@ public partial class VenueLocation
 
     [InverseProperty("VenueLocation")]
     public virtual ICollection<VenueOpeningHour> VenueOpeningHours { get; set; } = new List<VenueOpeningHour>();
+
+    [InverseProperty("VenueLocation")]
+    public virtual ICollection<VenueLocationTag> VenueLocationTags { get; set; } = new List<VenueLocationTag>();
 }
