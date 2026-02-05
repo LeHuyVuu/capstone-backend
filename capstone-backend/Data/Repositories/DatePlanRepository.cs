@@ -43,5 +43,13 @@ namespace capstone_backend.Data.Repositories
             return await query.FirstOrDefaultAsync();
 
         }
+
+        public async Task<IEnumerable<DatePlan>> GetAllExpiredPlansAsync(DateTime thresholdTime)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(dp => dp.IsDeleted == false && dp.PlannedEndAt < thresholdTime)
+                .ToListAsync();
+        }
     }
 }

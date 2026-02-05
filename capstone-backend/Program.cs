@@ -1,6 +1,7 @@
 using capstone_backend.Api.Middleware;
 using capstone_backend.Api.Models;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Business.Mappings;
 using capstone_backend.Extensions;
 using capstone_backend.Hubs;
@@ -174,7 +175,12 @@ using (var scope = serviceProvider.CreateScope())
         "update-venue-closed-status",
         () => venueLocationService.UpdateAllVenuesIsClosedStatusAsync(),
         Cron.Minutely);
-    
+
+    recurringJobManager.AddOrUpdate<IDatePlanWorker>(
+        "auto-close-expired-dateplans",
+        x => x.AutoCloseExpiredDatePlanAsync(),
+        "* 4 * * *");
+
     app.Logger.LogInformation("[INFO] Hangfire recurring jobs configured");
 }
 

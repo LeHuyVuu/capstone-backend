@@ -9,6 +9,9 @@
 
             public const string TitleDatePlanStarted = "Date time! Bắt đầu";
             public const string TitelDatePlanEnded = "Buổi hẹn đã kết thúc";
+            public const string TitleDatePlanSoftEnded = "Buổi hẹn dự kiến đã kết thúc";
+
+            public const string TitleDatePlanAutoClosed = "Buổi hẹn đã được đóng tự động";
 
             public static string GetReminder1DayBody(string datePlanTitle, TimeOnly plannedStartAt)
             {
@@ -28,6 +31,15 @@
             public static string GetDatePlanEndedBody(string datePlanTitle)
             {
                 return $"Buổi hẹn \"{datePlanTitle}\" của chúng ta đã kết thúc. Hy vọng bạn đã có những khoảnh khắc tuyệt vời!";
+            }
+
+            public static string GetDatePlanSoftEndedBody(string datePlanTitle)
+            {
+                return $"Buổi hẹn \"{datePlanTitle}\" của chúng ta đã kết thúc theo dự kiến. Hãy nhớ cập nhật trạng thái nhé!";
+            }
+            public static string GetDatePlanAutoClosedBody(string datePlanTitle)
+            {
+                return $"Buổi hẹn \"{datePlanTitle}\" đã được đóng tự động. Hãy lên kế hoạch cho buổi hẹn tiếp theo nhé!";
             }
         }
     }
