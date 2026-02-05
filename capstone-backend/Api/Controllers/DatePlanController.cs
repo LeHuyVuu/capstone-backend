@@ -117,9 +117,76 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Send Date Plan
+        /// </summary>
+        [HttpPatch("{datePlanId:int}/send")]
+        public async Task<IActionResult> SendDatePlanToCoupleMember(int datePlanId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.ActionDatePlanAsync(userId.Value, datePlanId, DatePlanAction.SEND);
+                return OkResponse(result, "Sent date plan to couple member successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Accept Date Plan
+        /// </summary>
+        [HttpPatch("{datePlanId:int}/accept")]
+        public async Task<IActionResult> AcceptDatePlanToCoupleMember(int datePlanId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.ActionDatePlanAsync(userId.Value, datePlanId, DatePlanAction.ACCEPT);
+                return OkResponse(result, "Accepted date plan to couple member successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Reject Date Plan
+        /// </summary>
+        [HttpPatch("{datePlanId:int}/reject")]
+        public async Task<IActionResult> RejectDatePlanToCoupleMember(int datePlanId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.ActionDatePlanAsync(userId.Value, datePlanId, DatePlanAction.REJECT);
+                return OkResponse(result, "Rejected date plan to couple member successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Start Date Plan
         /// </summary>
-        
+        [HttpPatch("{datePlanId:int}/start")]
+        public async Task<IActionResult> StartDatePlan(int datePlanId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.StartDatePlanAsync(userId.Value, datePlanId);
+                return OkResponse(result, "Started date plan successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
 
         /// <summary>
         /// Create Date Plan

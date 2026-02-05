@@ -91,6 +91,12 @@ public class VenueLocationProfile : Profile
             .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.User != null ? src.User.AvatarUrl : null))
             .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User != null ? src.User.Email : null));
 
+        // MemberProfile to ReviewMemberInfo
+        CreateMap<MemberProfile, ReviewMemberInfo>()
+            .ForMember(dest => dest.DisplayName, opt => opt.MapFrom(src => src.User != null ? src.User.DisplayName : null))
+            .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.User != null ? src.User.AvatarUrl : null))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User != null ? src.User.Email : null));
+
         // VenueOpeningHour to TodayOpeningHourResponse
         CreateMap<VenueOpeningHour, TodayOpeningHourResponse>();
     }

@@ -4,6 +4,7 @@ namespace capstone_backend.Business.Interfaces
 {
     public interface IFcmService
     {
-        Task<string> SendNotificationAsync(SendNotificationRequest request);
+        Task<string> SendNotificationAsync(string token, SendNotificationRequest request);
+        Task<string> SendMultiNotificationAsync(List<string> tokens, SendNotificationRequest request);
     }
 }
