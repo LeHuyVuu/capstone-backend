@@ -56,4 +56,7 @@ public partial class DatePlan
     [ForeignKey("OrganizerMemberId")]
     [InverseProperty("MemberProfiles")]
     public virtual MemberProfile? OrganizerMember { get; set; }
+
+    [InverseProperty("DatePlan")]
+    public virtual ICollection<DatePlanJob> DatePlanJobs { get; set; } = new List<DatePlanJob>();
 }

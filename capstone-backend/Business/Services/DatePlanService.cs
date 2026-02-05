@@ -3,9 +3,11 @@ using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.DatePlan;
 using capstone_backend.Business.DTOs.DatePlanItem;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
+using Hangfire;
 
 namespace capstone_backend.Business.Services
 {
@@ -288,5 +290,139 @@ namespace capstone_backend.Business.Services
                 throw;
             }
         }
+
+        public async Task<int> StartDatePlanAsync(int userId, int datePlanId)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member not found");
+
+                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                if (couple == null)
+                    throw new Exception("Member does not belong to any couples");
+
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
+                if (datePlan == null)
+                    throw new Exception("Date plan not found");
+
+                // Check status
+                if (datePlan.Status != DatePlanStatus.PENDING.ToString())
+                    throw new Exception("Only date plans with status PENDING can be started");
+
+                // Start date plan
+                datePlan.Status = DatePlanStatus.SCHEDULED.ToString();
+                _unitOfWork.DatePlans.Update(datePlan);
+
+                if (datePlan.PlannedStartAt > DateTime.UtcNow && datePlan.PlannedEndAt > DateTime.UtcNow)
+                {
+                    var jobs = new List<DatePlanJob>();
+
+                    string jobStartId = BackgroundJob.Schedule<IDatePlanWorker>(
+                        w => w.StartDatePlanAsync(datePlan.Id),
+                        datePlan.PlannedStartAt.Value);
+
+                    // Save job
+                    var dateStartPlanJob = new DatePlanJob
+                    {
+                        DatePlanId = datePlan.Id,
+                        JobId = jobStartId,
+                        JobType = DatePlanJobType.START.ToString()
+                    };
+                    jobs.Add(dateStartPlanJob);
+
+                    string jobEndId = BackgroundJob.Schedule<IDatePlanWorker>(
+                        w => w.EndDatePlanAsync(datePlan.Id),
+                        datePlan.PlannedEndAt.Value);
+
+                    // Save job
+                    var dateEndPlanJob = new DatePlanJob
+                    {
+                        DatePlanId = datePlan.Id,
+                        JobId = jobEndId,
+                        JobType = DatePlanJobType.END.ToString()
+                    };
+                    jobs.Add(dateEndPlanJob);
+
+                    string jobReminderId = BackgroundJob.Schedule<IDatePlanWorker>(
+                        w => w.SendReminderAsync(datePlan.Id, "DAY"),
+                        datePlan.PlannedStartAt.Value.AddMinutes(-8));
+                    
+                    jobs.Add(new DatePlanJob
+                    {
+                        DatePlanId = datePlan.Id,
+                        JobId = jobReminderId,
+                        JobType = DatePlanJobType.REMINDER.ToString()
+                    });
+
+                    string jobReminder2Id = BackgroundJob.Schedule<IDatePlanWorker>(
+                        w => w.SendReminderAsync(datePlan.Id, "HOUR"),
+                        datePlan.PlannedStartAt.Value.AddMinutes(-5));
+
+                    jobs.Add(new DatePlanJob
+                    {
+                        DatePlanId = datePlan.Id,
+                        JobId = jobReminderId,
+                        JobType = DatePlanJobType.REMINDER.ToString()
+                    });
+
+                    await _unitOfWork.DatePlanJobs.AddRangeAsync(jobs);
+                }
+
+                return await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<int> ActionDatePlanAsync(int userId, int datePlanId, DatePlanAction action)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member not found");
+
+                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                if (couple == null)
+                    throw new Exception("Member does not belong to any couples");
+
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
+                if (datePlan == null)
+                    throw new Exception("Date plan not found");
+
+                if (action == DatePlanAction.SEND)
+                {
+                    // Check if whose is organizer
+                    if (datePlan.OrganizerMemberId != member.Id)
+                        throw new Exception("Only the organizer can send the date plan");
+                    datePlan.Status = DatePlanStatus.PENDING.ToString();
+                }
+                else if (action == DatePlanAction.ACCEPT)
+                {
+                    if (datePlan.OrganizerMemberId == member.Id)
+                        throw new Exception("The organizer cannot accept the date plan");
+                    datePlan.Status = DatePlanStatus.SCHEDULED.ToString();
+                }
+                else if (action == DatePlanAction.REJECT)
+                {
+                    if (datePlan.OrganizerMemberId == member.Id)
+                        throw new Exception("The organizer cannot reject the date plan");
+                    datePlan.Status = DatePlanStatus.DRAFTED.ToString();
+                }
+
+                _unitOfWork.DatePlans.Update(datePlan);
+                return await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }      
     }
 }

@@ -50,6 +50,8 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<DatePlanItem> DatePlanItems { get; set; }
 
+    public virtual DbSet<DatePlanJob> DatePlanJobs { get; set; }
+
     public virtual DbSet<DeviceToken> DeviceTokens { get; set; }
 
     public virtual DbSet<Interaction> Interactions { get; set; }
@@ -426,6 +428,16 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.VenueLocation).WithMany(p => p.DatePlanItems)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("date_plan_items_venue_location_id_fkey");
+        });
+
+        modelBuilder.Entity<DatePlanJob>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("date_plan_jobs_pkey");
+
+            entity.HasOne(j => j.DatePlan)
+                  .WithMany(dp => dp.DatePlanJobs)
+                  .HasConstraintName("fk_date_plan_jobs_date_plans_date_plan_id")
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<DeviceToken>(entity =>

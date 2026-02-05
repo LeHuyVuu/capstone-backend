@@ -2,6 +2,7 @@ using Amazon.Rekognition;
 using Amazon.Runtime;
 using capstone_backend.Api.Filters;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Business.Services;
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Interfaces;
@@ -92,6 +93,7 @@ public static class ServiceExtensions
         services.AddScoped<IVenueOwnerProfileRepository, VenueOwnerProfileRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IDeviceTokenRepository, DeviceTokenRepository>();
+        services.AddScoped<IDatePlanJobRepository, DatePlanJobRepository>();
         services.AddScoped<IReviewRepository, ReviewRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -143,6 +145,9 @@ public static class ServiceExtensions
 
         // Register Subscription Package Service
         services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
+
+        // Register Hangfire Jobs
+        services.AddScoped<IDatePlanWorker, DatePlanWorker>();
 
         return services;
     }
@@ -495,7 +500,8 @@ public static class ServiceExtensions
                 .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
                 .UseSimpleAssemblyNameTypeSerializer()
                 .UseRecommendedSerializerSettings()
-                .UsePostgreSqlStorage(hangfireConnectionString);
+                .UsePostgreSqlStorage(options =>
+                    options.UseNpgsqlConnection(hangfireConnectionString));
         });
 
         services.AddHangfireServer(options =>
@@ -503,7 +509,7 @@ public static class ServiceExtensions
             options.WorkerCount = Environment.ProcessorCount * 2;
         });
 
-        Console.WriteLine("[INFO] Hangfire: Configured with PostgreSQL");
+        Console.WriteLine("[INFO] Hangfire: Configured with PostgreSQL");      
 
         return services;
     }

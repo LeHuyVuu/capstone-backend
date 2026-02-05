@@ -109,7 +109,7 @@ app.UseExceptionMiddleware();
 app.UseTraceId();
 
 // 3. Setup Hangfire Dashboard
-app.UseHangfireDashboard();
+app.UseHangfireDashboard("/hangfire");
 app.UseSwaggerConfiguration();
 
 // 3.1. Scalar - Đẹp nhất, hiện đại nhất (RECOMMENDED)

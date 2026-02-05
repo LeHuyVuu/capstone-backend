@@ -12,6 +12,13 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<DatePlan?> GetByIdAsync(int id)
+        {
+            return await _dbSet
+                .Where(dp => dp.Id == id && dp.IsDeleted == false)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<DatePlan?> GetByIdAndCoupleIdAsync(int id, int coupleId, bool includeItems = false)
         {
             //return await _dbSet
