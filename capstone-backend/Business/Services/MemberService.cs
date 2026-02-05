@@ -2,6 +2,7 @@ using capstone_backend.Business.DTOs.Member;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace capstone_backend.Business.Services;
@@ -10,11 +11,13 @@ public class MemberService : IMemberService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<MemberService> _logger;
+    private readonly IConfiguration _configuration;
 
-    public MemberService(IUnitOfWork unitOfWork, ILogger<MemberService> logger)
+    public MemberService(IUnitOfWork unitOfWork, ILogger<MemberService> logger, IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _configuration = configuration;
     }
 
     public async Task<CoupleProfileResponse> InviteMemberAsync(
@@ -146,5 +149,41 @@ public class MemberService : IMemberService
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+
+    public async Task<InviteInfoResponse> GetInviteInfoAsync(int currentUserId)
+    {
+        var memberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(currentUserId);
+        if (memberProfile == null)
+            throw new InvalidOperationException("Member profile not found");
+
+        if (string.IsNullOrEmpty(memberProfile.InviteCode))
+            throw new InvalidOperationException("Invite code not generated for this user");
+
+        // Đọc cấu hình từ appsettings.json
+        var useRedirectPage = _configuration.GetValue<bool>("DeepLink:UseRedirectPage");
+        var baseUrl = _configuration["DeepLink:BaseUrl"] ?? "https://your-domain.com";
+        var devScheme = _configuration["DeepLink:DevScheme"] ?? "couplejoy";
+        
+        string deepLink;
+
+        if (useRedirectPage)
+        {
+            // Production: Dùng redirect page (tự động mở app hoặc hiển thị trang tải)
+            // Link: https://your-domain.com/invite/ABC123
+            deepLink = $"{baseUrl}/invite/{memberProfile.InviteCode}";
+        }
+        else
+        {
+            // Dev mode: Custom URL Scheme trực tiếp
+            deepLink = $"{devScheme}://invite?code={memberProfile.InviteCode}";
+        }
+
+        return new InviteInfoResponse
+        {
+            InviteCode = memberProfile.InviteCode,
+            InviteLink = deepLink
+        };
     }
 }
