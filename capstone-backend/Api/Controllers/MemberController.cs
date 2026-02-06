@@ -47,4 +47,28 @@ public class MemberController : BaseController
             return BadRequestResponse(ex.Message);
         }
     }
+
+    /// <summary>
+    /// Get the invite code and sharing link for the current user
+    /// </summary>
+    /// <returns>Invite code and link</returns>
+    [HttpGet("invite-code")]
+    public async Task<IActionResult> GetInviteInfo()
+    {
+        try
+        {
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+            {
+                return UnauthorizedResponse("User ID not found");
+            }
+
+            var inviteInfo = await _memberService.GetInviteInfoAsync(currentUserId.Value);
+            return OkResponse(inviteInfo, "Invite info retrieved successfully");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
 }
