@@ -15,21 +15,20 @@ namespace capstone_backend.Business.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IHubContext<NotificationHub> _hubContext;
-        private readonly IFcmService? _fcmService;
 
-        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IServiceProvider serviceProvider)
+        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _hubContext = hubContext;
-            _fcmService = serviceProvider.GetService<IFcmService>();
         }
 
-        public async Task<NotificationResponse> CreateNotificationService(NotificationRequest request)
+        public async Task<NotificationResponse> CreateNotificationService(int userId, NotificationRequest request)
         {
             try
             {
                 var notification = _mapper.Map<Notification>(request);
+                notification.UserId = userId;
 
                 await _unitOfWork.Notifications.AddAsync(notification);
                 await _unitOfWork.SaveChangesAsync();
@@ -140,19 +139,19 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task SendNotificationAsync(NotificationRequest request)
+        public async Task SendNotificationAsync(int userId, NotificationRequest request)
         {
             try
             {
                 // 1. Save notification to database
-                var notificationRes = await CreateNotificationService(request);
+                var notificationRes = await CreateNotificationService(userId, request);
                 if (notificationRes == null)
                 {
                     throw new Exception("Failed to save notification.");
                 }
 
                 // 2. Send notification
-                var (total, unread) = await _unitOfWork.Notifications.GetNotificationStatsByUserIdAsync(request.UserId);
+                var (total, unread) = await _unitOfWork.Notifications.GetNotificationStatsByUserIdAsync(userId);
                 var noti = new NotificationReceived()
                 {
                     Notification = notificationRes,
@@ -163,7 +162,8 @@ namespace capstone_backend.Business.Services
                     }
                 };
 
-                await _hubContext.Clients.Group($"User_{request.UserId}").SendAsync(NotificationEvents.NotificationReceived, noti);
+                // 3. Send real-time update to client
+                await _hubContext.Clients.Group($"User_{userId}").SendAsync(NotificationEvents.NotificationReceived, noti);
             }
             catch (Exception)
             {
@@ -172,24 +172,40 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task SendNotificationAsyncV2(string token)
+        public async Task SendNotificationUsersAsync(List<int> userIds, NotificationRequest reuest)
         {
             try
             {
-                var request = new SendNotificationRequest
+                var notifications = new List<Notification>();
+
+                foreach (var userId in userIds)
                 {
-                    Token = token,
-                    Title = "Test Notification",
-                    Body = "This is a test notification message."
-                };
-               
-                if (_fcmService == null)
-                {
-                    Console.WriteLine("[WARNING] FCM Service not configured. Skip push notification.");
-                    return;
+                    var notification = _mapper.Map<Notification>(reuest);
+                    notification.UserId = userId;
+                    notifications.Add(notification);
                 }
 
-                await _fcmService.SendNotificationAsync(request);
+                await _unitOfWork.Notifications.AddRangeAsync(notifications);
+                await _unitOfWork.SaveChangesAsync();
+
+                for (int i = 0; i < userIds.Count(); i++)
+                {
+                    var notiEntity = notifications[i];
+
+                    var (total, unread) = await _unitOfWork.Notifications.GetNotificationStatsByUserIdAsync(userIds[i]);
+
+                    var notiPayload = new NotificationReceived()
+                    {
+                        Notification = _mapper.Map<NotificationResponse>(notiEntity),
+                        Stats = new NotificationStats()
+                        {
+                            Total = total,
+                            Unread = unread
+                        }
+                    };
+
+                    await _hubContext.Clients.Group($"User_{userIds[i]}").SendAsync(NotificationEvents.NotificationReceived, notiPayload);
+                }
             }
             catch (Exception)
             {

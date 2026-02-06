@@ -3,21 +3,25 @@ using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.DatePlan;
 using capstone_backend.Business.DTOs.DatePlanItem;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
+using Hangfire;
 
 namespace capstone_backend.Business.Services
 {
     public class DatePlanService : IDatePlanService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IDatePlanWorker _datePlanWorker;
         private readonly IMapper _mapper;
 
-        public DatePlanService(IUnitOfWork unitOfWork, IMapper mapper)
+        public DatePlanService(IUnitOfWork unitOfWork, IMapper mapper, IDatePlanWorker datePlanWorker)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _datePlanWorker = datePlanWorker;
         }
 
         public async Task<int> CreateDatePlanAsync(int userId, CreateDatePlanRequest request)
@@ -288,5 +292,145 @@ namespace capstone_backend.Business.Services
                 throw;
             }
         }
+
+        private async Task<int> StartDatePlanAsync(DatePlan datePlan)
+        {
+            try
+            {
+
+                if (datePlan.PlannedStartAt > DateTime.UtcNow && datePlan.PlannedEndAt > DateTime.UtcNow)
+                {
+                    var jobs = new List<DatePlanJob>();
+
+                    string jobStartId = BackgroundJob.Schedule<IDatePlanWorker>(
+                        w => w.StartDatePlanAsync(datePlan.Id),
+                        datePlan.PlannedStartAt.Value);
+
+                    // Save job
+                    var dateStartPlanJob = new DatePlanJob
+                    {
+                        DatePlanId = datePlan.Id,
+                        JobId = jobStartId,
+                        JobType = DatePlanJobType.START.ToString()
+                    };
+                    jobs.Add(dateStartPlanJob);
+
+                    string jobEndId = BackgroundJob.Schedule<IDatePlanWorker>(
+                        w => w.EndDatePlanAsync(datePlan.Id),
+                        datePlan.PlannedEndAt.Value);
+
+                    // Save job
+                    var dateEndPlanJob = new DatePlanJob
+                    {
+                        DatePlanId = datePlan.Id,
+                        JobId = jobEndId,
+                        JobType = DatePlanJobType.END.ToString()
+                    };
+                    jobs.Add(dateEndPlanJob);
+
+                    string jobReminderId = BackgroundJob.Schedule<IDatePlanWorker>(
+                        w => w.SendReminderAsync(datePlan.Id, "DAY"),
+                        datePlan.PlannedStartAt.Value.AddDays(-1));
+                    
+                    jobs.Add(new DatePlanJob
+                    {
+                        DatePlanId = datePlan.Id,
+                        JobId = jobReminderId,
+                        JobType = DatePlanJobType.REMINDER.ToString()
+                    });
+
+                    string jobReminder2Id = BackgroundJob.Schedule<IDatePlanWorker>(
+                        w => w.SendReminderAsync(datePlan.Id, "HOUR"),
+                        datePlan.PlannedStartAt.Value.AddHours(-1));
+
+                    jobs.Add(new DatePlanJob
+                    {
+                        DatePlanId = datePlan.Id,
+                        JobId = jobReminder2Id,
+                        JobType = DatePlanJobType.REMINDER.ToString()
+                    });
+
+                    await _unitOfWork.DatePlanJobs.AddRangeAsync(jobs);
+                }
+
+                return await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<int> ActionDatePlanAsync(int userId, int datePlanId, DatePlanAction action)
+        {
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member not found");
+
+                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                if (couple == null)
+                    throw new Exception("Member does not belong to any couples");
+
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
+                if (datePlan == null)
+                    throw new Exception("Date plan not found");
+
+                if (action == DatePlanAction.SEND)
+                {
+                    // Check if whose is organizer
+                    if (datePlan.OrganizerMemberId != member.Id)
+                        throw new Exception("Only the organizer can send the date plan");
+                    datePlan.Status = DatePlanStatus.PENDING.ToString();
+                }
+                else if (action == DatePlanAction.ACCEPT && datePlan.Status == DatePlanStatus.PENDING.ToString())
+                {
+                    if (datePlan.OrganizerMemberId == member.Id)
+                        throw new Exception("The organizer cannot accept the date plan");
+                    datePlan.Status = DatePlanStatus.SCHEDULED.ToString();
+
+                    // Start date plan jobs
+                    await StartDatePlanAsync(datePlan);
+                }
+                else if (action == DatePlanAction.REJECT)
+                {
+                    if (datePlan.OrganizerMemberId == member.Id)
+                        throw new Exception("The organizer cannot reject the date plan");
+                    datePlan.Status = DatePlanStatus.DRAFTED.ToString();
+                }
+                else if (action == DatePlanAction.CANCEL && (datePlan.Status == DatePlanStatus.SCHEDULED.ToString() || datePlan.Status == DatePlanStatus.IN_PROGRESS.ToString()))
+                {
+                    if (datePlan.OrganizerMemberId != member.Id)
+                        throw new Exception("Only the organizer can cancel the date plan");
+                    datePlan.Status = DatePlanStatus.CANCELLED.ToString();
+
+                    // Remove jobs
+                    await _datePlanWorker.CleanupAllJobsAsync(datePlan.Id);
+                }
+                else if (action == DatePlanAction.COMPLETE && datePlan.Status == DatePlanStatus.IN_PROGRESS.ToString())
+                {
+                    if (datePlan.OrganizerMemberId != member.Id)
+                        throw new Exception("Only the organizer can complete the date plan");
+                    datePlan.Status = DatePlanStatus.COMPLETED.ToString();
+                    datePlan.CompletedAt = DateTime.UtcNow;
+                    // Remove jobs
+                    await _datePlanWorker.CleanupAllJobsAsync(datePlan.Id);
+                }
+                else
+                {
+                    throw new Exception("Invalid action or date plan status");
+                }
+
+                    _unitOfWork.DatePlans.Update(datePlan);
+                return await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }      
     }
 }

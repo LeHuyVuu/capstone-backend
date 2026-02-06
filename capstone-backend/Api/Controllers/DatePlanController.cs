@@ -117,9 +117,94 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Start Date Plan
+        /// Send Date Plan
         /// </summary>
-        
+        [HttpPatch("{datePlanId:int}/send")]
+        public async Task<IActionResult> SendDatePlanToCoupleMember(int datePlanId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.ActionDatePlanAsync(userId.Value, datePlanId, DatePlanAction.SEND);
+                return OkResponse(result, "Sent date plan to couple member successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Accept Date Plan
+        /// </summary>
+        [HttpPatch("{datePlanId:int}/accept")]
+        public async Task<IActionResult> AcceptDatePlanToCoupleMember(int datePlanId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.ActionDatePlanAsync(userId.Value, datePlanId, DatePlanAction.ACCEPT);
+                return OkResponse(result, "Accepted date plan to couple member successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Reject Date Plan
+        /// </summary>
+        [HttpPatch("{datePlanId:int}/reject")]
+        public async Task<IActionResult> RejectDatePlanToCoupleMember(int datePlanId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.ActionDatePlanAsync(userId.Value, datePlanId, DatePlanAction.REJECT);
+                return OkResponse(result, "Rejected date plan to couple member successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Cancel Date Plan (when member want to cancel early)
+        /// </summary>
+        [HttpPatch("{datePlanId:int}/cancel")]
+        public async Task<IActionResult> CancelDatePlanToCoupleMember(int datePlanId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.ActionDatePlanAsync(userId.Value, datePlanId, DatePlanAction.CANCEL);
+                return OkResponse(result, "Cancelled date plan to couple member successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Complete Date Plan (when member want to complete early)
+        /// </summary>
+        [HttpPatch("{datePlanId:int}/complete")]
+        public async Task<IActionResult> CompleteDatePlanToCoupleMember(int datePlanId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.ActionDatePlanAsync(userId.Value, datePlanId, DatePlanAction.COMPLETE);
+                return OkResponse(result, "Completed date plan to couple member successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
 
         /// <summary>
         /// Create Date Plan

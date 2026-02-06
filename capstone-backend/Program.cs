@@ -1,12 +1,15 @@
 using capstone_backend.Api.Middleware;
 using capstone_backend.Api.Models;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Business.Mappings;
 using capstone_backend.Extensions;
 using capstone_backend.Hubs;
 using DotNetEnv;
 using Hangfire;
+using Hangfire.Dashboard.BasicAuthorization;
 using Scalar.AspNetCore;
+using System.Net;
 
 // Load environment variables from .env file
 var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
@@ -109,7 +112,27 @@ app.UseExceptionMiddleware();
 app.UseTraceId();
 
 // 3. Setup Hangfire Dashboard
-app.UseHangfireDashboard();
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] {
+        new BasicAuthAuthorizationFilter(new BasicAuthAuthorizationFilterOptions
+        {
+            SslRedirect = false,
+            RequireSsl = false,
+            LoginCaseSensitive = true,
+            Users = new []
+            {
+                new BasicAuthAuthorizationUser
+                {
+                    Login = Environment.GetEnvironmentVariable("HANGFIRE_USERNAME"),
+                    PasswordClear = Environment.GetEnvironmentVariable("HANGFIRE_PASSWORD")
+                }
+            }
+        })
+    },
+    DashboardTitle = "CoupleMood Job Dashboard",
+    DisplayStorageConnectionString = false
+});
 app.UseSwaggerConfiguration();
 
 // 3.1. Scalar - Đẹp nhất, hiện đại nhất (RECOMMENDED)
@@ -152,7 +175,12 @@ using (var scope = serviceProvider.CreateScope())
         "update-venue-closed-status",
         () => venueLocationService.UpdateAllVenuesIsClosedStatusAsync(),
         Cron.Minutely);
-    
+
+    recurringJobManager.AddOrUpdate<IDatePlanWorker>(
+        "auto-close-expired-dateplans",
+        x => x.AutoCloseExpiredDatePlanAsync(),
+        "* 4 * * *");
+
     app.Logger.LogInformation("[INFO] Hangfire recurring jobs configured");
 }
 

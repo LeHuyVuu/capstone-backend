@@ -72,4 +72,30 @@ public class CoupleProfileRepository : GenericRepository<CoupleProfile>, ICouple
                 c.MemberId1 == memberId || c.MemberId2 == memberId, 
                 cancellationToken);
     }
+
+    public async Task<(int userId1, int userId2)> GetCoupleUserIdsAsync(int coupleId)
+    {
+        var couple = await _dbSet
+            .Where(c => c.id == coupleId && c.IsDeleted == false)
+            .Select(c => new
+            {
+                Member1UserId = _context.MemberProfiles
+                    .Where(m => m.Id == c.MemberId1 && m.IsDeleted == false)
+                    .Select(m => m.UserId)
+                    .FirstOrDefault(),
+
+                Member2UserId = _context.MemberProfiles
+                    .Where(m => m.Id == c.MemberId2 && m.IsDeleted == false)
+                    .Select(m => m.UserId)
+                    .FirstOrDefault(),
+            })
+            .FirstOrDefaultAsync();
+
+        if (couple == null) throw new Exception("Couple not found");
+
+        if (couple.Member1UserId == 0 || couple.Member2UserId == 0)
+            throw new Exception("Couple members not valid");
+
+        return (couple.Member1UserId, couple.Member2UserId);
+    }
 }

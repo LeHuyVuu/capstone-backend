@@ -12,6 +12,13 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<DatePlan?> GetByIdAsync(int id)
+        {
+            return await _dbSet
+                .Where(dp => dp.Id == id && dp.IsDeleted == false)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<DatePlan?> GetByIdAndCoupleIdAsync(int id, int coupleId, bool includeItems = false)
         {
             //return await _dbSet
@@ -35,6 +42,14 @@ namespace capstone_backend.Data.Repositories
 
             return await query.FirstOrDefaultAsync();
 
+        }
+
+        public async Task<IEnumerable<DatePlan>> GetAllExpiredPlansAsync(DateTime thresholdTime)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(dp => dp.IsDeleted == false && dp.PlannedEndAt < thresholdTime)
+                .ToListAsync();
         }
     }
 }

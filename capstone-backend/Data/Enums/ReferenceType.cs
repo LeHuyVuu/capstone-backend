@@ -2,6 +2,7 @@
 {
     public enum ReferenceType
     {
-        UNKNOWN
+        UNKNOWN,
+        DATE_PLAN
     }
 }
