@@ -135,7 +135,7 @@ namespace capstone_backend.Business.Services
                                       ((dp.PlannedEndAt.HasValue && dp.PlannedEndAt >= now) ||
                                         (dp.PlannedEndAt == null && dp.PlannedStartAt.HasValue && dp.PlannedStartAt >= now)
                                       ),
-                                dp => dp.OrderBy(dp => dp.PlannedStartAt ?? dp.CreatedAt)
+                                dp => dp.OrderByDescending(dp => dp.CreatedAt)
                             );
                         break;
 
@@ -149,7 +149,7 @@ namespace capstone_backend.Business.Services
                                       ((dp.PlannedEndAt.HasValue && dp.PlannedEndAt < now) ||
                                         (dp.PlannedEndAt == null && dp.PlannedStartAt.HasValue && dp.PlannedStartAt < now)
                                       ),
-                                dp => dp.OrderBy(dp => dp.PlannedStartAt ?? dp.CreatedAt)
+                                dp => dp.OrderByDescending(dp => dp.CreatedAt)
                             );
                         break;
 
@@ -160,7 +160,7 @@ namespace capstone_backend.Business.Services
                                 dp => dp.CoupleId == couple.id &&
                                       dp.IsDeleted == false &&
                                       dp.Status != DatePlanStatus.CANCELLED.ToString(),
-                                dp => dp.OrderBy(dp => dp.PlannedStartAt ?? dp.CreatedAt)
+                                dp => dp.OrderByDescending(dp => dp.CreatedAt)
                             );
                         break;
 
