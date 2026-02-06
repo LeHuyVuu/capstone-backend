@@ -36,7 +36,7 @@ namespace capstone_backend.Api.Controllers
         public async Task<IActionResult> GetDatePlans(
             [FromQuery] DatePlanTime time = DatePlanTime.ALL,
             [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 5)
+            [FromQuery] int pageSize = 10)
         {
             try
             {

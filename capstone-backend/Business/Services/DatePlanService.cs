@@ -135,7 +135,7 @@ namespace capstone_backend.Business.Services
                                       ((dp.PlannedEndAt.HasValue && dp.PlannedEndAt >= now) ||
                                         (dp.PlannedEndAt == null && dp.PlannedStartAt.HasValue && dp.PlannedStartAt >= now)
                                       ),
-                                dp => dp.OrderBy(dp => dp.PlannedStartAt ?? dp.CreatedAt)
+                                dp => dp.OrderByDescending(dp => dp.CreatedAt)
                             );
                         break;
 
@@ -149,7 +149,7 @@ namespace capstone_backend.Business.Services
                                       ((dp.PlannedEndAt.HasValue && dp.PlannedEndAt < now) ||
                                         (dp.PlannedEndAt == null && dp.PlannedStartAt.HasValue && dp.PlannedStartAt < now)
                                       ),
-                                dp => dp.OrderBy(dp => dp.PlannedStartAt ?? dp.CreatedAt)
+                                dp => dp.OrderByDescending(dp => dp.CreatedAt)
                             );
                         break;
 
@@ -160,7 +160,7 @@ namespace capstone_backend.Business.Services
                                 dp => dp.CoupleId == couple.id &&
                                       dp.IsDeleted == false &&
                                       dp.Status != DatePlanStatus.CANCELLED.ToString(),
-                                dp => dp.OrderBy(dp => dp.PlannedStartAt ?? dp.CreatedAt)
+                                dp => dp.OrderByDescending(dp => dp.CreatedAt)
                             );
                         break;
 
@@ -205,7 +205,7 @@ namespace capstone_backend.Business.Services
                 if (couple == null)
                     throw new Exception("Member does not belong to any couples");
 
-                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id, true);
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id, true, true);
                 if (datePlan == null)
                     throw new Exception("Date plan not found");
 
