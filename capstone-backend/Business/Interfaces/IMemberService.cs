@@ -12,4 +12,11 @@ public interface IMemberService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Created couple profile</returns>
     Task<CoupleProfileResponse> InviteMemberAsync(int currentUserId, string inviteCode);
+
+    /// <summary>
+    /// Get invite info for the current user
+    /// </summary>
+    /// <param name="currentUserId">ID of the current user</param>
+    /// <returns>Invite code and link</returns>
+    Task<InviteInfoResponse> GetInviteInfoAsync(int currentUserId);
 }
