@@ -26,6 +26,8 @@ public interface IUnitOfWork : IDisposable
 
     ICoupleProfileRepository CoupleProfiles { get; }
 
+    ICoupleInvitationRepository CoupleInvitations { get; }
+
     ITestTypeRepository TestTypes { get; }
 
     IQuestionRepository Questions { get; }

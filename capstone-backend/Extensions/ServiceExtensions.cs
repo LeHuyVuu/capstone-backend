@@ -81,6 +81,7 @@ public static class ServiceExtensions
         services.AddScoped<IMemberMoodLogRepository, MemberMoodLogRepository>();
         services.AddScoped<IMoodTypeRepository, MoodTypeRepository>();
         services.AddScoped<ICoupleProfileRepository, CoupleProfileRepository>();
+        services.AddScoped<ICoupleInvitationRepository, CoupleInvitationRepository>();
         services.AddScoped<ITestTypeRepository, TestTypeRepository>();
         services.AddScoped<IQuestionRepository, QuestionRepository>();
         services.AddScoped<IQuestionAnswerRepository, QuestionAnswerRepository>();
@@ -143,6 +144,9 @@ public static class ServiceExtensions
 
         // Register Subscription Package Service
         services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
+
+        // Register Couple Invitation Service
+        services.AddScoped<ICoupleInvitationService, CoupleInvitationService>();
 
         return services;
     }

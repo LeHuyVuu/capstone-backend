@@ -44,6 +44,8 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<CoupleProfile> CoupleProfiles { get; set; }
 
+    public virtual DbSet<CoupleInvitation> CoupleInvitations { get; set; }
+
     public virtual DbSet<CoupleProfileChallenge> CoupleProfileChallenges { get; set; }
 
     public virtual DbSet<DatePlan> DatePlans { get; set; }
@@ -132,6 +134,32 @@ public partial class MyDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // FIX: Convert tất cả DateTime về UTC để tránh lỗi PostgreSQL
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateTime))
+                {
+                    property.SetValueConverter(
+                        new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTime, DateTime>(
+                            v => v.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(v, DateTimeKind.Utc) : v.ToUniversalTime(),
+                            v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
+                        )
+                    );
+                }
+                else if (property.ClrType == typeof(DateTime?))
+                {
+                    property.SetValueConverter(
+                        new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTime?, DateTime?>(
+                            v => v.HasValue ? (v.Value.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v.Value.ToUniversalTime()) : v,
+                            v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v
+                        )
+                    );
+                }
+            }
+        }
+
         modelBuilder.Entity<Accessory>(entity =>
         {
             entity.ToTable("accessories");
@@ -378,6 +406,25 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.MemberId2Navigation).WithMany(p => p.CoupleProfilememberId2Navigations)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("couple_profiles_member_id_2_fkey");
+        });
+
+        modelBuilder.Entity<CoupleInvitation>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("couple_invitations_pkey");
+
+            entity.Property(e => e.Status).HasDefaultValue("PENDING");
+            entity.Property(e => e.SentAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+
+            entity.HasOne(d => d.SenderMember).WithMany(p => p.CoupleInvitationsSent)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("couple_invitations_sender_member_id_fkey");
+
+            entity.HasOne(d => d.ReceiverMember).WithMany(p => p.CoupleInvitationsReceived)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("couple_invitations_receiver_member_id_fkey");
         });
 
         modelBuilder.Entity<CoupleProfileChallenge>(entity =>

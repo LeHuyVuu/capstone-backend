@@ -20,6 +20,7 @@ public class UnitOfWork : IUnitOfWork
         IMemberMoodLogRepository memberMoodLogRepository,
         IMoodTypeRepository moodTypeRepository,
         ICoupleProfileRepository coupleProfileRepository,
+        ICoupleInvitationRepository coupleInvitationRepository,
         ITestTypeRepository testTypeRepository,
         IQuestionRepository questionRepository,
         IQuestionAnswerRepository questionAnswerRepository,
@@ -39,6 +40,7 @@ public class UnitOfWork : IUnitOfWork
         MemberMoodLogs = memberMoodLogRepository;
         MoodTypes = moodTypeRepository;
         CoupleProfiles = coupleProfileRepository;
+        CoupleInvitations = coupleInvitationRepository;
         TestTypes = testTypeRepository;
         Questions = questionRepository;
         QuestionAnswers = questionAnswerRepository;
@@ -64,6 +66,8 @@ public class UnitOfWork : IUnitOfWork
     public IMoodTypeRepository MoodTypes { get; }
 
     public ICoupleProfileRepository CoupleProfiles { get; }
+
+    public ICoupleInvitationRepository CoupleInvitations { get; }
 
     public ITestTypeRepository TestTypes { get; }
 

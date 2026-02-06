@@ -61,4 +61,15 @@ public class CoupleProfileRepository : GenericRepository<CoupleProfile>, ICouple
             .Where(c => c.Status == "ACTIVE")
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<CoupleProfile?> GetActiveCoupleByMemberIdAsync(
+        int memberId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbSet
+            .Where(c => c.IsDeleted != true && c.Status == "ACTIVE")
+            .FirstOrDefaultAsync(c => 
+                c.MemberId1 == memberId || c.MemberId2 == memberId, 
+                cancellationToken);
+    }
 }
