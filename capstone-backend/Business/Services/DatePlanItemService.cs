@@ -4,6 +4,7 @@ using capstone_backend.Business.DTOs.DatePlanItem;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
+using capstone_backend.Extensions.Common;
 
 namespace capstone_backend.Business.Services
 {
@@ -47,19 +48,36 @@ namespace capstone_backend.Business.Services
                 if (venues == null || !venues.Any())
                     throw new Exception("Venues cannot be empty");
 
+                // Check if only distinct venue locations are added
+                var datePlanItems = await _unitOfWork.DatePlanItems.GetByDatePlanIdAsync(datePlanId);
+                var existingVenueIds = datePlanItems.Select(dpi => dpi.VenueLocationId).ToHashSet();
+
+                var requestVenueIds = request.Venues
+                    .Select(x => x.VenueLocationId)
+                    .ToList();
+
+                var existedIds = requestVenueIds
+                    .Where(id => existingVenueIds.Contains(id))
+                    .Distinct()
+                    .ToList();
+
+                if (requestVenueIds.Count != requestVenueIds.Distinct().Count())
+                    throw new Exception("Duplicate venue locations in request");
+
+                if (requestVenueIds.Any(id => existingVenueIds.Contains(id)))
+                    throw new Exception($"Venue locations already exist in this date plan: {string.Join(", ", existedIds)}");
+
+
                 var items = venues.Select(v =>
                 {
+
                     // Check if item start time is after date plan start time
-                    if (v.StartTime.HasValue && v.StartTime.Value < TimeOnly.FromDateTime(datePlan.PlannedStartAt.Value))
+                    if (v.StartTime.HasValue && v.StartTime.Value < TimeOnly.FromDateTime(TimezoneUtil.ToVietNamTime(datePlan.PlannedStartAt.Value)))
                         throw new Exception("Date plan item start time cannot be before date plan start time");
 
                     // Check if item end time is after date plan end time
-                    if (v.EndTime.HasValue && v.EndTime.Value > TimeOnly.FromDateTime(datePlan.PlannedEndAt.Value))
+                    if (v.EndTime.HasValue && v.EndTime.Value > TimeOnly.FromDateTime(TimezoneUtil.ToVietNamTime(datePlan.PlannedEndAt.Value)))
                         throw new Exception("Date plan item end time cannot be after date plan end time");
-
-                    // Check if item end time is before item start time
-                    if (v.StartTime.HasValue && v.EndTime.HasValue && v.EndTime.Value < v.StartTime.Value)
-                        throw new Exception("Date plan item end time cannot be before start time");
 
                     var item = _mapper.Map<DatePlanItem>(v);
                     item.DatePlanId = datePlanId;
@@ -165,7 +183,7 @@ namespace capstone_backend.Business.Services
                 if (datePlan == null)
                     throw new Exception("Date plan not found");
 
-                var datePlanItem = await _unitOfWork.DatePlanItems.GetByIdAndDatePlanIdAsync(datePlanItemId, datePlanId);
+                var datePlanItem = await _unitOfWork.DatePlanItems.GetByIdAndDatePlanIdAsync(datePlanItemId, datePlanId, includeVenueLocation: true);
                 if (datePlanItem == null)
                     throw new Exception("Date plan item not found");
 

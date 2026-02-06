@@ -19,7 +19,7 @@ namespace capstone_backend.Data.Repositories
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<DatePlan?> GetByIdAndCoupleIdAsync(int id, int coupleId, bool includeItems = false)
+        public async Task<DatePlan?> GetByIdAndCoupleIdAsync(int id, int coupleId, bool includeItems = false, bool includeVenueLocation = false)
         {
             //return await _dbSet
             //    .Where(dp => dp.Id == id &&
@@ -37,7 +37,16 @@ namespace capstone_backend.Data.Repositories
             if (includeItems)
             {
                 query = query
-                    .Include(dp => dp.DatePlanItems.Where(dpi => dpi.IsDeleted == false).OrderBy(dpi => dpi.OrderIndex));
+                    .Include(dp => dp.DatePlanItems
+                        .Where(dpi => dpi.IsDeleted == false)
+                        .OrderBy(dpi => dpi.OrderIndex));
+            }
+
+            if (includeVenueLocation)
+            {
+                query = query
+                    .Include(dp => dp.DatePlanItems)
+                        .ThenInclude(dpi => dpi.VenueLocation);
             }
 
             return await query.FirstOrDefaultAsync();

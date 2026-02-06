@@ -21,6 +21,14 @@ namespace capstone_backend.Business.Mappings
                         ? TimezoneUtil.ToVietNamTime(src.PlannedEndAt.Value)
                         : (DateTime?)null));
             CreateMap<DatePlan, DatePlanDetailResponse>()
+                .ForMember(dest => dest.PlannedStartAt, opt => opt.MapFrom(src =>
+                    src.PlannedStartAt.HasValue
+                        ? TimezoneUtil.ToVietNamTime(src.PlannedStartAt.Value)
+                        : (DateTime?)null))
+                .ForMember(dest => dest.PlannedEndAt, opt => opt.MapFrom(src =>
+                    src.PlannedEndAt.HasValue
+                        ? TimezoneUtil.ToVietNamTime(src.PlannedEndAt.Value)
+                        : (DateTime?)null))
                 .ForMember(dest => dest.CompletedAt, opt => opt.MapFrom(src => 
                     src.CompletedAt.HasValue
                         ? TimezoneUtil.ToVietNamTime(src.CompletedAt.Value)

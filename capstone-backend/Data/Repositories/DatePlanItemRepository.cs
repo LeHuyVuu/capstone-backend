@@ -20,7 +20,7 @@ namespace capstone_backend.Data.Repositories
                 .ToListAsync();
         }
 
-        public async Task<DatePlanItem?> GetByIdAndDatePlanIdAsync(int datePlanItemId, int datePlanId, bool includeItems = false)
+        public async Task<DatePlanItem?> GetByIdAndDatePlanIdAsync(int datePlanItemId, int datePlanId, bool includeItems = false, bool includeVenueLocation = false)
         {
             IQueryable<DatePlanItem> query = _dbSet
                 .Where(dpi => dpi.Id == datePlanItemId &&
@@ -32,6 +32,12 @@ namespace capstone_backend.Data.Repositories
             {
                 query = query
                     .Include(dpi => dpi.DatePlan);
+            }
+
+            if (includeVenueLocation)
+            {
+                query = query
+                    .Include(dpi => dpi.VenueLocation);
             }
 
             return await query.FirstOrDefaultAsync();
