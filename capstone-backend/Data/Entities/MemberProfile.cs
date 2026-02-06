@@ -118,4 +118,10 @@ public partial class MemberProfile
 
     [InverseProperty("Member")]
     public virtual ICollection<Interaction> Interactions { get; set; } = new List<Interaction>();
+
+    [InverseProperty("SenderMember")]
+    public virtual ICollection<CoupleInvitation> CoupleInvitationsSent { get; set; } = new List<CoupleInvitation>();
+
+    [InverseProperty("ReceiverMember")]
+    public virtual ICollection<CoupleInvitation> CoupleInvitationsReceived { get; set; } = new List<CoupleInvitation>();
 }
