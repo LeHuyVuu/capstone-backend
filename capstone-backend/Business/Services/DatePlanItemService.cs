@@ -34,6 +34,14 @@ namespace capstone_backend.Business.Services
                 if (datePlan == null)
                     throw new Exception("Date plan not found");
 
+                // Check if date plan start and end time are valid
+                var now = DateTime.UtcNow;
+                if (!datePlan.PlannedStartAt.HasValue || !datePlan.PlannedEndAt.HasValue)
+                    throw new Exception("Date plan start and end time must be set before adding venues");
+
+                if (datePlan.PlannedStartAt.Value < now)
+                    throw new Exception("Date plan start time must be in the future");
+
                 // Snapshot
                 var venues = request.Venues ?? new List<DatePlanItemRequest>();
                 if (venues == null || !venues.Any())
@@ -41,6 +49,18 @@ namespace capstone_backend.Business.Services
 
                 var items = venues.Select(v =>
                 {
+                    // Check if item start time is after date plan start time
+                    if (v.StartTime.HasValue && v.StartTime.Value < TimeOnly.FromDateTime(datePlan.PlannedStartAt.Value))
+                        throw new Exception("Date plan item start time cannot be before date plan start time");
+
+                    // Check if item end time is after date plan end time
+                    if (v.EndTime.HasValue && v.EndTime.Value > TimeOnly.FromDateTime(datePlan.PlannedEndAt.Value))
+                        throw new Exception("Date plan item end time cannot be after date plan end time");
+
+                    // Check if item end time is before item start time
+                    if (v.StartTime.HasValue && v.EndTime.HasValue && v.EndTime.Value < v.StartTime.Value)
+                        throw new Exception("Date plan item end time cannot be before start time");
+
                     var item = _mapper.Map<DatePlanItem>(v);
                     item.DatePlanId = datePlanId;
 
