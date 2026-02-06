@@ -1,0 +1,519 @@
+using capstone_backend.Business.DTOs.CoupleInvitation;
+using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Entities;
+using capstone_backend.Data.Interfaces;
+using capstone_backend.Data.Repositories;
+using Microsoft.EntityFrameworkCore;
+
+namespace capstone_backend.Business.Services;
+
+public class CoupleInvitationService : ICoupleInvitationService
+{
+    private readonly IUnitOfWork _unitOfWork;
+
+    public CoupleInvitationService(IUnitOfWork unitOfWork)
+    {
+        _unitOfWork = unitOfWork;
+    }
+
+    public async Task<(bool Success, string Message, CoupleInvitationResponse? Data)> SendInvitationDirectAsync(
+        int senderMemberId,
+        SendInvitationDirectRequest request)
+    {
+        // Cannot send to yourself
+        if (request.ReceiverMemberId == senderMemberId)
+        {
+            return (false, "Không thể gửi lời mời cho chính mình", null);
+        }
+
+        // Check if receiver exists
+        var receiver = await _unitOfWork.MembersProfile.GetByIdAsync(request.ReceiverMemberId);
+        if (receiver == null)
+        {
+            return (false, "Không tìm thấy member này", null);
+        }
+
+        // Send invitation (without invite code)
+        return await SendInvitationInternalAsync(senderMemberId, request.ReceiverMemberId, null, request.Message);
+    }
+
+    private async Task<(bool Success, string Message, CoupleInvitationResponse? Data)> SendInvitationInternalAsync(
+        int senderMemberId,
+        int receiverMemberId,
+        string? inviteCodeUsed,
+        string? message)
+    {
+        // Get sender
+        var sender = await _unitOfWork.MembersProfile.GetByIdAsync(senderMemberId);
+        if (sender == null)
+        {
+            return (false, "Không tìm thấy thông tin của bạn", null);
+        }
+
+        // Get receiver
+        var receiver = await _unitOfWork.MembersProfile.GetByIdAsync(receiverMemberId);
+        if (receiver == null)
+        {
+            return (false, "Không tìm thấy member này", null);
+        }
+
+        // Edge case 1: Sender must be SINGLE
+        if (sender.RelationshipStatus != "SINGLE")
+        {
+            return (false, "Bạn phải ở trạng thái SINGLE để gửi lời mời ghép đôi", null);
+        }
+
+        // Edge case 2: Receiver must be SINGLE
+        if (receiver.RelationshipStatus != "SINGLE")
+        {
+            return (false, $"{receiver.FullName} không ở trạng thái SINGLE", null);
+        }
+
+        // Edge case 3: Sender must not have active couple profile
+        var senderHasCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(senderMemberId);
+        if (senderHasCouple != null)
+        {
+            return (false, "Bạn đã có cặp đôi rồi", null);
+        }
+
+        // Edge case 4: Receiver must not have active couple profile
+        var receiverHasCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(receiverMemberId);
+        if (receiverHasCouple != null)
+        {
+            return (false, $"{receiver.FullName} đã có cặp đôi rồi", null);
+        }
+
+        // Edge case 5: No pending invitation between them
+        var hasPending = await _unitOfWork.CoupleInvitations.HasPendingInvitationBetweenAsync(senderMemberId, receiverMemberId);
+        if (hasPending)
+        {
+            return (false, "Đã có lời mời đang chờ giữa 2 bạn rồi", null);
+        }
+
+        // Create invitation
+        var invitation = new CoupleInvitation
+        {
+            SenderMemberId = senderMemberId,
+            ReceiverMemberId = receiverMemberId,
+            InviteCodeUsed = inviteCodeUsed,
+            Status = "PENDING",
+            Message = message,
+            SentAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+
+        await _unitOfWork.CoupleInvitations.AddAsync(invitation);
+        await _unitOfWork.SaveChangesAsync();
+
+        // TODO: Send push notification to receiver
+
+        var response = new CoupleInvitationResponse
+        {
+            InvitationId = invitation.Id,
+            SenderMemberId = senderMemberId,
+            SenderName = sender.FullName ?? "Unknown",
+            SenderAvatarUrl = sender.User?.AvatarUrl,
+            ReceiverMemberId = receiverMemberId,
+            ReceiverName = receiver.FullName ?? "Unknown",
+            ReceiverAvatarUrl = receiver.User?.AvatarUrl,
+            InviteCodeUsed = inviteCodeUsed,
+            Status = invitation.Status,
+            Message = message,
+            SentAt = invitation.SentAt,
+            RespondedAt = null
+        };
+
+        return (true, "Đã gửi lời mời ghép đôi thành công", response);
+    }
+
+    public async Task<(bool Success, string Message, AcceptInvitationResponse? Data)> AcceptInvitationAsync(
+        int invitationId,
+        int currentMemberId)
+    {
+        // Get invitation with members
+        var invitation = await _unitOfWork.CoupleInvitations.GetByIdWithMembersAsync(invitationId);
+        if (invitation == null)
+        {
+            return (false, "Không tìm thấy lời mời này", null);
+        }
+
+        // Edge case 1: Only receiver can accept
+        if (invitation.ReceiverMemberId != currentMemberId)
+        {
+            return (false, "Bạn không có quyền chấp nhận lời mời này", null);
+        }
+
+        // Edge case 2: Cannot accept if already accepted
+        if (invitation.Status == "ACCEPTED")
+        {
+            return (false, "Lời mời này đã được chấp nhận rồi", null);
+        }
+
+        // Edge case 3: Must be PENDING
+        if (invitation.Status != "PENDING")
+        {
+            return (false, $"Lời mời này đã {invitation.Status.ToLower()}, không thể chấp nhận", null);
+        }
+
+        // Edge case 4: Both must still be SINGLE
+        if (invitation.SenderMember.RelationshipStatus != "SINGLE")
+        {
+            return (false, $"{invitation.SenderMember.FullName} không còn SINGLE nữa", null);
+        }
+
+        if (invitation.ReceiverMember.RelationshipStatus != "SINGLE")
+        {
+            return (false, "Bạn không còn SINGLE nữa", null);
+        }
+
+        // Edge case 5: Both must not have active couple
+        var senderHasCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(invitation.SenderMemberId);
+        if (senderHasCouple != null)
+        {
+            return (false, $"{invitation.SenderMember.FullName} đã có cặp đôi rồi", null);
+        }
+
+        var receiverHasCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(invitation.ReceiverMemberId);
+        if (receiverHasCouple != null)
+        {
+            return (false, "Bạn đã có cặp đôi rồi", null);
+        }
+
+        // Update invitation status and timestamps
+        invitation.Status = "ACCEPTED";
+        invitation.RespondedAt = DateTime.UtcNow;
+        invitation.UpdatedAt = DateTime.UtcNow;
+        await _unitOfWork.CoupleInvitations.UpdateAsync(invitation);
+
+        // IMPORTANT: Save invitation status first before cancelling other invitations
+        await _unitOfWork.SaveChangesAsync();
+
+        // Create couple profile
+        var coupleProfile = new CoupleProfile
+        {
+            MemberId1 = invitation.SenderMemberId,
+            MemberId2 = invitation.ReceiverMemberId,
+            Status = "ACTIVE",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+
+        await _unitOfWork.CoupleProfiles.AddAsync(coupleProfile);
+
+        // Update relationship status for both members
+        invitation.SenderMember.RelationshipStatus = "IN_RELATIONSHIP";
+        _unitOfWork.MembersProfile.Update(invitation.SenderMember);
+
+        invitation.ReceiverMember.RelationshipStatus = "IN_RELATIONSHIP";
+        _unitOfWork.MembersProfile.Update(invitation.ReceiverMember);
+
+        // Cancel all other pending invitations for both members
+        // (Now the current invitation is already ACCEPTED, so it won't be cancelled)
+        await _unitOfWork.CoupleInvitations.CancelAllPendingInvitationsForMemberAsync(invitation.SenderMemberId);
+        await _unitOfWork.CoupleInvitations.CancelAllPendingInvitationsForMemberAsync(invitation.ReceiverMemberId);
+
+        await _unitOfWork.SaveChangesAsync();
+
+        // TODO: Send push notifications to both
+
+        var response = new AcceptInvitationResponse
+        {
+            InvitationId = invitation.Id,
+            Status = invitation.Status,
+            RespondedAt = invitation.RespondedAt.Value,
+            CoupleProfile = new CoupleProfileInfo
+            {
+                CoupleId = coupleProfile.id,
+                MemberId1 = coupleProfile.MemberId1,
+                Member1Name = invitation.SenderMember.FullName ?? "Unknown",
+                MemberId2 = coupleProfile.MemberId2,
+                Member2Name = invitation.ReceiverMember.FullName ?? "Unknown",
+                Status = coupleProfile.Status ?? "ACTIVE",
+                CreatedAt = coupleProfile.CreatedAt ?? DateTime.UtcNow
+            }
+        };
+
+        return (true, "Đã chấp nhận lời mời ghép đôi thành công! 💕", response);
+    }
+
+    public async Task<(bool Success, string Message)> RejectInvitationAsync(int invitationId, int currentMemberId)
+    {
+        var invitation = await _unitOfWork.CoupleInvitations.GetByIdAsync(invitationId);
+        if (invitation == null)
+        {
+            return (false, "Không tìm thấy lời mời này");
+        }
+
+        // Edge case 1: Only receiver can reject
+        if (invitation.ReceiverMemberId != currentMemberId)
+        {
+            return (false, "Bạn không có quyền từ chối lời mời này");
+        }
+
+        // Edge case 2: Cannot reject if already accepted
+        if (invitation.Status == "ACCEPTED")
+        {
+            return (false, "Không thể từ chối lời mời đã được chấp nhận");
+        }
+
+        // Edge case 3: Cannot reject if couple already created
+        var receiverHasCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(currentMemberId);
+        if (receiverHasCouple != null)
+        {
+            return (false, "Bạn đã có cặp đôi, không thể từ chối lời mời này");
+        }
+
+        // Edge case 4: Must be PENDING
+        if (invitation.Status != "PENDING")
+        {
+            return (false, $"Lời mời này đã được {invitation.Status.ToLower()}");
+        }
+
+        // Update invitation status and timestamps
+        invitation.Status = "REJECTED";
+        invitation.RespondedAt = DateTime.UtcNow;
+        invitation.UpdatedAt = DateTime.UtcNow;
+
+        await _unitOfWork.CoupleInvitations.UpdateAsync(invitation);
+        await _unitOfWork.SaveChangesAsync();
+
+        // TODO: Send push notification to sender
+
+        return (true, "Đã từ chối lời mời ghép đôi");
+    }
+
+    public async Task<(bool Success, string Message)> CancelInvitationAsync(int invitationId, int currentMemberId)
+    {
+        var invitation = await _unitOfWork.CoupleInvitations.GetByIdAsync(invitationId);
+        if (invitation == null)
+        {
+            return (false, "Không tìm thấy lời mời này");
+        }
+
+        // Edge case 1: Only sender can cancel
+        if (invitation.SenderMemberId != currentMemberId)
+        {
+            return (false, "Bạn không có quyền hủy lời mời này");
+        }
+
+        // Edge case 2: Cannot cancel if already accepted
+        if (invitation.Status == "ACCEPTED")
+        {
+            return (false, "Không thể hủy lời mời đã được chấp nhận");
+        }
+
+        // Edge case 3: Cannot cancel if couple already created
+        var senderHasCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(currentMemberId);
+        if (senderHasCouple != null)
+        {
+            return (false, "Bạn đã có cặp đôi, không thể hủy lời mời này");
+        }
+
+        // Edge case 4: Must be PENDING
+        if (invitation.Status != "PENDING")
+        {
+            return (false, $"Lời mời này đã được {invitation.Status.ToLower()}");
+        }
+
+        // Update status and timestamps
+        invitation.Status = "CANCELLED";
+        invitation.RespondedAt = DateTime.UtcNow;
+        invitation.UpdatedAt = DateTime.UtcNow;
+
+        await _unitOfWork.CoupleInvitations.UpdateAsync(invitation);
+        await _unitOfWork.SaveChangesAsync();
+
+        return (true, "Đã hủy lời mời ghép đôi");
+    }
+
+    public async Task<(bool Success, string Message)> BreakupAsync(int currentMemberId)
+    {
+        // Edge case 1: Member must have an active couple
+        var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(currentMemberId);
+        if (couple == null)
+        {
+            return (false, "Bạn chưa có cặp đôi để chia tay");
+        }
+
+        // Edge case 2: Couple must be ACTIVE
+        if (couple.Status != "ACTIVE")
+        {
+            return (false, $"Cặp đôi đã {couple.Status?.ToLower()}, không thể chia tay");
+        }
+
+        // Get both members
+        var member1 = await _unitOfWork.MembersProfile.GetByIdAsync(couple.MemberId1);
+        var member2 = await _unitOfWork.MembersProfile.GetByIdAsync(couple.MemberId2);
+
+        // Edge case 3: Both members must exist
+        if (member1 == null || member2 == null)
+        {
+            return (false, "Không tìm thấy thông tin thành viên trong cặp đôi");
+        }
+
+        // Update couple profile status to SEPARATED
+        couple.Status = "SEPARATED";
+        couple.UpdatedAt = DateTime.UtcNow;
+        couple.IsDeleted = false; // Keep record for history
+
+        _unitOfWork.CoupleProfiles.Update(couple);
+
+        // Update both members' relationship status back to SINGLE
+        member1.RelationshipStatus = "SINGLE";
+        member1.UpdatedAt = DateTime.UtcNow;
+        _unitOfWork.MembersProfile.Update(member1);
+
+        member2.RelationshipStatus = "SINGLE";
+        member2.UpdatedAt = DateTime.UtcNow;
+        _unitOfWork.MembersProfile.Update(member2);
+
+        // Save all changes
+        await _unitOfWork.SaveChangesAsync();
+
+        // Determine who initiated the breakup for messaging
+        var partnerName = currentMemberId == couple.MemberId1 ? member2.FullName : member1.FullName;
+
+        // TODO: Send push notification to partner about breakup
+
+        return (true, $"Đã chia tay với {partnerName}. Chúc bạn sớm tìm được người phù hợp hơn!");
+    }
+
+    public async Task<List<CoupleInvitationResponse>> GetReceivedInvitationsAsync(
+        int memberId,
+        string? status,
+        int page,
+        int pageSize)
+    {
+        var invitations = await _unitOfWork.CoupleInvitations.GetReceivedInvitationsAsync(memberId, status, page, pageSize);
+
+        return invitations.Select(i => new CoupleInvitationResponse
+        {
+            InvitationId = i.Id,
+            SenderMemberId = i.SenderMemberId,
+            SenderName = i.SenderMember?.FullName ?? "Unknown",
+            SenderAvatarUrl = i.SenderMember?.User?.AvatarUrl,
+            ReceiverMemberId = i.ReceiverMemberId,
+            ReceiverName = "", // Not needed for received invitations
+            ReceiverAvatarUrl = null,
+            InviteCodeUsed = i.InviteCodeUsed,
+            Status = i.Status,
+            Message = i.Message,
+            SentAt = i.SentAt,
+            RespondedAt = i.RespondedAt
+        }).ToList();
+    }
+
+    public async Task<List<CoupleInvitationResponse>> GetSentInvitationsAsync(
+        int memberId,
+        string? status,
+        int page,
+        int pageSize)
+    {
+        var invitations = await _unitOfWork.CoupleInvitations.GetSentInvitationsAsync(memberId, status, page, pageSize);
+
+        return invitations.Select(i => new CoupleInvitationResponse
+        {
+            InvitationId = i.Id,
+            SenderMemberId = i.SenderMemberId,
+            SenderName = "", // Not needed for sent invitations
+            SenderAvatarUrl = null,
+            ReceiverMemberId = i.ReceiverMemberId,
+            ReceiverName = i.ReceiverMember?.FullName ?? "Unknown",
+            ReceiverAvatarUrl = i.ReceiverMember?.User?.AvatarUrl,
+            InviteCodeUsed = i.InviteCodeUsed,
+            Status = i.Status,
+            Message = i.Message,
+            SentAt = i.SentAt,
+            RespondedAt = i.RespondedAt
+        }).ToList();
+    }
+
+    public async Task<List<MemberProfileResponse>> SearchMembersAsync(
+        string query,
+        int currentMemberId,
+        int page,
+        int pageSize)
+    {
+        // Normalize query for Vietnamese accent-insensitive search
+        var normalizedQuery = string.IsNullOrWhiteSpace(query) 
+            ? null 
+            : Helpers.VietnameseTextHelper.NormalizeForSearch(query);
+
+        // Get members (excluding current user)
+        var allMembers = await _unitOfWork.MembersProfile.GetPagedAsync(
+            1, 1000,
+            filter: m => m.IsDeleted != true && m.Id != currentMemberId && m.FullName != null,
+            orderBy: q => q.OrderBy(m => m.FullName)
+        );
+
+        // Filter by normalized name
+        var filteredMembers = string.IsNullOrWhiteSpace(normalizedQuery)
+            ? allMembers.Items
+            : allMembers.Items.Where(m => 
+                Helpers.VietnameseTextHelper.NormalizeForSearch(m.FullName ?? "")
+                    .Contains(normalizedQuery)).ToList();
+
+        // Pagination
+        var pagedMembers = filteredMembers
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        if (!pagedMembers.Any())
+            return new List<MemberProfileResponse>();
+
+        // Batch queries - get all data at once instead of N queries in loop
+        var currentMember = await _unitOfWork.MembersProfile.GetByIdAsync(currentMemberId);
+        var currentHasCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(currentMemberId);
+        
+        var memberIds = pagedMembers.Select(m => m.Id).ToList();
+        var membersWithCouples = await _unitOfWork.Context.CoupleProfiles
+            .Where(c => c.Status == "ACTIVE" && 
+                       (memberIds.Contains(c.MemberId1) || memberIds.Contains(c.MemberId2)))
+            .Select(c => new { c.MemberId1, c.MemberId2 })
+            .ToListAsync();
+        
+        var memberIdsWithCouples = membersWithCouples
+            .SelectMany(c => new[] { c.MemberId1, c.MemberId2 })
+            .Distinct()
+            .ToHashSet();
+
+        var pendingInvitations = await _unitOfWork.Context.CoupleInvitations
+            .Where(i => i.Status == "PENDING" && i.IsDeleted == false &&
+                       ((i.SenderMemberId == currentMemberId && memberIds.Contains(i.ReceiverMemberId)) ||
+                        (i.ReceiverMemberId == currentMemberId && memberIds.Contains(i.SenderMemberId))))
+            .Select(i => new { i.SenderMemberId, i.ReceiverMemberId })
+            .ToListAsync();
+        
+        var pendingMemberIds = pendingInvitations
+            .SelectMany(i => new[] { i.SenderMemberId, i.ReceiverMemberId })
+            .Where(id => id != currentMemberId)
+            .Distinct()
+            .ToHashSet();
+
+        // Build response
+        return pagedMembers.Select(member =>
+        {
+            var canSend = currentMember?.RelationshipStatus == "SINGLE" &&
+                         currentHasCouple == null &&
+                         member.RelationshipStatus == "SINGLE" &&
+                         !memberIdsWithCouples.Contains(member.Id) &&
+                         !pendingMemberIds.Contains(member.Id);
+
+            return new MemberProfileResponse
+            {
+                MemberId = member.Id,
+                FullName = member.FullName ?? "Unknown",
+                AvatarUrl = member.User?.AvatarUrl,
+                Bio = member.Bio,
+                RelationshipStatus = member.RelationshipStatus ?? "SINGLE",
+                CanSendInvitation = canSend
+            };
+        }).ToList();
+    }
+}
+
+
