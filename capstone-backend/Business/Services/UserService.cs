@@ -16,13 +16,15 @@ public class UserService : IUserService
     private readonly ILogger<UserService> _logger;
     private readonly IJwtService _jwtService;
     private readonly ICometChatService _cometChatService;
+    private readonly ICollectionService _collectionService;
 
-    public UserService(IUnitOfWork unitOfWork, ILogger<UserService> logger, IJwtService jwtService, ICometChatService cometChatService)
+    public UserService(IUnitOfWork unitOfWork, ILogger<UserService> logger, IJwtService jwtService, ICometChatService cometChatService, ICollectionService collectionService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _jwtService = jwtService;
         _cometChatService = cometChatService;
+        _collectionService = collectionService;
     }
 
     public async Task<LoginResponse?> LoginAsync(LoginRequest request)
@@ -168,6 +170,10 @@ public class UserService : IUserService
 
         _logger.LogInformation("Created member profile for user {UserId} with invite code {InviteCode}",
             userId, memberProfile.InviteCode);
+
+        // Tạo collection mặc định "Mục yêu thích" cho member mới
+        await _collectionService.CreateDefaultCollectionForMemberAsync(memberProfile.Id);
+        _logger.LogInformation("Created default collection for member {MemberId}", memberProfile.Id);
     }
 
     /// <summary>
