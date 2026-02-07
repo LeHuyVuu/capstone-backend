@@ -97,6 +97,11 @@ public static class ServiceExtensions
         services.AddScoped<IDatePlanJobRepository, DatePlanJobRepository>();
         services.AddScoped<IReviewRepository, ReviewRepository>();
 
+        // Messaging repositories
+        services.AddScoped<IConversationRepository, ConversationRepository>();
+        services.AddScoped<IConversationMemberRepository, ConversationMemberRepository>();
+        services.AddScoped<IMessageRepository, MessageRepository>();
+
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
@@ -151,6 +156,9 @@ public static class ServiceExtensions
         services.AddScoped<ICoupleInvitationService, CoupleInvitationService>();
         // Register Hangfire Jobs
         services.AddScoped<IDatePlanWorker, DatePlanWorker>();
+
+        // Register Messaging Service
+        services.AddScoped<IMessagingService, MessagingService>();
 
         return services;
     }
