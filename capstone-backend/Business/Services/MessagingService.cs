@@ -223,16 +223,21 @@ public class MessagingService : IMessagingService
         if (messageWithSender == null)
             throw new Exception("Message not found after creation");
 
-        var response = MapToMessageResponse(messageWithSender, currentUserId);
-
-        // Notify conversation members via SignalR
+        // Notify conversation members via SignalR - create response for each member with correct IsMine
         var members = await _memberRepository.GetActiveConversationMembersAsync(request.ConversationId, cancellationToken);
-        foreach (var member in members.Where(m => m.UserId != currentUserId))
+        foreach (var member in members)
         {
-            await _hubContext.Clients.User(member.UserId.ToString())
-                .SendAsync("ReceiveMessage", response, cancellationToken);
+            if (member.UserId == null || member.UserId == currentUserId)
+                continue;
+                
+            // Create response specific to this member so IsMine is correct
+            var memberResponse = MapToMessageResponse(messageWithSender, member.UserId.Value);
+            await _hubContext.Clients.User(member.UserId.Value.ToString())
+                .SendAsync("ReceiveMessage", memberResponse, cancellationToken);
         }
 
+        // Return response for sender with IsMine = true
+        var response = MapToMessageResponse(messageWithSender, currentUserId);
         return response;
     }
 
@@ -296,7 +301,7 @@ public class MessagingService : IMessagingService
         var message = await _messageRepository.GetByIdAsync(request.MessageId);
         if (message?.SenderId != null && message.SenderId != currentUserId)
         {
-            await _hubContext.Clients.User(message.SenderId.ToString())
+            await _hubContext.Clients.User(message.SenderId.Value.ToString())
                 .SendAsync("MessageRead", request.ConversationId, request.MessageId, currentUserId, cancellationToken);
         }
     }
@@ -449,9 +454,12 @@ public class MessagingService : IMessagingService
         if (message.ConversationId != null)
         {
             var members = await _memberRepository.GetActiveConversationMembersAsync(message.ConversationId.Value, cancellationToken);
-            foreach (var member in members.Where(m => m.UserId != currentUserId))
+            foreach (var member in members)
             {
-                await _hubContext.Clients.User(member.UserId.ToString())
+                if (member.UserId == null || member.UserId == currentUserId)
+                    continue;
+                    
+                await _hubContext.Clients.User(member.UserId.Value.ToString())
                     .SendAsync("MessageDeleted", messageId, cancellationToken);
             }
         }
