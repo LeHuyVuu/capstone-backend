@@ -437,36 +437,92 @@ public class CoupleInvitationService : ICoupleInvitationService
         int page,
         int pageSize)
     {
-        // Normalize query for Vietnamese accent-insensitive search
+        var currentMember = await _unitOfWork.Context.MemberProfiles
+            .Include(m => m.User)
+            .FirstOrDefaultAsync(m => m.Id == currentMemberId);
+            
+        if (currentMember == null)
+            return new List<MemberProfileResponse>();
+
         var normalizedQuery = string.IsNullOrWhiteSpace(query) 
             ? null 
             : Helpers.VietnameseTextHelper.NormalizeForSearch(query);
 
-        // Get members (excluding current user)
-        var allMembers = await _unitOfWork.MembersProfile.GetPagedAsync(
-            1, 1000,
-            filter: m => m.IsDeleted != true && m.Id != currentMemberId && m.FullName != null,
-            orderBy: q => q.OrderBy(m => m.FullName)
-        );
+        IQueryable<MemberProfile> baseQuery = _unitOfWork.Context.MemberProfiles
+            .Include(m => m.User)
+            .Where(m => m.IsDeleted != true && m.Id != currentMemberId && m.FullName != null &&
+                       m.User != null && m.User.IsDeleted != true && m.User.Role == "MEMBER");
 
-        // Filter by normalized name
-        var filteredMembers = string.IsNullOrWhiteSpace(normalizedQuery)
-            ? allMembers.Items
-            : allMembers.Items.Where(m => 
-                Helpers.VietnameseTextHelper.NormalizeForSearch(m.FullName ?? "")
-                    .Contains(normalizedQuery)).ToList();
+        List<MemberProfile> candidates;
 
-        // Pagination
-        var pagedMembers = filteredMembers
+        // Khi query = null, áp dụng matching algorithm
+        if (string.IsNullOrWhiteSpace(normalizedQuery))
+        {
+            var targetGender = currentMember.Gender == "MALE" ? "FEMALE" : 
+                              currentMember.Gender == "FEMALE" ? "MALE" : null;
+
+            // Lấy personality của current member (1 query riêng nhỏ)
+            var currentPersonality = await _unitOfWork.Context.PersonalityTests
+                .Where(pt => pt.MemberId == currentMemberId && pt.IsDeleted != true && 
+                           pt.Status == "COMPLETED" && pt.ResultCode != null)
+                .OrderByDescending(pt => pt.TakenAt)
+                .Select(pt => pt.ResultCode)
+                .FirstOrDefaultAsync();
+
+            // Filter chỉ gender (bắt buộc) và area (bắt buộc phải bằng nhau)
+            var matchingMembers = await baseQuery
+                .Where(m => m.Gender == targetGender && m.area == currentMember.area)
+                .Include(m => m.PersonalityTests.Where(pt => pt.IsDeleted != true && pt.Status == "COMPLETED"))
+                .ToListAsync();
+
+            // Sắp xếp theo độ ưu tiên (không loại bỏ, chỉ ưu tiên): Mood > Personality > Interests > Name
+            candidates = matchingMembers
+                .OrderByDescending(m => m.MoodTypesId == currentMember.MoodTypesId)  // Ưu tiên 1: Cùng mood
+                .ThenByDescending(m => 
+                {
+                    // Ưu tiên 2: Cùng personality
+                    if (string.IsNullOrWhiteSpace(currentPersonality)) return false;
+                    var memberPersonality = m.PersonalityTests.OrderByDescending(pt => pt.TakenAt).FirstOrDefault()?.ResultCode;
+                    return !string.IsNullOrWhiteSpace(memberPersonality) && memberPersonality == currentPersonality;
+                })
+                .ThenByDescending(m => 
+                {
+                    // Ưu tiên 3: Có overlap interests
+                    if (string.IsNullOrWhiteSpace(currentMember.Interests) || string.IsNullOrWhiteSpace(m.Interests)) return false;
+                    return m.Interests.Contains(currentMember.Interests) || currentMember.Interests.Contains(m.Interests);
+                })
+                .ThenBy(m => m.FullName)  // Sắp xếp theo tên
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToList();
+        }
+        else
+        {
+            // Query có search text - filter ngay trong SQL
+            // TODO: Cần tạo computed column hoặc function để search Vietnamese normalized
+            candidates = await baseQuery
+                .OrderBy(m => m.FullName)
+                .ToListAsync(); // Load tất cả để filter normalized name trong memory
+            
+            candidates = candidates
+                .Where(m => Helpers.VietnameseTextHelper.NormalizeForSearch(m.FullName ?? "").Contains(normalizedQuery))
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+        }
 
-        if (!pagedMembers.Any())
+        if (!candidates.Any())
             return new List<MemberProfileResponse>();
 
+        return await BuildMemberResponsesAsync(currentMemberId, currentMember, candidates);
+    }
+
+    private async Task<List<MemberProfileResponse>> BuildMemberResponsesAsync(
+        int currentMemberId,
+        MemberProfile currentMember,
+        List<MemberProfile> pagedMembers)
+    {
         // Batch queries - get all data at once instead of N queries in loop
-        var currentMember = await _unitOfWork.MembersProfile.GetByIdAsync(currentMemberId);
         var currentHasCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(currentMemberId);
         
         var memberIds = pagedMembers.Select(m => m.Id).ToList();
