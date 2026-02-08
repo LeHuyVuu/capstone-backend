@@ -2,6 +2,7 @@
 using capstone_backend.Business.DTOs.DatePlanItem;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Enums;
+using capstone_backend.Extensions.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -65,7 +66,7 @@ namespace capstone_backend.Api.Controllers
         public async Task<IActionResult> GetDatePlanItems(
             int datePlanId,
             [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 5)
+            [FromQuery] int pageSize = 10)
         {
             try
             {
@@ -216,6 +217,7 @@ namespace capstone_backend.Api.Controllers
             try
             {
                 var userId = GetCurrentUserId();
+
                 var result = await _datePlanService.CreateDatePlanAsync(userId.Value, request);
 
                 return OkResponse(result, "Created date plan successfully");

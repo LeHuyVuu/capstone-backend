@@ -5,6 +5,7 @@ using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
+using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Services
 {
@@ -67,17 +68,58 @@ namespace capstone_backend.Business.Services
                 if (requestVenueIds.Any(id => existingVenueIds.Contains(id)))
                     throw new Exception($"Venue locations already exist in this date plan: {string.Join(", ", existedIds)}");
 
+                var venuesWithTime = venues
+                    .Where(v => v.StartTime.HasValue && v.EndTime.HasValue)
+                    .ToList();
+
+                for (int i = 0; i < venuesWithTime.Count; i++)
+                {
+                    for (int j = i + 1; j < venuesWithTime.Count; j++)
+                    {
+                        var venue1 = venuesWithTime[i];
+                        var venue2 = venuesWithTime[j];
+
+                        // Check if time ranges overlap
+                        if (venue1.StartTime < venue2.EndTime && venue2.StartTime < venue1.EndTime)
+                        {
+                            throw new Exception($"Time slots overlap between venues: {venue1.StartTime:HH:mm}-{venue1.EndTime:HH:mm} and {venue2.StartTime:HH:mm}-{venue2.EndTime:HH:mm}");
+                        }
+                    }
+                }
+
+                var existingItemsWithTime = datePlanItems
+                    .Where(dpi => dpi.StartTime.HasValue && dpi.EndTime.HasValue && dpi.IsDeleted == false)
+                    .ToList();
+
+                foreach (var newVenue in venuesWithTime)
+                {
+                    foreach (var existingItem in existingItemsWithTime)
+                    {
+                        if (newVenue.StartTime < existingItem.EndTime && existingItem.StartTime < newVenue.EndTime)
+                        {
+                            throw new Exception($"Time slot {newVenue.StartTime:HH:mm}-{newVenue.EndTime:HH:mm} overlaps with existing item: {existingItem.StartTime:HH:mm}-{existingItem.EndTime:HH:mm}");
+                        }
+                    }
+                }
 
                 var items = venues.Select(v =>
                 {
 
-                    // Check if item start time is after date plan start time
-                    if (v.StartTime.HasValue && v.StartTime.Value < TimeOnly.FromDateTime(TimezoneUtil.ToVietNamTime(datePlan.PlannedStartAt.Value)))
-                        throw new Exception("Date plan item start time cannot be before date plan start time");
+                    var planStartVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedStartAt.Value); // DateTime
+                    var planDay = DateOnly.FromDateTime(planStartVn);
 
-                    // Check if item end time is after date plan end time
-                    if (v.EndTime.HasValue && v.EndTime.Value > TimeOnly.FromDateTime(TimezoneUtil.ToVietNamTime(datePlan.PlannedEndAt.Value)))
-                        throw new Exception("Date plan item end time cannot be after date plan end time");
+                    DateTime itemStartVn = planDay.ToDateTime(v.StartTime.Value);
+                    DateTime itemEndVn = planDay.ToDateTime(v.EndTime.Value);
+
+                    if (v.EndTime.Value < v.StartTime.Value)
+                        itemEndVn = itemEndVn.AddDays(1);
+
+                    if (itemStartVn < planStartVn) 
+                        throw new Exception("Item start cannot be before plan start");
+
+                    var planEndVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedEndAt.Value);
+                    if (itemEndVn > planEndVn) 
+                        throw new Exception("Item end cannot be after plan end");
 
                     var item = _mapper.Map<DatePlanItem>(v);
                     item.DatePlanId = datePlanId;
@@ -141,7 +183,7 @@ namespace capstone_backend.Business.Services
                 if (couple == null)
                     throw new Exception("Member does not belong to any couples");
 
-                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id, includeVenueLocation: true);
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
                 if (datePlan == null)
                     throw new Exception("Date plan not found");
 
@@ -149,7 +191,8 @@ namespace capstone_backend.Business.Services
                         pageNumber,
                         pageSize,
                         dpi => dpi.DatePlanId == datePlanId && dpi.IsDeleted == false,
-                        dpi => dpi.OrderBy(dpi => dpi.OrderIndex)
+                        dpi => dpi.OrderBy(dpi => dpi.OrderIndex),
+                        dpi => dpi.Include(x => x.VenueLocation)
                     );
 
                 return new PagedResult<DatePlanItemResponse>
