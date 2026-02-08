@@ -408,7 +408,7 @@ public class MessagingService : IMessagingService
         _memberRepository.Update(member);
         await _unitOfWork.SaveChangesAsync();
 
-        // Notify removed member via SignalR
+         // Notify removed member via SignalR
         await _hubContext.Clients.User(request.UserId.ToString())
             .SendAsync("RemovedFromConversation", request.ConversationId, cancellationToken);
     }
