@@ -1,3 +1,4 @@
+using capstone_backend.Business.Common;
 using capstone_backend.Business.DTOs.Collection;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.Interfaces;
@@ -39,6 +40,28 @@ public class CollectionService : ICollectionService
         return MapToResponse(collection);
     }
 
+    public async Task<CollectionResponse> CreateDefaultCollectionForMemberAsync(int memberId, CancellationToken cancellationToken = default)
+    {
+        var collection = new Collection()
+        {
+            MemberId = memberId,
+            CollectionName = CollectionConstants.DEFAULT_COLLECTION_NAME,
+            Description = CollectionConstants.DEFAULT_COLLECTION_DESCRIPTION,
+            Status = CollectionConstants.DEFAULT_COLLECTION_STATUS,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+
+        await _unitOfWork.Context.Set<Collection>().AddAsync(collection, cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("Created default collection '{CollectionName}' for member {MemberId}", 
+            CollectionConstants.DEFAULT_COLLECTION_NAME, memberId);
+
+        return MapToResponse(collection);
+    }
+
     public async Task<CollectionResponse?> GetCollectionByIdAsync(int collectionId, CancellationToken cancellationToken = default)
     {
         var collection = await _unitOfWork.Context.Set<Collection>()
@@ -46,6 +69,25 @@ public class CollectionService : ICollectionService
             .FirstOrDefaultAsync(c => c.Id == collectionId && c.IsDeleted != true, cancellationToken);
 
         return collection == null ? null : MapToResponse(collection);
+    }
+
+    public async Task<CollectionResponse> GetCurrentCollectionAsync(int memberId, CancellationToken cancellationToken = default)
+    {
+        // Tìm collection mặc định của member
+        var collection = await _unitOfWork.Context.Set<Collection>()
+            .Include(c => c.Venues)
+            .FirstOrDefaultAsync(c => c.MemberId == memberId 
+                && c.CollectionName == CollectionConstants.DEFAULT_COLLECTION_NAME 
+                && c.IsDeleted != true, cancellationToken);
+
+        // Nếu chưa có thì tạo mới
+        if (collection == null)
+        {
+            _logger.LogInformation("Default collection not found for member {MemberId}, creating new one", memberId);
+            return await CreateDefaultCollectionForMemberAsync(memberId, cancellationToken);
+        }
+
+        return MapToResponse(collection);
     }
 
     public async Task<PagedResult<CollectionResponse>> GetCollectionsByMemberAsync(int memberId, int page, int pageSize, CancellationToken cancellationToken = default)
@@ -78,6 +120,14 @@ public class CollectionService : ICollectionService
         if (collection == null)
             return null;
 
+        // Bảo vệ collection mặc định khỏi việc đổi tên
+        if (collection.CollectionName == CollectionConstants.DEFAULT_COLLECTION_NAME && 
+            !string.IsNullOrEmpty(request.CollectionName) && 
+            request.CollectionName != CollectionConstants.DEFAULT_COLLECTION_NAME)
+        {
+            throw new InvalidOperationException("Không thể đổi tên collection mặc định");
+        }
+
         if (!string.IsNullOrEmpty(request.CollectionName))
             collection.CollectionName = request.CollectionName;
         
@@ -97,6 +147,31 @@ public class CollectionService : ICollectionService
         return MapToResponse(collection);
     }
 
+    public async Task<CollectionResponse?> UpdateCollectionStatusAsync(int collectionId, int memberId, UpdateCollectionStatusRequest request, CancellationToken cancellationToken = default)
+    {
+        var collection = await _unitOfWork.Context.Set<Collection>()
+            .FirstOrDefaultAsync(c => c.Id == collectionId && c.MemberId == memberId && c.IsDeleted != true, cancellationToken);
+
+        if (collection == null)
+            return null;
+
+        // Bảo vệ collection mặc định khỏi việc đổi status
+        if (collection.CollectionName == CollectionConstants.DEFAULT_COLLECTION_NAME)
+        {
+            throw new InvalidOperationException("Không thể thay đổi trạng thái của collection mặc định");
+        }
+
+        collection.Status = request.Status;
+        collection.UpdatedAt = DateTime.UtcNow;
+
+        _unitOfWork.Context.Set<Collection>().Update(collection);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("Updated status of collection {CollectionId} to {Status}", collectionId, request.Status);
+
+        return MapToResponse(collection);
+    }
+
     public async Task<bool> DeleteCollectionAsync(int collectionId, int memberId, CancellationToken cancellationToken = default)
     {
         var collection = await _unitOfWork.Context.Set<Collection>()
@@ -104,6 +179,12 @@ public class CollectionService : ICollectionService
 
         if (collection == null)
             return false;
+
+        // Bảo vệ collection mặc định khỏi việc xóa
+        if (collection.CollectionName == CollectionConstants.DEFAULT_COLLECTION_NAME)
+        {
+            throw new InvalidOperationException("Không thể xóa collection mặc định");
+        }
 
         collection.IsDeleted = true;
         collection.UpdatedAt = DateTime.UtcNow;
@@ -114,6 +195,39 @@ public class CollectionService : ICollectionService
         _logger.LogInformation("Deleted collection {CollectionId}", collectionId);
 
         return true;
+    }
+
+    public async Task<CollectionResponse?> AddVenueToCollectionAsync(int collectionId, int memberId, int venueId, CancellationToken cancellationToken = default)
+    {
+        var collection = await _unitOfWork.Context.Set<Collection>()
+            .Include(c => c.Venues)
+            .FirstOrDefaultAsync(c => c.Id == collectionId && c.MemberId == memberId && c.IsDeleted != true, cancellationToken);
+
+        if (collection == null)
+            return null;
+
+        // Kiểm tra venue có tồn tại không
+        var venue = await _unitOfWork.Context.Set<VenueLocation>()
+            .FirstOrDefaultAsync(v => v.Id == venueId, cancellationToken);
+
+        if (venue == null)
+            return null;
+
+        // Chỉ add nếu chưa có trong collection
+        if (!collection.Venues.Any(v => v.Id == venueId))
+        {
+            collection.Venues.Add(venue);
+            collection.UpdatedAt = DateTime.UtcNow;
+            await _unitOfWork.SaveChangesAsync();
+            
+            _logger.LogInformation("Added venue {VenueId} to collection {CollectionId}", venueId, collectionId);
+        }
+        else
+        {
+            _logger.LogInformation("Venue {VenueId} already exists in collection {CollectionId}", venueId, collectionId);
+        }
+
+        return MapToResponse(collection);
     }
 
     public async Task<CollectionResponse?> AddVenuesToCollectionAsync(int collectionId, int memberId, PatchCollectionRequest request, CancellationToken cancellationToken = default)

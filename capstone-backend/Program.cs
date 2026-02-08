@@ -194,5 +194,6 @@ app.Logger.LogInformation("Application starting...");
 
 // Hubs
 app.MapHub<NotificationHub>("/hubs/notification");
+app.MapHub<MessagingHub>("/hubs/messaging");
 
 app.Run();
