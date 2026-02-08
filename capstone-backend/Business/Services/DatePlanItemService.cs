@@ -62,6 +62,9 @@ namespace capstone_backend.Business.Services
                     .Distinct()
                     .ToList();
 
+                var planStartVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedStartAt!.Value);
+                var planEndVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedEndAt!.Value);
+
                 if (requestVenueIds.Count != requestVenueIds.Distinct().Count())
                     throw new Exception("Duplicate venue locations in request");
 
@@ -72,44 +75,41 @@ namespace capstone_backend.Business.Services
                     .Where(v => v.StartTime.HasValue && v.EndTime.HasValue)
                     .ToList();
 
-                for (int i = 0; i < venuesWithTime.Count; i++)
+                var rangesNew = venuesWithTime.Select(v => new
                 {
-                    for (int j = i + 1; j < venuesWithTime.Count; j++)
+                    V = v,
+                    Range = ResolveItemRangeWithinPlan(planStartVn, planEndVn, v.StartTime!.Value, v.EndTime!.Value)
+                }).ToList();
+
+                // new - new
+                for (int i = 0; i < rangesNew.Count; i++)
+                    for (int j = i + 1; j < rangesNew.Count; j++)
                     {
-                        var venue1 = venuesWithTime[i];
-                        var venue2 = venuesWithTime[j];
-
-                        // Check if time ranges overlap
-                        if (venue1.StartTime < venue2.EndTime && venue2.StartTime < venue1.EndTime)
-                        {
-                            throw new Exception($"Time slots overlap between venues: {venue1.StartTime:HH:mm}-{venue1.EndTime:HH:mm} and {venue2.StartTime:HH:mm}-{venue2.EndTime:HH:mm}");
-                        }
+                        if (Overlap(rangesNew[i].Range, rangesNew[j].Range))
+                            throw new Exception($"Time overlap on request");
                     }
-                }
 
-                var existingItemsWithTime = datePlanItems
-                    .Where(dpi => dpi.StartTime.HasValue && dpi.EndTime.HasValue && dpi.IsDeleted == false)
+                var existingWithTime = datePlanItems
+                    .Where(x => x.StartTime.HasValue && x.EndTime.HasValue)
+                    .Select(x => new
+                    {
+                        Item = x,
+                        Range = ResolveItemRangeWithinPlan(planStartVn, planEndVn, x.StartTime!.Value, x.EndTime!.Value)
+                    })
                     .ToList();
 
-                foreach (var newVenue in venuesWithTime)
-                {
-                    foreach (var existingItem in existingItemsWithTime)
+                foreach (var n in rangesNew)
+                    foreach (var ex in existingWithTime)
                     {
-                        if (newVenue.StartTime < existingItem.EndTime && existingItem.StartTime < newVenue.EndTime)
-                        {
-                            throw new Exception($"Time slot {newVenue.StartTime:HH:mm}-{newVenue.EndTime:HH:mm} overlaps with existing item: {existingItem.StartTime:HH:mm}-{existingItem.EndTime:HH:mm}");
-                        }
+                        if (Overlap(n.Range, ex.Range))
+                            throw new Exception($"Time overlap on exist items");
                     }
-                }
 
                 var maxOderIndex = datePlanItems
                     .Select(x => x.OrderIndex)
                     .Max() ?? 0;
 
-                var items = new List<DatePlanItem>();
-
-                var planStartVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedStartAt!.Value);
-                var planEndVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedEndAt!.Value);
+                var items = new List<DatePlanItem>();             
 
                 foreach (var v in venues)
                 {
@@ -125,7 +125,7 @@ namespace capstone_backend.Business.Services
                     item.OrderIndex = ++maxOderIndex;
                     items.Add(item);
 
-                    datePlan.TotalCount = datePlan.TotalCount += 1;
+                    datePlan.TotalCount += 1;
                 };
 
                 _unitOfWork.DatePlans.Update(datePlan);
@@ -311,6 +311,7 @@ namespace capstone_backend.Business.Services
                     datePlanItem.Note = request.Note;
 
                 datePlan.UpdatedAt = DateTime.UtcNow;
+                datePlan.Version += 1;
 
                 _unitOfWork.DatePlanItems.Update(datePlanItem);
                 _unitOfWork.DatePlans.Update(datePlan);
@@ -389,5 +390,8 @@ namespace capstone_backend.Business.Services
                 throw;
             }
         }
+
+        private static bool Overlap((DateTime s, DateTime e) a, (DateTime s, DateTime e) b)
+            => a.s < b.e && b.s < a.e;
     }
 }
