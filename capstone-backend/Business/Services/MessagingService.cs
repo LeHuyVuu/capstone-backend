@@ -218,44 +218,27 @@ public class MessagingService : IMessagingService
         await _messageRepository.AddAsync(message);
         await _unitOfWork.SaveChangesAsync();
 
-
-
         // Load sender info
         var messageWithSender = await _messageRepository.GetByIdWithSenderAsync(message.Id, cancellationToken);
         if (messageWithSender == null)
             throw new Exception("Message not found after creation");
 
-        // Create response for sender with IsMine = true
-        var senderResponse = MapToMessageResponse(messageWithSender, currentUserId);
-
-        // Create response for recipients with IsMine = false
-        // Use a dummy userId (0) that won't match the senderId, so IsMine will be false
-        var recipientResponse = new MessageResponse
+        // Notify conversation members via SignalR - create response for each member with correct IsMine
+        var members = await _memberRepository.GetActiveConversationMembersAsync(request.ConversationId, cancellationToken);
+        foreach (var member in members)
         {
-            Id = messageWithSender.Id,
-            ConversationId = messageWithSender.ConversationId ?? 0,
-            SenderId = messageWithSender.SenderId ?? 0,
-            SenderName = !string.IsNullOrWhiteSpace(messageWithSender.Sender?.DisplayName)
-                ? messageWithSender.Sender.DisplayName
-                : messageWithSender.Sender?.Email,
-            SenderAvatar = messageWithSender.Sender?.AvatarUrl,
-            Content = messageWithSender.Content,
-            MessageType = messageWithSender.MessageType ?? "TEXT",
-            ReferenceId = messageWithSender.ReferenceId,
-            ReferenceType = messageWithSender.ReferenceType,
-            Metadata = messageWithSender.Metadata,
-            CreatedAt = messageWithSender.CreatedAt,
-            UpdatedAt = messageWithSender.UpdatedAt,
-            IsMine = false  // Recipients should see IsMine = false
-        };
+            if (member.UserId == null || member.UserId == currentUserId)
+                continue;
+                
+            // Create response specific to this member so IsMine is correct
+            var memberResponse = MapToMessageResponse(messageWithSender, member.UserId.Value);
+            await _hubContext.Clients.User(member.UserId.Value.ToString())
+                .SendAsync("ReceiveMessage", memberResponse, cancellationToken);
+        }
 
-        // Broadcast to conversation group via SignalR
-        var groupName = $"conversation_{request.ConversationId}";
-        await _hubContext.Clients.Group(groupName)
-            .SendAsync("ReceiveMessage", recipientResponse, cancellationToken);
-
-        return senderResponse;
-
+        // Return response for sender with IsMine = true
+        var response = MapToMessageResponse(messageWithSender, currentUserId);
+        return response;
     }
 
     public async Task<MessagesPageResponse> GetMessagesAsync(
