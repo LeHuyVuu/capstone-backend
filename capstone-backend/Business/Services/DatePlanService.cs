@@ -89,12 +89,11 @@ namespace capstone_backend.Business.Services
 
                 // Get items
                 var datePlanItems = await _unitOfWork.DatePlanItems.GetByDatePlanIdAsync(datePlan.Id);
-                datePlanItems = datePlanItems.Select(dpi =>
+                foreach (var dpi in datePlanItems)
                 {
                     dpi.IsDeleted = true;
                     _unitOfWork.DatePlanItems.Update(dpi);
-                    return dpi;
-                }).ToList();
+                }
 
                 datePlan.IsDeleted = true;
                 _unitOfWork.DatePlans.Update(datePlan);
@@ -293,67 +292,72 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        private async Task<int> StartDatePlanAsync(DatePlan datePlan)
+        private async Task StartDatePlanAsync(DatePlan datePlan)
         {
             try
             {
-
-                if (datePlan.PlannedStartAt > DateTime.UtcNow && datePlan.PlannedEndAt > DateTime.UtcNow)
+                var now = DateTime.UtcNow;
+                var jobs = new List<DatePlanJob>();
+                if (datePlan.PlannedStartAt > now)
                 {
-                    var jobs = new List<DatePlanJob>();
+
 
                     string jobStartId = BackgroundJob.Schedule<IDatePlanWorker>(
                         w => w.StartDatePlanAsync(datePlan.Id),
                         datePlan.PlannedStartAt.Value);
 
                     // Save job
-                    var dateStartPlanJob = new DatePlanJob
+                    jobs.Add(new DatePlanJob
                     {
                         DatePlanId = datePlan.Id,
                         JobId = jobStartId,
                         JobType = DatePlanJobType.START.ToString()
-                    };
-                    jobs.Add(dateStartPlanJob);
+                    });
+                }
 
+                if (datePlan.PlannedEndAt > now)
+                {
                     string jobEndId = BackgroundJob.Schedule<IDatePlanWorker>(
                         w => w.EndDatePlanAsync(datePlan.Id),
                         datePlan.PlannedEndAt.Value);
 
                     // Save job
-                    var dateEndPlanJob = new DatePlanJob
+                    jobs.Add(new DatePlanJob
                     {
                         DatePlanId = datePlan.Id,
                         JobId = jobEndId,
                         JobType = DatePlanJobType.END.ToString()
-                    };
-                    jobs.Add(dateEndPlanJob);
+                    });
+                }
 
-                    string jobReminderId = BackgroundJob.Schedule<IDatePlanWorker>(
+                if (datePlan.PlannedStartAt.HasValue && datePlan.PlannedStartAt.Value.AddDays(-1) > now)
+                {
+                    string jobReminder1Id = BackgroundJob.Schedule<IDatePlanWorker>(
                         w => w.SendReminderAsync(datePlan.Id, "DAY"),
                         datePlan.PlannedStartAt.Value.AddDays(-1));
-                    
                     jobs.Add(new DatePlanJob
                     {
                         DatePlanId = datePlan.Id,
-                        JobId = jobReminderId,
+                        JobId = jobReminder1Id,
                         JobType = DatePlanJobType.REMINDER.ToString()
                     });
-
+                }
+            
+                if (datePlan.PlannedStartAt.HasValue && datePlan.PlannedStartAt.Value.AddHours(-1) > now)
+                {
                     string jobReminder2Id = BackgroundJob.Schedule<IDatePlanWorker>(
                         w => w.SendReminderAsync(datePlan.Id, "HOUR"),
                         datePlan.PlannedStartAt.Value.AddHours(-1));
-
                     jobs.Add(new DatePlanJob
                     {
                         DatePlanId = datePlan.Id,
                         JobId = jobReminder2Id,
                         JobType = DatePlanJobType.REMINDER.ToString()
                     });
-
-                    await _unitOfWork.DatePlanJobs.AddRangeAsync(jobs);
                 }
 
-                return await _unitOfWork.SaveChangesAsync();
+                if (jobs.Count > 0)
+                    await _unitOfWork.DatePlanJobs.AddRangeAsync(jobs);
             }
             catch (Exception)
             {
@@ -394,7 +398,7 @@ namespace capstone_backend.Business.Services
                     // Start date plan jobs
                     await StartDatePlanAsync(datePlan);
                 }
-                else if (action == DatePlanAction.REJECT)
+                else if (action == DatePlanAction.REJECT && datePlan.Status == DatePlanStatus.PENDING.ToString())
                 {
                     if (datePlan.OrganizerMemberId == member.Id)
                         throw new Exception("The organizer cannot reject the date plan");
@@ -423,7 +427,7 @@ namespace capstone_backend.Business.Services
                     throw new Exception("Invalid action or date plan status");
                 }
 
-                    _unitOfWork.DatePlans.Update(datePlan);
+                _unitOfWork.DatePlans.Update(datePlan);
                 return await _unitOfWork.SaveChangesAsync();
             }
             catch (Exception)
