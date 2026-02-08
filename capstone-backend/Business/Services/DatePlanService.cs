@@ -31,12 +31,12 @@ namespace capstone_backend.Business.Services
                 // Check member
                 var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
                 if (member == null)
-                    throw new Exception("Member not found");
+                    throw new Exception("Không tìm thấy hồ sơ thành viên");
 
                 // Check couple
                 var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
                 if (couple == null)
-                    throw new Exception("Member does not belong to any couples");
+                    throw new Exception("Thành viên chưa thuộc cặp đôi nào");
 
                 // Nomarlize date
                 var plannedStartAtUtc = DateTimeNormalizeUtil.NormalizeToUtc(request.PlannedStartAt);
@@ -44,7 +44,7 @@ namespace capstone_backend.Business.Services
 
                 if (plannedEndAtUtc < plannedStartAtUtc)
                 {
-                    throw new Exception("Planned end date must be greater than or equal to planned start date");
+                    throw new Exception("Thời gian kết thúc dự kiến không được sớm hơn thời gian bắt đầu dự kiến");
                 }
 
                 // Create date plan
@@ -72,29 +72,28 @@ namespace capstone_backend.Business.Services
             {
                 var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
                 if (member == null)
-                    throw new Exception("Member not found");
+                    throw new Exception("Không tìm thấy hồ sơ thành viên");
 
                 var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
                 if (couple == null)
-                    throw new Exception("Member does not belong to any couples");
+                    throw new Exception("Thành viên chưa thuộc cặp đôi nào");
 
                 var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
                 if (datePlan == null)
-                    throw new Exception("Date plan not found");
+                    throw new Exception("Không tìm thấy lịch trình buổi hẹn");
 
                 // Check status
                 if (datePlan.Status != DatePlanStatus.DRAFTED.ToString() &&
                     datePlan.Status != DatePlanStatus.PENDING.ToString())
-                    throw new Exception("Only date plans with status DRAFTED or PENDING can be deleted");
+                    throw new Exception("Chỉ có thể xoá lịch trình buổi hẹn ở trạng thái DRAFTED hoặc PENDING");
 
                 // Get items
                 var datePlanItems = await _unitOfWork.DatePlanItems.GetByDatePlanIdAsync(datePlan.Id);
-                datePlanItems = datePlanItems.Select(dpi =>
+                foreach (var dpi in datePlanItems)
                 {
                     dpi.IsDeleted = true;
                     _unitOfWork.DatePlanItems.Update(dpi);
-                    return dpi;
-                }).ToList();
+                }
 
                 datePlan.IsDeleted = true;
                 _unitOfWork.DatePlans.Update(datePlan);
@@ -113,11 +112,11 @@ namespace capstone_backend.Business.Services
             {
                 var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
                 if (member == null)
-                    throw new Exception("Member not found");
+                    throw new Exception("Không tìm thấy hồ sơ thành viên");
 
                 var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
                 if (couple == null)
-                    throw new Exception("Member does not belong to any couples");
+                    throw new Exception("Thành viên chưa thuộc cặp đôi nào");
 
                 var now = DateTime.UtcNow;
                 IEnumerable<DatePlan> items = Enumerable.Empty<DatePlan>();
@@ -199,15 +198,15 @@ namespace capstone_backend.Business.Services
             {
                 var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
                 if (member == null)
-                    throw new Exception("Member not found");
+                    throw new Exception("Không tìm thấy hồ sơ thành viên");
 
                 var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
                 if (couple == null)
-                    throw new Exception("Member does not belong to any couples");
+                    throw new Exception("Thành viên chưa thuộc cặp đôi nào");
 
                 var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id, true, true);
                 if (datePlan == null)
-                    throw new Exception("Date plan not found");
+                    throw new Exception("Không tìm thấy lịch trình buổi hẹn");
 
                 var response = _mapper.Map<DatePlanDetailResponse>(datePlan);
 
@@ -226,24 +225,24 @@ namespace capstone_backend.Business.Services
             {
                 var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
                 if (member == null)
-                    throw new Exception("Member not found");
+                    throw new Exception("Không tìm thấy hồ sơ thành viên");
 
                 var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
                 if (couple == null)
-                    throw new Exception("Member does not belong to any couples");
+                    throw new Exception("Thành viên chưa thuộc cặp đôi nào");
 
                 var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
                 if (datePlan == null)
-                    throw new Exception("Date plan not found");
+                    throw new Exception("Không tìm thấy lịch trình buổi hẹn");
 
                 // Check status
                 if (datePlan.Status != DatePlanStatus.DRAFTED.ToString() &&
                     datePlan.Status != DatePlanStatus.PENDING.ToString())
-                    throw new Exception("Only date plans with status DRAFTED or PENDING can be updated");
+                    throw new Exception("Chỉ có thể cập nhật lịch trình buổi hẹn ở trạng thái DRAFTED hoặc PENDING");
 
                 // Concurrency check
                 if (datePlan.Version != version)
-                    throw new Exception("The date plan has been modified by another process. Please reload and try again");
+                    throw new Exception("Lịch trình đã được chỉnh sửa bởi người khác. Vui lòng tải lại và thử lại");
 
                 /// Validate
                 if (request.PlannedStartAt.HasValue)
@@ -256,7 +255,7 @@ namespace capstone_backend.Business.Services
                 var newEnd = request.PlannedEndAt ?? datePlan.PlannedEndAt;
 
                 if (newStart.HasValue && newEnd.HasValue && newEnd.Value < newStart.Value)
-                    throw new Exception("Planned end date must be greater than or equal to planned start date");
+                    throw new Exception("Thời gian kết thúc dự kiến không được sớm hơn thời gian bắt đầu dự kiến");
 
                 // Apply partial updates
                 if (!string.IsNullOrWhiteSpace(request.Title))
@@ -279,7 +278,7 @@ namespace capstone_backend.Business.Services
                 _unitOfWork.DatePlans.Update(datePlan);
                 var check = await _unitOfWork.SaveChangesAsync();
                 if (check <= 0)
-                    throw new Exception("Failed to update date plan");
+                    throw new Exception("Cập nhật lịch trình thất bại");
 
                 var response = _mapper.Map<DatePlanResponse>(datePlan);
 
@@ -293,67 +292,72 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        private async Task<int> StartDatePlanAsync(DatePlan datePlan)
+        private async Task StartDatePlanAsync(DatePlan datePlan)
         {
             try
             {
-
-                if (datePlan.PlannedStartAt > DateTime.UtcNow && datePlan.PlannedEndAt > DateTime.UtcNow)
+                var now = DateTime.UtcNow;
+                var jobs = new List<DatePlanJob>();
+                if (datePlan.PlannedStartAt > now)
                 {
-                    var jobs = new List<DatePlanJob>();
+
 
                     string jobStartId = BackgroundJob.Schedule<IDatePlanWorker>(
                         w => w.StartDatePlanAsync(datePlan.Id),
                         datePlan.PlannedStartAt.Value);
 
                     // Save job
-                    var dateStartPlanJob = new DatePlanJob
+                    jobs.Add(new DatePlanJob
                     {
                         DatePlanId = datePlan.Id,
                         JobId = jobStartId,
                         JobType = DatePlanJobType.START.ToString()
-                    };
-                    jobs.Add(dateStartPlanJob);
+                    });
+                }
 
+                if (datePlan.PlannedEndAt > now)
+                {
                     string jobEndId = BackgroundJob.Schedule<IDatePlanWorker>(
                         w => w.EndDatePlanAsync(datePlan.Id),
                         datePlan.PlannedEndAt.Value);
 
                     // Save job
-                    var dateEndPlanJob = new DatePlanJob
+                    jobs.Add(new DatePlanJob
                     {
                         DatePlanId = datePlan.Id,
                         JobId = jobEndId,
                         JobType = DatePlanJobType.END.ToString()
-                    };
-                    jobs.Add(dateEndPlanJob);
+                    });
+                }
 
-                    string jobReminderId = BackgroundJob.Schedule<IDatePlanWorker>(
+                if (datePlan.PlannedStartAt.HasValue && datePlan.PlannedStartAt.Value.AddDays(-1) > now)
+                {
+                    string jobReminder1Id = BackgroundJob.Schedule<IDatePlanWorker>(
                         w => w.SendReminderAsync(datePlan.Id, "DAY"),
                         datePlan.PlannedStartAt.Value.AddDays(-1));
-                    
                     jobs.Add(new DatePlanJob
                     {
                         DatePlanId = datePlan.Id,
-                        JobId = jobReminderId,
+                        JobId = jobReminder1Id,
                         JobType = DatePlanJobType.REMINDER.ToString()
                     });
-
+                }
+            
+                if (datePlan.PlannedStartAt.HasValue && datePlan.PlannedStartAt.Value.AddHours(-1) > now)
+                {
                     string jobReminder2Id = BackgroundJob.Schedule<IDatePlanWorker>(
                         w => w.SendReminderAsync(datePlan.Id, "HOUR"),
                         datePlan.PlannedStartAt.Value.AddHours(-1));
-
                     jobs.Add(new DatePlanJob
                     {
                         DatePlanId = datePlan.Id,
                         JobId = jobReminder2Id,
                         JobType = DatePlanJobType.REMINDER.ToString()
                     });
-
-                    await _unitOfWork.DatePlanJobs.AddRangeAsync(jobs);
                 }
 
-                return await _unitOfWork.SaveChangesAsync();
+                if (jobs.Count > 0)
+                    await _unitOfWork.DatePlanJobs.AddRangeAsync(jobs);
             }
             catch (Exception)
             {
@@ -368,42 +372,42 @@ namespace capstone_backend.Business.Services
             {
                 var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
                 if (member == null)
-                    throw new Exception("Member not found");
+                    throw new Exception("Không tìm thấy hồ sơ thành viên");
 
                 var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
                 if (couple == null)
-                    throw new Exception("Member does not belong to any couples");
+                    throw new Exception("Thành viên chưa thuộc cặp đôi nào");
 
                 var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
                 if (datePlan == null)
-                    throw new Exception("Date plan not found");
+                    throw new Exception("Không tìm thấy lịch trình buổi hẹn");
 
                 if (action == DatePlanAction.SEND)
                 {
                     // Check if whose is organizer
                     if (datePlan.OrganizerMemberId != member.Id)
-                        throw new Exception("Only the organizer can send the date plan");
+                        throw new Exception("Chỉ người tổ chức mới có quyền gửi lịch trình buổi hẹn");
                     datePlan.Status = DatePlanStatus.PENDING.ToString();
                 }
                 else if (action == DatePlanAction.ACCEPT && datePlan.Status == DatePlanStatus.PENDING.ToString())
                 {
                     if (datePlan.OrganizerMemberId == member.Id)
-                        throw new Exception("The organizer cannot accept the date plan");
+                        throw new Exception("Người tổ chức không thể chấp nhận lịch trình buổi hẹn");
                     datePlan.Status = DatePlanStatus.SCHEDULED.ToString();
 
                     // Start date plan jobs
                     await StartDatePlanAsync(datePlan);
                 }
-                else if (action == DatePlanAction.REJECT)
+                else if (action == DatePlanAction.REJECT && datePlan.Status == DatePlanStatus.PENDING.ToString())
                 {
                     if (datePlan.OrganizerMemberId == member.Id)
-                        throw new Exception("The organizer cannot reject the date plan");
+                        throw new Exception("Người tổ chức không thể từ chối lịch trình buổi hẹn");
                     datePlan.Status = DatePlanStatus.DRAFTED.ToString();
                 }
                 else if (action == DatePlanAction.CANCEL && (datePlan.Status == DatePlanStatus.SCHEDULED.ToString() || datePlan.Status == DatePlanStatus.IN_PROGRESS.ToString()))
                 {
                     if (datePlan.OrganizerMemberId != member.Id)
-                        throw new Exception("Only the organizer can cancel the date plan");
+                        throw new Exception("Chỉ người tổ chức mới có quyền huỷ trình buổi hẹn");
                     datePlan.Status = DatePlanStatus.CANCELLED.ToString();
 
                     // Remove jobs
@@ -412,7 +416,7 @@ namespace capstone_backend.Business.Services
                 else if (action == DatePlanAction.COMPLETE && datePlan.Status == DatePlanStatus.IN_PROGRESS.ToString())
                 {
                     if (datePlan.OrganizerMemberId != member.Id)
-                        throw new Exception("Only the organizer can complete the date plan");
+                        throw new Exception("Chỉ người tổ chức mới có quyền hoàn thành lịch trình buổi hẹn");
                     datePlan.Status = DatePlanStatus.COMPLETED.ToString();
                     datePlan.CompletedAt = DateTime.UtcNow;
                     // Remove jobs
@@ -420,10 +424,10 @@ namespace capstone_backend.Business.Services
                 }
                 else
                 {
-                    throw new Exception("Invalid action or date plan status");
+                    throw new Exception("Thao tác không hợp lệ hoặc trạng thái lịch trình buổi hẹn không phù hợp");
                 }
 
-                    _unitOfWork.DatePlans.Update(datePlan);
+                _unitOfWork.DatePlans.Update(datePlan);
                 return await _unitOfWork.SaveChangesAsync();
             }
             catch (Exception)

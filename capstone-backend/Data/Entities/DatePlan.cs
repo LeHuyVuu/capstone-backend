@@ -22,6 +22,8 @@ public partial class DatePlan
 
     public int? Version { get; set; }
 
+    public int TotalCount { get; set; }
+
     public DateTime? PlannedStartAt { get; set; }
 
     public DateTime? PlannedEndAt { get; set; }

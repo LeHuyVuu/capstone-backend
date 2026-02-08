@@ -2,6 +2,7 @@
 using capstone_backend.Business.DTOs.DatePlanItem;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Enums;
+using capstone_backend.Extensions.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -49,7 +50,7 @@ namespace capstone_backend.Api.Controllers
                     TotalUpcoming = totalUpcoming
                 };
 
-                return OkResponse(customReponse, "Fetched date plans successfully");
+                return OkResponse(customReponse, "Lấy danh sách lịch trình buổi hẹn thành công");
             }
             catch (Exception ex)
             {
@@ -65,13 +66,13 @@ namespace capstone_backend.Api.Controllers
         public async Task<IActionResult> GetDatePlanItems(
             int datePlanId,
             [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 5)
+            [FromQuery] int pageSize = 10)
         {
             try
             {
                 var userId = GetCurrentUserId();
                 var result = await _datePlanItemService.GetAllAsync(pageNumber, pageSize, userId.Value, datePlanId);
-                return OkResponse(result, "Fetched date plan items successfully");
+                return OkResponse(result, "Lấy danh sách mục lịch trình thành công");
             }
             catch (Exception ex)
             {
@@ -89,7 +90,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 var result = await _datePlanService.GetByIdAsync(datePlanId, userId.Value);
-                return OkResponse(result, "Fetched date plan detail successfully");
+                return OkResponse(result, "Lấy chi tiết 1 lịch trình buổi hẹn thành công");
             }
             catch (Exception ex)
             {
@@ -108,7 +109,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 var result = await _datePlanItemService.GetDetailDatePlanItemAsync(userId.Value, datePlanItemId, datePlanId);
-                return OkResponse(result, "Fetched date plan item detail successfully");
+                return OkResponse(result, "Lấy chi tiết 1 mục lịch trình thành công");
             }
             catch (Exception ex)
             {
@@ -126,7 +127,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 var result = await _datePlanService.ActionDatePlanAsync(userId.Value, datePlanId, DatePlanAction.SEND);
-                return OkResponse(result, "Sent date plan to couple member successfully");
+                return OkResponse(result, "Gửi lịch trình buổi hẹn cho nửa kia thành công");
             }
             catch (Exception ex)
             {
@@ -144,7 +145,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 var result = await _datePlanService.ActionDatePlanAsync(userId.Value, datePlanId, DatePlanAction.ACCEPT);
-                return OkResponse(result, "Accepted date plan to couple member successfully");
+                return OkResponse(result, "Chấp nhận lịch trình buổi hẹn từ nửa kia thành công");
             }
             catch (Exception ex)
             {
@@ -162,7 +163,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 var result = await _datePlanService.ActionDatePlanAsync(userId.Value, datePlanId, DatePlanAction.REJECT);
-                return OkResponse(result, "Rejected date plan to couple member successfully");
+                return OkResponse(result, "Từ chối lịch trình buổi hẹn từ nửa kia thành công");
             }
             catch (Exception ex)
             {
@@ -180,7 +181,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 var result = await _datePlanService.ActionDatePlanAsync(userId.Value, datePlanId, DatePlanAction.CANCEL);
-                return OkResponse(result, "Cancelled date plan to couple member successfully");
+                return OkResponse(result, "Huỷ lịch trình buổi hẹn thành công");
             }
             catch (Exception ex)
             {
@@ -198,7 +199,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 var result = await _datePlanService.ActionDatePlanAsync(userId.Value, datePlanId, DatePlanAction.COMPLETE);
-                return OkResponse(result, "Completed date plan to couple member successfully");
+                return OkResponse(result, "Hoàn thành lịch trình buổi hẹn thành công");
             }
             catch (Exception ex)
             {
@@ -216,9 +217,10 @@ namespace capstone_backend.Api.Controllers
             try
             {
                 var userId = GetCurrentUserId();
+
                 var result = await _datePlanService.CreateDatePlanAsync(userId.Value, request);
 
-                return OkResponse(result, "Created date plan successfully");
+                return OkResponse(result, "Tạo lịch trình buổi hẹn thành công");
             }
             catch (Exception ex)
             {
@@ -236,7 +238,27 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 var result = await _datePlanItemService.AddVenuesToDatePlanAsync(userId.Value, datePlanId, request);
-                return OkResponse(result, "Added venues to date plan successfully");
+                return OkResponse(result, "Thêm địa điểm mới vào lịch trình buổi hẹn thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Reorder Date Plan Items
+        /// </summary>
+        [HttpPut("{datePlanId:int}/items/reorder")]
+        public async Task<IActionResult> ReorderDatePlanItems(
+            int datePlanId,
+            [FromBody] ReorderDatePlanItemsRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanItemService.ReorderDatePlanItemAsync(userId.Value, datePlanId, request);
+                return OkResponse(result, "Sắp xếp địa điểm thành công");
             }
             catch (Exception ex)
             {
@@ -256,7 +278,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 var result = await _datePlanService.UpdateDatePlanAsync(userId.Value, datePlanId, version, request);
-                return OkResponse(result, "Updated date plan successfully");
+                return OkResponse(result, "Cập nhật lịch trình thành công");
             }
             catch (Exception ex)
             {
@@ -279,7 +301,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 var result = await _datePlanItemService.UpdateItemAsync(userId.Value, datePlanId, datePlanItemId, version, request);
-                return OkResponse(result, "Updated date plan item successfully");
+                return OkResponse(result, "Cập nhật mục lịch trình thành công");
             }
             catch (Exception ex)
             {
@@ -301,9 +323,9 @@ namespace capstone_backend.Api.Controllers
                 var result = await _datePlanService.DeleteDatePlanAsync(userId.Value, datePlanId);
                 if (result <= 0)
                 {
-                    return BadRequestResponse("Failed to delete date plan");
+                    return BadRequestResponse("Xoá lịch trình thất bại");
                 }
-                return OkResponse(result, "Deleted date plan successfully");
+                return OkResponse(result, "Xoá lịch trình thành công");
             }
             catch (Exception ex)
             {
@@ -325,9 +347,9 @@ namespace capstone_backend.Api.Controllers
                 var result = await _datePlanItemService.DeleteDatePlanItemAsync(userId.Value, datePlanItemId, datePlanId);
                 if (result <= 0)
                 {
-                    return BadRequestResponse("Failed to delete date plan item");
+                    return BadRequestResponse("Xoá mục lịch trình thất bại");
                 }
-                return OkResponse(result, "Deleted date plan successfully");
+                return OkResponse(result, "Xoá mục lịch trình thành công");
             }
             catch (Exception ex)
             {
