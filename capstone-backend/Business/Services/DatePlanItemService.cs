@@ -102,30 +102,31 @@ namespace capstone_backend.Business.Services
                     }
                 }
 
-                var items = venues.Select(v =>
+                var maxOderIndex = datePlanItems
+                    .Select(x => x.OrderIndex)
+                    .Max() ?? 0;
+
+                var items = new List<DatePlanItem>();
+
+                var planStartVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedStartAt!.Value);
+                var planEndVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedEndAt!.Value);
+
+                foreach (var v in venues)
                 {
 
-                    var planStartVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedStartAt.Value); // DateTime
-                    var planDay = DateOnly.FromDateTime(planStartVn);
-
-                    DateTime itemStartVn = planDay.ToDateTime(v.StartTime.Value);
-                    DateTime itemEndVn = planDay.ToDateTime(v.EndTime.Value);
-
-                    if (v.EndTime.Value < v.StartTime.Value)
-                        itemEndVn = itemEndVn.AddDays(1);
-
-                    if (itemStartVn < planStartVn) 
-                        throw new Exception("Item start cannot be before plan start");
-
-                    var planEndVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedEndAt.Value);
-                    if (itemEndVn > planEndVn) 
-                        throw new Exception("Item end cannot be after plan end");
+                    var (itemStartVn, itemEndVn) = ResolveItemRangeWithinPlan(
+                        planStartVn, planEndVn,
+                        v.StartTime.Value, v.EndTime.Value
+                    );
 
                     var item = _mapper.Map<DatePlanItem>(v);
                     item.DatePlanId = datePlanId;
 
-                    return item;
-                }).ToList();
+                    item.OrderIndex = ++maxOderIndex;
+                    items.Add(item);
+
+                    datePlan.TotalCount = datePlan.TotalCount += 1;
+                };
 
                 _unitOfWork.DatePlans.Update(datePlan);
                 await _unitOfWork.DatePlanItems.AddRangeAsync(items);
@@ -137,6 +138,34 @@ namespace capstone_backend.Business.Services
                 throw;
             }
         }
+
+        private static (DateTime Start, DateTime End) ResolveItemRangeWithinPlan(
+            DateTime planStartVn,
+            DateTime planEndVn,
+            TimeOnly startTime,
+            TimeOnly endTime)
+        {
+            var day0 = DateOnly.FromDateTime(planStartVn);
+            var candidates = new[]
+            {
+                day0.ToDateTime(startTime),
+                day0.AddDays(1).ToDateTime(startTime)
+            };
+
+            foreach (var start in candidates)
+            {
+                var end = DateOnly.FromDateTime(start).ToDateTime(endTime);
+
+                if (endTime < startTime)
+                    end = end.AddDays(1);
+
+                if (start >= planStartVn && end <= planEndVn && end > start)
+                    return (start, end);
+            }
+
+            throw new Exception("Item time is outside date plan time range");
+        }
+
 
         public async Task<int> DeleteDatePlanItemAsync(int value, int datePlanItemId, int datePlanId)
         {
