@@ -247,6 +247,26 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Reorder Date Plan Items
+        /// </summary>
+        [HttpPut("{datePlanId:int}/items/reorder")]
+        public async Task<IActionResult> ReorderDatePlanItems(
+            int datePlanId,
+            [FromBody] ReorderDatePlanItemsRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanItemService.ReorderDatePlanItemAsync(userId.Value, datePlanId, request);
+                return OkResponse(result, "Reordered date plan items successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Update Date Plan
         /// </summary>
         [HttpPatch("{datePlanId:int}")]

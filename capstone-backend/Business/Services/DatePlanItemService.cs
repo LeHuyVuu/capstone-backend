@@ -328,5 +328,66 @@ namespace capstone_backend.Business.Services
                 throw;
             }
         }
+
+        public async Task<bool> ReorderDatePlanItemAsync(int userId, int datePlanId, ReorderDatePlanItemsRequest request)
+        {
+            try
+            {
+                // Validate input
+                var orderedIds = request?.OrderedItemIds ?? new List<int>();
+                if (orderedIds.Count == 0)
+                    throw new Exception("OrderedItemIds cannot be empty");
+
+                if (orderedIds.Count != orderedIds.Distinct().Count())
+                    throw new Exception("Duplicate item ids in request");
+
+                // Auth check
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member not found");
+
+                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                if (couple == null)
+                    throw new Exception("Member does not belong to any couples");
+
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
+                if (datePlan == null)
+                    throw new Exception("Date plan not found");
+
+                var datePlanItems = await _unitOfWork.DatePlanItems.GetByDatePlanIdAsync(datePlanId);
+
+                if (orderedIds.Count != datePlanItems.Count())
+                    throw new Exception("OrderedItemIds must contain all active items of the plan");
+
+                var activeIdSet = datePlanItems
+                    .Select(x => x.Id)
+                    .ToHashSet();
+                var invalidIds = orderedIds
+                    .Where(id => !activeIdSet.Contains(id))
+                    .ToList();
+                if (invalidIds.Any())
+                    throw new Exception($"Some items do not belong to this date plan: {string.Join(", ", invalidIds)}");
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                var newIndexMap = orderedIds
+                    .Select((id, idx) => new { id, idx })
+                    .ToDictionary(x => x.id, x => x.idx);
+
+                foreach (var item in datePlanItems)
+                    item.OrderIndex = newIndexMap[item.Id] + 1;
+
+                _unitOfWork.DatePlanItems.UpdateRange(datePlanItems);
+                await _unitOfWork.SaveChangesAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
     }
 }
