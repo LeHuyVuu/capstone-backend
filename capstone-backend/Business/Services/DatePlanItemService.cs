@@ -5,6 +5,7 @@ using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
+using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Services
 {
@@ -61,29 +62,71 @@ namespace capstone_backend.Business.Services
                     .Distinct()
                     .ToList();
 
+                var planStartVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedStartAt!.Value);
+                var planEndVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedEndAt!.Value);
+
                 if (requestVenueIds.Count != requestVenueIds.Distinct().Count())
                     throw new Exception("Duplicate venue locations in request");
 
                 if (requestVenueIds.Any(id => existingVenueIds.Contains(id)))
                     throw new Exception($"Venue locations already exist in this date plan: {string.Join(", ", existedIds)}");
 
+                var venuesWithTime = venues
+                    .Where(v => v.StartTime.HasValue && v.EndTime.HasValue)
+                    .ToList();
 
-                var items = venues.Select(v =>
+                var rangesNew = venuesWithTime.Select(v => new
+                {
+                    V = v,
+                    Range = ResolveItemRangeWithinPlan(planStartVn, planEndVn, v.StartTime!.Value, v.EndTime!.Value)
+                }).ToList();
+
+                // new - new
+                for (int i = 0; i < rangesNew.Count; i++)
+                    for (int j = i + 1; j < rangesNew.Count; j++)
+                    {
+                        if (Overlap(rangesNew[i].Range, rangesNew[j].Range))
+                            throw new Exception($"Time overlap on request");
+                    }
+
+                var existingWithTime = datePlanItems
+                    .Where(x => x.StartTime.HasValue && x.EndTime.HasValue)
+                    .Select(x => new
+                    {
+                        Item = x,
+                        Range = ResolveItemRangeWithinPlan(planStartVn, planEndVn, x.StartTime!.Value, x.EndTime!.Value)
+                    })
+                    .ToList();
+
+                foreach (var n in rangesNew)
+                    foreach (var ex in existingWithTime)
+                    {
+                        if (Overlap(n.Range, ex.Range))
+                            throw new Exception($"Time overlap on exist items");
+                    }
+
+                var maxOderIndex = datePlanItems
+                    .Select(x => x.OrderIndex)
+                    .Max() ?? 0;
+
+                var items = new List<DatePlanItem>();             
+
+                foreach (var v in venues)
                 {
 
-                    // Check if item start time is after date plan start time
-                    if (v.StartTime.HasValue && v.StartTime.Value < TimeOnly.FromDateTime(TimezoneUtil.ToVietNamTime(datePlan.PlannedStartAt.Value)))
-                        throw new Exception("Date plan item start time cannot be before date plan start time");
-
-                    // Check if item end time is after date plan end time
-                    if (v.EndTime.HasValue && v.EndTime.Value > TimeOnly.FromDateTime(TimezoneUtil.ToVietNamTime(datePlan.PlannedEndAt.Value)))
-                        throw new Exception("Date plan item end time cannot be after date plan end time");
+                    var (itemStartVn, itemEndVn) = ResolveItemRangeWithinPlan(
+                        planStartVn, planEndVn,
+                        v.StartTime.Value, v.EndTime.Value
+                    );
 
                     var item = _mapper.Map<DatePlanItem>(v);
                     item.DatePlanId = datePlanId;
 
-                    return item;
-                }).ToList();
+                    item.OrderIndex = ++maxOderIndex;
+                    items.Add(item);
+
+                    datePlan.TotalCount += 1;
+                };
 
                 _unitOfWork.DatePlans.Update(datePlan);
                 await _unitOfWork.DatePlanItems.AddRangeAsync(items);
@@ -95,6 +138,34 @@ namespace capstone_backend.Business.Services
                 throw;
             }
         }
+
+        private static (DateTime Start, DateTime End) ResolveItemRangeWithinPlan(
+            DateTime planStartVn,
+            DateTime planEndVn,
+            TimeOnly startTime,
+            TimeOnly endTime)
+        {
+            var day0 = DateOnly.FromDateTime(planStartVn);
+            var candidates = new[]
+            {
+                day0.ToDateTime(startTime),
+                day0.AddDays(1).ToDateTime(startTime)
+            };
+
+            foreach (var start in candidates)
+            {
+                var end = DateOnly.FromDateTime(start).ToDateTime(endTime);
+
+                if (endTime < startTime)
+                    end = end.AddDays(1);
+
+                if (start >= planStartVn && end <= planEndVn && end > start)
+                    return (start, end);
+            }
+
+            throw new Exception("Item time is outside date plan time range");
+        }
+
 
         public async Task<int> DeleteDatePlanItemAsync(int value, int datePlanItemId, int datePlanId)
         {
@@ -141,7 +212,7 @@ namespace capstone_backend.Business.Services
                 if (couple == null)
                     throw new Exception("Member does not belong to any couples");
 
-                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id, includeVenueLocation: true);
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
                 if (datePlan == null)
                     throw new Exception("Date plan not found");
 
@@ -149,7 +220,8 @@ namespace capstone_backend.Business.Services
                         pageNumber,
                         pageSize,
                         dpi => dpi.DatePlanId == datePlanId && dpi.IsDeleted == false,
-                        dpi => dpi.OrderBy(dpi => dpi.OrderIndex)
+                        dpi => dpi.OrderBy(dpi => dpi.OrderIndex),
+                        dpi => dpi.Include(x => x.VenueLocation)
                     );
 
                 return new PagedResult<DatePlanItemResponse>
@@ -239,6 +311,7 @@ namespace capstone_backend.Business.Services
                     datePlanItem.Note = request.Note;
 
                 datePlan.UpdatedAt = DateTime.UtcNow;
+                datePlan.Version += 1;
 
                 _unitOfWork.DatePlanItems.Update(datePlanItem);
                 _unitOfWork.DatePlans.Update(datePlan);
@@ -256,5 +329,69 @@ namespace capstone_backend.Business.Services
                 throw;
             }
         }
+
+        public async Task<bool> ReorderDatePlanItemAsync(int userId, int datePlanId, ReorderDatePlanItemsRequest request)
+        {
+            try
+            {
+                // Validate input
+                var orderedIds = request?.OrderedItemIds ?? new List<int>();
+                if (orderedIds.Count == 0)
+                    throw new Exception("OrderedItemIds cannot be empty");
+
+                if (orderedIds.Count != orderedIds.Distinct().Count())
+                    throw new Exception("Duplicate item ids in request");
+
+                // Auth check
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null)
+                    throw new Exception("Member not found");
+
+                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                if (couple == null)
+                    throw new Exception("Member does not belong to any couples");
+
+                var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id);
+                if (datePlan == null)
+                    throw new Exception("Date plan not found");
+
+                var datePlanItems = await _unitOfWork.DatePlanItems.GetByDatePlanIdAsync(datePlanId);
+
+                if (orderedIds.Count != datePlanItems.Count())
+                    throw new Exception("OrderedItemIds must contain all active items of the plan");
+
+                var activeIdSet = datePlanItems
+                    .Select(x => x.Id)
+                    .ToHashSet();
+                var invalidIds = orderedIds
+                    .Where(id => !activeIdSet.Contains(id))
+                    .ToList();
+                if (invalidIds.Any())
+                    throw new Exception($"Some items do not belong to this date plan: {string.Join(", ", invalidIds)}");
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                var newIndexMap = orderedIds
+                    .Select((id, idx) => new { id, idx })
+                    .ToDictionary(x => x.id, x => x.idx);
+
+                foreach (var item in datePlanItems)
+                    item.OrderIndex = newIndexMap[item.Id] + 1;
+
+                _unitOfWork.DatePlanItems.UpdateRange(datePlanItems);
+                await _unitOfWork.SaveChangesAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
+                return true;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        private static bool Overlap((DateTime s, DateTime e) a, (DateTime s, DateTime e) b)
+            => a.s < b.e && b.s < a.e;
     }
 }
