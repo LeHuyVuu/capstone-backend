@@ -49,6 +49,14 @@ public class MessagingService : IMessagingService
         if (!memberIds.Contains(currentUserId))
             memberIds.Add(currentUserId);
 
+        // Validate all member users exist in database
+        foreach (var memberId in memberIds)
+        {
+            var user = await _unitOfWork.Users.GetByIdAsync(memberId);
+            if (user == null)
+                throw new BadRequestException($"User with ID {memberId} not found", "USER_NOT_FOUND");
+        }
+
         // For direct conversation, must have exactly 2 members
         if (request.Type == "DIRECT")
         {
@@ -120,6 +128,11 @@ public class MessagingService : IMessagingService
 
         if (currentUserId == otherUserId)
             throw new Exception("Cannot create conversation with yourself");
+
+        // Validate other user exists
+        var otherUser = await _unitOfWork.Users.GetByIdAsync(otherUserId);
+        if (otherUser == null)
+            throw new BadRequestException($"User with ID {otherUserId} not found", "USER_NOT_FOUND");
 
         // Check if conversation exists
         var existing = await _conversationRepository.GetDirectConversationAsync(currentUserId, otherUserId, cancellationToken);
