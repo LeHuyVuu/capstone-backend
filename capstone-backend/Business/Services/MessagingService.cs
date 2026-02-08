@@ -507,8 +507,10 @@ public class MessagingService : IMessagingService
             {
                 UserId = m.UserId ?? 0,
                 Username = m.User?.Email,
-                FullName = m.User?.DisplayName, // Adjust based on your User entity
-                Avatar = null, // Adjust based on your User entity
+                FullName = !string.IsNullOrWhiteSpace(m.User?.DisplayName) 
+                    ? m.User.DisplayName 
+                    : m.User?.Email,
+                Avatar = m.User?.AvatarUrl,
                 Role = m.Role ?? "MEMBER",
                 JoinedAt = m.JoinedAt,
                 IsOnline = false // TODO: Implement online status tracking
@@ -535,8 +537,10 @@ public class MessagingService : IMessagingService
             Id = message.Id,
             ConversationId = message.ConversationId ?? 0,
             SenderId = message.SenderId ?? 0,
-            SenderName = message.Sender?.Email,
-            SenderAvatar = null, // Adjust based on your User entity
+            SenderName = !string.IsNullOrWhiteSpace(message.Sender?.DisplayName)
+                ? message.Sender.DisplayName
+                : message.Sender?.Email,
+            SenderAvatar = message.Sender?.AvatarUrl,
             Content = message.Content,
             MessageType = message.MessageType ?? "TEXT",
             ReferenceId = message.ReferenceId,
