@@ -210,7 +210,7 @@ public class VenueLocationService : IVenueLocationService
         var summary = new ReviewSummary
         {
             TotalReviews = ratings.Count,
-            AverageRating = ratings.Any() ? (decimal)ratings.Average() : 0m,
+            AverageRating = ratings.Any() ? Math.Round((decimal)ratings.Average(), 1) : 0m,
             Ratings = new List<RatingDistribution>(),
             MatchedReviewsCount = matchedReviewCount,
             MoodMatchPercentage = totalReviewCount > 0 
@@ -886,7 +886,7 @@ public class VenueLocationService : IVenueLocationService
             Latitude = v.Latitude,
             Longitude = v.Longitude,
             Area = v.Area,
-            AverageRating = v.AverageRating,
+            AverageRating = v.AverageRating.HasValue ? Math.Round(v.AverageRating.Value, 1) : null,
             AvarageCost = v.AvarageCost,
             ReviewCount = v.ReviewCount,
             Status = v.Status,
@@ -1027,7 +1027,7 @@ public class VenueLocationService : IVenueLocationService
             Latitude = v.Latitude,
             Longitude = v.Longitude,
             Area = v.Area,
-            AverageRating = v.AverageRating,
+            AverageRating = v.AverageRating.HasValue ? Math.Round(v.AverageRating.Value, 1) : null,
             AvarageCost = v.AvarageCost,
             ReviewCount = v.ReviewCount,
             Status = v.Status,
