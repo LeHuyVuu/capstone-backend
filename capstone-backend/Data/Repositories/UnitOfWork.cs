@@ -34,7 +34,8 @@ public class UnitOfWork : IUnitOfWork
         IDeviceTokenRepository deviceTokenRepository,
         IDatePlanJobRepository datePlanJobRepository,
         IReviewRepository reviewRepository,
-        ICheckInHistoryRepository checkInHistoryRepository)
+        ICheckInHistoryRepository checkInHistoryRepository,
+        IMediaRepository mediaRepository)
     {
         _context = context;
         Users = userRepository;
@@ -57,6 +58,7 @@ public class UnitOfWork : IUnitOfWork
         DatePlanJobs = datePlanJobRepository;
         Reviews = reviewRepository;
         CheckInHistories = checkInHistoryRepository;
+        Media = mediaRepository;
     }
 
     public MyDbContext Context => _context;
@@ -100,6 +102,8 @@ public class UnitOfWork : IUnitOfWork
     public IReviewRepository Reviews { get; }
 
     public ICheckInHistoryRepository CheckInHistories { get; }
+
+    public IMediaRepository Media { get; }
 
     public async Task<int> SaveChangesAsync()
     {

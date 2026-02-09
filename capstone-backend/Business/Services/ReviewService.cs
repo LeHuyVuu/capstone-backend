@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using capstone_backend.Business.Common;
 using capstone_backend.Business.DTOs.Review;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Review;
@@ -13,11 +14,13 @@ namespace capstone_backend.Business.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly S3StorageService _s3Service;
 
-        public ReviewService(IUnitOfWork unitOfWork, IMapper mapper)
+        public ReviewService(IUnitOfWork unitOfWork, IMapper mapper, S3StorageService s3Service)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _s3Service = s3Service;
         }
 
         public async Task<int> CheckinAsync(int userId, CheckinRequest request)
@@ -101,7 +104,7 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Không tìm thấy lịch sử check-in hợp lệ");
 
             if (checkIn.IsValid != true)
-                throw new Exception("Lịch sử check-in chưa được xác thực, không thể đánh giá địa điểm");
+                throw new Exception("Lịch sử check-in chưa được xác thực, không thể đánh giá địa điểm");          
 
             var review = _mapper.Map<Review>(request);
             review.MemberId = member.Id;
@@ -112,6 +115,25 @@ namespace capstone_backend.Business.Services
 
             _unitOfWork.CheckInHistories.Update(checkIn);
             await _unitOfWork.Reviews.AddAsync(review);
+
+            // Upload s3
+            if (request.Images != null && request.Images.Any())
+            {
+                foreach (var imageFile in request.Images)
+                {
+                    var imageUrl = await _s3Service.UploadFileAsync(imageFile, userId, S3Keys.REVIEW);
+
+                    await _unitOfWork.Media.AddAsync(new Media
+                    {
+                        Url = imageUrl,
+                        UploaderId = userId,
+                        MediaType = MediaType.IMAGE.ToString(),
+                        TargetId = review.Id,
+                        TargetType = ReferenceType.REVIEW.ToString()
+                    });
+                }
+            }
+
             return await _unitOfWork.SaveChangesAsync();
         }
 

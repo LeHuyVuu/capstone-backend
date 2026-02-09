@@ -98,6 +98,7 @@ public static class ServiceExtensions
         services.AddScoped<IDatePlanJobRepository, DatePlanJobRepository>();
         services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<ICheckInHistoryRepository, CheckInHistoryRepository>();
+        services.AddScoped<IMediaRepository, MediaRepository>();
 
         // Messaging repositories
         services.AddScoped<IConversationRepository, ConversationRepository>();

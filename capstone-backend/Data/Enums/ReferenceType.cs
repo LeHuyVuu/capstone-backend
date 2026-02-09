@@ -5,6 +5,7 @@
         UNKNOWN,
         DATE_PLAN,
         VENUE_LOCATION,
-        CHECK_IN_HISTORY
+        CHECK_IN_HISTORY,
+        REVIEW,
     }
 }

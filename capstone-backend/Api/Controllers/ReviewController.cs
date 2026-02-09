@@ -1,11 +1,13 @@
 ﻿using capstone_backend.Business.DTOs.Review;
 using capstone_backend.Business.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace capstone_backend.Api.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize(Roles = "MEMBER, member")]
     [ApiController]
     public class ReviewController : BaseController
     {
@@ -57,10 +59,23 @@ namespace capstone_backend.Api.Controllers
         /// Submit a review for a venue location
         /// </summary>
         [HttpPost("submit")]
-        public async Task<IActionResult> SubmitReviewAsync([FromBody] CreateReviewRequest request)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> SubmitReviewAsync([FromForm] CreateReviewRequest request)
         {
             try
             {
+                if (request.Images != null)
+                {
+                    if (request.Images.Count > 5)
+                        return BadRequestResponse("Tối đa 5 ảnh");
+
+                    foreach (var img in request.Images)
+                    {
+                        if (img.Length > 5 * 1024 * 1024) // 5MB
+                            return BadRequestResponse($"Ảnh {img.FileName} nặng quá (>5MB).");
+                    }
+                }
+
                 var userId = GetCurrentUserId();
                 var result = await _reviewService.SubmitReviewAsync(userId.Value, request);
                 return OkResponse(result, "Đánh giá địa điểm thành công");

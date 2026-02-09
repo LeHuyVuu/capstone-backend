@@ -4,8 +4,12 @@
     {
         public int VenueLocationId { get; set; }
         public int CheckInId { get; set; }
-        public string Content { get; set; } = null!;
+        /// <example>Thật tuyệt vời!</example>
+        public string? Content { get; set; } = null!;
+        /// <example>5</example>
         public int Rating { get; set; }
+        /// <example>false</example>
         public bool IsAnonymous { get; set; }
+        public List<IFormFile>? Images { get; set; }
     }
 }
