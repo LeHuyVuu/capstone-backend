@@ -1,4 +1,5 @@
 using AutoMapper;
+using capstone_backend.Api.Models;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.User;
 using capstone_backend.Business.DTOs.VenueLocation;
@@ -18,16 +19,18 @@ public class VenueLocationService : IVenueLocationService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
     private readonly ILogger<VenueLocationService> _logger;
+    private readonly ICurrentUser _currentUser;
 
-    public VenueLocationService(IUnitOfWork unitOfWork, IMapper mapper, ILogger<VenueLocationService> logger)
+    public VenueLocationService(IUnitOfWork unitOfWork, IMapper mapper, ILogger<VenueLocationService> logger, ICurrentUser currentUser)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _logger = logger;
+        _currentUser = currentUser;
     }
 
     #region Image JSON Helpers
-    
+
     /// <summary>
     /// Serialize list of image URLs to JSON string (max 5 images)
     /// </summary>
@@ -91,6 +94,17 @@ public class VenueLocationService : IVenueLocationService
             response.TodayOpeningHour = _mapper.Map<TodayOpeningHourResponse>(todayOpeningHour);
             response.TodayOpeningHour.Status = GetVenueStatus(todayOpeningHour, currentTime);
         }
+
+        // Check checkin status
+        var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
+        var checkin = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(member.Id, venueId);
+
+        response.UserState = new UserStateDto
+        {
+            HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId),
+            ActiceCheckInId = checkin != null ? checkin.Id : null,
+            CanReview = checkin != null && checkin.IsValid == true
+        };
 
         _logger.LogInformation("Retrieved venue location detail for ID {VenueId}", venueId);
 

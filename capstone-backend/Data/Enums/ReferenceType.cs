@@ -3,6 +3,8 @@
     public enum ReferenceType
     {
         UNKNOWN,
-        DATE_PLAN
+        DATE_PLAN,
+        VENUE_LOCATION,
+        CHECK_IN_HISTORY
     }
 }
