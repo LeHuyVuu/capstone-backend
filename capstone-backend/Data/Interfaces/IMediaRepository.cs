@@ -9,5 +9,6 @@ namespace capstone_backend.Data.Interfaces
         Task<IEnumerable<Media>> GetByListTargetIdsAsync(List<int> targetIds, string type);
         Task<IEnumerable<Media>> GetByUrlsAsync(List<string> urls);
         Task<IEnumerable<Media>> GetByTargetIdAndTypeAsync(int id, string type);
+        Task<IEnumerable<Media>> GetAllDeletedAsync();
     }
 }

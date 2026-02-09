@@ -19,6 +19,15 @@ namespace capstone_backend.Data.Repositories
                 .CountAsync();
         }
 
+        public async Task<IEnumerable<Media>> GetAllDeletedAsync()
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(m => m.IsDeleted == true)
+                .Take(100)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<Media>> GetByListTargetIdsAsync(List<int> targetIds, string type)
         {
             return await _dbSet

@@ -2,6 +2,8 @@ using capstone_backend.Api.Middleware;
 using capstone_backend.Api.Models;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.DatePlan;
+using capstone_backend.Business.Jobs.Media;
+using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Business.Mappings;
 using capstone_backend.Extensions;
 using capstone_backend.Hubs;
@@ -183,8 +185,18 @@ using (var scope = serviceProvider.CreateScope())
 
     recurringJobManager.AddOrUpdate<IDatePlanWorker>(
         "auto-close-expired-dateplans",
-        x => x.AutoCloseExpiredDatePlanAsync(),
-        "* 4 * * *", new RecurringJobOptions
+        job => job.AutoCloseExpiredDatePlanAsync(),
+        Cron.Daily(4), 
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
+    recurringJobManager.AddOrUpdate<IMediaWorker>(
+        "delete-media-daily",
+        job => job.DeleteMediaFileAsync(),
+        Cron.MinuteInterval(5),
+        new RecurringJobOptions
         {
             TimeZone = vnTz
         });
