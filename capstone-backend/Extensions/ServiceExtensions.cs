@@ -3,6 +3,8 @@ using Amazon.Runtime;
 using capstone_backend.Api.Filters;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.DatePlan;
+using capstone_backend.Business.Jobs.Media;
+using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Business.Services;
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Interfaces;
@@ -96,6 +98,8 @@ public static class ServiceExtensions
         services.AddScoped<IDeviceTokenRepository, DeviceTokenRepository>();
         services.AddScoped<IDatePlanJobRepository, DatePlanJobRepository>();
         services.AddScoped<IReviewRepository, ReviewRepository>();
+        services.AddScoped<ICheckInHistoryRepository, CheckInHistoryRepository>();
+        services.AddScoped<IMediaRepository, MediaRepository>();
 
         // Messaging repositories
         services.AddScoped<IConversationRepository, ConversationRepository>();
@@ -145,6 +149,7 @@ public static class ServiceExtensions
         services.AddScoped<IMbtiContentService, MbtiContentService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IDeviceTokenService, DeviceTokenService>();
+        services.AddScoped<IReviewService, ReviewService>();
 
         // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
         services.AddScoped<ILocationFollowerService, LocationFollowerService>();
@@ -156,6 +161,8 @@ public static class ServiceExtensions
         services.AddScoped<ICoupleInvitationService, CoupleInvitationService>();
         // Register Hangfire Jobs
         services.AddScoped<IDatePlanWorker, DatePlanWorker>();
+        services.AddScoped<IReviewWorker, ReviewWorker>();
+        services.AddScoped<IMediaWorker, MediaWorker>();
 
         // Register Messaging Service
         services.AddScoped<IMessagingService, MessagingService>();

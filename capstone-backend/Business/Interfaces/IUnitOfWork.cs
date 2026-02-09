@@ -54,6 +54,10 @@ public interface IUnitOfWork : IDisposable
 
     IReviewRepository Reviews { get; }
 
+    ICheckInHistoryRepository CheckInHistories { get; }
+
+    IMediaRepository Media { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>

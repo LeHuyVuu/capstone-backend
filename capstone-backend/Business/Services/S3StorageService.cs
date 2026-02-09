@@ -50,4 +50,26 @@ public class S3StorageService
         // URL chuẩn theo bucket + region (virtual-hosted-style)
         return $"https://{_bucketName}.s3.{_region}.amazonaws.com/{key}";
     }
+
+    public async Task DeleteFileByKeyAsync(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
+        try
+        {
+            var deleteRequest = new DeleteObjectRequest
+            {
+                BucketName = _bucketName,
+                Key = key
+            };
+
+            await _s3Client.DeleteObjectAsync(deleteRequest);
+        }
+        catch (AmazonS3Exception ex)
+        {
+
+            throw new Exception($"S3 error: {ex.Message}");
+        }
+    }
 }
