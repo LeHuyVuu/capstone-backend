@@ -18,7 +18,7 @@ namespace capstone_backend.Api.Controllers
 
         /// <summary>
         /// Check-in to a venue location
-        /// </summary>"
+        /// </summary>
         [HttpPost("check-in")]
         public async Task<IActionResult> CheckinAsync(CheckinRequest request)
         {
@@ -33,5 +33,11 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        ///// <summary>
+        ///// Validate a check-in using the check-in history ID
+        ///// </summary>
+        //[HttpPost("validate")]
+
     }
 }

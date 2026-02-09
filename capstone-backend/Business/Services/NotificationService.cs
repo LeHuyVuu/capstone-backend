@@ -34,6 +34,7 @@ namespace capstone_backend.Business.Services
                 await _unitOfWork.SaveChangesAsync();
 
                 var response = _mapper.Map<NotificationResponse>(notification);
+                response.Data = request.Data;
 
                 return response;
             }

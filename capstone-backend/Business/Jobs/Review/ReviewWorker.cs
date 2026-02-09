@@ -53,8 +53,14 @@ namespace capstone_backend.Business.Jobs.Review
                 {
                     Title = NotificationTemplate.Review.TitleReviewRequest,
                     Message = NotificationTemplate.Review.GetReviewRequestBody(venue.Name),
-                    ReferenceId = venue.Id,
-                    ReferenceType = ReferenceType.VENUE_LOCATION.ToString()
+                    Type = NotificationType.LOCATION.ToString(),
+                    ReferenceId = checkInHistoryId,
+                    ReferenceType = ReferenceType.CHECK_IN_HISTORY.ToString(),
+                    Data = new Dictionary<string, string>
+                    {
+                        { NotificationKeys.RefId, venue.Id.ToString() },
+                        { NotificationKeys.RefType, ReferenceType.VENUE_LOCATION.ToString() }
+                    }
                 }
             );
 
@@ -78,7 +84,8 @@ namespace capstone_backend.Business.Jobs.Review
                         {
                             { NotificationKeys.Type, NotificationType.LOCATION.ToString() },
                             { NotificationKeys.RefId, checkInHistoryId.ToString() },
-                            { NotificationKeys.RefType, ReferenceType.CHECK_IN_HISTORY.ToString() }
+                            { NotificationKeys.RefType, ReferenceType.CHECK_IN_HISTORY.ToString() },
+                            { "VenueLocationID", venue.Id.ToString() }
                         }
                     }
                 );
