@@ -115,6 +115,7 @@ namespace capstone_backend.Business.Services
 
             _unitOfWork.CheckInHistories.Update(checkIn);
             await _unitOfWork.Reviews.AddAsync(review);
+            await _unitOfWork.SaveChangesAsync();
 
             // Upload s3
             if (request.Images != null && request.Images.Any())

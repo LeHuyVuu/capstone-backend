@@ -5,6 +5,7 @@ using capstone_backend.Business.DTOs.User;
 using capstone_backend.Business.DTOs.VenueLocation;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -157,6 +158,11 @@ public class VenueLocationService : IVenueLocationService
         // Lấy mood match statistics
         var (totalReviewCount, matchedReviewCount) = await _unitOfWork.Reviews.GetMoodMatchStatisticsAsync(venueId);
 
+        // Lấy tất cả media liên quan đến reviews
+        var reviewIds = reviews.Select(r => r.Id).ToList();
+        var allMedias = await _unitOfWork.Media.GetByListTargetIdsAsync(reviewIds, ReferenceType.REVIEW.ToString());
+        var mediaLookup = allMedias.ToLookup(m => m.TargetId);
+
         // Map reviews sang VenueReviewResponse
         var reviewResponses = reviews.Select(r => 
         {
@@ -178,17 +184,14 @@ public class VenueLocationService : IVenueLocationService
                 };
             }
 
-            // Parse ImageUrls từ JSON string sang List<string>
-            if (!string.IsNullOrEmpty(r.ImageUrls))
+            // Lấy ImageUrls từ Media
+            if (mediaLookup.Contains(r.Id))
             {
-                try
-                {
-                    response.ImageUrls = System.Text.Json.JsonSerializer.Deserialize<List<string>>(r.ImageUrls);
-                }
-                catch
-                {
-                    response.ImageUrls = new List<string>();
-                }
+                response.ImageUrls = mediaLookup[r.Id].Select(m => m.Url).ToList();
+            }
+            else
+            {
+                response.ImageUrls = new List<string>();
             }
 
             // Set MatchedTag bằng tiếng Việt
