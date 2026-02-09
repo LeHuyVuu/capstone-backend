@@ -505,7 +505,7 @@ public class CoupleInvitationService : ICoupleInvitationService
 
             return new MemberProfileResponse
             {
-                MemberId = member.Id,
+                UserId = member.UserId,
                 FullName = member.FullName ?? "Unknown",
                 AvatarUrl = member.User?.AvatarUrl,
                 Bio = member.Bio,

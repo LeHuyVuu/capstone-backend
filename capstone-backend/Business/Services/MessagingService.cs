@@ -96,14 +96,23 @@ public class MessagingService : IMessagingService
         await _conversationRepository.AddAsync(conversation);
         await _unitOfWork.SaveChangesAsync();
 
-        // Notify members via SignalR
+        // Load lại conversation với đầy đủ User info
+        var createdConversation = await _conversationRepository.GetByIdWithMembersAsync(conversation.Id, cancellationToken);
+        if (createdConversation == null)
+            throw new Exception("Failed to load created conversation");
+
+        var response = await MapToConversationResponse(createdConversation, currentUserId, cancellationToken);
+
+        // Notify members via SignalR - gửi full conversation data
         foreach (var memberId in memberIds.Where(id => id != currentUserId))
         {
+            // Map response cho từng member để IsMine và OtherUser đúng
+            var memberResponse = await MapToConversationResponse(createdConversation, memberId, cancellationToken);
             await _hubContext.Clients.User(memberId.ToString())
-                .SendAsync("NewConversation", conversation.Id, cancellationToken);
+                .SendAsync("NewConversation", memberResponse, cancellationToken);
         }
 
-        return await MapToConversationResponse(conversation, currentUserId, cancellationToken);
+        return response;
     }
 
     public async Task<ConversationResponse> GetOrCreateDirectConversationAsync(
@@ -198,8 +207,23 @@ public class MessagingService : IMessagingService
         if (request.MessageType == "TEXT" && string.IsNullOrWhiteSpace(request.Content))
             throw new Exception("Message content is required for text messages");
 
-        if (request.MessageType != "TEXT" && request.ReferenceId == null)
-            throw new Exception($"Reference ID is required for {request.MessageType} messages");
+        if ((request.MessageType == "IMAGE" || request.MessageType == "FILE" || 
+             request.MessageType == "VIDEO" || request.MessageType == "AUDIO") && 
+            string.IsNullOrWhiteSpace(request.FileUrl))
+            throw new Exception($"File URL is required for {request.MessageType} messages");
+
+        // Build metadata JSON for file attachments
+        string? metadata = request.Metadata;
+        if (!string.IsNullOrWhiteSpace(request.FileUrl))
+        {
+            var fileInfo = new
+            {
+                fileUrl = request.FileUrl,
+                fileName = request.FileName,
+                fileSize = request.FileSize
+            };
+            metadata = System.Text.Json.JsonSerializer.Serialize(fileInfo);
+        }
 
         // Create message
         var message = new Message
@@ -210,7 +234,7 @@ public class MessagingService : IMessagingService
             MessageType = request.MessageType,
             ReferenceId = request.ReferenceId,
             ReferenceType = request.ReferenceType?.Trim(),
-            Metadata = request.Metadata?.Trim(),
+            Metadata = metadata,
             CreatedAt = DateTime.UtcNow,
             IsDeleted = false
         };
@@ -380,8 +404,8 @@ public class MessagingService : IMessagingService
         if (currentUserId <= 0)
             throw new Exception("Invalid user");
 
-        if (request.ConversationId <= 0 || request.UserId <= 0)
-            throw new Exception("Invalid conversation or user ID");
+        if (request.ConversationId <= 0 || request.MemberId <= 0)
+            throw new Exception("Invalid conversation or member ID");
 
         // Check conversation exists and is group
         var conversation = await _conversationRepository.GetByIdAsync(request.ConversationId);
@@ -392,7 +416,7 @@ public class MessagingService : IMessagingService
             throw new Exception("Can only remove members from group conversations");
 
         // Check if current user is admin (unless removing self)
-        if (currentUserId != request.UserId)
+        if (currentUserId != request.MemberId)
         {
             var currentMember = await _memberRepository.GetMemberAsync(request.ConversationId, currentUserId, cancellationToken);
             if (currentMember?.Role != "ADMIN" || currentMember?.IsActive != true)
@@ -400,7 +424,7 @@ public class MessagingService : IMessagingService
         }
 
         // Remove member
-        var member = await _memberRepository.GetMemberAsync(request.ConversationId, request.UserId, cancellationToken);
+        var member = await _memberRepository.GetMemberAsync(request.ConversationId, request.MemberId, cancellationToken);
         if (member == null || member.IsActive == false)
             throw new Exception("Member not found");
 
@@ -409,7 +433,7 @@ public class MessagingService : IMessagingService
         await _unitOfWork.SaveChangesAsync();
 
          // Notify removed member via SignalR
-        await _hubContext.Clients.User(request.UserId.ToString())
+        await _hubContext.Clients.User(request.MemberId.ToString())
             .SendAsync("RemovedFromConversation", request.ConversationId, cancellationToken);
     }
 
@@ -421,7 +445,7 @@ public class MessagingService : IMessagingService
         await RemoveMemberAsync(currentUserId, new RemoveMemberRequest
         {
             ConversationId = conversationId,
-            UserId = currentUserId
+            MemberId = currentUserId
         }, cancellationToken);
     }
 
@@ -527,12 +551,23 @@ public class MessagingService : IMessagingService
         // Get unread count
         response.UnreadCount = await _memberRepository.GetUnreadCountAsync(conversation.Id, currentUserId, cancellationToken);
 
+        // For DIRECT conversation, set OtherUser for easy FE display
+        if (conversation.Type == "DIRECT")
+        {
+            response.OtherUser = response.Members.FirstOrDefault(m => m.UserId != currentUserId);
+            // Override Name with other user's name for convenience
+            if (response.OtherUser != null)
+            {
+                response.Name = response.OtherUser.FullName;
+            }
+        }
+
         return response;
     }
 
     private MessageResponse MapToMessageResponse(Message message, int currentUserId)
     {
-        return new MessageResponse
+        var response = new MessageResponse
         {
             Id = message.Id,
             ConversationId = message.ConversationId ?? 0,
@@ -550,5 +585,33 @@ public class MessagingService : IMessagingService
             UpdatedAt = message.UpdatedAt,
             IsMine = message.SenderId == currentUserId
         };
+
+        // Parse file info from metadata if exists
+        if (!string.IsNullOrWhiteSpace(message.Metadata))
+        {
+            try
+            {
+                var fileInfo = System.Text.Json.JsonSerializer.Deserialize<FileMetadata>(message.Metadata);
+                if (fileInfo != null)
+                {
+                    response.FileUrl = fileInfo.FileUrl;
+                    response.FileName = fileInfo.FileName;
+                    response.FileSize = fileInfo.FileSize;
+                }
+            }
+            catch
+            {
+                // Ignore parse errors, metadata might be other format
+            }
+        }
+
+        return response;
+    }
+
+    private class FileMetadata
+    {
+        public string? FileUrl { get; set; }
+        public string? FileName { get; set; }
+        public long? FileSize { get; set; }
     }
 }
