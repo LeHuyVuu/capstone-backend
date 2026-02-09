@@ -2,6 +2,8 @@ using capstone_backend.Api.Middleware;
 using capstone_backend.Api.Models;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.DatePlan;
+using capstone_backend.Business.Jobs.Media;
+using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Business.Mappings;
 using capstone_backend.Extensions;
 using capstone_backend.Hubs;
@@ -86,7 +88,8 @@ builder.Services.AddAutoMapper(
     typeof(VenueLocationProfile),
     typeof(PersonalityTestProfile),
     typeof(DatePlanProfile),
-    typeof(NotificationProfile)
+    typeof(NotificationProfile),
+    typeof(ReviewProfile)
 );
 
 // 14. Add HttpContextAccessor
@@ -168,6 +171,10 @@ var serviceProvider = app.Services;
 
 using (var scope = serviceProvider.CreateScope())
 {
+    // Timezone VN
+    var vnTz = TimeZoneInfo.FindSystemTimeZoneById(
+        OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh"
+    );
     var venueLocationService = scope.ServiceProvider.GetRequiredService<IVenueLocationService>();
     
     // Cập nhật IsClosed status mỗi phút
@@ -178,8 +185,21 @@ using (var scope = serviceProvider.CreateScope())
 
     recurringJobManager.AddOrUpdate<IDatePlanWorker>(
         "auto-close-expired-dateplans",
-        x => x.AutoCloseExpiredDatePlanAsync(),
-        "* 4 * * *");
+        job => job.AutoCloseExpiredDatePlanAsync(),
+        Cron.Daily(4), 
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
+    recurringJobManager.AddOrUpdate<IMediaWorker>(
+        "delete-media-daily",
+        job => job.DeleteMediaFileAsync(),
+        Cron.MinuteInterval(5),
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
 
     app.Logger.LogInformation("[INFO] Hangfire recurring jobs configured");
 }
@@ -194,5 +214,6 @@ app.Logger.LogInformation("Application starting...");
 
 // Hubs
 app.MapHub<NotificationHub>("/hubs/notification");
+app.MapHub<MessagingHub>("/hubs/messaging");
 
 app.Run();

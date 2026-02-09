@@ -45,6 +45,10 @@ public partial class MemberProfile
     [Column(TypeName = "jsonb")]
     public string? AvailableTime { get; set; }
 
+    public string? address { get; set; }
+    
+    public string? area { get; set; }
+
     [StringLength(10)]
     public string? InviteCode { get; set; }
 

@@ -14,6 +14,13 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
     {
     }
 
+    public async Task<VenueLocation?> GetByIdAsync(int id)
+    {
+        return await _dbSet
+            .Where(vl => vl.Id == id && vl.IsDeleted == false)
+            .FirstOrDefaultAsync();
+    }
+
     /// <summary>
     /// Get venue location by ID with all related entities and opening hours for today
     /// </summary>

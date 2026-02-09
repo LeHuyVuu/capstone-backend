@@ -68,23 +68,25 @@ public class MemberService : IMemberService
         if (partnerMemberProfile.RelationshipStatus == "IN_RELATIONSHIP")
             throw new InvalidOperationException("The member you are trying to invite is already marked as in a relationship");
 
-        // 4. Kiểm tra xem người gọi API đã có trong couple nào chưa
+        // 4. Kiểm tra xem người gọi API đã có trong couple đang ACTIVE chưa (đã chia tay thì được ghép lại)
         var currentMemberInCouple = await _unitOfWork.Context.CoupleProfiles
             .Where(c => c.IsDeleted != true &&
+                       c.Status == "ACTIVE" &&
                        (c.MemberId1 == currentMemberProfile.Id || c.MemberId2 == currentMemberProfile.Id))
             .FirstOrDefaultAsync();
 
         if (currentMemberInCouple != null)
-            throw new InvalidOperationException("You are already in a couple. Cannot invite another member.");
+            throw new InvalidOperationException("You are already in an active couple. Cannot invite another member.");
 
-        // 5. Kiểm tra xem người được mời đã có trong couple nào chưa
+        // 5. Kiểm tra xem người được mời đã có trong couple đang ACTIVE chưa (đã chia tay thì được ghép lại)
         var partnerInCouple = await _unitOfWork.Context.CoupleProfiles
             .Where(c => c.IsDeleted != true &&
+                       c.Status == "ACTIVE" &&
                        (c.MemberId1 == partnerMemberProfile.Id || c.MemberId2 == partnerMemberProfile.Id))
             .FirstOrDefaultAsync();
 
         if (partnerInCouple != null)
-            throw new InvalidOperationException("The member you are trying to invite is already in a couple.");
+            throw new InvalidOperationException("The member you are trying to invite is already in an active couple.");
 
         // 5. Tạo couple profile mới
         // Đảm bảo member_id_1 < member_id_2 để thỏa constraint ck_member_order

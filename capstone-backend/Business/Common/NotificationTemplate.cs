@@ -42,5 +42,14 @@
                 return $"Buổi hẹn \"{datePlanTitle}\" đã được đóng tự động. Hãy lên kế hoạch cho buổi hẹn tiếp theo nhé!";
             }
         }
+
+        public static class Review
+        {
+            public const string TitleReviewRequest = "⏳ Đã 10 phút rồi!";
+            public static string GetReviewRequestBody(string venueName)
+            {
+                return $"Bạn vẫn đang ở 📍{venueName}📍 chứ? Cùng Đánh giá ngay nào!";
+            }
+        }
     }
 }

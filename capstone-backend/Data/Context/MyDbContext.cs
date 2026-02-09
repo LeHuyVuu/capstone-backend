@@ -134,6 +134,11 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Category> Categories { get; set; }
 
+    // Messaging entities
+    public virtual DbSet<Conversation> Conversations { get; set; }
+    public virtual DbSet<ConversationMember> ConversationMembers { get; set; }
+    public virtual DbSet<Message> Messages { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // FIX: Convert tất cả DateTime về UTC để tránh lỗi PostgreSQL
@@ -1024,6 +1029,59 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+        });
+
+        // Messaging entities configuration
+        modelBuilder.Entity<Conversation>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("conversations_pkey");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(now() AT TIME ZONE 'UTC')");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            
+            entity.HasOne(d => d.Creator)
+                .WithMany()
+                .HasForeignKey(d => d.CreatedBy)
+                .HasConstraintName("fk_conversations_created_by");
+        });
+
+        modelBuilder.Entity<ConversationMember>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("conversation_members_pkey");
+            entity.Property(e => e.JoinedAt).HasDefaultValueSql("(now() AT TIME ZONE 'UTC')");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            
+            entity.HasOne(d => d.Conversation)
+                .WithMany(p => p.Members)
+                .HasForeignKey(d => d.ConversationId)
+                .HasConstraintName("fk_conversation_members_conversation");
+                
+            entity.HasOne(d => d.User)
+                .WithMany()
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("fk_conversation_members_user");
+                
+            entity.HasOne(d => d.LastReadMessage)
+                .WithMany()
+                .HasForeignKey(d => d.LastReadMessageId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_conversation_members_last_read_message");
+        });
+
+        modelBuilder.Entity<Message>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("messages_pkey");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(now() AT TIME ZONE 'UTC')");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            
+            entity.HasOne(d => d.Conversation)
+                .WithMany(p => p.Messages)
+                .HasForeignKey(d => d.ConversationId)
+                .HasConstraintName("fk_messages_conversation");
+                
+            entity.HasOne(d => d.Sender)
+                .WithMany()
+                .HasForeignKey(d => d.SenderId)
+                .HasConstraintName("fk_messages_sender");
         });
 
         OnModelCreatingPartial(modelBuilder);
