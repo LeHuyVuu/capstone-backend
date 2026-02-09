@@ -84,6 +84,30 @@ namespace capstone_backend.Business.Services
             return checkIn.Id;
         }
 
+        public async Task<int> DeleteReviewAsync(int userId, int reviewId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Không tìm thấy hồ sơ thành viên");
+
+            var review = await _unitOfWork.Reviews.GetByIdAndMemberIdAsync(reviewId, member.Id);
+            if (review == null)
+                throw new Exception("Không tìm thấy đánh giá hợp lệ");
+
+            review.IsDeleted = true;
+
+            var mediaList = await _unitOfWork.Media.GetByTargetIdAndTypeAsync(review.Id, ReferenceType.REVIEW.ToString());
+            foreach (var media in mediaList)
+            {
+                media.IsDeleted = true;
+                _unitOfWork.Media.Update(media);
+            }
+
+            _unitOfWork.Reviews.Update(review);
+
+            return await _unitOfWork.SaveChangesAsync();
+        }
+
         public async Task<int> SubmitReviewAsync(int userId, CreateReviewRequest request)
         {
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);

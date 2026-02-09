@@ -110,5 +110,23 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Delete a review for a venue location
+        /// </summary>
+        [HttpDelete("{reviewId}/delete")]
+        public async Task<IActionResult> DeleteReviewAsync(int reviewId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _reviewService.DeleteReviewAsync(userId.Value, reviewId);
+                return OkResponse(result, "Xoá đánh giá địa điểm thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

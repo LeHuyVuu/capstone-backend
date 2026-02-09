@@ -27,6 +27,14 @@ namespace capstone_backend.Data.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<Media>> GetByTargetIdAndTypeAsync(int id, string type)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(m => m.TargetId == id && m.TargetType == type && m.IsDeleted == false)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<Media>> GetByUrlsAsync(List<string> urls)
         {
             return await _dbSet
