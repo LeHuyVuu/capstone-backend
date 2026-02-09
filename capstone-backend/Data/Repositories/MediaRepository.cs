@@ -11,11 +11,27 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<int> CountByTargetIdAndTypeAsync(int id, string type)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(m => m.TargetId == id && m.TargetType == type && m.IsDeleted == false)
+                .CountAsync();
+        }
+
         public async Task<IEnumerable<Media>> GetByListTargetIdsAsync(List<int> targetIds, string type)
         {
             return await _dbSet
                 .AsNoTracking()
-                .Where(m => targetIds.Contains(m.TargetId) && m.TargetType == type)
+                .Where(m => targetIds.Contains(m.TargetId) && m.TargetType == type && m.IsDeleted == false)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Media>> GetByUrlsAsync(List<string> urls)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Where(m => urls.Contains(m.Url) && m.IsDeleted == false)
                 .ToListAsync();
         }
     }

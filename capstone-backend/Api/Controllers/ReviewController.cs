@@ -66,9 +66,6 @@ namespace capstone_backend.Api.Controllers
             {
                 if (request.Images != null)
                 {
-                    if (request.Images.Count > 5)
-                        return BadRequestResponse("Tối đa 5 ảnh");
-
                     foreach (var img in request.Images)
                     {
                         if (img.Length > 5 * 1024 * 1024) // 5MB
@@ -79,6 +76,34 @@ namespace capstone_backend.Api.Controllers
                 var userId = GetCurrentUserId();
                 var result = await _reviewService.SubmitReviewAsync(userId.Value, request);
                 return OkResponse(result, "Đánh giá địa điểm thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Update a review for a venue location
+        /// </summary>
+        [HttpPost("{reviewId}/update")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> SubmitReviewAsync(int reviewId, [FromForm] UpdateReviewRequest request)
+        {
+            try
+            {
+                if (request.NewImages != null)
+                {
+                    foreach (var img in request.NewImages)
+                    {
+                        if (img.Length > 5 * 1024 * 1024) // 5MB
+                            return BadRequestResponse($"Ảnh {img.FileName} nặng quá (>5MB).");
+                    }
+                }
+
+                var userId = GetCurrentUserId();
+                var result = await _reviewService.UpdateReviewAsync(userId.Value, reviewId, request);
+                return OkResponse(result, "Thay đổi đánh giá địa điểm thành công");
             }
             catch (Exception ex)
             {

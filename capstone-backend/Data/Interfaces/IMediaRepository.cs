@@ -5,6 +5,8 @@ namespace capstone_backend.Data.Interfaces
 {
     public interface IMediaRepository : IGenericRepository<Media>
     {
+        Task<int> CountByTargetIdAndTypeAsync(int id, string type);
         Task<IEnumerable<Media>> GetByListTargetIdsAsync(List<int> targetIds, string type);
+        Task<IEnumerable<Media>> GetByUrlsAsync(List<string> urls);
     }
 }

@@ -150,4 +150,11 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
         return await _dbSet
             .AnyAsync(r => r.MemberId == memberId && r.VenueId == venueId && r.IsDeleted != true);
     }
+
+    public async Task<Review?> GetByIdAndMemberIdAsync(int reviewId, int memberId)
+    {
+        return await _dbSet
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Id == reviewId && r.MemberId == memberId && r.IsDeleted == false);
+    }
 }

@@ -138,6 +138,63 @@ namespace capstone_backend.Business.Services
             return await _unitOfWork.SaveChangesAsync();
         }
 
+        public async Task<int> UpdateReviewAsync(int userId, int reviewId, UpdateReviewRequest request)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Không tìm thấy hồ sơ thành viên");
+
+            var venue = await _unitOfWork.VenueLocations.GetByIdAsync(request.VenueLocationId);
+            if (venue == null)
+                throw new Exception("Không tìm thấy địa điểm");
+
+            var review = await _unitOfWork.Reviews.GetByIdAndMemberIdAsync(reviewId, member.Id);
+            if (review == null)
+                throw new Exception("Không tìm thấy đánh giá hợp lệ");
+
+            review.Rating = request.Rating;
+            review.Content = request.Content;
+
+            if (request.DeletedImageUrls != null && request.DeletedImageUrls.Any())
+            {
+                var imagesToDelete = await _unitOfWork.Media.GetByUrlsAsync(request.DeletedImageUrls);
+                foreach (var img in imagesToDelete)
+                {
+                    img.IsDeleted = true;
+                    _unitOfWork.Media.Update(img);                   
+                }
+            }
+
+            int existingImageCount = await _unitOfWork.Media.CountByTargetIdAndTypeAsync(review.Id, ReferenceType.REVIEW.ToString());
+            int currentImageCount = existingImageCount - (request.DeletedImageUrls?.Count ?? 0);
+            int newImageCount = request.NewImages?.Count ?? 0;
+
+            if (currentImageCount + newImageCount > 5)
+                throw new Exception("Bạn chỉ có thể tải lên tối đa 5 hình ảnh cho mỗi đánh giá");
+
+            if (request.NewImages != null && request.NewImages.Any())
+            {
+                foreach (var imageFile in request.NewImages)
+                {
+                    string imageUrl = await _s3Service.UploadFileAsync(imageFile, userId, S3Keys.REVIEW);
+
+                    var newImage = new Media
+                    {
+                        Url = imageUrl,
+                        UploaderId = userId,
+                        MediaType = MediaType.IMAGE.ToString(),
+                        TargetId = review.Id,
+                        TargetType = ReferenceType.REVIEW.ToString()
+                    };
+
+                    await _unitOfWork.Media.AddAsync(newImage);
+                }
+            }
+
+            _unitOfWork.Reviews.Update(review);
+            return await _unitOfWork.SaveChangesAsync();
+        }
+
         public async Task<int> ValidateCheckinAsync(int userId, int checkInId, CheckinRequest request)
         {
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
