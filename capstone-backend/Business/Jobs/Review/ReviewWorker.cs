@@ -85,7 +85,7 @@ namespace capstone_backend.Business.Jobs.Review
                             { NotificationKeys.Type, NotificationType.LOCATION.ToString() },
                             { NotificationKeys.RefId, checkInHistoryId.ToString() },
                             { NotificationKeys.RefType, ReferenceType.CHECK_IN_HISTORY.ToString() },
-                            { "VenueLocationID", venue.Id.ToString() }
+                            { "venueLocationId", venue.Id.ToString() }
                         }
                     }
                 );

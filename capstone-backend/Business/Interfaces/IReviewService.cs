@@ -5,5 +5,6 @@ namespace capstone_backend.Business.Interfaces
     public interface IReviewService
     {
         Task<int> CheckinAsync(int userId, CheckinRequest request);
+        Task<int> ValidateCheckinAsync(int userId, int checkInId, CheckinRequest request);
     }
 }

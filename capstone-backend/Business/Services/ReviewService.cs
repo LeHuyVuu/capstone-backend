@@ -76,5 +76,43 @@ namespace capstone_backend.Business.Services
 
             return checkIn.Id;
         }
+
+        public async Task<int> ValidateCheckinAsync(int userId, int checkInId, CheckinRequest request)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Không tìm thấy hồ sơ thành viên");
+
+            var venue = await _unitOfWork.VenueLocations.GetByIdAsync(request.VenueLocationId);
+            if (venue == null)
+                throw new Exception("Không tìm thấy địa điểm");
+
+            if (!venue.Latitude.HasValue || !venue.Longitude.HasValue)
+                throw new Exception("Địa điểm không có tọa độ hợp lệ");
+
+            // Check if review already exists
+            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId);
+            if (hasReview)
+                throw new Exception("Bạn đã đánh giá địa điểm này rồi");
+
+            var checkIn = await _unitOfWork.CheckInHistories.GetByIdAsync(checkInId);
+            if (checkIn == null || checkIn.MemberId != member.Id || checkIn.VenueId != request.VenueLocationId)
+                throw new Exception("Không tìm thấy lịch sử check-in hợp lệ");
+
+            var distance = GeoCalculator.CalculateDistance(           
+                request.Latitude,
+                request.Longitude,
+                venue.Latitude.Value,
+                venue.Longitude.Value
+            );
+
+            if (distance > 0.1)
+                throw new Exception("Bạn đang ở quá xa địa điểm để có thể xác thực check-in");
+
+            checkIn.IsValid = true;
+
+            _unitOfWork.CheckInHistories.Update(checkIn);
+            return await _unitOfWork.SaveChangesAsync();
+        }
     }
 }

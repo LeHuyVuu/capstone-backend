@@ -19,7 +19,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Check-in to a venue location
         /// </summary>
-        [HttpPost("check-in")]
+        [HttpPost("check-in-trigger")]
         public async Task<IActionResult> CheckinAsync(CheckinRequest request)
         {
             try
@@ -34,10 +34,23 @@ namespace capstone_backend.Api.Controllers
             }
         }
 
-        ///// <summary>
-        ///// Validate a check-in using the check-in history ID
-        ///// </summary>
-        //[HttpPost("validate")]
+        /// <summary>
+        /// Validate a check-in using the check-in history ID
+        /// </summary>
+        [HttpPost("validate-condition")]
+        public async Task<IActionResult> ValidateAsync([FromQuery] int checkInId, CheckinRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _reviewService.ValidateCheckinAsync(userId.Value, checkInId, request);
 
+                return OkResponse(result, "Xác thực check-in thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
