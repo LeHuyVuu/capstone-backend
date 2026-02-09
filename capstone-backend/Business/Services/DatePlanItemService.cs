@@ -41,9 +41,6 @@ namespace capstone_backend.Business.Services
                 if (!datePlan.PlannedStartAt.HasValue || !datePlan.PlannedEndAt.HasValue)
                     throw new Exception("Vui lòng thiết lập thời gian bắt đầu và kết thúc dự kiến trước khi thêm địa điểm");
 
-                if (datePlan.PlannedStartAt.Value < now)
-                    throw new Exception("Thời gian bắt đầu buổi hẹn phải ở tương lai");
-
                 // Snapshot
                 var venues = request.Venues ?? new List<DatePlanItemRequest>();
                 if (venues == null || !venues.Any())
