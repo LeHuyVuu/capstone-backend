@@ -1,7 +1,9 @@
-﻿using capstone_backend.Business.DTOs.Review;
+﻿using AutoMapper;
+using capstone_backend.Business.DTOs.Review;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using Hangfire;
 
@@ -10,10 +12,12 @@ namespace capstone_backend.Business.Services
     public class ReviewService : IReviewService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public ReviewService(IUnitOfWork unitOfWork)
+        public ReviewService(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         public async Task<int> CheckinAsync(int userId, CheckinRequest request)
@@ -75,6 +79,40 @@ namespace capstone_backend.Business.Services
             );
 
             return checkIn.Id;
+        }
+
+        public async Task<int> SubmitReviewAsync(int userId, CreateReviewRequest request)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Không tìm thấy hồ sơ thành viên");
+
+            var venue = await _unitOfWork.VenueLocations.GetByIdAsync(request.VenueLocationId);
+            if (venue == null)
+                throw new Exception("Không tìm thấy địa điểm");
+
+            // Check if review already exists
+            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId);
+            if (hasReview)
+                throw new Exception("Bạn đã đánh giá địa điểm này rồi");
+
+            var checkIn = await _unitOfWork.CheckInHistories.GetByIdAsync(request.CheckInId);
+            if (checkIn == null || checkIn.MemberId != member.Id || checkIn.VenueId != request.VenueLocationId)
+                throw new Exception("Không tìm thấy lịch sử check-in hợp lệ");
+
+            if (checkIn.IsValid != true)
+                throw new Exception("Lịch sử check-in chưa được xác thực, không thể đánh giá địa điểm");
+
+            var review = _mapper.Map<Review>(request);
+            review.MemberId = member.Id;
+            review.VenueId = request.VenueLocationId;
+            review.Status = ReviewStatus.PENDING.ToString();
+
+            checkIn.IsValid = false;
+
+            _unitOfWork.CheckInHistories.Update(checkIn);
+            await _unitOfWork.Reviews.AddAsync(review);
+            return await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task<int> ValidateCheckinAsync(int userId, int checkInId, CheckinRequest request)
