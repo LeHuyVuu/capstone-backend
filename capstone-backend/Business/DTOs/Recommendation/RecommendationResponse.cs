@@ -1,14 +1,16 @@
+using capstone_backend.Business.DTOs.Common;
+
 namespace capstone_backend.Business.DTOs.Recommendation;
 
 /// <summary>
-/// Response DTO containing AI-generated venue recommendations
+/// Response DTO containing AI-generated venue recommendations with pagination
 /// </summary>
 public class RecommendationResponse
 {
     /// <summary>
-    /// List of recommended venues
+    /// Paginated list of recommended venues
     /// </summary>
-    public List<RecommendedVenue> Recommendations { get; set; } = new();
+    public PagedResult<RecommendedVenue> Recommendations { get; set; } = new();
     
     /// <summary>
     /// AI-generated explanation for the recommendations
