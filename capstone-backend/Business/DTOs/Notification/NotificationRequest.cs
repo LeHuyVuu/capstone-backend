@@ -19,8 +19,8 @@ namespace capstone_backend.Business.DTOs.Notification
         /// <example>
         /// 49
         /// </example>
-        public int UserId { get; set; }
         public int? ReferenceId { get; set; }
         public string? ReferenceType { get; set; }
+        public Dictionary<string, string> Data { get; set; } = new Dictionary<string, string>();
     }
 }

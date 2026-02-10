@@ -28,7 +28,7 @@
             return TimeZoneInfo.ConvertTimeFromUtc(utcDateTime, VietnamTimeZone);
         }
 
-        public static DateTimeOffset ToVietnamTime(DateTimeOffset utcDateTime)
+        public static DateTimeOffset ToVietNamTime(DateTimeOffset utcDateTime)
         {
             return TimeZoneInfo.ConvertTime(utcDateTime, VietnamTimeZone);
         }

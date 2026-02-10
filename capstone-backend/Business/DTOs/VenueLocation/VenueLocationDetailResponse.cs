@@ -44,6 +44,8 @@ public class VenueLocationDetailResponse
 
     // Venue opening hours for each day
     public List<VenueOpeningHourResponse>? OpeningHours { get; set; }
+
+    public UserStateDto? UserState { get; set; }
 }
 
 /// <summary>

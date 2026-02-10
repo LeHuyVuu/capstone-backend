@@ -9,9 +9,6 @@ namespace capstone_backend.Business.DTOs.DatePlan
         public int CoupleId { get; set; }
         public int OrganizerMemberId { get; set; }
         public string? Note { get; set; }
-        public int TotalCount { get; set; } = 0;
-        public int VisitedCount { get; set; } = 0;
-        public decimal CompletionRate { get; set; } = 0m;
         public DateTime? CompletedAt { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

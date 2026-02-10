@@ -22,18 +22,13 @@ public partial class DatePlan
 
     public int? Version { get; set; }
 
+    public int TotalCount { get; set; }
+
     public DateTime? PlannedStartAt { get; set; }
 
     public DateTime? PlannedEndAt { get; set; }
 
     public DateTime? CompletedAt { get; set; }
-
-    public int TotalCount { get; set; } = 0;
-
-    public int VisitedCount { get; set; } = 0;
-
-    [Precision(5, 4)]
-    public decimal CompletionRate { get; set; } = 0m;
 
     [Precision(18, 2)]
     public decimal? EstimatedBudget { get; set; }
@@ -56,4 +51,7 @@ public partial class DatePlan
     [ForeignKey("OrganizerMemberId")]
     [InverseProperty("MemberProfiles")]
     public virtual MemberProfile? OrganizerMember { get; set; }
+
+    [InverseProperty("DatePlan")]
+    public virtual ICollection<DatePlanJob> DatePlanJobs { get; set; } = new List<DatePlanJob>();
 }

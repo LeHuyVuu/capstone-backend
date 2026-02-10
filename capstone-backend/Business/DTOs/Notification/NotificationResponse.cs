@@ -10,5 +10,6 @@
         public string? ReferenceType { get; set; }
         public DateTime CreatedAt { get; set; }
         public bool IsRead { get; set; }
+        public Dictionary<string, string> Data { get; set; } = new Dictionary<string, string>();
     }
 }

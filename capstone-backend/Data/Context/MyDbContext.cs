@@ -44,11 +44,15 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<CoupleProfile> CoupleProfiles { get; set; }
 
+    public virtual DbSet<CoupleInvitation> CoupleInvitations { get; set; }
+
     public virtual DbSet<CoupleProfileChallenge> CoupleProfileChallenges { get; set; }
 
     public virtual DbSet<DatePlan> DatePlans { get; set; }
 
     public virtual DbSet<DatePlanItem> DatePlanItems { get; set; }
+
+    public virtual DbSet<DatePlanJob> DatePlanJobs { get; set; }
 
     public virtual DbSet<DeviceToken> DeviceTokens { get; set; }
 
@@ -92,6 +96,8 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<ReviewLike> ReviewLikes { get; set; }
 
+    public virtual DbSet<ReviewReply> ReviewReplies { get; set; }
+
     public virtual DbSet<SearchHistory> SearchHistories { get; set; }
 
     public virtual DbSet<SpecialEvent> SpecialEvents { get; set; }
@@ -130,8 +136,39 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Category> Categories { get; set; }
 
+    // Messaging entities
+    public virtual DbSet<Conversation> Conversations { get; set; }
+    public virtual DbSet<ConversationMember> ConversationMembers { get; set; }
+    public virtual DbSet<Message> Messages { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // FIX: Convert tất cả DateTime về UTC để tránh lỗi PostgreSQL
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateTime))
+                {
+                    property.SetValueConverter(
+                        new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTime, DateTime>(
+                            v => v.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(v, DateTimeKind.Utc) : v.ToUniversalTime(),
+                            v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
+                        )
+                    );
+                }
+                else if (property.ClrType == typeof(DateTime?))
+                {
+                    property.SetValueConverter(
+                        new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTime?, DateTime?>(
+                            v => v.HasValue ? (v.Value.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v.Value.ToUniversalTime()) : v,
+                            v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v
+                        )
+                    );
+                }
+            }
+        }
+
         modelBuilder.Entity<Accessory>(entity =>
         {
             entity.ToTable("accessories");
@@ -380,6 +417,25 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("couple_profiles_member_id_2_fkey");
         });
 
+        modelBuilder.Entity<CoupleInvitation>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("couple_invitations_pkey");
+
+            entity.Property(e => e.Status).HasDefaultValue("PENDING");
+            entity.Property(e => e.SentAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+
+            entity.HasOne(d => d.SenderMember).WithMany(p => p.CoupleInvitationsSent)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("couple_invitations_sender_member_id_fkey");
+
+            entity.HasOne(d => d.ReceiverMember).WithMany(p => p.CoupleInvitationsReceived)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("couple_invitations_receiver_member_id_fkey");
+        });
+
         modelBuilder.Entity<CoupleProfileChallenge>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("couple_profile_challenges_pkey");
@@ -426,6 +482,16 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.VenueLocation).WithMany(p => p.DatePlanItems)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("date_plan_items_venue_location_id_fkey");
+        });
+
+        modelBuilder.Entity<DatePlanJob>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("date_plan_jobs_pkey");
+
+            entity.HasOne(j => j.DatePlan)
+                  .WithMany(dp => dp.DatePlanJobs)
+                  .HasConstraintName("fk_date_plan_jobs_date_plans_date_plan_id")
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<DeviceToken>(entity =>
@@ -704,6 +770,25 @@ public partial class MyDbContext : DbContext
                 .HasConstraintName("review_likes_review_id_fkey");
         });
 
+        modelBuilder.Entity<ReviewReply>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("review_replies_pkey");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.ReviewReplies)
+                  .HasForeignKey(d => d.UserId)
+                  .HasConstraintName("review_replies_user_id_fkey");
+
+            entity.HasOne(d => d.Review)
+                  .WithOne(p => p.ReviewReply)
+                  .HasForeignKey<ReviewReply>(d => d.ReviewId)
+                  .OnDelete(DeleteBehavior.Cascade)
+                  .HasConstraintName("review_replies_review_id_fkey");
+        });
+
         modelBuilder.Entity<SearchHistory>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("search_histories_pkey");
@@ -965,6 +1050,59 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+        });
+
+        // Messaging entities configuration
+        modelBuilder.Entity<Conversation>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("conversations_pkey");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(now() AT TIME ZONE 'UTC')");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            
+            entity.HasOne(d => d.Creator)
+                .WithMany()
+                .HasForeignKey(d => d.CreatedBy)
+                .HasConstraintName("fk_conversations_created_by");
+        });
+
+        modelBuilder.Entity<ConversationMember>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("conversation_members_pkey");
+            entity.Property(e => e.JoinedAt).HasDefaultValueSql("(now() AT TIME ZONE 'UTC')");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            
+            entity.HasOne(d => d.Conversation)
+                .WithMany(p => p.Members)
+                .HasForeignKey(d => d.ConversationId)
+                .HasConstraintName("fk_conversation_members_conversation");
+                
+            entity.HasOne(d => d.User)
+                .WithMany()
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("fk_conversation_members_user");
+                
+            entity.HasOne(d => d.LastReadMessage)
+                .WithMany()
+                .HasForeignKey(d => d.LastReadMessageId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_conversation_members_last_read_message");
+        });
+
+        modelBuilder.Entity<Message>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("messages_pkey");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(now() AT TIME ZONE 'UTC')");
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
+            
+            entity.HasOne(d => d.Conversation)
+                .WithMany(p => p.Messages)
+                .HasForeignKey(d => d.ConversationId)
+                .HasConstraintName("fk_messages_conversation");
+                
+            entity.HasOne(d => d.Sender)
+                .WithMany()
+                .HasForeignKey(d => d.SenderId)
+                .HasConstraintName("fk_messages_sender");
         });
 
         OnModelCreatingPartial(modelBuilder);

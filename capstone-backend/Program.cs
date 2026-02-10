@@ -1,12 +1,17 @@
 using capstone_backend.Api.Middleware;
 using capstone_backend.Api.Models;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.DatePlan;
+using capstone_backend.Business.Jobs.Media;
+using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Business.Mappings;
 using capstone_backend.Extensions;
 using capstone_backend.Hubs;
 using DotNetEnv;
 using Hangfire;
+using Hangfire.Dashboard.BasicAuthorization;
 using Scalar.AspNetCore;
+using System.Net;
 
 // Load environment variables from .env file
 var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
@@ -83,7 +88,8 @@ builder.Services.AddAutoMapper(
     typeof(VenueLocationProfile),
     typeof(PersonalityTestProfile),
     typeof(DatePlanProfile),
-    typeof(NotificationProfile)
+    typeof(NotificationProfile),
+    typeof(ReviewProfile)
 );
 
 // 14. Add HttpContextAccessor
@@ -109,7 +115,27 @@ app.UseExceptionMiddleware();
 app.UseTraceId();
 
 // 3. Setup Hangfire Dashboard
-app.UseHangfireDashboard();
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] {
+        new BasicAuthAuthorizationFilter(new BasicAuthAuthorizationFilterOptions
+        {
+            SslRedirect = false,
+            RequireSsl = false,
+            LoginCaseSensitive = true,
+            Users = new []
+            {
+                new BasicAuthAuthorizationUser
+                {
+                    Login = Environment.GetEnvironmentVariable("HANGFIRE_USERNAME"),
+                    PasswordClear = Environment.GetEnvironmentVariable("HANGFIRE_PASSWORD")
+                }
+            }
+        })
+    },
+    DashboardTitle = "CoupleMood Job Dashboard",
+    DisplayStorageConnectionString = false
+});
 app.UseSwaggerConfiguration();
 
 // 3.1. Scalar - Đẹp nhất, hiện đại nhất (RECOMMENDED)
@@ -145,6 +171,10 @@ var serviceProvider = app.Services;
 
 using (var scope = serviceProvider.CreateScope())
 {
+    // Timezone VN
+    var vnTz = TimeZoneInfo.FindSystemTimeZoneById(
+        OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh"
+    );
     var venueLocationService = scope.ServiceProvider.GetRequiredService<IVenueLocationService>();
     
     // Cập nhật IsClosed status mỗi phút
@@ -152,7 +182,25 @@ using (var scope = serviceProvider.CreateScope())
         "update-venue-closed-status",
         () => venueLocationService.UpdateAllVenuesIsClosedStatusAsync(),
         Cron.Minutely);
-    
+
+    recurringJobManager.AddOrUpdate<IDatePlanWorker>(
+        "auto-close-expired-dateplans",
+        job => job.AutoCloseExpiredDatePlanAsync(),
+        Cron.Daily(4), 
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
+    recurringJobManager.AddOrUpdate<IMediaWorker>(
+        "delete-media-daily",
+        job => job.DeleteMediaFileAsync(),
+        Cron.Daily(2),
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
     app.Logger.LogInformation("[INFO] Hangfire recurring jobs configured");
 }
 
@@ -165,6 +213,7 @@ app.UseStaticFiles();
 app.Logger.LogInformation("Application starting...");
 
 // Hubs
-app.MapHub<NotificationHub>("/hub/notifications");
+app.MapHub<NotificationHub>("/hubs/notification");
+app.MapHub<MessagingHub>("/hubs/messaging");
 
 app.Run();

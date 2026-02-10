@@ -70,21 +70,112 @@ public class VenueLocationController : BaseController
     }
 
     /// <summary>
-    /// Get reviews for a specific venue location.
-    /// Returns reviews with member information (name, avatar) and like count.
+    /// Get reviews for a specific venue location with summary statistics.
+    /// Returns:
+    /// - Summary: Average rating, total reviews, rating distribution (5-1 stars with count and percentage)
+    /// - Reviews: Paginated list with member info (name, avatar), attached images, and matched tag in Vietnamese
     /// </summary>
     /// <param name="id">Venue location ID</param>
     /// <param name="page">Page number (default: 1)</param>
     /// <param name="pageSize">Page size (default: 10)</param>
-    /// <returns>Paginated list of reviews</returns>
+    /// <returns>Reviews with summary and paginated list</returns>
     [HttpGet("{id}/reviews")]
     public async Task<IActionResult> GetReviewsByVenueId(int id, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         _logger.LogInformation("Requesting reviews for venue ID: {VenueId}, Page: {Page}, PageSize: {PageSize}", id, page, pageSize);
 
-        var reviews = await _venueLocationService.GetReviewsByVenueIdAsync(id, page, pageSize);
+        var response = await _venueLocationService.GetReviewsByVenueIdAsync(id, page, pageSize);
 
-        return OkResponse(reviews, $"Retrieved {reviews.Items.Count()} reviews for venue location");
+        return OkResponse(response, $"Retrieved {response.Reviews.Items.Count()} reviews with summary for venue location");
+    }
+
+    /// <summary>
+    /// Get reviews for a specific venue location with optional date/month/year filter and review likes.
+    /// If no date filter provided, returns all reviews.
+    /// Priority: Date > Month+Year > Year only
+    /// Returns:
+    /// - Summary: Average rating, total reviews, rating distribution, mood match percentage (from all reviews)
+    /// - Reviews: Paginated list (optionally filtered) with member info, attached images, matched tag, and review likes
+    /// </summary>
+    /// <param name="id">Venue location ID</param>
+    /// <param name="date">Optional: Specific date to filter (format: yyyy-MM-dd). If provided, month and year are ignored</param>
+    /// <param name="month">Optional: Month to filter (1-12). Requires year parameter</param>
+    /// <param name="year">Optional: Year to filter. Can be used alone or with month</param>
+    /// <param name="page">Page number (default: 1)</param>
+    /// <param name="pageSize">Page size (default: 10)</param>
+    /// <param name="sortDescending">Sort by created time descending - newest first (default: true)</param>
+    /// <returns>Reviews with summary, paginated list, and review likes</returns>
+    [HttpGet("{id}/reviews/with-likes")]
+    [ProducesResponseType(typeof(ApiResponse<VenueReviewsWithSummaryResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetReviewsWithLikes(
+        int id,
+        [FromQuery] DateTime? date = null,
+        [FromQuery] int? month = null,
+        [FromQuery] int? year = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] bool sortDescending = true)
+    {
+        // Validate pagination parameters
+        if (page < 1)
+        {
+            return BadRequestResponse("Page number must be greater than 0");
+        }
+
+        if (pageSize < 1 || pageSize > 100)
+        {
+            return BadRequestResponse("Page size must be between 1 and 100");
+        }
+
+        // Validate date filter parameters (nếu có)
+        if (month.HasValue && !year.HasValue)
+        {
+            return BadRequestResponse("Year is required when month is provided");
+        }
+
+        if (month.HasValue && (month.Value < 1 || month.Value > 12))
+        {
+            return BadRequestResponse("Month must be between 1 and 12");
+        }
+
+        if (year.HasValue && (year.Value < 2000 || year.Value > 2100))
+        {
+            return BadRequestResponse("Year must be between 2000 and 2100");
+        }
+
+        var filterDescription = date.HasValue
+            ? $"date: {date.Value:yyyy-MM-dd}"
+            : month.HasValue && year.HasValue
+                ? $"month: {year}/{month:D2}"
+                : year.HasValue
+                    ? $"year: {year}"
+                    : "all reviews";
+
+        _logger.LogInformation(
+            "Requesting reviews ({Filter}) for venue ID: {VenueId}, Page: {Page}, PageSize: {PageSize}, SortDescending: {SortDesc}",
+            filterDescription, id, page, pageSize, sortDescending);
+
+        try
+        {
+            var response = await _venueLocationService.GetReviewsWithLikesByVenueIdAsync(
+                id, page, pageSize, date, month, year, sortDescending);
+
+            var sortOrder = sortDescending ? "newest first" : "oldest first";
+            return OkResponse(response,
+                $"Retrieved {response.Reviews.Items.Count()} reviews ({filterDescription}) with likes for venue location (sorted by time, {sortOrder})");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Venue {VenueId} not found", id);
+            return NotFoundResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving reviews for venue {VenueId}", id);
+            return BadRequestResponse("Failed to retrieve reviews");
+        }
     }
 
     /// <summary>

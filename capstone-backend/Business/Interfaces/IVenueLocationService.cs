@@ -21,8 +21,29 @@ public interface IVenueLocationService
     /// <param name="venueId">Venue location ID</param>
     /// <param name="page">Page number (default: 1)</param>
     /// <param name="pageSize">Page size (default: 10)</param>
-    /// <returns>Paged list of reviews with member information and like count</returns>
-    Task<PagedResult<VenueReviewResponse>> GetReviewsByVenueIdAsync(int venueId, int page = 1, int pageSize = 10);
+    /// <returns>Reviews with summary (average rating, total reviews, rating distribution) and paginated list</returns>
+    Task<VenueReviewsWithSummaryResponse> GetReviewsByVenueIdAsync(int venueId, int page = 1, int pageSize = 10);
+
+    /// <summary>
+    /// Get reviews for a venue location with optional date/month/year filter, sorted by time with review likes included (có phân trang)
+    /// If no date filter provided, returns all reviews
+    /// </summary>
+    /// <param name="venueId">Venue location ID</param>
+    /// <param name="page">Page number (default: 1)</param>
+    /// <param name="pageSize">Page size (default: 10)</param>
+    /// <param name="date">Optional: Specific date to filter (yyyy-MM-dd)</param>
+    /// <param name="month">Optional: Month to filter (1-12), requires year</param>
+    /// <param name="year">Optional: Year to filter</param>
+    /// <param name="sortDescending">Sort by created time descending (default: true)</param>
+    /// <returns>Reviews with summary and paginated list including review likes</returns>
+    Task<VenueReviewsWithSummaryResponse> GetReviewsWithLikesByVenueIdAsync(
+        int venueId, 
+        int page = 1, 
+        int pageSize = 10, 
+        DateTime? date = null,
+        int? month = null, 
+        int? year = null,
+        bool sortDescending = true);
 
     /// <summary>
     /// Create a new venue location with location tags

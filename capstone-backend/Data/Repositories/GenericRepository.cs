@@ -46,6 +46,11 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         _dbSet.Remove(entity);
     }
 
+    public void DeleteRange(IEnumerable<T> entities)
+    {
+        _dbSet.RemoveRange(entities);
+    }
+
     public async Task<IEnumerable<T>> GetAllAsync()
     {
         return await _dbSet.AsNoTracking().ToListAsync();
@@ -60,7 +65,8 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
         int pageNumber,
         int pageSize,
         Expression<Func<T, bool>>? filter = null,
-        Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null)
+        Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
+        Func<IQueryable<T>, IQueryable<T>>? include = null)
     {
         IQueryable<T> query = _dbSet.AsNoTracking();
 
@@ -79,7 +85,11 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
             query = orderBy(query);
         }
 
-        // 4. Paging
+        // 4. Includes
+        if (include != null)
+            query = include(query);
+
+        // 5. Paging
         var items = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
@@ -92,5 +102,13 @@ public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
         _dbSet.Attach(entity);
         _context.Entry(entity).State = EntityState.Modified;
+    }
+
+    public void UpdateRange(IEnumerable<T> entities)
+    {
+        if (entities == null)
+            throw new ArgumentNullException(nameof(entities));
+
+        _dbSet.UpdateRange(entities);
     }
 }

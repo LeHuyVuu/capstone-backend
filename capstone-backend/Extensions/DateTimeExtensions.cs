@@ -8,6 +8,6 @@ namespace capstone_backend.Extensions
         => TimezoneUtil.ToVietNamTime(utcDateTime);
 
         public static DateTimeOffset ToVietnamTime(this DateTimeOffset utcDateTime)
-            => TimezoneUtil.ToVietnamTime(utcDateTime);
+            => TimezoneUtil.ToVietNamTime(utcDateTime);
     }
 }

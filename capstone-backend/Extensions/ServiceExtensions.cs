@@ -2,6 +2,9 @@ using Amazon.Rekognition;
 using Amazon.Runtime;
 using capstone_backend.Api.Filters;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.DatePlan;
+using capstone_backend.Business.Jobs.Media;
+using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Business.Services;
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Interfaces;
@@ -81,6 +84,7 @@ public static class ServiceExtensions
         services.AddScoped<IMemberMoodLogRepository, MemberMoodLogRepository>();
         services.AddScoped<IMoodTypeRepository, MoodTypeRepository>();
         services.AddScoped<ICoupleProfileRepository, CoupleProfileRepository>();
+        services.AddScoped<ICoupleInvitationRepository, CoupleInvitationRepository>();
         services.AddScoped<ITestTypeRepository, TestTypeRepository>();
         services.AddScoped<IQuestionRepository, QuestionRepository>();
         services.AddScoped<IQuestionAnswerRepository, QuestionAnswerRepository>();
@@ -92,6 +96,16 @@ public static class ServiceExtensions
         services.AddScoped<IVenueOwnerProfileRepository, VenueOwnerProfileRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IDeviceTokenRepository, DeviceTokenRepository>();
+        services.AddScoped<IDatePlanJobRepository, DatePlanJobRepository>();
+        services.AddScoped<IReviewRepository, ReviewRepository>();
+        services.AddScoped<ICheckInHistoryRepository, CheckInHistoryRepository>();
+        services.AddScoped<IMediaRepository, MediaRepository>();
+        services.AddScoped<IReviewReplyRepository, ReviewReplyRepository>();
+
+        // Messaging repositories
+        services.AddScoped<IConversationRepository, ConversationRepository>();
+        services.AddScoped<IConversationMemberRepository, ConversationMemberRepository>();
+        services.AddScoped<IMessageRepository, MessageRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -136,12 +150,23 @@ public static class ServiceExtensions
         services.AddScoped<IMbtiContentService, MbtiContentService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IDeviceTokenService, DeviceTokenService>();
+        services.AddScoped<IReviewService, ReviewService>();
 
         // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
         services.AddScoped<ILocationFollowerService, LocationFollowerService>();
 
         // Register Subscription Package Service
         services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
+
+        // Register Couple Invitation Service
+        services.AddScoped<ICoupleInvitationService, CoupleInvitationService>();
+        // Register Hangfire Jobs
+        services.AddScoped<IDatePlanWorker, DatePlanWorker>();
+        services.AddScoped<IReviewWorker, ReviewWorker>();
+        services.AddScoped<IMediaWorker, MediaWorker>();
+
+        // Register Messaging Service
+        services.AddScoped<IMessagingService, MessagingService>();
 
         return services;
     }
@@ -494,7 +519,8 @@ public static class ServiceExtensions
                 .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
                 .UseSimpleAssemblyNameTypeSerializer()
                 .UseRecommendedSerializerSettings()
-                .UsePostgreSqlStorage(hangfireConnectionString);
+                .UsePostgreSqlStorage(options =>
+                    options.UseNpgsqlConnection(hangfireConnectionString));
         });
 
         services.AddHangfireServer(options =>
@@ -502,7 +528,7 @@ public static class ServiceExtensions
             options.WorkerCount = Environment.ProcessorCount * 2;
         });
 
-        Console.WriteLine("[INFO] Hangfire: Configured with PostgreSQL");
+        Console.WriteLine("[INFO] Hangfire: Configured with PostgreSQL");      
 
         return services;
     }
@@ -572,6 +598,13 @@ public static class ServiceExtensions
 
         try
         {
+            // Check if config is valid
+            if (string.IsNullOrWhiteSpace(projectId) || string.IsNullOrWhiteSpace(privateKey))
+            {
+                Console.WriteLine("[WARNING] Firebase config missing. FCM will be disabled.");
+                return services;
+            }
+
             // Only init if instance not exists
             if (FirebaseApp.DefaultInstance == null)
             {
@@ -606,7 +639,8 @@ public static class ServiceExtensions
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Firebase initialization failed: {ex.Message}");
-            throw;
         }
+
+        return services;
     }
 }

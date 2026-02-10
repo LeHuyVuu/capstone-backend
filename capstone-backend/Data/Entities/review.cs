@@ -32,6 +32,10 @@ public partial class Review
 
     public DateTime? UpdatedAt { get; set; }
 
+    public string? ImageUrls { get; set; }
+
+    public bool? IsMatched { get; set; }
+
     public bool? IsDeleted { get; set; }
 
     [ForeignKey("MemberId")]
@@ -44,4 +48,7 @@ public partial class Review
     [ForeignKey("VenueId")]
     [InverseProperty("Reviews")]
     public virtual VenueLocation Venue { get; set; } = null!;
+
+    [InverseProperty("Review")]
+    public virtual ReviewReply? ReviewReply { get; set; }
 }

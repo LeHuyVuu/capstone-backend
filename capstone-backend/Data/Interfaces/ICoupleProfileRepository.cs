@@ -28,4 +28,12 @@ public interface ICoupleProfileRepository : IGenericRepository<CoupleProfile>
     Task<List<CoupleProfile>> GetAllActiveAsync(
         bool includeSoftDeleted = false,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get active couple profile by member ID
+    /// </summary>
+    Task<CoupleProfile?> GetActiveCoupleByMemberIdAsync(
+        int memberId,
+        CancellationToken cancellationToken = default);
+    Task<(int userId1, int userId2)> GetCoupleUserIdsAsync(int coupleId);
 }

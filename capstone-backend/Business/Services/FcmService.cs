@@ -13,70 +13,130 @@ namespace capstone_backend.Business.Services
             _messaging = FirebaseMessaging.DefaultInstance;
         }
 
-        public async Task<string> SendNotificationAsync(SendNotificationRequest request)
+        public async Task<string> SendMultiNotificationAsync(List<string> tokens, SendNotificationRequest request)
         {
+            // Validate input
+            if (tokens == null || !tokens.Any())
+            {
+                return "No tokens provided";
+            }
+
+            try
+            {
+                var multicastMessage = new MulticastMessage
+                {
+                    Tokens = tokens,
+                    Notification = CreateNotification(request),
+                    Data = request.Data,
+                    Android = CreateAndroidConfig(request),
+                    Apns = CreateApnsConfig(request),
+                    Webpush = CreateWebpushConfig(request)
+                };
+
+                var response = await _messaging.SendEachForMulticastAsync(multicastMessage);
+
+                if (response.FailureCount > 0)
+                {
+                    foreach (var failure in response.Responses.Where(r => !r.IsSuccess))
+                    {
+                        // todo: remove invalid tokens from database
+                    }
+                }
+
+                return $"Success: {response.SuccessCount}, Fail: {response.FailureCount}";
+            }
+            catch (FirebaseMessagingException ex)
+            {
+                throw;
+            }
+        }
+
+        public async Task<string> SendNotificationAsync(string token, SendNotificationRequest request)
+        {
+            if (string.IsNullOrEmpty(token)) return "Empty token";
+
             try
             {
                 var message = new Message
                 {
-                    Token = request.Token,
-                    Notification = new Notification
-                    {
-                        Title = request.Title,
-                        Body = request.Body,
-                        ImageUrl = request.ImageUrl
-                    },
-                    Data = request.data,
-                    Android = new AndroidConfig
-                    {
-                        Priority = Priority.High,
-                        Notification = new AndroidNotification
-                        {
-                            Sound = "default",
-                            ChannelId = "default",
-                            Icon = "ic_notification",
-                            Color = "#FF6B6B",
-                            ClickAction = "FLUTTER_NOTIFICATION_CLICK"
-                        }
-                    },
-                    Apns = new ApnsConfig
-                    {
-                        Aps = new Aps
-                        {
-                            Alert = new ApsAlert
-                            {
-                                Title = request.Title,
-                                Body = request.Body
-                            },
-                            Badge = 1,
-                            Sound = "default",
-                            ContentAvailable = true 
-                        },
-                        FcmOptions = new ApnsFcmOptions
-                        {
-                            ImageUrl = request.ImageUrl
-                        }
-                    },
-                    Webpush = new WebpushConfig
-                    {
-                        Notification = new WebpushNotification
-                        {
-                            Title = request.Title,
-                            Body = request.Body,
-                            Icon = request.ImageUrl ?? "/icon.png"
-                        }
-                    }
+                    Token = token,
+                    Notification = CreateNotification(request),
+                    Data = request.Data,
+                    Android = CreateAndroidConfig(request),
+                    Apns = CreateApnsConfig(request),
+                    Webpush = CreateWebpushConfig(request)
                 };
 
                 var response = await _messaging.SendAsync(message);
-                Console.WriteLine($"[INFO] FCM sent successfully");
                 return response;
             }
             catch (FirebaseMessagingException ex)
             {
-                Console.WriteLine($"[ERROR] FCM failed: {ex.MessagingErrorCode} - {ex.Message}");
-                throw new Exception($"FCM Error [{ex.MessagingErrorCode}]: {ex.Message}", ex);
+                throw;
             }
+        }
+
+        // Helper methods to create platform-specific configurations
+        private Notification CreateNotification(SendNotificationRequest request)
+        {
+            return new Notification
+            {
+                Title = request.Title,
+                Body = request.Body,
+                ImageUrl = request.ImageUrl
+            };
+        }
+
+        private AndroidConfig CreateAndroidConfig(SendNotificationRequest request)
+        {
+            return new AndroidConfig
+            {
+                Priority = Priority.High,
+                Notification = new AndroidNotification
+                {
+                    Sound = "default",
+                    ChannelId = "default", 
+                    Icon = "ic_notification",
+                    Color = "#FF6B6B",
+                    ClickAction = "FLUTTER_NOTIFICATION_CLICK"
+                }
+            };
+        }
+
+        private ApnsConfig CreateApnsConfig(SendNotificationRequest request)
+        {
+            return new ApnsConfig
+            {
+                Aps = new Aps
+                {
+                    Alert = new ApsAlert
+                    {
+                        Title = request.Title,
+                        Body = request.Body
+                    },
+                    Badge = 1,
+                    Sound = "default",
+                    ContentAvailable = true,
+                    MutableContent = true
+                },
+                FcmOptions = new ApnsFcmOptions
+                {
+                    ImageUrl = request.ImageUrl
+                }
+            };
+        }
+
+        private WebpushConfig CreateWebpushConfig(SendNotificationRequest request)
+        {
+            return new WebpushConfig
+            {
+                Notification = new WebpushNotification
+                {
+                    Title = request.Title,
+                    Body = request.Body,
+                    Icon = request.ImageUrl ?? "icon.png"
+                }
+            };
         }
     }
 }

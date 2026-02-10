@@ -20,6 +20,7 @@ public class UnitOfWork : IUnitOfWork
         IMemberMoodLogRepository memberMoodLogRepository,
         IMoodTypeRepository moodTypeRepository,
         ICoupleProfileRepository coupleProfileRepository,
+        ICoupleInvitationRepository coupleInvitationRepository,
         ITestTypeRepository testTypeRepository,
         IQuestionRepository questionRepository,
         IQuestionAnswerRepository questionAnswerRepository,
@@ -30,7 +31,12 @@ public class UnitOfWork : IUnitOfWork
         IDatePlanItemRepository datePlanItemRepository,
         IVenueOwnerProfileRepository venueOwnerProfileRepository,
         INotificationRepository notificationRepository,
-        IDeviceTokenRepository deviceTokenRepository)
+        IDeviceTokenRepository deviceTokenRepository,
+        IDatePlanJobRepository datePlanJobRepository,
+        IReviewRepository reviewRepository,
+        ICheckInHistoryRepository checkInHistoryRepository,
+        IMediaRepository mediaRepository,
+        IReviewReplyRepository reviewReplyRepository)
     {
         _context = context;
         Users = userRepository;
@@ -38,6 +44,7 @@ public class UnitOfWork : IUnitOfWork
         MemberMoodLogs = memberMoodLogRepository;
         MoodTypes = moodTypeRepository;
         CoupleProfiles = coupleProfileRepository;
+        CoupleInvitations = coupleInvitationRepository;
         TestTypes = testTypeRepository;
         Questions = questionRepository;
         QuestionAnswers = questionAnswerRepository;
@@ -49,6 +56,11 @@ public class UnitOfWork : IUnitOfWork
         VenueOwnerProfiles = venueOwnerProfileRepository;
         Notifications = notificationRepository;
         DeviceTokens = deviceTokenRepository;
+        DatePlanJobs = datePlanJobRepository;
+        Reviews = reviewRepository;
+        CheckInHistories = checkInHistoryRepository;
+        Media = mediaRepository;
+        ReviewReplies = reviewReplyRepository;
     }
 
     public MyDbContext Context => _context;
@@ -62,6 +74,8 @@ public class UnitOfWork : IUnitOfWork
     public IMoodTypeRepository MoodTypes { get; }
 
     public ICoupleProfileRepository CoupleProfiles { get; }
+
+    public ICoupleInvitationRepository CoupleInvitations { get; }
 
     public ITestTypeRepository TestTypes { get; }
 
@@ -84,6 +98,16 @@ public class UnitOfWork : IUnitOfWork
     public INotificationRepository Notifications { get; }
 
     public IDeviceTokenRepository DeviceTokens { get; }
+
+    public IDatePlanJobRepository DatePlanJobs { get; set; }
+
+    public IReviewRepository Reviews { get; }
+
+    public ICheckInHistoryRepository CheckInHistories { get; }
+
+    public IMediaRepository Media { get; }
+
+    public IReviewReplyRepository ReviewReplies { get; }
 
     public async Task<int> SaveChangesAsync()
     {

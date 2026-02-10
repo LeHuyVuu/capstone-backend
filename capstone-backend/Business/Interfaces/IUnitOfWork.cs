@@ -26,6 +26,8 @@ public interface IUnitOfWork : IDisposable
 
     ICoupleProfileRepository CoupleProfiles { get; }
 
+    ICoupleInvitationRepository CoupleInvitations { get; }
+
     ITestTypeRepository TestTypes { get; }
 
     IQuestionRepository Questions { get; }
@@ -47,6 +49,16 @@ public interface IUnitOfWork : IDisposable
     INotificationRepository Notifications { get; }
 
     IDeviceTokenRepository DeviceTokens { get; }
+
+    IDatePlanJobRepository DatePlanJobs { get; }
+
+    IReviewRepository Reviews { get; }
+
+    ICheckInHistoryRepository CheckInHistories { get; }
+
+    IMediaRepository Media { get; }
+
+    IReviewReplyRepository ReviewReplies { get; }
 
     /// <summary>
     /// Save all changes to database

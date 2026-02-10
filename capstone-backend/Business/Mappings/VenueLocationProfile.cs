@@ -15,9 +15,12 @@ public class VenueLocationProfile : Profile
         // VenueLocation entity to VenueLocationDetailResponse
         // Ignore image fields - handled manually with JSON deserialize
         CreateMap<VenueLocation, VenueLocationDetailResponse>()
-            .ForMember(dest => dest.CoverImage, opt => opt.Ignore())
-            .ForMember(dest => dest.InteriorImage, opt => opt.Ignore())
-            .ForMember(dest => dest.FullPageMenuImage, opt => opt.Ignore())
+            .ForMember(dest => dest.CoverImage,
+                opt => opt.MapFrom(s => string.IsNullOrWhiteSpace(s.CoverImage) ? null : new List<string> { s.CoverImage }))
+            .ForMember(dest => dest.InteriorImage,
+                opt => opt.MapFrom(s => string.IsNullOrWhiteSpace(s.InteriorImage) ? null : new List<string> { s.InteriorImage }))
+            .ForMember(dest => dest.FullPageMenuImage,
+                opt => opt.MapFrom(s => string.IsNullOrWhiteSpace(s.FullPageMenuImage) ? null : new List<string> { s.FullPageMenuImage }))
             .AfterMap((src, dest) =>
             {
                 // Map và gom nhóm LocationTags thành CoupleMoodTypes và CouplePersonalityTypes riêng biệt
@@ -80,7 +83,15 @@ public class VenueLocationProfile : Profile
         CreateMap<VenueOwnerProfile, VenueOwnerProfileResponse>();
 
         // Review to VenueReviewResponse
-        CreateMap<Review, VenueReviewResponse>();
+        // Ignore ImageUrls, MatchedTag và ReviewLikes - xử lý thủ công trong service
+        CreateMap<Review, VenueReviewResponse>()
+            .ForMember(dest => dest.ImageUrls, opt => opt.Ignore())
+            .ForMember(dest => dest.MatchedTag, opt => opt.Ignore())
+            .ForMember(dest => dest.ReviewLikes, opt => opt.Ignore());
+
+        // ReviewLike to ReviewLikeInfo
+        CreateMap<ReviewLike, ReviewLikeInfo>()
+            .ForMember(dest => dest.Member, opt => opt.Ignore()); // Xử lý thủ công trong service
 
         // MemberProfile to ReviewMemberInfo
         CreateMap<MemberProfile, ReviewMemberInfo>()
