@@ -5,5 +5,6 @@ namespace capstone_backend.Data.Interfaces
 {
     public interface IReviewReplyRepository : IGenericRepository<ReviewReply>
     {
+        Task<ReviewReply?> GetByReviewId(int reviewId);
     }
 }

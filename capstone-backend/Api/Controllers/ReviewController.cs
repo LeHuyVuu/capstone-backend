@@ -130,10 +130,10 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Reply to a review (for venue owners)
+        /// Reply to a review (for Venue Owners)
         /// </summary>
         [HttpPost("{reviewId}/reply")]
-        public async Task<IActionResult> ReplyToReviewAsync(int reviewId, [FromBody] CreateReviewReplyRequest request)
+        public async Task<IActionResult> ReplyToReviewAsync(int reviewId, [FromBody] ReviewReplyRequest request)
         {
             try
             {
@@ -146,6 +146,30 @@ namespace capstone_backend.Api.Controllers
                 var userId = GetCurrentUserId();
                 var result = await _reviewService.ReplyToReviewAsync(userId.Value, reviewId, request);
                 return OkResponse(result, "Phản hồi đánh giá thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Reply to a review (for Venue Owners)
+        /// </summary>
+        [HttpPut("{reviewId}/reply")]
+        public async Task<IActionResult> UpdateReplyReviewAsync(int reviewId, [FromBody] ReviewReplyRequest request)
+        {
+            try
+            {
+                var role = GetCurrentUserRole();
+                if (role == null || !role.Equals("VENUEOWNER", StringComparison.OrdinalIgnoreCase))
+                {
+                    return UnauthorizedResponse("Chỉ chủ địa điểm mới có thể cập nhật phản hồi đánh giá");
+                }
+
+                var userId = GetCurrentUserId();
+                var result = await _reviewService.UpdateReplyReviewAsync(userId.Value, reviewId, request);
+                return OkResponse(result, "Cập nhật phản hồi đánh giá thành công");
             }
             catch (Exception ex)
             {

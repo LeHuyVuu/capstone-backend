@@ -12,7 +12,7 @@ namespace capstone_backend.Business.Mappings
             CreateMap<CreateReviewRequest, Review>();
 
             // Review reply
-            CreateMap<CreateReviewReplyRequest, ReviewReply>();
+            CreateMap<ReviewReplyRequest, ReviewReply>();
             CreateMap<ReviewReply, ReviewReplyResponse>()
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src =>
                     src.CreatedAt.HasValue
