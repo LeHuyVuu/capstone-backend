@@ -26,6 +26,7 @@ public class CollectionService : ICollectionService
             MemberId = memberId,
             CollectionName = request.CollectionName,
             Description = request.Description,
+            Img = request.Img,
             Status = request.Status,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -133,6 +134,9 @@ public class CollectionService : ICollectionService
         
         if (request.Description != null)
             collection.Description = request.Description;
+        
+        if (request.Img != null)
+            collection.Img = request.Img;
         
         if (!string.IsNullOrEmpty(request.Status))
             collection.Status = request.Status;
@@ -293,6 +297,7 @@ public class CollectionService : ICollectionService
             MemberId = collection.MemberId,
             CollectionName = collection.CollectionName,
             Description = collection.Description,
+            Img = collection.Img,
             Status = collection.Status,
             CreatedAt = collection.CreatedAt,
             UpdatedAt = collection.UpdatedAt,
