@@ -10,6 +10,9 @@ namespace capstone_backend.Business.Mappings
         public ReviewProfile()
         {
             CreateMap<CreateReviewRequest, Review>();
+
+            // Review reply
+            CreateMap<CreateReviewReplyRequest, ReviewReply>();
             CreateMap<ReviewReply, ReviewReplyResponse>()
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src =>
                     src.CreatedAt.HasValue

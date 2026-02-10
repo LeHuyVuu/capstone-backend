@@ -58,6 +58,8 @@ public interface IUnitOfWork : IDisposable
 
     IMediaRepository Media { get; }
 
+    IReviewReplyRepository ReviewReplies { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>

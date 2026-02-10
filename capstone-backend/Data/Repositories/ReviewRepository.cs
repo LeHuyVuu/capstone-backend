@@ -22,6 +22,7 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
         var query = _context.Set<Review>()
             .Include(r => r.Member)
                 .ThenInclude(m => m!.User)
+            .Include(r => r.ReviewReply)
             .Where(r => r.VenueId == venueId && r.IsDeleted != true)
             .OrderByDescending(r => r.CreatedAt);
 

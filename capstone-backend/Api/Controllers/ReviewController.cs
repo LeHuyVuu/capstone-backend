@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace capstone_backend.Api.Controllers
 {
     [Route("api/[controller]")]
-    [Authorize(Roles = "MEMBER, member")]
+    [Authorize(Roles = "MEMBER, member, VENUEOWNER")]
     [ApiController]
     public class ReviewController : BaseController
     {
@@ -122,6 +122,30 @@ namespace capstone_backend.Api.Controllers
                 var userId = GetCurrentUserId();
                 var result = await _reviewService.DeleteReviewAsync(userId.Value, reviewId);
                 return OkResponse(result, "Xoá đánh giá địa điểm thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Reply to a review (for venue owners)
+        /// </summary>
+        [HttpPost("{reviewId}/reply")]
+        public async Task<IActionResult> ReplyToReviewAsync(int reviewId, [FromBody] CreateReviewReplyRequest request)
+        {
+            try
+            {
+                var role = GetCurrentUserRole();
+                if (role == null || !role.Equals("VENUEOWNER", StringComparison.OrdinalIgnoreCase))
+                {
+                    return UnauthorizedResponse("Chỉ chủ địa điểm mới có thể phản hồi đánh giá");
+                }
+
+                var userId = GetCurrentUserId();
+                var result = await _reviewService.ReplyToReviewAsync(userId.Value, reviewId, request);
+                return OkResponse(result, "Phản hồi đánh giá thành công");
             }
             catch (Exception ex)
             {
