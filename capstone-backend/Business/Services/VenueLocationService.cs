@@ -163,6 +163,8 @@ public class VenueLocationService : IVenueLocationService
         var allMedias = await _unitOfWork.Media.GetByListTargetIdsAsync(reviewIds, ReferenceType.REVIEW.ToString());
         var mediaLookup = allMedias.ToLookup(m => m.TargetId);
 
+        var venue = await _unitOfWork.VenueLocations.GetByIdWithOwnerAsync(venueId);
+
         // Map reviews sang VenueReviewResponse
         var reviewResponses = reviews.Select(r => 
         {
@@ -192,6 +194,12 @@ public class VenueLocationService : IVenueLocationService
             else
             {
                 response.ImageUrls = new List<string>();
+            }
+
+            if (r.ReviewReply != null)
+            {
+                if (response.ReviewReply != null)
+                    response.ReviewReply.VenueOwnerProfile = _mapper.Map<VenueOwnerProfileResponse>(venue.VenueOwner);
             }
 
             // Set MatchedTag bằng tiếng Việt

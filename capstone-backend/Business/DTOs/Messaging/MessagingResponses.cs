@@ -11,6 +11,7 @@ public class ConversationResponse
     public int? CreatedBy { get; set; }
     public DateTime? CreatedAt { get; set; }
     public List<ConversationMemberResponse> Members { get; set; } = new();
+    public ConversationMemberResponse? OtherUser { get; set; } // Thông tin người đang chat (chỉ cho DIRECT conversation)
     public MessageResponse? LastMessage { get; set; }
     public int UnreadCount { get; set; }
 }
@@ -43,6 +44,12 @@ public class MessageResponse
     public string MessageType { get; set; } = string.Empty;
     public int? ReferenceId { get; set; }
     public string? ReferenceType { get; set; }
+    
+    // File attachment info
+    public string? FileUrl { get; set; }
+    public string? FileName { get; set; }
+    public long? FileSize { get; set; }
+    
     public string? Metadata { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }

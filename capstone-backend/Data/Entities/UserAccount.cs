@@ -59,4 +59,7 @@ public partial class UserAccount
 
     [InverseProperty("User")]
     public virtual ICollection<Wallet> Wallets { get; set; } = new List<Wallet>();
+
+    [InverseProperty("User")]
+    public virtual ICollection<ReviewReply> ReviewReplies { get; set; } = new List<ReviewReply>();
 }

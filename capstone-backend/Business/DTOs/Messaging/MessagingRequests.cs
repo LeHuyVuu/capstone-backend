@@ -27,11 +27,26 @@ public class SendMessageRequest
     
     public string? Content { get; set; }
     
-    public string MessageType { get; set; } = "TEXT";
+    public string MessageType { get; set; } = "TEXT"; // TEXT, IMAGE, FILE, VIDEO, AUDIO
     
     public int? ReferenceId { get; set; }
     
     public string? ReferenceType { get; set; }
+    
+    /// <summary>
+    /// File URL (sau khi upload qua /api/messaging/upload-attachment)
+    /// </summary>
+    public string? FileUrl { get; set; }
+    
+    /// <summary>
+    /// File name gốc
+    /// </summary>
+    public string? FileName { get; set; }
+    
+    /// <summary>
+    /// File size (bytes)
+    /// </summary>
+    public long? FileSize { get; set; }
     
     public string? Metadata { get; set; }
 }
@@ -81,6 +96,6 @@ public class RemoveMemberRequest
     [Required(ErrorMessage = "Conversation ID is required")]
     public int ConversationId { get; set; }
     
-    [Required(ErrorMessage = "User ID is required")]
-    public int UserId { get; set; }
+    [Required(ErrorMessage = "Member ID is required")]
+    public int MemberId { get; set; }
 }

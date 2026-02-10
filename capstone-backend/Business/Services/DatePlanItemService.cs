@@ -368,12 +368,30 @@ namespace capstone_backend.Business.Services
 
                 await _unitOfWork.BeginTransactionAsync();
 
+                // Sort items to take old time
+                var sortedCurrentItems = datePlanItems
+                    .OrderBy(x => x.OrderIndex)
+                    .ToList();
+
+                // Save old time
+                var oldTimes = sortedCurrentItems
+                    .Select(x => new { x.StartTime, x.EndTime })
+                    .ToList();
+
                 var newIndexMap = orderedIds
                     .Select((id, idx) => new { id, idx })
                     .ToDictionary(x => x.id, x => x.idx);
 
                 foreach (var item in datePlanItems)
-                    item.OrderIndex = newIndexMap[item.Id] + 1;
+                {
+                    if (newIndexMap.TryGetValue(item.Id, out int newIndex))
+                    {
+                        item.OrderIndex = newIndex + 1;
+
+                        item.StartTime = oldTimes[newIndex].StartTime;
+                        item.EndTime = oldTimes[newIndex].EndTime;
+                    }
+                }
 
                 _unitOfWork.DatePlanItems.UpdateRange(datePlanItems);
                 await _unitOfWork.SaveChangesAsync();

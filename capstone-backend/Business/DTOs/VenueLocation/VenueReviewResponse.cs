@@ -1,3 +1,5 @@
+using capstone_backend.Business.DTOs.Review;
+
 namespace capstone_backend.Business.DTOs.VenueLocation;
 
 /// <summary>
@@ -33,6 +35,7 @@ public class VenueReviewResponse
     /// Danh sách likes của review
     /// </summary>
     public List<ReviewLikeInfo>? ReviewLikes { get; set; }
+    public ReviewReplyResponse? ReviewReply { get; set; }
 }
 
 /// <summary>
