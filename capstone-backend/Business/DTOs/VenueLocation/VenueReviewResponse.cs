@@ -1,3 +1,5 @@
+using capstone_backend.Business.DTOs.Review;
+
 namespace capstone_backend.Business.DTOs.VenueLocation;
 
 /// <summary>
@@ -28,6 +30,25 @@ public class VenueReviewResponse
     /// Tag matched hoặc not matched bằng tiếng Việt
     /// </summary>
     public string? MatchedTag { get; set; }
+
+    /// <summary>
+    /// Danh sách likes của review
+    /// </summary>
+    public List<ReviewLikeInfo>? ReviewLikes { get; set; }
+    public ReviewReplyResponse? ReviewReply { get; set; }
+}
+
+/// <summary>
+/// Review like information
+/// </summary>
+public class ReviewLikeInfo
+{
+    public int Id { get; set; }
+    public int? MemberId { get; set; }
+    public DateTime? CreatedAt { get; set; }
+    
+    // Member information (người like review)
+    public ReviewMemberInfo? Member { get; set; }
 }
 
 /// <summary>
@@ -66,6 +87,16 @@ public class ReviewSummary
     /// Phân bố rating theo số sao
     /// </summary>
     public List<RatingDistribution> Ratings { get; set; } = new();
+
+    /// <summary>
+    /// Tỉ lệ phần trăm reviews phù hợp với mood của venue
+    /// </summary>
+    public decimal MoodMatchPercentage { get; set; }
+
+    /// <summary>
+    /// Số lượng reviews phù hợp với mood
+    /// </summary>
+    public int MatchedReviewsCount { get; set; }
 }
 
 /// <summary>

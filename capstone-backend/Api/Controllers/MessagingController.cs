@@ -190,7 +190,7 @@ public class MessagingController : BaseController
         await _messagingService.RemoveMemberAsync(userId, new RemoveMemberRequest
         {
             ConversationId = conversationId,
-            UserId = memberId
+            MemberId = memberId
         }, cancellationToken);
         
         return NoContent();

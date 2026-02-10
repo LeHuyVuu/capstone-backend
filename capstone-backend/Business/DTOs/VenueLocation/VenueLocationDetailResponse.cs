@@ -23,6 +23,7 @@ public class VenueLocationDetailResponse
     public int? ReviewCount { get; set; }
     public int? FavoriteCount { get; set; }
     public string? Status { get; set; }
+    public List<string>? Category { get; set; }
     public List<string>? CoverImage { get; set; }
     public List<string>? InteriorImage { get; set; }
     public List<string>? FullPageMenuImage { get; set; }
@@ -43,6 +44,8 @@ public class VenueLocationDetailResponse
 
     // Venue opening hours for each day
     public List<VenueOpeningHourResponse>? OpeningHours { get; set; }
+
+    public UserStateDto? UserState { get; set; }
 }
 
 /// <summary>

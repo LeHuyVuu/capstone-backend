@@ -23,7 +23,7 @@ public static class RecommendationFormatter
             VenueOwnerId = venue.VenueOwnerId,
             Name = venue.Name,
             Address = venue.Address,
-            Description = venue.Description ?? "",
+            Description = venue.Description,
             Email = venue.Email,
             PhoneNumber = venue.PhoneNumber,
             WebsiteUrl = venue.WebsiteUrl,
@@ -37,7 +37,7 @@ public static class RecommendationFormatter
             Distance = distanceMap.TryGetValue(venue.Id, out var dist) ? dist : null,
             DistanceText = FormatDistanceText(distanceMap.TryGetValue(venue.Id, out var d) ? d : null),
             AverageRating = venue.Reviews?.Any() == true
-                ? (decimal)venue.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value)
+                ? Math.Round((decimal)venue.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value), 1)
                 : null,
             ReviewCount = venue.Reviews?.Count ?? 0,
             CoverImage = DeserializeImages(venue.CoverImage),
@@ -71,7 +71,7 @@ public static class RecommendationFormatter
             VenueOwnerId = venue.VenueOwnerId,
             Name = venue.Name,
             Address = venue.Address,
-            Description = venue.Description ?? "",
+            Description = venue.Description,
             Email = venue.Email,
             PhoneNumber = venue.PhoneNumber,
             WebsiteUrl = venue.WebsiteUrl,
@@ -86,7 +86,7 @@ public static class RecommendationFormatter
             DistanceText = FormatDistanceText(distanceMap.TryGetValue(venue.Id, out var d) ? d : null),
             MatchReason = "Địa điểm phổ biến và được đánh giá cao",
             AverageRating = venue.Reviews?.Any() == true
-                ? (decimal)venue.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value)
+                ? Math.Round((decimal)venue.Reviews.Where(r => r.Rating.HasValue).Average(r => (double)r.Rating!.Value), 1)
                 : null,
             ReviewCount = venue.Reviews?.Count ?? 0,
             CoverImage = DeserializeImages(venue.CoverImage),

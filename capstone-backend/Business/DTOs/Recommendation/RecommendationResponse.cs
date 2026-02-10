@@ -13,7 +13,7 @@ public class RecommendationResponse
     /// <summary>
     /// AI-generated explanation for the recommendations
     /// </summary>
-    public string Explanation { get; set; } = string.Empty;
+    public string? Explanation { get; set; }
     
     /// <summary>
     /// Detected couple mood type based on input moods
@@ -69,7 +69,7 @@ public class RecommendedVenue
     /// <summary>
     /// Venue description
     /// </summary>
-    public string Description { get; set; } = string.Empty;
+    public string? Description { get; set; }
     
     /// <summary>
     /// Venue email
@@ -134,7 +134,7 @@ public class RecommendedVenue
     /// <summary>
     /// Match reason from AI analysis
     /// </summary>
-    public string MatchReason { get; set; } = string.Empty;
+    public string? MatchReason { get; set; }
     
     /// <summary>
     /// Average rating from reviews

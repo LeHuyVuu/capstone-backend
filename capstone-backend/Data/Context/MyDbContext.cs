@@ -96,6 +96,8 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<ReviewLike> ReviewLikes { get; set; }
 
+    public virtual DbSet<ReviewReply> ReviewReplies { get; set; }
+
     public virtual DbSet<SearchHistory> SearchHistories { get; set; }
 
     public virtual DbSet<SpecialEvent> SpecialEvents { get; set; }
@@ -766,6 +768,25 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.Review).WithMany(p => p.ReviewLikes)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("review_likes_review_id_fkey");
+        });
+
+        modelBuilder.Entity<ReviewReply>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("review_replies_pkey");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(d => d.User)
+                  .WithMany(p => p.ReviewReplies)
+                  .HasForeignKey(d => d.UserId)
+                  .HasConstraintName("review_replies_user_id_fkey");
+
+            entity.HasOne(d => d.Review)
+                  .WithOne(p => p.ReviewReply)
+                  .HasForeignKey<ReviewReply>(d => d.ReviewId)
+                  .OnDelete(DeleteBehavior.Cascade)
+                  .HasConstraintName("review_replies_review_id_fkey");
         });
 
         modelBuilder.Entity<SearchHistory>(entity =>

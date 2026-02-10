@@ -1,9 +1,11 @@
 using AutoMapper;
+using capstone_backend.Api.Models;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.User;
 using capstone_backend.Business.DTOs.VenueLocation;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
@@ -18,15 +20,32 @@ public class VenueLocationService : IVenueLocationService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
     private readonly ILogger<VenueLocationService> _logger;
+    private readonly ICurrentUser _currentUser;
 
-    public VenueLocationService(IUnitOfWork unitOfWork, IMapper mapper, ILogger<VenueLocationService> logger)
+    public VenueLocationService(IUnitOfWork unitOfWork, IMapper mapper, ILogger<VenueLocationService> logger, ICurrentUser currentUser)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _logger = logger;
+        _currentUser = currentUser;
     }
 
-    #region Image JSON Helpers
+    #region Category & Image Helpers
+    
+    /// <summary>
+    /// Deserialize category string to list (split by " / ")
+    /// </summary>
+    private static List<string>? DeserializeCategory(string? categoryString)
+    {
+        if (string.IsNullOrWhiteSpace(categoryString))
+            return null;
+        
+        return categoryString
+            .Split(new[] { " / " }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim())
+            .Where(s => !string.IsNullOrEmpty(s))
+            .ToList();
+    }
     
     /// <summary>
     /// Serialize list of image URLs to JSON string (max 5 images)
@@ -76,6 +95,7 @@ public class VenueLocationService : IVenueLocationService
         var response = _mapper.Map<VenueLocationDetailResponse>(venue);
 
         // Deserialize image JSON strings to arrays
+        response.Category = DeserializeCategory(venue.Category);
         response.CoverImage = DeserializeImages(venue.CoverImage);
         response.InteriorImage = DeserializeImages(venue.InteriorImage);
         response.FullPageMenuImage = DeserializeImages(venue.FullPageMenuImage);
@@ -91,6 +111,17 @@ public class VenueLocationService : IVenueLocationService
             response.TodayOpeningHour = _mapper.Map<TodayOpeningHourResponse>(todayOpeningHour);
             response.TodayOpeningHour.Status = GetVenueStatus(todayOpeningHour, currentTime);
         }
+
+        // Check checkin status
+        var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
+        var checkin = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(member.Id, venueId);
+
+        response.UserState = new UserStateDto
+        {
+            HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId),
+            ActiceCheckInId = checkin != null ? checkin.Id : null,
+            CanReview = checkin != null && checkin.IsValid == true
+        };
 
         _logger.LogInformation("Retrieved venue location detail for ID {VenueId}", venueId);
 
@@ -140,6 +171,146 @@ public class VenueLocationService : IVenueLocationService
         // Lấy tất cả ratings để tính summary
         var allRatings = await _unitOfWork.Reviews.GetAllRatingsByVenueIdAsync(venueId);
 
+        // Lấy mood match statistics
+        var (totalReviewCount, matchedReviewCount) = await _unitOfWork.Reviews.GetMoodMatchStatisticsAsync(venueId);
+
+        // Lấy tất cả media liên quan đến reviews
+        var reviewIds = reviews.Select(r => r.Id).ToList();
+        var allMedias = await _unitOfWork.Media.GetByListTargetIdsAsync(reviewIds, ReferenceType.REVIEW.ToString());
+        var mediaLookup = allMedias.ToLookup(m => m.TargetId);
+
+        var venue = await _unitOfWork.VenueLocations.GetByIdWithOwnerAsync(venueId);
+
+        // Map reviews sang VenueReviewResponse
+        var reviewResponses = reviews.Select(r => 
+        {
+            var response = _mapper.Map<VenueReviewResponse>(r);
+            
+            // Map member information
+            if (r.Member != null)
+            {
+                response.Member = new ReviewMemberInfo
+                {
+                    Id = r.Member.Id,
+                    UserId = r.Member.UserId,
+                    FullName = r.Member.FullName,
+                    Gender = r.Member.Gender,
+                    Bio = r.Member.Bio,
+                    DisplayName = r.Member.User?.DisplayName,
+                    AvatarUrl = r.Member.User?.AvatarUrl,
+                    Email = r.Member.User?.Email
+                };
+            }
+
+            // Lấy ImageUrls từ Media
+            if (mediaLookup.Contains(r.Id))
+            {
+                response.ImageUrls = mediaLookup[r.Id].Select(m => m.Url).ToList();
+            }
+            else
+            {
+                response.ImageUrls = new List<string>();
+            }
+
+            if (r.ReviewReply != null)
+            {
+                if (response.ReviewReply != null)
+                    response.ReviewReply.VenueOwnerProfile = _mapper.Map<VenueOwnerProfileResponse>(venue.VenueOwner);
+            }
+
+            // Set MatchedTag bằng tiếng Việt
+            response.MatchedTag = r.IsMatched == true ? "Phù hợp" : "Không phù hợp";
+
+            return response;
+        }).ToList();
+
+        // Tính summary statistics
+        var summary = CalculateReviewSummary(allRatings, totalReviewCount, matchedReviewCount);
+
+        _logger.LogInformation("Retrieved {Count} reviews for venue {VenueId} (Page {Page}/{TotalPages}) - Average Rating: {AvgRating}, Mood Match: {MoodMatch}%", 
+            reviewResponses.Count, venueId, page, (int)Math.Ceiling(totalCount / (double)pageSize), summary.AverageRating, summary.MoodMatchPercentage);
+
+        return new VenueReviewsWithSummaryResponse
+        {
+            Summary = summary,
+            Reviews = new PagedResult<VenueReviewResponse>
+            {
+                Items = reviewResponses,
+                PageNumber = page,
+                PageSize = pageSize,
+                TotalCount = totalCount
+            }
+        };
+    }
+
+    /// <summary>
+    /// Tính toán review summary từ danh sách ratings và mood match statistics
+    /// </summary>
+    private ReviewSummary CalculateReviewSummary(List<int> ratings, int totalReviewCount, int matchedReviewCount)
+    {
+        var summary = new ReviewSummary
+        {
+            TotalReviews = ratings.Count,
+            AverageRating = ratings.Any() ? Math.Round((decimal)ratings.Average(), 1) : 0m,
+            Ratings = new List<RatingDistribution>(),
+            MatchedReviewsCount = matchedReviewCount,
+            MoodMatchPercentage = totalReviewCount > 0 
+                ? Math.Round((decimal)matchedReviewCount / totalReviewCount * 100, 2) 
+                : 0m
+        };
+
+        // Tính phân bố ratings từ 5 sao xuống 1 sao
+        for (int star = 5; star >= 1; star--)
+        {
+            var count = ratings.Count(r => r == star);
+            var percent = summary.TotalReviews > 0 
+                ? Math.Round((decimal)count / summary.TotalReviews * 100, 2) 
+                : 0m;
+
+            summary.Ratings.Add(new RatingDistribution
+            {
+                Star = star,
+                Count = count,
+                Percent = percent
+            });
+        }
+
+        return summary;
+    }
+
+    /// <summary>
+    /// Get reviews for a venue location with optional date/month/year filter, sorted by time with review likes included (có phân trang)
+    /// If no date filter provided, returns all reviews
+    /// </summary>
+    public async Task<VenueReviewsWithSummaryResponse> GetReviewsWithLikesByVenueIdAsync(
+        int venueId, 
+        int page = 1, 
+        int pageSize = 10, 
+        DateTime? date = null,
+        int? month = null,
+        int? year = null,
+        bool sortDescending = true)
+    {
+        // Kiểm tra venue có tồn tại không
+        var venue = await _unitOfWork.VenueLocations.GetByIdAsync(venueId);
+        if (venue == null || venue.IsDeleted == true)
+        {
+            _logger.LogWarning("Venue {VenueId} not found or deleted", venueId);
+            throw new InvalidOperationException($"Venue location with ID {venueId} not found");
+        }
+
+        // Lấy danh sách reviews kèm review likes (có phân trang)
+        // Nếu có date filter thì dùng GetReviewsByDateFilterAsync, không thì dùng GetReviewsWithLikesByVenueIdAsync
+        var (reviews, totalCount) = (date.HasValue || month.HasValue || year.HasValue)
+            ? await _unitOfWork.Reviews.GetReviewsByDateFilterAsync(venueId, page, pageSize, date, month, year, sortDescending)
+            : await _unitOfWork.Reviews.GetReviewsWithLikesByVenueIdAsync(venueId, page, pageSize, sortDescending);
+
+        // Lấy tất cả ratings để tính summary
+        var allRatings = await _unitOfWork.Reviews.GetAllRatingsByVenueIdAsync(venueId);
+
+        // Lấy mood match statistics
+        var (totalReviewCount, matchedReviewCount) = await _unitOfWork.Reviews.GetMoodMatchStatisticsAsync(venueId);
+
         // Map reviews sang VenueReviewResponse
         var reviewResponses = reviews.Select(r => 
         {
@@ -177,14 +348,53 @@ public class VenueLocationService : IVenueLocationService
             // Set MatchedTag bằng tiếng Việt
             response.MatchedTag = r.IsMatched == true ? "Phù hợp" : "Không phù hợp";
 
+            // Map ReviewLikes
+            if (r.ReviewLikes != null && r.ReviewLikes.Any())
+            {
+                response.ReviewLikes = r.ReviewLikes
+                    .Where(rl => rl.Member != null) // Filter out likes without member info
+                    .Select(rl => new ReviewLikeInfo
+                    {
+                        Id = rl.Id,
+                        MemberId = rl.MemberId,
+                        CreatedAt = rl.CreatedAt,
+                        Member = rl.Member != null ? new ReviewMemberInfo
+                        {
+                            Id = rl.Member.Id,
+                            UserId = rl.Member.UserId,
+                            FullName = rl.Member.FullName,
+                            Gender = rl.Member.Gender,
+                            Bio = rl.Member.Bio,
+                            DisplayName = rl.Member.User?.DisplayName,
+                            AvatarUrl = rl.Member.User?.AvatarUrl,
+                            Email = rl.Member.User?.Email
+                        } : null
+                    })
+                    .ToList();
+            }
+            else
+            {
+                response.ReviewLikes = new List<ReviewLikeInfo>();
+            }
+
             return response;
         }).ToList();
 
         // Tính summary statistics
-        var summary = CalculateReviewSummary(allRatings);
+        var summary = CalculateReviewSummary(allRatings, totalReviewCount, matchedReviewCount);
 
-        _logger.LogInformation("Retrieved {Count} reviews for venue {VenueId} (Page {Page}/{TotalPages}) - Average Rating: {AvgRating}", 
-            reviewResponses.Count, venueId, page, (int)Math.Ceiling(totalCount / (double)pageSize), summary.AverageRating);
+        var filterDescription = date.HasValue
+            ? $"date: {date.Value:yyyy-MM-dd}"
+            : month.HasValue && year.HasValue
+                ? $"month: {year}/{month:D2}"
+                : year.HasValue
+                    ? $"year: {year}"
+                    : "all reviews";
+
+        var sortOrder = sortDescending ? "newest first" : "oldest first";
+        _logger.LogInformation(
+            "Retrieved {Count} reviews ({Filter}) with likes for venue {VenueId} (Page {Page}/{TotalPages}, {SortOrder}) - Average Rating: {AvgRating}, Mood Match: {MoodMatch}%", 
+            reviewResponses.Count, filterDescription, venueId, page, (int)Math.Ceiling(totalCount / (double)pageSize), sortOrder, summary.AverageRating, summary.MoodMatchPercentage);
 
         return new VenueReviewsWithSummaryResponse
         {
@@ -197,37 +407,6 @@ public class VenueLocationService : IVenueLocationService
                 TotalCount = totalCount
             }
         };
-    }
-
-    /// <summary>
-    /// Tính toán review summary từ danh sách ratings
-    /// </summary>
-    private ReviewSummary CalculateReviewSummary(List<int> ratings)
-    {
-        var summary = new ReviewSummary
-        {
-            TotalReviews = ratings.Count,
-            AverageRating = ratings.Any() ? (decimal)ratings.Average() : 0m,
-            Ratings = new List<RatingDistribution>()
-        };
-
-        // Tính phân bố ratings từ 5 sao xuống 1 sao
-        for (int star = 5; star >= 1; star--)
-        {
-            var count = ratings.Count(r => r == star);
-            var percent = summary.TotalReviews > 0 
-                ? Math.Round((decimal)count / summary.TotalReviews * 100, 2) 
-                : 0m;
-
-            summary.Ratings.Add(new RatingDistribution
-            {
-                Star = star,
-                Count = count,
-                Percent = percent
-            });
-        }
-
-        return summary;
     }
 
     /// <summary>
@@ -748,7 +927,7 @@ public class VenueLocationService : IVenueLocationService
             Latitude = v.Latitude,
             Longitude = v.Longitude,
             Area = v.Area,
-            AverageRating = v.AverageRating,
+            AverageRating = v.AverageRating.HasValue ? Math.Round(v.AverageRating.Value, 1) : null,
             AvarageCost = v.AvarageCost,
             ReviewCount = v.ReviewCount,
             Status = v.Status,
@@ -889,7 +1068,7 @@ public class VenueLocationService : IVenueLocationService
             Latitude = v.Latitude,
             Longitude = v.Longitude,
             Area = v.Area,
-            AverageRating = v.AverageRating,
+            AverageRating = v.AverageRating.HasValue ? Math.Round(v.AverageRating.Value, 1) : null,
             AvarageCost = v.AvarageCost,
             ReviewCount = v.ReviewCount,
             Status = v.Status,
