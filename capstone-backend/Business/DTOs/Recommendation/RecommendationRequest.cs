@@ -59,12 +59,12 @@ public class RecommendationRequest
     public decimal? RadiusKm { get; set; } = 5;
     
     /// <summary>
-    /// Number of recommendations to return (default: 10, max: 20)
-    /// </summary>
-    public int Limit { get; set; } = 10;
-    
-    /// <summary>
     /// Optional: Budget level (1=Low, 2=Medium, 3=High)
     /// </summary>
     public int? BudgetLevel { get; set; }
+    
+    // Internal properties - set from query parameters, not from request body
+    internal int Page { get; set; } = 1;
+    internal int PageSize { get; set; } = 10;
+    
 }

@@ -25,10 +25,6 @@ public class RecommendationRequestValidator : AbstractValidator<RecommendationRe
                 .Length(4).WithMessage("MbtiType must be 4 characters (e.g., INTJ, ESFP)");
         });
 
-        // Limit validation - always required, default is 10
-        RuleFor(x => x.Limit)
-            .InclusiveBetween(1, 20).WithMessage("Limit must be between 1 and 20");
-        
         // Budget level validation - if provided, must be 1-3
         When(x => x.BudgetLevel.HasValue, () =>
         {
