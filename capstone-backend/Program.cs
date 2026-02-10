@@ -195,7 +195,7 @@ using (var scope = serviceProvider.CreateScope())
     recurringJobManager.AddOrUpdate<IMediaWorker>(
         "delete-media-daily",
         job => job.DeleteMediaFileAsync(),
-        Cron.MinuteInterval(5),
+        Cron.Daily(2),
         new RecurringJobOptions
         {
             TimeZone = vnTz

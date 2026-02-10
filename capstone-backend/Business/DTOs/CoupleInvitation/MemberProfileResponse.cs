@@ -5,7 +5,7 @@ namespace capstone_backend.Business.DTOs.CoupleInvitation;
 /// </summary>
 public class MemberProfileResponse
 {
-    public int MemberId { get; set; }
+    public int UserId { get; set; }
     public string FullName { get; set; } = string.Empty;
     public string? AvatarUrl { get; set; }
     public string? Bio { get; set; }
