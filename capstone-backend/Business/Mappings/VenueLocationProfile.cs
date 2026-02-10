@@ -13,8 +13,9 @@ public class VenueLocationProfile : Profile
     public VenueLocationProfile()
     {
         // VenueLocation entity to VenueLocationDetailResponse
-        // Ignore image fields - handled manually with JSON deserialize
+        // Ignore image and category fields - handled manually with JSON deserialize
         CreateMap<VenueLocation, VenueLocationDetailResponse>()
+            .ForMember(dest => dest.Category, opt => opt.Ignore())
             .ForMember(dest => dest.CoverImage,
                 opt => opt.MapFrom(s => string.IsNullOrWhiteSpace(s.CoverImage) ? null : new List<string> { s.CoverImage }))
             .ForMember(dest => dest.InteriorImage,
