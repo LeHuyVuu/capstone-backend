@@ -313,4 +313,11 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
 
         return (venues, totalCount);
     }
+
+    public async Task<VenueLocation?> GetByIdWithOwnerAsync(int id)
+    {
+        return await _dbSet
+            .Include(vl => vl.VenueOwner)
+            .FirstOrDefaultAsync(vl => vl.Id == id);
+    }
 }
