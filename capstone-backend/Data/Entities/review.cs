@@ -48,4 +48,7 @@ public partial class Review
     [ForeignKey("VenueId")]
     [InverseProperty("Reviews")]
     public virtual VenueLocation Venue { get; set; } = null!;
+
+    [InverseProperty("Review")]
+    public virtual ReviewReply? ReviewReply { get; set; }
 }
