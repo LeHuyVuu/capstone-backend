@@ -108,6 +108,28 @@ namespace capstone_backend.Business.Services
             return await _unitOfWork.SaveChangesAsync();
         }
 
+        public async Task<int> DeleteReviewReplyAsync(int userId, int reviewId)
+        {
+            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(userId);
+            if (venueOwner == null)
+                throw new Exception("Không tìm thấy hồ sơ chủ địa điểm");
+
+            var review = await _unitOfWork.Reviews.GetByIdAsync(reviewId);
+            if (review == null)
+                throw new Exception("Không tìm thấy đánh giá hợp lệ");
+
+            var venue = await _unitOfWork.VenueLocations.GetByIdAsync(review.VenueId);
+            if (venue == null || venue.VenueOwnerId != venueOwner.Id)
+                throw new Exception("Bạn không có quyền xoá phản hồi đánh giá này");
+
+            var existingReply = await _unitOfWork.ReviewReplies.GetByReviewId(review.Id);
+            if (existingReply == null)
+                throw new Exception("Không tìm thấy phản hồi đánh giá hợp lệ");
+
+            _unitOfWork.ReviewReplies.Delete(existingReply);
+            return await _unitOfWork.SaveChangesAsync();
+        }
+
         public async Task<int> ReplyToReviewAsync(int userId, int reviewId, ReviewReplyRequest request)
         {
             var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(userId);
