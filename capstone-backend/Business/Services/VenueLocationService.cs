@@ -47,8 +47,6 @@ public class VenueLocationService : IVenueLocationService
             .ToList();
     }
     
-    #region Image JSON Helpers
-
     /// <summary>
     /// Serialize list of image URLs to JSON string (max 5 images)
     /// </summary>
