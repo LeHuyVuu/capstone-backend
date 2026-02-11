@@ -118,7 +118,7 @@ public class OpenAIRecommendationService : IRecommendationService
             string? coupleMoodForFilter = isSinglePerson ? null : (hasFilters ? coupleMoodType : null);
             string? singleMoodForFilter = isSinglePerson && hasFilters ? coupleMoodType : null;
             
-            var venuesWithDistance = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
+            var (venuesWithDistance, totalCount) = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
                 coupleMoodForFilter,
                 hasFilters ? personalityTags : new List<string>(),
                 singleMoodForFilter,
@@ -135,7 +135,7 @@ public class OpenAIRecommendationService : IRecommendationService
             // Fallback: nếu có filter mà không đủ kết quả, query thêm không filter
             if (hasFilters && venues.Count < totalToFetch)
             {
-                var additionalVenuesWithDistance = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
+                var (additionalVenuesWithDistance, _) = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
                     null,
                     new List<string>(),
                     null,
@@ -181,7 +181,6 @@ public class OpenAIRecommendationService : IRecommendationService
           
             // Phase 5: Build response with pagination
             var allRecommendations = RecommendationFormatter.FormatRecommendedVenues(venues, distanceMap);
-            var totalCount = allRecommendations.Count;
             
             // Apply pagination
             var pagedItems = allRecommendations
@@ -198,7 +197,7 @@ public class OpenAIRecommendationService : IRecommendationService
                     Items = pagedItems,
                     PageNumber = page,
                     PageSize = pageSize,
-                    TotalCount = totalCount
+                    TotalCount = totalCount  // Use actual total count from repository
                 },
                 CoupleMoodType = isSinglePerson ? null : coupleMoodType,
                 SingleMood = isSinglePerson ? coupleMoodType : null,
@@ -225,7 +224,7 @@ public class OpenAIRecommendationService : IRecommendationService
         
         try
         {
-            var venuesWithDistance = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
+            var (venuesWithDistance, totalCount) = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
                 null, 
                 new List<string>(), 
                 null,
@@ -268,7 +267,7 @@ public class OpenAIRecommendationService : IRecommendationService
                     Items = pagedItems,
                     PageNumber = page,
                     PageSize = pageSize,
-                    TotalCount = allRecommendations.Count
+                    TotalCount = totalCount  // Use actual total count from repository
                 },
                 Explanation = "Đây là những địa điểm phổ biến và được yêu thích nhất.",
                 ProcessingTimeMs = processingTimeMs

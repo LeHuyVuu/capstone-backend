@@ -119,7 +119,7 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
     /// Supports: lat/lon radius search OR area (province/city) filtering
     /// Returns venues with distance calculated using Haversine formula
     /// </summary>
-    public async Task<List<(VenueLocation Venue, decimal? DistanceKm)>> GetForRecommendationsAsync(
+    public async Task<(List<(VenueLocation Venue, decimal? DistanceKm)> Venues, int TotalCount)> GetForRecommendationsAsync(
         string? coupleMoodType,
         List<string> personalityTags,
         string? singleMoodName,
@@ -231,6 +231,9 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
         // Always include reviews for rating calculation
         query = query.Include(v => v.Reviews);
 
+        // Get total count before pagination
+        var totalCountQuery = query.Select(v => v.Id);
+        
         // Fetch venues from database
         var venues = await query
             .AsSplitQuery()
@@ -249,18 +252,25 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
                 ))
                 .Where(x => x.DistanceKm <= (radiusKm ?? 5m)) // Filter by actual distance
                 .OrderBy(x => x.DistanceKm) // Sort by distance (nearest first)
+                .ToList();
+
+            var totalCount = venuesWithDistance.Count;
+            var pagedVenues = venuesWithDistance
                 .Take(limit)
                 .Select(x => (x.Venue, (decimal?)x.DistanceKm))
                 .ToList();
 
-            return venuesWithDistance;
+            return (pagedVenues, totalCount);
         }
 
         // No geo filter - return without distance
-        return venues
+        var totalCountNoGeo = venues.Count;
+        var pagedVenuesNoGeo = venues
             .Take(limit)
             .Select(v => (v, (decimal?)null))
             .ToList();
+        
+        return (pagedVenuesNoGeo, totalCountNoGeo);
     }
 
 
