@@ -33,20 +33,14 @@ public class RecommendationController : BaseController
     /// </summary>
     [HttpPost]
     [SwaggerOperation(
-        Summary = "🤖 AI-Powered Venue Recommendations",
+        Summary = "Powered Venue Recommendations",
         Description = @"Ultra-flexible recommendation engine - accepts natural language, structured data, geo-location, or any combination. AI analyzes MBTI, mood, location, preferences to suggest perfect venues.
 
 ## 🎯 API này hỗ trợ NHIỀU cách truyền input:
 
 ---
 
-### 📝 **Case 1: Natural Language Query (Ngôn ngữ tự nhiên)**
-AI tự động parse query để hiểu ý định, tâm trạng, preferences
-```json
-{
-  ""query"": ""Hôm nay anniversary, muốn đi đâu đó lãng mạn ở Hà Nội""
-}
-```
+
 
 ---
 
@@ -391,10 +385,16 @@ Không truyền region/lat/lon → Search toàn quốc
     [ProducesResponseType(typeof(ApiResponse<RecommendationResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetRecommendations([FromBody] RecommendationRequest request)
+    public async Task<IActionResult> GetRecommendations(
+        [FromBody] RecommendationRequest request,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
     {
         try
         {
+            // Set pagination from query parameters
+            request.Page = Math.Max(1, page);
+            request.PageSize = Math.Min(Math.Max(1, pageSize), 50); // Max 50 per page
            
 
             var userId = GetCurrentUserId();
@@ -453,8 +453,8 @@ Không truyền region/lat/lon → Search toàn quốc
                 request.Area, request.Latitude, request.Longitude, request.RadiusKm, request.BudgetLevel);
             var result = await _recommendationService.GetRecommendationsAsync(request);
 
-            var message = result.Recommendations.Any() 
-                ? $"Successfully generated {result.Recommendations.Count} recommendations in {result.ProcessingTimeMs}ms"
+            var message = result.Recommendations.Items.Any() 
+                ? $"Successfully generated {result.Recommendations.TotalCount} recommendations (Page {result.Recommendations.PageNumber}/{Math.Ceiling((double)result.Recommendations.TotalCount / result.Recommendations.PageSize)}) in {result.ProcessingTimeMs}ms"
                 : "No venues found matching your criteria, but here are some general suggestions";
 
             return OkResponse(result, message);
