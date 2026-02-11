@@ -7,6 +7,7 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using Hangfire;
+using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Services
 {
@@ -208,6 +209,69 @@ namespace capstone_backend.Business.Services
             }
 
             return await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<ReviewLikeResponse> ToggleLikeReviewAsync(int userId, int reviewId)
+        {
+            // Use transaction
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+                if (member == null) throw new Exception("Không tìm thấy hồ sơ thành viên");
+
+                var review = await _unitOfWork.Reviews.GetByIdAsync(reviewId);
+                if (review == null) throw new Exception("Không tìm thấy đánh giá");
+
+                var isLiked = false;
+                var existingLike = await _unitOfWork.ReviewLikes.GetByReviewIdAndMemberIdAsync(reviewId, member.Id);
+
+                if (existingLike != null)
+                {
+                    _unitOfWork.ReviewLikes.Delete(existingLike);
+
+                    await _unitOfWork.SaveChangesAsync();
+                }
+                else
+                {
+                    // LIKE
+                    var newLike = new ReviewLike 
+                    { 
+                        ReviewId = reviewId, 
+                        MemberId = member.Id 
+                    };
+
+                    try
+                    {
+                        await _unitOfWork.ReviewLikes.AddAsync(newLike);
+                        await _unitOfWork.SaveChangesAsync(); // Save để chắc chắn insert thành công
+                    }
+                    catch (DbUpdateException)
+                    {
+                        throw new Exception("Bạn đã like đánh giá này rồi (Concurreny check)");
+                    }
+                    isLiked = true;
+                }
+
+                var realCount = await _unitOfWork.ReviewLikes.CountAsync(x => x.ReviewId == reviewId);
+
+                review.LikeCount = realCount;
+                _unitOfWork.Reviews.Update(review);
+                await _unitOfWork.SaveChangesAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new ReviewLikeResponse
+                {
+                    IsLiked = isLiked,
+                    LikeCount = realCount
+                };
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
         public async Task<int> UpdateReplyReviewAsync(int userId, int reviewId, ReviewReplyRequest request)

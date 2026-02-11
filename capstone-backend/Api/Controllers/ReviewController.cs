@@ -201,5 +201,24 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Like a review
+        /// </summary>
+        [HttpPost("{reviewId:int}/toggle-like")]
+        public async Task<IActionResult> ToggleLikeReviewAsync(int reviewId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _reviewService.ToggleLikeReviewAsync(userId.Value, reviewId);
+                var message = result.IsLiked ? "Thích đánh giá thành công" : "Bỏ thích đánh giá thành công";
+                return OkResponse(result, message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
