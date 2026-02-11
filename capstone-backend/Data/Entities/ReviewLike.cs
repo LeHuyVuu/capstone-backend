@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
+[Index("ReviewId", "MemberId", Name = "idx_review_member_like")]
 public partial class ReviewLike
 {
     [Key]
