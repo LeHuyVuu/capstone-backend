@@ -80,6 +80,7 @@ public class VenueLocationController : BaseController
     /// <param name="pageSize">Page size (default: 10)</param>
     /// <returns>Reviews with summary and paginated list</returns>
     [HttpGet("{id}/reviews")]
+    [Authorize]
     public async Task<IActionResult> GetReviewsByVenueId(int id, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         _logger.LogInformation("Requesting reviews for venue ID: {VenueId}, Page: {Page}, PageSize: {PageSize}", id, page, pageSize);
