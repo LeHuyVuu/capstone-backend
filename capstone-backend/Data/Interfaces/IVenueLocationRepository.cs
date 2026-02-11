@@ -55,7 +55,7 @@ public interface IVenueLocationRepository : IGenericRepository<VenueLocation>
     /// <param name="limit">Maximum number of results</param>
     /// <param name="budgetLevel">Budget level (1: Low &lt; 200k, 2: Medium 200k-1m, 3: High &gt; 1m) or custom logic</param>
     /// <returns>List of matching venues with distance (sorted by distance when lat/lon provided)</returns>
-    Task<List<(VenueLocation Venue, decimal? DistanceKm)>> GetForRecommendationsAsync(
+    Task<(List<(VenueLocation Venue, decimal? DistanceKm)> Venues, int TotalCount)> GetForRecommendationsAsync(
         string? coupleMoodType,
         List<string> personalityTags,
         string? singleMoodName,
