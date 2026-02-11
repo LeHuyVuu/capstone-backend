@@ -101,6 +101,7 @@ public static class ServiceExtensions
         services.AddScoped<ICheckInHistoryRepository, CheckInHistoryRepository>();
         services.AddScoped<IMediaRepository, MediaRepository>();
         services.AddScoped<IReviewReplyRepository, ReviewReplyRepository>();
+        services.AddScoped<IReviewLikeRepository, ReviewLikeRepository>();
 
         // Messaging repositories
         services.AddScoped<IConversationRepository, ConversationRepository>();

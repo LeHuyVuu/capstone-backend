@@ -60,6 +60,8 @@ public interface IUnitOfWork : IDisposable
 
     IReviewReplyRepository ReviewReplies { get; }
 
+    IReviewLikeRepository ReviewLikes { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>

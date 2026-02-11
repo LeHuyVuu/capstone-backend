@@ -158,4 +158,10 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
             .AsNoTracking()
             .FirstOrDefaultAsync(r => r.Id == reviewId && r.MemberId == memberId && r.IsDeleted == false);
     }
+
+    public async Task<Review?> GetByIdAsync(int id)
+    {
+        return await _dbSet
+            .FirstOrDefaultAsync(r => r.Id == id && r.IsDeleted == false);
+    }
 }
