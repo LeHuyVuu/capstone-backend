@@ -113,7 +113,7 @@ public class VenueLocationService : IVenueLocationService
         }
 
         // Check checkin status
-        if (_currentUser.UserId != null)
+        if (_currentUser.UserId != null && _currentUser.Role == "MEMBER")
         {
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
             var checkin = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(member.Id, venueId);
