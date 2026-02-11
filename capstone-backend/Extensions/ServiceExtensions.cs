@@ -168,6 +168,9 @@ public static class ServiceExtensions
         // Register Messaging Service
         services.AddScoped<IMessagingService, MessagingService>();
 
+        // Register Moderation Service
+        services.AddSingleton<IModerationService, ModerationService>();
+
         return services;
     }
 

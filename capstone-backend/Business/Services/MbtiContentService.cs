@@ -10,8 +10,8 @@ namespace capstone_backend.Business.Services
 
         public MbtiContentService(IWebHostEnvironment env)
         {
-            var webRoot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
-            var filePath = Path.Combine(webRoot, "assets", "mbti", "mbti.json");
+            var contentRoot = env.ContentRootPath;
+            var filePath = Path.Combine(contentRoot, "Resources", "Mbti", "mbti.json");
             // --------------------
 
             if (!File.Exists(filePath))

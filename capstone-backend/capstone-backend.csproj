@@ -66,6 +66,13 @@
 
     <ItemGroup>
       <Folder Include="Business\Entities\" />
+      <Folder Include="wwwroot\assets\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="Resources\BadWords\banned-words.txt">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

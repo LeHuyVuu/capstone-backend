@@ -1,4 +1,5 @@
-﻿using capstone_backend.Business.DTOs.DatePlan;
+﻿using capstone_backend.Api.Filters;
+using capstone_backend.Business.DTOs.DatePlan;
 using capstone_backend.Business.DTOs.DatePlanItem;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Enums;
@@ -12,6 +13,7 @@ namespace capstone_backend.Api.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(Roles = "MEMBER, member")]
+    [Moderation]
     public class DatePlanController : BaseController
     {
         private readonly IDatePlanService _datePlanService;
