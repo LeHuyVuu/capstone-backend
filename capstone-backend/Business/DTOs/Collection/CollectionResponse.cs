@@ -8,6 +8,7 @@ public class CollectionResponse
     public int MemberId { get; set; }
     public string? CollectionName { get; set; }
     public string? Description { get; set; }
+    public string? Img { get; set; }
     public string? Status { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }

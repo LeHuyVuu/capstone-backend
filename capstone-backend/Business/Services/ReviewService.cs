@@ -144,6 +144,10 @@ namespace capstone_backend.Business.Services
             if (venue == null || venue.VenueOwnerId != venueOwner.Id)
                 throw new Exception("Bạn không có quyền phản hồi đánh giá này");
 
+            var existingReply = await _unitOfWork.ReviewReplies.GetByReviewId(review.Id);
+            if (existingReply != null)
+                throw new Exception("Đã tồn tại phản hồi cho đánh giá này");
+
             var reply = _mapper.Map<ReviewReply>(request);
             reply.ReviewId = review.Id;
             reply.UserId = userId;

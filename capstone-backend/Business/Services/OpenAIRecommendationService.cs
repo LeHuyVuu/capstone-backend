@@ -1,4 +1,5 @@
 using capstone_backend.Business.DTOs.Recommendation;
+using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Recommendation;
 using capstone_backend.Data.Interfaces;
@@ -101,6 +102,14 @@ public class OpenAIRecommendationService : IRecommendationService
             _logger.LogInformation($"[Recommendation] Lat/Lon: {request.Latitude}, {request.Longitude} | Area: {searchArea}");
             _logger.LogInformation($"[Recommendation] Mood: {coupleMoodType} | Tags: {string.Join(", ", personalityTags)} | SinglePerson: {isSinglePerson}");
 
+            // Pagination setup
+            var pageSize = request.PageSize;
+            pageSize = Math.Min(pageSize, 50); // Max 50 per page
+            var page = Math.Max(1, request.Page);
+            
+            // Fetch exact amount needed for current page
+            var totalToFetch = page * pageSize;
+
             // Phase 3: Query venues trực tiếp từ repo
             var hasFilters = !string.IsNullOrEmpty(coupleMoodType) || personalityTags.Any();
             
@@ -117,14 +126,14 @@ public class OpenAIRecommendationService : IRecommendationService
                 request.Latitude,
                 request.Longitude,
                 request.RadiusKm,
-                request.Limit,
+                totalToFetch,
                 request.BudgetLevel
             );
             var venues = venuesWithDistance.Select(x => x.Venue).ToList();
             var distanceMap = venuesWithDistance.ToDictionary(x => x.Venue.Id, x => x.DistanceKm);
 
             // Fallback: nếu có filter mà không đủ kết quả, query thêm không filter
-            if (hasFilters && venues.Count < request.Limit)
+            if (hasFilters && venues.Count < totalToFetch)
             {
                 var additionalVenuesWithDistance = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
                     null,
@@ -134,7 +143,7 @@ public class OpenAIRecommendationService : IRecommendationService
                     request.Latitude,
                     request.Longitude,
                     request.RadiusKm,
-                    request.Limit - venues.Count,
+                    totalToFetch - venues.Count,
                     request.BudgetLevel
                 );
 
@@ -153,7 +162,13 @@ public class OpenAIRecommendationService : IRecommendationService
             {
                 return new RecommendationResponse
                 {
-                    Recommendations = new List<RecommendedVenue>(),
+                    Recommendations = new PagedResult<RecommendedVenue>
+                    {
+                        Items = new List<RecommendedVenue>(),
+                        PageNumber = page,
+                        PageSize = pageSize,
+                        TotalCount = 0
+                    },
                     Explanation = "Xin lỗi, hiện tại chúng tôi chưa có đủ dữ liệu địa điểm. Vui lòng thử lại sau.",
                     CoupleMoodType = isSinglePerson ? null : coupleMoodType,
                     SingleMood = isSinglePerson ? coupleMoodType : null,
@@ -164,13 +179,27 @@ public class OpenAIRecommendationService : IRecommendationService
      
 
           
-            // Phase 5: Build response
-            var recommendations = RecommendationFormatter.FormatRecommendedVenues(venues, distanceMap);
+            // Phase 5: Build response with pagination
+            var allRecommendations = RecommendationFormatter.FormatRecommendedVenues(venues, distanceMap);
+            var totalCount = allRecommendations.Count;
+            
+            // Apply pagination
+            var pagedItems = allRecommendations
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+            
             stopwatch.Stop();
 
             return new RecommendationResponse
             {
-                Recommendations = recommendations,
+                Recommendations = new PagedResult<RecommendedVenue>
+                {
+                    Items = pagedItems,
+                    PageNumber = page,
+                    PageSize = pageSize,
+                    TotalCount = totalCount
+                },
                 CoupleMoodType = isSinglePerson ? null : coupleMoodType,
                 SingleMood = isSinglePerson ? coupleMoodType : null,
                 PersonalityTags = personalityTags,
@@ -190,6 +219,10 @@ public class OpenAIRecommendationService : IRecommendationService
     /// </summary>
     private async Task<RecommendationResponse> GetFallbackRecommendationsAsync(RecommendationRequest request, long processingTimeMs)
     {
+        var pageSize = Math.Min(request.PageSize, 50);
+        var page = Math.Max(1, request.Page);
+        var totalToFetch = page * pageSize;
+        
         try
         {
             var venuesWithDistance = await _unitOfWork.VenueLocations.GetForRecommendationsAsync(
@@ -200,7 +233,7 @@ public class OpenAIRecommendationService : IRecommendationService
                 request.Latitude, 
                 request.Longitude, 
                 request.RadiusKm, 
-                request.Limit,
+                totalToFetch,
                 request.BudgetLevel
             );
             var venues = venuesWithDistance.Select(x => x.Venue).ToList();
@@ -210,15 +243,33 @@ public class OpenAIRecommendationService : IRecommendationService
             {
                 return new RecommendationResponse
                 {
-                    Recommendations = new List<RecommendedVenue>(),
+                    Recommendations = new PagedResult<RecommendedVenue>
+                    {
+                        Items = new List<RecommendedVenue>(),
+                        PageNumber = page,
+                        PageSize = pageSize,
+                        TotalCount = 0
+                    },
                     Explanation = "Xin lỗi, hiện tại hệ thống gặp sự cố. Vui lòng thử lại sau.",
                     ProcessingTimeMs = processingTimeMs
                 };
             }
 
+            var allRecommendations = RecommendationFormatter.FormatFallbackVenues(venues, totalToFetch, distanceMap);
+            var pagedItems = allRecommendations
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
             return new RecommendationResponse
             {
-                Recommendations = RecommendationFormatter.FormatFallbackVenues(venues, request.Limit, distanceMap),
+                Recommendations = new PagedResult<RecommendedVenue>
+                {
+                    Items = pagedItems,
+                    PageNumber = page,
+                    PageSize = pageSize,
+                    TotalCount = allRecommendations.Count
+                },
                 Explanation = "Đây là những địa điểm phổ biến và được yêu thích nhất.",
                 ProcessingTimeMs = processingTimeMs
             };
@@ -227,7 +278,13 @@ public class OpenAIRecommendationService : IRecommendationService
         {
             return new RecommendationResponse
             {
-                Recommendations = new List<RecommendedVenue>(),
+                Recommendations = new PagedResult<RecommendedVenue>
+                {
+                    Items = new List<RecommendedVenue>(),
+                    PageNumber = page,
+                    PageSize = pageSize,
+                    TotalCount = 0
+                },
                 Explanation = "Hệ thống tạm thời không khả dụng. Vui lòng thử lại sau.",
                 ProcessingTimeMs = processingTimeMs
             };

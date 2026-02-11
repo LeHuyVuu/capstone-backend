@@ -17,6 +17,8 @@ public partial class Collection
 
     public string? Description { get; set; }
 
+    public string? Img { get; set; }
+
     public string? Status { get; set; }
 
     public DateTime? CreatedAt { get; set; }

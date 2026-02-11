@@ -1,4 +1,5 @@
-﻿using capstone_backend.Business.DTOs.Review;
+﻿using capstone_backend.Api.Filters;
+using capstone_backend.Business.DTOs.Review;
 using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -8,6 +9,7 @@ namespace capstone_backend.Api.Controllers
 {
     [Route("api/[controller]")]
     [Authorize(Roles = "MEMBER, member, VENUEOWNER")]
+    [Moderation]
     [ApiController]
     public class ReviewController : BaseController
     {

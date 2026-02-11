@@ -30,8 +30,23 @@ public class VenueLocationService : IVenueLocationService
         _currentUser = currentUser;
     }
 
-    #region Image JSON Helpers
-
+    #region Category & Image Helpers
+    
+    /// <summary>
+    /// Deserialize category string to list (split by " / ")
+    /// </summary>
+    private static List<string>? DeserializeCategory(string? categoryString)
+    {
+        if (string.IsNullOrWhiteSpace(categoryString))
+            return null;
+        
+        return categoryString
+            .Split(new[] { " / " }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim())
+            .Where(s => !string.IsNullOrEmpty(s))
+            .ToList();
+    }
+    
     /// <summary>
     /// Serialize list of image URLs to JSON string (max 5 images)
     /// </summary>
@@ -80,6 +95,7 @@ public class VenueLocationService : IVenueLocationService
         var response = _mapper.Map<VenueLocationDetailResponse>(venue);
 
         // Deserialize image JSON strings to arrays
+        response.Category = DeserializeCategory(venue.Category);
         response.CoverImage = DeserializeImages(venue.CoverImage);
         response.InteriorImage = DeserializeImages(venue.InteriorImage);
         response.FullPageMenuImage = DeserializeImages(venue.FullPageMenuImage);
