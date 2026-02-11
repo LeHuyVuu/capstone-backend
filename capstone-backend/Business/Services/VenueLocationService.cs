@@ -113,15 +113,19 @@ public class VenueLocationService : IVenueLocationService
         }
 
         // Check checkin status
-        var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
-        var checkin = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(member.Id, venueId);
-
-        response.UserState = new UserStateDto
+        if (_currentUser.UserId != null)
         {
-            HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId),
-            ActiceCheckInId = checkin != null ? checkin.Id : null,
-            CanReview = checkin != null && checkin.IsValid == true
-        };
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
+            var checkin = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(member.Id, venueId);
+
+            response.UserState = new UserStateDto
+            {
+                HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId),
+                ActiceCheckInId = checkin != null ? checkin.Id : null,
+                CanReview = checkin != null && checkin.IsValid == true
+            };
+        }
+        
 
         _logger.LogInformation("Retrieved venue location detail for ID {VenueId}", venueId);
 
