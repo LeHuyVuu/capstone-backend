@@ -1,4 +1,4 @@
-using capstone_backend.Business.Common;
+using capstone_backend.Business.Common.Constants;
 using capstone_backend.Business.DTOs.Collection;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.Interfaces;

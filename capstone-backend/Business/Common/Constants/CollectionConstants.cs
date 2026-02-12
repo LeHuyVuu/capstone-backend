@@ -1,4 +1,4 @@
-namespace capstone_backend.Business.Common;
+namespace capstone_backend.Business.Common.Constants;
 
 public static class CollectionConstants
 {
