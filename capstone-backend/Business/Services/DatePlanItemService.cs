@@ -213,6 +213,9 @@ namespace capstone_backend.Business.Services
                 if (datePlan == null)
                     throw new Exception("Không tìm thấy lịch trình buổi hẹn");
 
+                if (datePlan.Status == DatePlanStatus.DRAFTED.ToString() && datePlan.OrganizerMemberId != member.Id)
+                    throw new Exception("Chỉ có người tổ chức buổi hẹn mới có thể xem lịch trình ở trạng thái DRAFTED");
+
                 var (datePlanItems, totalCount) = await _unitOfWork.DatePlanItems.GetPagedAsync(
                         pageNumber,
                         pageSize,
@@ -255,6 +258,9 @@ namespace capstone_backend.Business.Services
                 var datePlanItem = await _unitOfWork.DatePlanItems.GetByIdAndDatePlanIdAsync(datePlanItemId, datePlanId, includeVenueLocation: true);
                 if (datePlanItem == null)
                     throw new Exception("Không tìm thấy mục trong lịch trình");
+
+                if (datePlan.Status == DatePlanStatus.DRAFTED.ToString() && datePlan.OrganizerMemberId != member.Id)
+                    throw new Exception("Chỉ có người tổ chức buổi hẹn mới có thể xem lịch trình ở trạng thái DRAFTED");
 
                 var response = _mapper.Map<DatePlanItemResponse>(datePlanItem);
                 return response;

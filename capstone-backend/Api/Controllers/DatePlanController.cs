@@ -33,6 +33,10 @@ namespace capstone_backend.Api.Controllers
         /// 
         /// PAST - Get all date plans that are past
         /// 
+        /// DRAFTED - Get all drafted date plans
+        /// 
+        /// PENDING - Get all pending date plans (pending approval)
+        /// 
         /// ALL - Get all date plans (default)
         /// </remarks>
         [HttpGet]

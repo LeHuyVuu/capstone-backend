@@ -131,6 +131,7 @@ namespace capstone_backend.Business.Services
                                 dp => dp.CoupleId == couple.id &&
                                       dp.IsDeleted == false &&
                                       dp.Status != DatePlanStatus.CANCELLED.ToString() &&
+                                      dp.Status == DatePlanStatus.SCHEDULED.ToString() &&
                                       ((dp.PlannedEndAt.HasValue && dp.PlannedEndAt >= now) ||
                                         (dp.PlannedEndAt == null && dp.PlannedStartAt.HasValue && dp.PlannedStartAt >= now)
                                       ),
@@ -145,22 +146,50 @@ namespace capstone_backend.Business.Services
                                 dp => dp.CoupleId == couple.id &&
                                       dp.IsDeleted == false &&
                                       dp.Status != DatePlanStatus.CANCELLED.ToString() &&
+                                      dp.Status == DatePlanStatus.COMPLETED.ToString() &&
                                       ((dp.PlannedEndAt.HasValue && dp.PlannedEndAt < now) ||
                                         (dp.PlannedEndAt == null && dp.PlannedStartAt.HasValue && dp.PlannedStartAt < now)
                                       ),
                                 dp => dp.OrderByDescending(dp => dp.CreatedAt)
                             );
                         break;
+                    
+                    case "DRAFTED":
+                        (items, totalCount) = await _unitOfWork.DatePlans.GetPagedAsync(
+                                pageNumber,
+                                pageSize,
+                                dp => dp.CoupleId == couple.id &&
+                                      dp.OrganizerMemberId == member.Id &&
+                                      dp.IsDeleted == false &&
+                                      dp.Status == DatePlanStatus.DRAFTED.ToString(),
+                                dp => dp.OrderByDescending(dp => dp.CreatedAt)
+                            );
+                        break;
 
-                    case "ALL":
+                    case "PENDING":
                         (items, totalCount) = await _unitOfWork.DatePlans.GetPagedAsync(
                                 pageNumber,
                                 pageSize,
                                 dp => dp.CoupleId == couple.id &&
                                       dp.IsDeleted == false &&
-                                      dp.Status != DatePlanStatus.CANCELLED.ToString(),
+                                      dp.Status == DatePlanStatus.PENDING.ToString(),
                                 dp => dp.OrderByDescending(dp => dp.CreatedAt)
                             );
+                        break;
+
+                    case "ALL":
+                        (items, totalCount) = await _unitOfWork.DatePlans.GetPagedAsync(
+                            pageNumber,
+                            pageSize,
+                            dp => dp.CoupleId == couple.id &&
+                                  dp.IsDeleted == false &&
+                                  dp.Status != DatePlanStatus.CANCELLED.ToString() &&
+                                  (
+                                      dp.Status != DatePlanStatus.DRAFTED.ToString() ||
+                                      dp.OrganizerMemberId == member.Id
+                                  ),
+                            dp => dp.OrderByDescending(dp => dp.CreatedAt)
+                        );
                         break;
 
                     default:
@@ -207,6 +236,9 @@ namespace capstone_backend.Business.Services
                 var datePlan = await _unitOfWork.DatePlans.GetByIdAndCoupleIdAsync(datePlanId, couple.id, true, true);
                 if (datePlan == null)
                     throw new Exception("Không tìm thấy lịch trình buổi hẹn");
+
+                if (datePlan.Status == DatePlanStatus.DRAFTED.ToString() && datePlan.OrganizerMemberId != member.Id)
+                    throw new Exception("Chỉ người tổ chức mới có quyền xem lịch trình buổi hẹn ở trạng thái DRAFTED");
 
                 var response = _mapper.Map<DatePlanDetailResponse>(datePlan);
 

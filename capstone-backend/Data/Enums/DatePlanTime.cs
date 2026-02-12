@@ -4,6 +4,8 @@
     {
         UPCOMING,
         PAST,
-        ALL
+        ALL,
+        DRAFTED,
+        PENDING
     }
 }
