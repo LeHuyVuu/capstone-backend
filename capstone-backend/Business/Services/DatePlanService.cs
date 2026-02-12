@@ -42,6 +42,13 @@ namespace capstone_backend.Business.Services
                 var plannedStartAtUtc = DateTimeNormalizeUtil.NormalizeToUtc(request.PlannedStartAt);
                 var plannedEndAtUtc = DateTimeNormalizeUtil.NormalizeToUtc(request.PlannedEndAt);
 
+                var now = DateTime.UtcNow;
+
+                if (plannedStartAtUtc < now)
+                {
+                    throw new Exception("Không thể tạo lịch trong quá khứ");
+                }
+
                 if (plannedEndAtUtc < plannedStartAtUtc)
                 {
                     throw new Exception("Thời gian kết thúc dự kiến không được sớm hơn thời gian bắt đầu dự kiến");
