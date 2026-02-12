@@ -15,12 +15,16 @@ public partial class Challenge
 
     public string? Description { get; set; }
 
-    public string ChallengeType { get; set; } = null!;
+    public string TriggerEvent { get; set; } = null!;
 
-    public int? RewardPoints { get; set; }
+    public int RewardPoints { get; set; } = 0;
 
     [Column(TypeName = "jsonb")]
-    public string? RuleDefinition { get; set; }
+    public string? ConditionRules { get; set; }
+
+    public string? GoalMetric { get; set; }
+
+    public int? TargetGoal { get; set; } = 0;
 
     public DateTime? StartDate { get; set; }
 
