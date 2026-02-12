@@ -31,24 +31,28 @@ namespace capstone_backend.Api.Controllers
         /// <remarks>
         /// UPCOMMING - Get all date plans that are upcoming
         /// 
-        /// PAST - Get all date plans that are past
+        /// COMPLETED - Get all date plans that are completed
         /// 
         /// DRAFTED - Get all drafted date plans
         /// 
         /// PENDING - Get all pending date plans (pending approval)
         /// 
+        /// IN_PROGRESS - Get all date plans that are in progress
+        /// 
+        /// CANCELLED - Get all date plans that are cancelled
+        /// 
         /// ALL - Get all date plans (default)
         /// </remarks>
         [HttpGet]
         public async Task<IActionResult> GetDatePlans(
-            [FromQuery] DatePlanTime time = DatePlanTime.ALL,
+            [FromQuery] DatePlanTime status = DatePlanTime.ALL,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10)
         {
             try
             {
                 var userId = GetCurrentUserId();
-                var (result, totalUpcoming) = await _datePlanService.GetAllDatePlansByTimeAsync(pageNumber, pageSize, userId.Value, time.ToString());
+                var (result, totalUpcoming) = await _datePlanService.GetAllDatePlansByTimeAsync(pageNumber, pageSize, userId.Value, status.ToString());
 
                 var customReponse = new DatePlanPagedResponse
                 {

@@ -3,9 +3,11 @@
     public enum DatePlanTime
     {
         UPCOMING,
-        PAST,
         ALL,
         DRAFTED,
-        PENDING
+        PENDING,
+        IN_PROGRESS,
+        CANCELLED,
+        COMPLETED
     }
 }

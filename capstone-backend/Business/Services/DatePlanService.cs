@@ -113,7 +113,7 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task<(PagedResult<DatePlanResponse>, int totalUpcoming)> GetAllDatePlansByTimeAsync(int pageNumber, int pageSize, int userId, string time)
+        public async Task<(PagedResult<DatePlanResponse>, int totalUpcoming)> GetAllDatePlansByTimeAsync(int pageNumber, int pageSize, int userId, string status)
         {
             try
             {
@@ -129,7 +129,7 @@ namespace capstone_backend.Business.Services
                 IEnumerable<DatePlan> items = Enumerable.Empty<DatePlan>();
                 var totalCount = 0;
 
-                switch (time)
+                switch (status)
                 {
                     case "UPCOMING":
                         (items, totalCount) = await _unitOfWork.DatePlans.GetPagedAsync(
@@ -137,7 +137,6 @@ namespace capstone_backend.Business.Services
                                 pageSize,
                                 dp => dp.CoupleId == couple.id &&
                                       dp.IsDeleted == false &&
-                                      dp.Status != DatePlanStatus.CANCELLED.ToString() &&
                                       dp.Status == DatePlanStatus.SCHEDULED.ToString() &&
                                       ((dp.PlannedEndAt.HasValue && dp.PlannedEndAt >= now) ||
                                         (dp.PlannedEndAt == null && dp.PlannedStartAt.HasValue && dp.PlannedStartAt >= now)
@@ -146,13 +145,12 @@ namespace capstone_backend.Business.Services
                             );
                         break;
 
-                    case "PAST":
+                    case "COMPLETED":
                         (items, totalCount) = await _unitOfWork.DatePlans.GetPagedAsync(
                                 pageNumber,
                                 pageSize,
                                 dp => dp.CoupleId == couple.id &&
                                       dp.IsDeleted == false &&
-                                      dp.Status != DatePlanStatus.CANCELLED.ToString() &&
                                       dp.Status == DatePlanStatus.COMPLETED.ToString() &&
                                       ((dp.PlannedEndAt.HasValue && dp.PlannedEndAt < now) ||
                                         (dp.PlannedEndAt == null && dp.PlannedStartAt.HasValue && dp.PlannedStartAt < now)
@@ -184,13 +182,34 @@ namespace capstone_backend.Business.Services
                             );
                         break;
 
+                    case "CANCELLED":
+                        (items, totalCount) = await _unitOfWork.DatePlans.GetPagedAsync(
+                            pageNumber,
+                            pageSize,
+                            dp => dp.CoupleId == couple.id &&
+                                  dp.IsDeleted == false &&
+                                  dp.Status == DatePlanStatus.CANCELLED.ToString(),
+                            dp => dp.OrderByDescending(dp => dp.CreatedAt)
+                        );
+                        break;
+
+                    case "IN_PROGRESS":
+                        (items, totalCount) = await _unitOfWork.DatePlans.GetPagedAsync(
+                            pageNumber,
+                            pageSize,
+                            dp => dp.CoupleId == couple.id &&
+                                  dp.IsDeleted == false &&
+                                  dp.Status == DatePlanStatus.IN_PROGRESS.ToString(),
+                            dp => dp.OrderByDescending(dp => dp.CreatedAt)
+                        );
+                        break;
+
                     case "ALL":
                         (items, totalCount) = await _unitOfWork.DatePlans.GetPagedAsync(
                             pageNumber,
                             pageSize,
                             dp => dp.CoupleId == couple.id &&
                                   dp.IsDeleted == false &&
-                                  dp.Status != DatePlanStatus.CANCELLED.ToString() &&
                                   (
                                       dp.Status != DatePlanStatus.DRAFTED.ToString() ||
                                       dp.OrganizerMemberId == member.Id
@@ -207,7 +226,7 @@ namespace capstone_backend.Business.Services
                 var totalUpcoming = await _unitOfWork.DatePlans.CountAsync(dp =>
                     dp.CoupleId == couple.id &&
                     dp.IsDeleted == false &&
-                    dp.Status != DatePlanStatus.CANCELLED.ToString() &&
+                    dp.Status == DatePlanStatus.SCHEDULED.ToString() &&
                     ((dp.PlannedEndAt.HasValue && dp.PlannedEndAt >= now) ||
                         (dp.PlannedEndAt == null && dp.PlannedStartAt.HasValue && dp.PlannedStartAt >= now)
                     )
