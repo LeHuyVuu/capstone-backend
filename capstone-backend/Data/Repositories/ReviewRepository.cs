@@ -75,6 +75,7 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
             .Include(r => r.ReviewLikes)
                 .ThenInclude(rl => rl.Member)
                     .ThenInclude(m => m!.User)
+            .Include(r => r.ReviewReply)
             .Where(r => r.VenueId == venueId && r.IsDeleted != true);
 
         // Sắp xếp theo thời gian
@@ -110,6 +111,7 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
             .Include(r => r.ReviewLikes)
                 .ThenInclude(rl => rl.Member)
                     .ThenInclude(m => m!.User)
+            .Include(r => r.ReviewReply)
             .Where(r => r.VenueId == venueId && r.IsDeleted != true);
 
         // Filter theo date (ưu tiên cao nhất)
