@@ -9,7 +9,7 @@ namespace capstone_backend.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "ADMIN")]
     public class ChallengeController : BaseController
     {
         private readonly IChallengeService _challengeService;
@@ -25,26 +25,30 @@ namespace capstone_backend.Api.Controllers
         [HttpGet("definitions")]
         public async Task<IActionResult> GetChallengeDefinitions()
         {
+            string checkinCode = ChallengeTriggerEvent.CHECKIN.ToString();
+            string reviewCode = ChallengeTriggerEvent.REVIEW.ToString();
+            string postCode = ChallengeTriggerEvent.POST.ToString();
+
             var data = new
             {
-                Triggers = new[]
+                TaskTypes = new[]
                 {
                     new
                     {
-                        Code = ChallengeTriggerEvent.CHECKIN.ToString(),
-                        Name = "Điểm danh hằng ngày"
+                        Code = checkinCode,
+                        Label = "Điểm danh hằng ngày"
                     },
 
                     new
                     {
-                        Code = ChallengeTriggerEvent.REVIEW.ToString(),
-                        Name = "Viết đánh giá"
+                        Code = reviewCode,
+                        Label = "Viết đánh giá địa điểm"
                     },
 
                     new
                     {
-                        Code = ChallengeTriggerEvent.POST.ToString(),
-                        Name = "Đăng bài viết"
+                        Code = postCode,
+                        Label = "Đăng bài viết"
                     }
                 },
 
@@ -53,20 +57,26 @@ namespace capstone_backend.Api.Controllers
                     new
                     {
                         Code = ChallengeConstants.GoalMetrics.COUNT,
-                        Name = "Đếm số lượng"
+                        Label = "Cộng dồn số lượng (tích luỹ)"
+                    },
+
+                    new
+                    {
+                        Code = ChallengeConstants.GoalMetrics.UNIQUE_LIST,
+                        Label = "Số địa điểm khác nhau"
                     },
 
                     new
                     {
                         Code = ChallengeConstants.GoalMetrics.Streak,
-                        Name = "Chuỗi liên tiếp"
+                        Label = "Chuỗi ngày liên tiếp"
                     }
                 },
 
                 Rules = new Dictionary<string, object>
                 {
-                    ["CHECKIN"] = new object[] { },
-                    ["REVIEW"] = new[]
+                    [checkinCode] = new object[] { },
+                    [reviewCode] = new[]
                     {
                         new
                         {
@@ -75,7 +85,7 @@ namespace capstone_backend.Api.Controllers
                             TYPE = "NUMBER"
                         },
                     },
-                    ["POST"] = new[]
+                    [postCode] = new[]
                     {
                         new
                         {
@@ -83,6 +93,13 @@ namespace capstone_backend.Api.Controllers
                             Label = "Hashtag trong bài viết",
                             TYPE = "STRING"
                         },
+
+                        new
+                        {
+                            Key = ChallengeConstants.RuleKeys.HAS_IMAGE,
+                            Label = "Yêu cầu có hình ảnh trong đánh giá",
+                            TYPE = "BOOLEAN"
+                        }
                     }
                 }
             };
