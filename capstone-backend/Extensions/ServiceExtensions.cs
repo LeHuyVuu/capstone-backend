@@ -153,6 +153,7 @@ public static class ServiceExtensions
         services.AddScoped<IDeviceTokenService, DeviceTokenService>();
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IChallengeService, ChallengeService>();
+        services.AddScoped<IMediaService, MediaService>();
 
         // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
         services.AddScoped<ILocationFollowerService, LocationFollowerService>();

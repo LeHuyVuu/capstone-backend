@@ -1,6 +1,8 @@
 ﻿using capstone_backend.Api.Models;
+using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Services;
 using capstone_backend.Data.Enums;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,13 +10,16 @@ namespace capstone_backend.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class MediaController : BaseController
     {
         private readonly S3StorageService _s3Service;
+        private readonly IMediaService _mediaService;
 
-        public MediaController(S3StorageService s3Service)
+        public MediaController(S3StorageService s3Service, IMediaService mediaService)
         {
             _s3Service = s3Service;
+            _mediaService = mediaService;
         }
 
         /// <summary>
@@ -35,14 +40,16 @@ namespace capstone_backend.Api.Controllers
             if (userId == null) 
                 return UnauthorizedResponse();
 
-            var uploadedUrls = new List<string>();
-            foreach (var file in files)
-            {
-                var url = await _s3Service.UploadFileAsync(file, userId.Value, type.ToString());
-                uploadedUrls.Add(url);
-            }
+            //var uploadedUrls = new List<string>();
+            //foreach (var file in files)
+            //{
+            //    var url = await _s3Service.UploadFileAsync(file, userId.Value, type.ToString());
+            //    uploadedUrls.Add(url);
+            //}
 
-            return OkResponse(uploadedUrls, "Tải ảnh lên thành công");
+            var result = await _mediaService.UploadMediaAsync(files, userId.Value, type.ToString());
+
+            return OkResponse(result, "Tải ảnh lên thành công");
         }
     }
 }

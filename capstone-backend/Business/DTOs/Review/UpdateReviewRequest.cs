@@ -9,6 +9,6 @@ namespace capstone_backend.Business.DTOs.Review
         public int Rating { get; set; }
         public string? Content { get; set; }
         public List<string>? DeletedImageUrls { get; set; }
-        public List<IFormFile>? NewImages { get; set; }
+        public List<string>? NewImages { get; set; }
     }
 }

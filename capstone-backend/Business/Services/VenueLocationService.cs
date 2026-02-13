@@ -189,9 +189,18 @@ public class VenueLocationService : IVenueLocationService
         var reviewResponses = reviews.Select(r => 
         {
             var response = _mapper.Map<VenueReviewResponse>(r);
-            
+
             // Map member information
-            if (r.Member != null)
+            if (r.IsAnonymous == true)
+            {
+                response.Member = new ReviewMemberInfo
+                {
+                    Id = 0,
+                    UserId = 0,
+                    FullName = "Ẩn danh"
+                };
+            }
+            else if (r.Member != null)
             {
                 response.Member = new ReviewMemberInfo
                 {
@@ -205,6 +214,8 @@ public class VenueLocationService : IVenueLocationService
                     Email = r.Member.User?.Email
                 };
             }
+
+            response.IsAnonymous = r.IsAnonymous;       
 
             // Lấy ImageUrls từ Media
             if (mediaLookup.Contains(r.Id))
