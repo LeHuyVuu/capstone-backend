@@ -184,6 +184,7 @@ namespace capstone_backend.Business.Services
             review.MemberId = member.Id;
             review.VenueId = request.VenueLocationId;
             review.Status = ReviewStatus.PENDING.ToString();
+            review.IsAnonymous = request.IsAnonymous;
 
             checkIn.IsValid = false;
 
