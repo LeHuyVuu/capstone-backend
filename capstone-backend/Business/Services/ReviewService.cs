@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Amazon.S3.Model.Internal.MarshallTransformations;
+using AutoMapper;
 using capstone_backend.Business.Common;
 using capstone_backend.Business.DTOs.Review;
 using capstone_backend.Business.Interfaces;
@@ -188,27 +189,24 @@ namespace capstone_backend.Business.Services
 
             _unitOfWork.CheckInHistories.Update(checkIn);
             await _unitOfWork.Reviews.AddAsync(review);
-            await _unitOfWork.SaveChangesAsync();
 
-            // Upload s3
+            // Handle images
             if (request.Images != null && request.Images.Any())
             {
-                foreach (var imageFile in request.Images)
+                var mediaList = await _unitOfWork.Media.GetByUrlsAsync(request.Images);
+                foreach (var media in mediaList)
                 {
-                    var imageUrl = await _s3Service.UploadFileAsync(imageFile, userId, S3Keys.REVIEW);
+                    if (media.UploaderId != userId || media.TargetId != null || media.TargetType != null)
+                        throw new Exception("Ảnh không hợp lệ");
 
-                    await _unitOfWork.Media.AddAsync(new Media
-                    {
-                        Url = imageUrl,
-                        UploaderId = userId,
-                        MediaType = MediaType.IMAGE.ToString(),
-                        TargetId = review.Id,
-                        TargetType = ReferenceType.REVIEW.ToString()
-                    });
+                    media.TargetId = review.Id;
+                    media.TargetType = ReferenceType.REVIEW.ToString();
+                    _unitOfWork.Media.Update(media);
                 }
             }
 
-            return await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
+            return review.Id;
         }
 
         public async Task<ReviewLikeResponse> ToggleLikeReviewAsync(int userId, int reviewId)
