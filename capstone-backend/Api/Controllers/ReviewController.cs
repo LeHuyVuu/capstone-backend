@@ -80,19 +80,10 @@ namespace capstone_backend.Api.Controllers
         /// Update a review for a venue location
         /// </summary>
         [HttpPost("{reviewId}/update")]
-        [Consumes("multipart/form-data")]
-        public async Task<IActionResult> SubmitReviewAsync(int reviewId, [FromForm] UpdateReviewRequest request)
+        public async Task<IActionResult> SubmitReviewAsync(int reviewId, [FromBody] UpdateReviewRequest request)
         {
             try
             {
-                if (request.NewImages != null)
-                {
-                    foreach (var img in request.NewImages)
-                    {
-                        if (img.Length > 5 * 1024 * 1024) // 5MB
-                            return BadRequestResponse($"Ảnh {img.FileName} nặng quá (>5MB).");
-                    }
-                }
 
                 var userId = GetCurrentUserId();
                 var result = await _reviewService.UpdateReviewAsync(userId.Value, reviewId, request);

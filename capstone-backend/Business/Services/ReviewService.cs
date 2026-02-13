@@ -189,6 +189,7 @@ namespace capstone_backend.Business.Services
 
             _unitOfWork.CheckInHistories.Update(checkIn);
             await _unitOfWork.Reviews.AddAsync(review);
+            await _unitOfWork.SaveChangesAsync();
 
             // Handle images
             if (request.Images != null && request.Images.Any())
@@ -331,20 +332,14 @@ namespace capstone_backend.Business.Services
 
             if (request.NewImages != null && request.NewImages.Any())
             {
-                foreach (var imageFile in request.NewImages)
+                var mediaList = await _unitOfWork.Media.GetByUrlsAsync(request.NewImages);
+                foreach (var media in mediaList)
                 {
-                    string imageUrl = await _s3Service.UploadFileAsync(imageFile, userId, S3Keys.REVIEW);
-
-                    var newImage = new Media
-                    {
-                        Url = imageUrl,
-                        UploaderId = userId,
-                        MediaType = MediaType.IMAGE.ToString(),
-                        TargetId = review.Id,
-                        TargetType = ReferenceType.REVIEW.ToString()
-                    };
-
-                    await _unitOfWork.Media.AddAsync(newImage);
+                    if (media.UploaderId != userId || media.TargetId != null || media.TargetType != null)
+                        throw new Exception("Ảnh không hợp lệ");
+                    media.TargetId = review.Id;
+                    media.TargetType = ReferenceType.REVIEW.ToString();
+                    _unitOfWork.Media.Update(media);
                 }
             }
 
