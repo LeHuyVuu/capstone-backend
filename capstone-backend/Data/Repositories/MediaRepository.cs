@@ -32,7 +32,7 @@ namespace capstone_backend.Data.Repositories
         {
             return await _dbSet
                 .AsNoTracking()
-                .Where(m => targetIds.Contains(m.TargetId) && m.TargetType == type && m.IsDeleted == false)
+                .Where(m => targetIds.Contains(m.TargetId.Value) && m.TargetType == type && m.IsDeleted == false)
                 .ToListAsync();
         }
 

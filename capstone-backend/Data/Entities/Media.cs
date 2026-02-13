@@ -17,9 +17,9 @@ public partial class Media
 
     public string? MediaType { get; set; }
 
-    public string TargetType { get; set; } = null!;
+    public string? TargetType { get; set; } = null!;
 
-    public int TargetId { get; set; }
+    public int? TargetId { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 
