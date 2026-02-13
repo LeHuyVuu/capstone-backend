@@ -79,7 +79,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Update a review for a venue location
         /// </summary>
-        [HttpPost("{reviewId}/update")]
+        [HttpPut("{reviewId}/update")]
         public async Task<IActionResult> SubmitReviewAsync(int reviewId, [FromBody] UpdateReviewRequest request)
         {
             try

@@ -313,6 +313,7 @@ namespace capstone_backend.Business.Services
 
             review.Rating = request.Rating;
             review.Content = request.Content;
+            review.IsAnonymous = request.IsAnonymous;
 
             if (request.DeletedImageUrls != null && request.DeletedImageUrls.Any())
             {
