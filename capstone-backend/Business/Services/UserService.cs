@@ -15,15 +15,13 @@ public class UserService : IUserService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UserService> _logger;
     private readonly IJwtService _jwtService;
-    private readonly ICometChatService _cometChatService;
     private readonly ICollectionService _collectionService;
 
-    public UserService(IUnitOfWork unitOfWork, ILogger<UserService> logger, IJwtService jwtService, ICometChatService cometChatService, ICollectionService collectionService)
+    public UserService(IUnitOfWork unitOfWork, ILogger<UserService> logger, IJwtService jwtService, ICollectionService collectionService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _jwtService = jwtService;
-        _cometChatService = cometChatService;
         _collectionService = collectionService;
     }
 
@@ -56,30 +54,11 @@ public class UserService : IUserService
         var refreshToken = _jwtService.GenerateRefreshToken();
         var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
 
-        // CometChat integration: Ensure user exists and generate auth token
-        string cometChatUid = string.Empty;
-        string cometChatAuthToken = string.Empty;
-        if (user.Role == "MEMBER")
-        {
-            try
-            {
-                cometChatUid = await _cometChatService.EnsureCometChatUserExistsAsync(user.Email, fullName);
-                cometChatAuthToken = await _cometChatService.GenerateCometChatAuthTokenAsync(cometChatUid);
-                _logger.LogInformation("CometChat integration successful for user {UserId}", user.Id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "CometChat integration failed for user {UserId}. Continuing with login.", user.Id);
-            }
-        }
-
         return new LoginResponse
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
             ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes),
-            CometChatUid = cometChatUid,
-            CometChatAuthToken = cometChatAuthToken,
             AvartarUrl = user.AvatarUrl,
             Gender = gender
         };
@@ -120,28 +99,11 @@ public class UserService : IUserService
         var refreshToken = _jwtService.GenerateRefreshToken();
         var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
 
-        // CometChat integration: Create user and generate auth token
-        string cometChatUid = string.Empty;
-        string cometChatAuthToken = string.Empty;
-        try
-        {
-            cometChatUid = await _cometChatService.CreateCometChatUserAsync(user.Email, request.FullName);
-            cometChatAuthToken = await _cometChatService.GenerateCometChatAuthTokenAsync(cometChatUid);
-            _logger.LogInformation("CometChat user created successfully for user {UserId}", user.Id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "CometChat user creation failed for user {UserId}. Continuing with registration.", user.Id);
-            // Don't fail registration if CometChat fails - user can still use the app
-        }
-
         return new LoginResponse
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes),
-            CometChatUid = cometChatUid,
-            CometChatAuthToken = cometChatAuthToken
+            ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes)
         };
     }
 
@@ -253,9 +215,7 @@ public class UserService : IUserService
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes),
-            CometChatUid = string.Empty,
-            CometChatAuthToken = string.Empty
+            ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes)
         };
     }
 

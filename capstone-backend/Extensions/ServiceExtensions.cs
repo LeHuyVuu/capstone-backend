@@ -123,9 +123,6 @@ public static class ServiceExtensions
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IMemberService, MemberService>();
 
-        // Register CometChat Service
-        services.AddScoped<ICometChatService, CometChatService>();
-
         // Register AI Recommendation Services
         services.AddScoped<IMoodMappingService, MoodMappingService>();
         services.AddScoped<IPersonalityMappingService, PersonalityMappingService>();
