@@ -62,6 +62,8 @@ public interface IUnitOfWork : IDisposable
 
     IReviewLikeRepository ReviewLikes { get; }
 
+    IChallengeRepository Challenges { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>

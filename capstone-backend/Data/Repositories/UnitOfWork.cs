@@ -37,7 +37,8 @@ public class UnitOfWork : IUnitOfWork
         ICheckInHistoryRepository checkInHistoryRepository,
         IMediaRepository mediaRepository,
         IReviewReplyRepository reviewReplyRepository,
-        IReviewLikeRepository reviewLikeRepository)
+        IReviewLikeRepository reviewLikeRepository,
+        IChallengeRepository challengeRepository)
     {
         _context = context;
         Users = userRepository;
@@ -63,6 +64,7 @@ public class UnitOfWork : IUnitOfWork
         Media = mediaRepository;
         ReviewReplies = reviewReplyRepository;
         ReviewLikes = reviewLikeRepository;
+        Challenges = challengeRepository;
     }
 
     public MyDbContext Context => _context;
@@ -112,6 +114,8 @@ public class UnitOfWork : IUnitOfWork
     public IReviewReplyRepository ReviewReplies { get; }
 
     public IReviewLikeRepository ReviewLikes { get; }
+
+    public IChallengeRepository Challenges { get; }
 
     public async Task<int> SaveChangesAsync()
     {
