@@ -27,6 +27,9 @@ public partial class Transaction
 
     public string? ExternalRefCode { get; set; }
 
+    [MaxLength(10)]
+    public string Currency { get; set; } = null!;
+
     public string? Status { get; set; }
 
     public DateTime? CreatedAt { get; set; }
