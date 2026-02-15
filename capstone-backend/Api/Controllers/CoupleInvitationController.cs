@@ -11,7 +11,7 @@ namespace capstone_backend.Api.Controllers;
 [ApiController]
 [Route("api/couple-invitations")]
 [Authorize]
-public class CoupleInvitationController : ControllerBase
+public class CoupleInvitationController : BaseController
 {
     private readonly ICoupleInvitationService _service;
     private readonly IUnitOfWork _unitOfWork;
@@ -61,19 +61,19 @@ public class CoupleInvitationController : ControllerBase
 
             if (!success)
             {
-                return BadRequest(new { error = message });
+                return BadRequestResponse(message);
             }
 
-            return Ok(new { success = true, message, data });
+            return OkResponse(data, message);
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Unauthorized(new { error = ex.Message });
+            return UnauthorizedResponse(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error sending invitation");
-            return StatusCode(500, new { error = "Đã xảy ra lỗi khi gửi lời mời" });
+            return InternalServerErrorResponse("Đã xảy ra lỗi khi gửi lời mời");
         }
     }
 
@@ -90,19 +90,19 @@ public class CoupleInvitationController : ControllerBase
 
             if (!success)
             {
-                return BadRequest(new { error = message });
+                return BadRequestResponse(message);
             }
 
-            return Ok(new { success = true, message, data });
+            return OkResponse(data, message);
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Unauthorized(new { error = ex.Message });
+            return UnauthorizedResponse(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error accepting invitation {InvitationId}", id);
-            return StatusCode(500, new { error = "Đã xảy ra lỗi khi chấp nhận lời mời" });
+            return InternalServerErrorResponse("Đã xảy ra lỗi khi chấp nhận lời mời");
         }
     }
 
@@ -119,19 +119,19 @@ public class CoupleInvitationController : ControllerBase
 
             if (!success)
             {
-                return BadRequest(new { error = message });
+                return BadRequestResponse(message);
             }
 
-            return Ok(new { success = true, message });
+            return OkResponse(message);
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Unauthorized(new { error = ex.Message });
+            return UnauthorizedResponse(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error rejecting invitation {InvitationId}", id);
-            return StatusCode(500, new { error = "Đã xảy ra lỗi khi từ chối lời mời" });
+            return InternalServerErrorResponse("Đã xảy ra lỗi khi từ chối lời mời");
         }
     }
 
@@ -148,19 +148,19 @@ public class CoupleInvitationController : ControllerBase
 
             if (!success)
             {
-                return BadRequest(new { error = message });
+                return BadRequestResponse(message);
             }
 
-            return Ok(new { success = true, message });
+            return OkResponse(message);
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Unauthorized(new { error = ex.Message });
+            return UnauthorizedResponse(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error cancelling invitation {InvitationId}", id);
-            return StatusCode(500, new { error = "Đã xảy ra lỗi khi hủy lời mời" });
+            return InternalServerErrorResponse("Đã xảy ra lỗi khi hủy lời mời");
         }
     }
 
@@ -193,19 +193,19 @@ public class CoupleInvitationController : ControllerBase
 
             if (!success)
             {
-                return BadRequest(new { error = message });
+                return BadRequestResponse(message);
             }
 
-            return Ok(new { success = true, message });
+            return OkResponse(message);
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Unauthorized(new { error = ex.Message });
+            return UnauthorizedResponse(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during breakup for member {MemberId}", await GetCurrentMemberIdAsync());
-            return StatusCode(500, new { error = "Đã xảy ra lỗi khi xử lý chia tay" });
+            return InternalServerErrorResponse("Đã xảy ra lỗi khi xử lý chia tay");
         }
     }
 
@@ -238,9 +238,8 @@ public class CoupleInvitationController : ControllerBase
             var memberId = await GetCurrentMemberIdAsync();
             var invitations = await _service.GetReceivedInvitationsAsync(memberId, status, page, pageSize);
 
-            return Ok(new
+            return OkResponse(new
             {
-                success = true,
                 data = invitations,
                 pagination = new
                 {
@@ -252,12 +251,12 @@ public class CoupleInvitationController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Unauthorized(new { error = ex.Message });
+            return UnauthorizedResponse(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting received invitations");
-            return StatusCode(500, new { error = "Đã xảy ra lỗi khi lấy danh sách lời mời" });
+            return InternalServerErrorResponse("Đã xảy ra lỗi khi lấy danh sách lời mời");
         }
     }
 
@@ -290,9 +289,8 @@ public class CoupleInvitationController : ControllerBase
             var memberId = await GetCurrentMemberIdAsync();
             var invitations = await _service.GetSentInvitationsAsync(memberId, status, page, pageSize);
 
-            return Ok(new
+            return OkResponse(new
             {
-                success = true,
                 data = invitations,
                 pagination = new
                 {
@@ -304,12 +302,12 @@ public class CoupleInvitationController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Unauthorized(new { error = ex.Message });
+            return UnauthorizedResponse(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting sent invitations");
-            return StatusCode(500, new { error = "Đã xảy ra lỗi khi lấy danh sách lời mời" });
+            return InternalServerErrorResponse("Đã xảy ra lỗi khi lấy danh sách lời mời");
         }
     }
 
@@ -328,9 +326,8 @@ public class CoupleInvitationController : ControllerBase
             var memberId = await GetCurrentMemberIdAsync();
             var members = await _service.SearchMembersAsync(query, memberId, page, pageSize);
 
-            return Ok(new
+            return OkResponse(new
             {
-                success = true,
                 data = members,
                 pagination = new
                 {
@@ -342,12 +339,12 @@ public class CoupleInvitationController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Unauthorized(new { error = ex.Message });
+            return UnauthorizedResponse(ex.Message);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error searching members");
-            return StatusCode(500, new { error = "Đã xảy ra lỗi khi tìm kiếm members" });
+            return InternalServerErrorResponse("Đã xảy ra lỗi khi tìm kiếm members");
         }
     }
 }
