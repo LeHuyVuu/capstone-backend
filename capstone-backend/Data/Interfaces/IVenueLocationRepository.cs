@@ -73,4 +73,6 @@ public interface IVenueLocationRepository : IGenericRepository<VenueLocation>
     /// <returns>Tuple of venue locations and total count</returns>
     Task<(List<VenueLocation> Venues, int TotalCount)> GetPendingVenuesAsync(int page, int pageSize);
     Task<VenueLocation?> GetByIdWithOwnerAsync(int id);
+
+    Task<IEnumerable<VenueLocation>> GetNamesByIdsAsync(List<int> venueIds);
 }

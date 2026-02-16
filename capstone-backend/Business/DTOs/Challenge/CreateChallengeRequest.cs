@@ -3,7 +3,7 @@
     public class CreateChallengeRequest
     {
         public string Title { get; set; } = null!;
-        public string Description { get; set; }
+        public string? Description { get; set; }
         public string TriggerEvent { get; set; } = null!;
         public string GoalMetric { get; set; } = null!;
         public int TargetGoal { get; set; } = 0;

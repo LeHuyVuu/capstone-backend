@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using capstone_backend.Business.Common.Constants;
 using capstone_backend.Business.DTOs.Challenge;
+using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
@@ -8,6 +9,7 @@ using capstone_backend.Extensions.Common;
 using CsvHelper;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace capstone_backend.Business.Services
 {
@@ -63,7 +65,7 @@ namespace capstone_backend.Business.Services
                                 {
                                     if (key == ChallengeConstants.RuleKeys.VENUE_ID)
                                     {
-                                        list = list.Select(x => x.ToString()).Distinct().Cast<object>().ToList();
+                                        list = list.Select(x => x).Distinct().Cast<object>().ToList();
                                     }
 
                                     rawValue = list;
@@ -119,6 +121,107 @@ namespace capstone_backend.Business.Services
             return new { ChallengeId = challenge.Id, Rules = ruleList };
         }
 
+        public async Task<PagedResult<ChallengeResponse>> GetAllChallengesAsync(int pageNumber, int pageSize)
+        {
+            var challenges = await _unitOfWork.Challenges.GetPagedAsync(
+                    pageNumber,
+                    pageSize,
+                    c => c.IsDeleted == false,
+                    c => c.OrderByDescending(ch => ch.CreatedAt)
+                );
+
+            // Map to response DTO
+            var challengeResponses = _mapper.Map<List<ChallengeResponse>>(challenges.Items);
+            var allVenueIds = new List<int>();
+
+            foreach (var challenge in challenges.Items)
+            {
+                if (string.IsNullOrEmpty(challenge.ConditionRules))
+                    continue;
+
+                var ruleWrapper = JsonSerializer.Deserialize<ChallengeRuleWrapper>(challenge.ConditionRules);
+                if (ruleWrapper?.Rules != null)
+                {
+                    foreach (var rule in ruleWrapper.Rules)
+                    {
+                        if (rule.Key == ChallengeConstants.RuleKeys.VENUE_ID && rule.Value is JsonElement valElement)
+                        {
+                            var ids = JsonSerializer.Deserialize<List<int>>(valElement);
+                            if (ids != null)
+                                allVenueIds.AddRange(ids);
+                        }
+                    }
+                }
+            }
+            // Get venue names
+            var venueLookup = await _unitOfWork.VenueLocations.GetNamesByIdsAsync(allVenueIds);
+            var venueIdToName = venueLookup.ToDictionary(v => v.Id, v => v.Name);
+
+            var items = challenges.Items.ToList();
+
+            // Turn rules to dto foreach challenge
+            for (int i = 0; i < items.Count; i++)
+            {
+                var rawRules = items[i].ConditionRules;
+                var targetDto = challengeResponses[i];
+
+                var ruleWrapper = JsonSerializer.Deserialize<ChallengeRuleWrapper>(rawRules);
+                if (ruleWrapper?.Rules != null)
+                {
+                    foreach (var r in ruleWrapper.Rules)
+                    {
+                        var displayRule = new ChallengeRuleDisplayDto
+                        {
+                            Key = r.Key,
+                            RawValue = r.Value
+                        };
+
+                        // Translate label
+                        displayRule.Label = r.Key switch
+                        {
+                            ChallengeConstants.RuleKeys.VENUE_ID => "Địa điểm áp dụng",
+                            ChallengeConstants.RuleKeys.HAS_IMAGE => "Yêu cầu hình ảnh",
+                            ChallengeConstants.RuleKeys.HASH_TAG => "Hashtag bắt buộc",
+                            _ => r.Key
+                        };
+
+                        // Translate values and operators
+                        if (r.Key == ChallengeConstants.RuleKeys.VENUE_ID)
+                        {
+                            displayRule.Operator = "Danh sách";
+
+                            if (r.Value is JsonElement valElement && valElement.ValueKind == JsonValueKind.Array)
+                            {
+                                var ids = JsonSerializer.Deserialize<List<int>>(valElement);
+                                var names = ids?.Select(id => venueIdToName.ContainsKey(id) ? venueIdToName[id] : id.ToString());
+                                displayRule.DisplayValue = names != null ? string.Join(", ", names) : "";
+                            }
+                        }
+                        else if (r.Key == ChallengeConstants.RuleKeys.HAS_IMAGE)
+                        {
+                            displayRule.Operator = "Là";
+                            displayRule.DisplayValue = "Bắt buộc";
+                        }
+                        else
+                        {
+                            displayRule.Operator = r.Op == ChallengeConstants.RuleOps.Eq ? "Bằng" : r.Op;
+                            displayRule.DisplayValue = r.Value.ToString();
+                        }
+                    
+                        targetDto.Rules.Add(displayRule);
+                    }
+                }
+            }
+
+            return new PagedResult<ChallengeResponse>
+            {
+                Items = challengeResponses,
+                TotalCount = challenges.TotalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
+
         private void Validate(CreateChallengeRequest request)
         {
             if (request.RewardPoints <= 0)
@@ -136,6 +239,26 @@ namespace capstone_backend.Business.Services
 
             if (request.StartDate >= request.EndDate)
                 throw new Exception("Ngày bắt đầu phải nhỏ hơn ngày kết thúc");
+        }
+        private class ChallengeRuleWrapper
+        {
+            [JsonPropertyName("logic")]
+            public string Logic { get; set; }
+
+            [JsonPropertyName("rules")]
+            public List<ChallengeRuleItem> Rules { get; set; }
+        }
+
+        private class ChallengeRuleItem
+        {
+            [JsonPropertyName("key")]
+            public string Key { get; set; }
+
+            [JsonPropertyName("op")]
+            public string Op { get; set; }
+
+            [JsonPropertyName("value")]
+            public object Value { get; set; }
         }
     }
 }

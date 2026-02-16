@@ -141,5 +141,27 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get all Challenges (Admin only)
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetAllChallenges([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var result = await _challengeService.GetAllChallengesAsync(pageNumber, pageSize);
+                if (result == null)
+                {
+                    return BadRequestResponse("Lấy danh sách thử thách thất bại");
+                }
+
+                return OkResponse(result, "Lấy danh sách thử thách thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
