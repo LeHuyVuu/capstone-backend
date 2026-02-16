@@ -561,11 +561,23 @@ public class CoupleInvitationService : ICoupleInvitationService
 
             return new MemberProfileResponse
             {
+                MemberProfileId = member.Id,
                 UserId = member.UserId,
                 FullName = member.FullName ?? "Unknown",
                 AvatarUrl = member.User?.AvatarUrl,
+                DateOfBirth = member.DateOfBirth,
+                Gender = member.Gender,
                 Bio = member.Bio,
                 RelationshipStatus = member.RelationshipStatus ?? "SINGLE",
+                HomeLatitude = member.HomeLatitude,
+                HomeLongitude = member.HomeLongitude,
+                BudgetMin = member.BudgetMin,
+                BudgetMax = member.BudgetMax,
+                Interests = member.Interests,
+                AvailableTime = member.AvailableTime,
+                Address = member.address,
+                Area = member.area,
+                InviteCode = member.InviteCode,
                 CanSendInvitation = canSend
             };
         }).ToList();
