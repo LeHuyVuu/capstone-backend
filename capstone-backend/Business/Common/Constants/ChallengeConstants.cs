@@ -1,4 +1,6 @@
-﻿namespace capstone_backend.Business.Common.Constants
+﻿using capstone_backend.Data.Enums;
+
+namespace capstone_backend.Business.Common.Constants
 {
     public static class ChallengeConstants
     {
@@ -19,7 +21,22 @@
         public static class RuleOps
         {
             public const string Eq = "EQ";
+            public const string In = "IN";
             public const string Contains = "CONTAINS";
         }
+
+        public static List<string> AllowedTriggerEvents = new List<string>
+        {
+            ChallengeTriggerEvent.CHECKIN.ToString(),
+            ChallengeTriggerEvent.REVIEW.ToString(),
+            ChallengeTriggerEvent.POST.ToString()
+        };
+
+        public static List<string> AllowedGoalMetrics = new List<string>
+        {
+            GoalMetrics.COUNT,
+            GoalMetrics.UNIQUE_LIST,
+            GoalMetrics.Streak
+        };
     }
 }

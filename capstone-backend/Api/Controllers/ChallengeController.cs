@@ -1,4 +1,5 @@
 ﻿using capstone_backend.Business.Common.Constants;
+using capstone_backend.Business.DTOs.Challenge;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -84,6 +85,13 @@ namespace capstone_backend.Api.Controllers
                             Label = "ID Quán (Bỏ trống nếu quán nào cũng được)",
                             TYPE = "NUMBER"
                         },
+
+                        new
+                        {
+                            Key = ChallengeConstants.RuleKeys.HAS_IMAGE,
+                            Label = "Yêu cầu có hình ảnh trong đánh giá (tuỳ chọn)",
+                            TYPE = "BOOLEAN"
+                        }
                     },
                     [postCode] = new[]
                     {
@@ -97,7 +105,7 @@ namespace capstone_backend.Api.Controllers
                         new
                         {
                             Key = ChallengeConstants.RuleKeys.HAS_IMAGE,
-                            Label = "Yêu cầu có hình ảnh trong đánh giá",
+                            Label = "Yêu cầu có hình ảnh trong đánh giá (tuỳ chọn)",
                             TYPE = "BOOLEAN"
                         }
                     }
@@ -105,6 +113,55 @@ namespace capstone_backend.Api.Controllers
             };
 
             return OkResponse(data);
+        }
+
+        /// <summary>
+        /// Create a new Challenge (Admin only)
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CreateChallenge([FromBody] CreateChallengeRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse();
+                }
+
+                var result = await _challengeService.CreateChallengeAsyncV2(userId.Value, request);
+                if (result == null)
+                {
+                    return BadRequestResponse("Failed to create challenge");
+                }
+                return OkResponse(result, "Create challenge successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get all Challenges (Admin only)
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetAllChallenges([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var result = await _challengeService.GetAllChallengesAsync(pageNumber, pageSize);
+                if (result == null)
+                {
+                    return BadRequestResponse("Lấy danh sách thử thách thất bại");
+                }
+
+                return OkResponse(result, "Lấy danh sách thử thách thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
         }
     }
 }

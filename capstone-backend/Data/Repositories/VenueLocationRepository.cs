@@ -330,4 +330,18 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
             .Include(vl => vl.VenueOwner)
             .FirstOrDefaultAsync(vl => vl.Id == id);
     }
+
+    public async Task<IEnumerable<VenueLocation>> GetNamesByIdsAsync(List<int> venueIds)
+    {
+        var query = _dbSet
+            .AsNoTracking()
+            .Where(v => venueIds.Contains(v.Id) && v.IsDeleted == false && v.Status == "ACTIVE")
+            .Select(v => new VenueLocation
+            {
+                Id = v.Id,
+                Name = v.Name
+            });
+
+        return await query.ToListAsync();
+    }
 }
