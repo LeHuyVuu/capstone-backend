@@ -121,30 +121,50 @@ public class SepayTransactionData
 }
 
 /// <summary>
-/// Webhook data từ Sepay khi có thanh toán
+/// Webhook data từ Sepay khi có thanh toán (actual format from Sepay)
 /// </summary>
 public class SepayWebhookData
 {
     [JsonPropertyName("id")]
     public int Id { get; set; }
 
-    [JsonPropertyName("transaction_date")]
+    [JsonPropertyName("gateway")]
+    public string? Gateway { get; set; }
+
+    [JsonPropertyName("transactionDate")]
     public string? TransactionDate { get; set; }
 
-    [JsonPropertyName("amount")]
-    public int Amount { get; set; }
+    [JsonPropertyName("accountNumber")]
+    public string? AccountNumber { get; set; }
+
+    [JsonPropertyName("subAccount")]
+    public string? SubAccount { get; set; }
+
+    [JsonPropertyName("code")]
+    public string? Code { get; set; }
 
     [JsonPropertyName("content")]
     public string? Content { get; set; }
 
-    [JsonPropertyName("order_code")]
-    public string? OrderCode { get; set; }
+    [JsonPropertyName("transferType")]
+    public string? TransferType { get; set; } // "in" | "out"
 
-    [JsonPropertyName("bank_account")]
-    public string? BankAccount { get; set; }
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
 
-    [JsonPropertyName("status")]
-    public string? Status { get; set; } // "success" | "pending" | "failed"
+    [JsonPropertyName("transferAmount")]
+    public int TransferAmount { get; set; }
+
+    [JsonPropertyName("referenceCode")]
+    public string? ReferenceCode { get; set; }
+
+    [JsonPropertyName("accumulated")]
+    public decimal? Accumulated { get; set; }
+
+    // Backward compatibility
+    public string? OrderCode => Code ?? Content;
+    public int Amount => TransferAmount;
+    public string? Status => TransferType == "in" ? "success" : "pending";
 }
 
 #endregion
