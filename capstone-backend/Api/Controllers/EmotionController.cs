@@ -19,12 +19,14 @@ public class EmotionController : BaseController
     private readonly FaceEmotionService _emotionService;
     private readonly ILogger<EmotionController> _logger;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMoodMappingService _moodMappingService;
 
-    public EmotionController(FaceEmotionService emotionService, ILogger<EmotionController> logger, IUnitOfWork unitOfWork)
+    public EmotionController(FaceEmotionService emotionService, ILogger<EmotionController> logger, IUnitOfWork unitOfWork, IMoodMappingService moodMappingService)
     {
         _emotionService = emotionService;
         _logger = logger;
         _unitOfWork = unitOfWork;
+        _moodMappingService = moodMappingService;
     }
 
     /// <summary>
@@ -170,6 +172,9 @@ public class EmotionController : BaseController
                                 await _unitOfWork.SaveChangesAsync();
                                 
                                 _logger.LogInformation($"✅ Đã cập nhật MoodTypesId={moodType.Id} ({moodType.Name}) và tạo MoodLog cho MemberId={memberProfile.Id}");
+
+                                // 3. Kiểm tra couple và tạo CoupleMoodLog
+                                await UpdateCoupleMoodIfNeeded(memberProfile.Id, moodType.Id);
                             }
                         }
                         else
@@ -205,6 +210,77 @@ public class EmotionController : BaseController
             _logger.LogError(ex, "Lỗi không xác định khi phân tích cảm xúc");
             return StatusCode(500, ApiResponse<object>.Error(
                 "Có lỗi xảy ra khi phân tích ảnh. Vui lòng thử lại.", 500));
+        }
+    }
+
+    private async Task UpdateCoupleMoodIfNeeded(int memberId, int moodTypeId)
+    {
+        try
+        {
+            // Kiểm tra xem member có couple không
+            var coupleProfile = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(memberId);
+            if (coupleProfile == null || coupleProfile.Status != "ACTIVE")
+            {
+                _logger.LogInformation($"Member {memberId} không có couple hoặc couple không active");
+                return;
+            }
+
+            // Xác định partner ID
+            var partnerId = coupleProfile.MemberId1 == memberId 
+                ? coupleProfile.MemberId2 
+                : coupleProfile.MemberId1;
+
+            // Lấy mood của partner
+            var partnerProfile = await _unitOfWork.MembersProfile.GetByIdAsync(partnerId);
+            if (partnerProfile?.MoodTypesId == null)
+            {
+                _logger.LogInformation($"Partner {partnerId} chưa có mood");
+                return;
+            }
+
+            // Tính couple mood type
+            var coupleMoodName = await _moodMappingService.GetCoupleMoodTypeAsync(moodTypeId, partnerProfile.MoodTypesId.Value);
+            if (string.IsNullOrEmpty(coupleMoodName))
+            {
+                _logger.LogWarning($"Không thể tính couple mood cho mood1={moodTypeId}, mood2={partnerProfile.MoodTypesId.Value}");
+                return;
+            }
+
+            // Tìm CoupleMoodType ID từ tên
+            var coupleMoodType = await _unitOfWork.Context.CoupleMoodTypes
+                .FirstOrDefaultAsync(cmt => cmt.Name == coupleMoodName && cmt.IsActive == true);
+            
+            if (coupleMoodType == null)
+            {
+                _logger.LogWarning($"Không tìm thấy CoupleMoodType với tên '{coupleMoodName}'");
+                return;
+            }
+
+            // Update CoupleProfile.CoupleMoodTypeId
+            coupleProfile.CoupleMoodTypeId = coupleMoodType.Id;
+            coupleProfile.UpdatedAt = DateTime.UtcNow;
+            _unitOfWork.CoupleProfiles.Update(coupleProfile);
+
+            // Tạo CoupleMoodLog
+            var coupleMoodLog = new capstone_backend.Data.Entities.CoupleMoodLog
+            {
+                CoupleId = coupleProfile.id,
+                CoupleMoodTypeId = coupleMoodType.Id,
+                Note = $"Auto-generated from member mood update (MemberId: {memberId})",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                IsDeleted = false
+            };
+
+            await _unitOfWork.Context.CoupleMoodLogs.AddAsync(coupleMoodLog);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation($"💑 Đã cập nhật couple mood '{coupleMoodName}' (ID: {coupleMoodType.Id}) cho CoupleId={coupleProfile.id}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"❌ Lỗi khi cập nhật couple mood cho MemberId={memberId}");
+            // Không throw exception để không ảnh hưởng đến flow chính
         }
     }
 }

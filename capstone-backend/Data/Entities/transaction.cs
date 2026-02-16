@@ -15,6 +15,8 @@ public partial class Transaction
     [Precision(18, 2)]
     public decimal Amount { get; set; }
 
+    public string Currency { get; set; } = null!;
+
     public int UserId { get; set; }
 
     public string PaymentMethod { get; set; } = null!;

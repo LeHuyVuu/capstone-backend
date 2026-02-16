@@ -4,6 +4,7 @@ using capstone_backend.Business.DTOs.User;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace capstone_backend.Business.Services;
 
@@ -251,7 +252,7 @@ public class UserService : IUserService
 
     public async Task<UserResponse?> GetUserByIdAsync(int userId)
     {
-        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        var user = await _unitOfWork.Users.GetByIdWithProfilesAsync(userId); // Reuse the same method since it already includes profiles
         return user == null ? null : MapToUserResponse(user);
     }
 
@@ -392,8 +393,8 @@ public class UserService : IUserService
                 HomeLongitude = memberProfile.HomeLongitude,
                 BudgetMin = memberProfile.BudgetMin,
                 BudgetMax = memberProfile.BudgetMax,
-                Interests = memberProfile.Interests,
-                AvailableTime = memberProfile.AvailableTime,
+                Interests = TryParseJson(memberProfile.Interests),
+                AvailableTime = TryParseJson(memberProfile.AvailableTime),
                 InviteCode = memberProfile.InviteCode
             } : null,
             VenueOwnerProfile = venueOwnerProfile != null ? new VenueOwnerProfileResponse
@@ -408,5 +409,23 @@ public class UserService : IUserService
                 BusinessLicenseUrl = user.BusinessLicenseUrl
             } : null
         };
+    }
+
+    /// <summary>
+    /// Try to parse JSON string to object, return null if invalid
+    /// </summary>
+    private static object? TryParseJson(string? jsonString)
+    {
+        if (string.IsNullOrWhiteSpace(jsonString))
+            return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<object>(jsonString);
+        }
+        catch
+        {
+            return jsonString; // Return as-is if parsing fails
+        }
     }
 }

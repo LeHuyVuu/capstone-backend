@@ -172,6 +172,9 @@ public static class ServiceExtensions
         // Register Moderation Service
         services.AddSingleton<IModerationService, ModerationService>();
 
+        // Register Sepay Service for payment (generates VietQR codes + receives webhooks)
+        services.AddScoped<SepayService>();
+
         return services;
     }
 

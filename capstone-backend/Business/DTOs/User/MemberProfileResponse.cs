@@ -15,7 +15,7 @@ public class MemberProfileResponse
     public decimal? HomeLongitude { get; set; }
     public decimal? BudgetMin { get; set; }
     public decimal? BudgetMax { get; set; }
-    public string? Interests { get; set; }
-    public string? AvailableTime { get; set; }
+    public object? Interests { get; set; }
+    public object? AvailableTime { get; set; }
     public string? InviteCode { get; set; }
 }
