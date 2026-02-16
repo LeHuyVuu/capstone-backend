@@ -45,14 +45,14 @@ public class CoupleInvitationService : ICoupleInvitationService
     {
         // Get sender
         var sender = await _unitOfWork.MembersProfile.GetByIdAsync(senderMemberId);
-        if (sender == null)
+        if (sender == null || sender.IsDeleted == true)
         {
             return (false, "Không tìm thấy thông tin của bạn", null);
         }
 
         // Get receiver
         var receiver = await _unitOfWork.MembersProfile.GetByIdAsync(receiverMemberId);
-        if (receiver == null)
+        if (receiver == null || receiver.IsDeleted == true)
         {
             return (false, "Không tìm thấy member này", null);
         }
@@ -157,7 +157,18 @@ public class CoupleInvitationService : ICoupleInvitationService
             return (false, $"Lời mời này đã {invitation.Status.ToLower()}, không thể chấp nhận", null);
         }
 
-        // Edge case 4: Both must still be SINGLE
+        // Edge case 4: Both members must not be deleted
+        if (invitation.SenderMember.IsDeleted == true)
+        {
+            return (false, $"{invitation.SenderMember.FullName} không còn tồn tại trong hệ thống", null);
+        }
+
+        if (invitation.ReceiverMember.IsDeleted == true)
+        {
+            return (false, "Tài khoản của bạn không còn tồn tại trong hệ thống", null);
+        }
+
+        // Edge case 5: Both must still be SINGLE
         if (invitation.SenderMember.RelationshipStatus != "SINGLE")
         {
             return (false, $"{invitation.SenderMember.FullName} không còn SINGLE nữa", null);
@@ -168,7 +179,7 @@ public class CoupleInvitationService : ICoupleInvitationService
             return (false, "Bạn không còn SINGLE nữa", null);
         }
 
-        // Edge case 5: Both must not have active couple
+        // Edge case 6: Both must not have active couple
         var senderHasCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(invitation.SenderMemberId);
         if (senderHasCouple != null)
         {
@@ -190,18 +201,42 @@ public class CoupleInvitationService : ICoupleInvitationService
         // IMPORTANT: Save invitation status first before cancelling other invitations
         await _unitOfWork.SaveChangesAsync();
 
-        // Create couple profile
-        var coupleProfile = new CoupleProfile
-        {
-            MemberId1 = invitation.SenderMemberId,
-            MemberId2 = invitation.ReceiverMemberId,
-            Status = "ACTIVE",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            IsDeleted = false
-        };
+        // Check if couple profile already exists (even if SEPARATED/INACTIVE)
+        // Need to check both (sender, receiver) and (receiver, sender) due to unique constraint
+        var existingCouple = await _unitOfWork.Context.Set<CoupleProfile>()
+            .FirstOrDefaultAsync(c => 
+                (c.MemberId1 == invitation.SenderMemberId && c.MemberId2 == invitation.ReceiverMemberId) ||
+                (c.MemberId1 == invitation.ReceiverMemberId && c.MemberId2 == invitation.SenderMemberId));
 
-        await _unitOfWork.CoupleProfiles.AddAsync(coupleProfile);
+        CoupleProfile coupleProfile;
+        
+        if (existingCouple != null)
+        {
+            // Reactivate existing couple profile
+            existingCouple.Status = "ACTIVE";
+            existingCouple.StartDate = DateOnly.FromDateTime(DateTime.UtcNow);
+            existingCouple.UpdatedAt = DateTime.UtcNow;
+            existingCouple.IsDeleted = false;
+            
+            _unitOfWork.Context.Set<CoupleProfile>().Update(existingCouple);
+            coupleProfile = existingCouple;
+        }
+        else
+        {
+            // Create new couple profile
+            coupleProfile = new CoupleProfile
+            {
+                MemberId1 = invitation.SenderMemberId,
+                MemberId2 = invitation.ReceiverMemberId,
+                Status = "ACTIVE",
+                StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                IsDeleted = false
+            };
+
+            await _unitOfWork.CoupleProfiles.AddAsync(coupleProfile);
+        }
 
         // Update relationship status for both members
         invitation.SenderMember.RelationshipStatus = "IN_RELATIONSHIP";
@@ -242,7 +277,7 @@ public class CoupleInvitationService : ICoupleInvitationService
     public async Task<(bool Success, string Message)> RejectInvitationAsync(int invitationId, int currentMemberId)
     {
         var invitation = await _unitOfWork.CoupleInvitations.GetByIdAsync(invitationId);
-        if (invitation == null)
+        if (invitation == null || invitation.IsDeleted == true)
         {
             return (false, "Không tìm thấy lời mời này");
         }
@@ -288,7 +323,7 @@ public class CoupleInvitationService : ICoupleInvitationService
     public async Task<(bool Success, string Message)> CancelInvitationAsync(int invitationId, int currentMemberId)
     {
         var invitation = await _unitOfWork.CoupleInvitations.GetByIdAsync(invitationId);
-        if (invitation == null)
+        if (invitation == null || invitation.IsDeleted == true)
         {
             return (false, "Không tìm thấy lời mời này");
         }
@@ -348,8 +383,8 @@ public class CoupleInvitationService : ICoupleInvitationService
         var member1 = await _unitOfWork.MembersProfile.GetByIdAsync(couple.MemberId1);
         var member2 = await _unitOfWork.MembersProfile.GetByIdAsync(couple.MemberId2);
 
-        // Edge case 3: Both members must exist
-        if (member1 == null || member2 == null)
+        // Edge case 3: Both members must exist and not be deleted
+        if (member1 == null || member1.IsDeleted == true || member2 == null || member2.IsDeleted == true)
         {
             return (false, "Không tìm thấy thông tin thành viên trong cặp đôi");
         }
