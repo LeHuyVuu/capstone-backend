@@ -15,6 +15,7 @@ public partial class Transaction
     [Precision(18, 2)]
     public decimal Amount { get; set; }
 
+    [MaxLength(10)]
     public string Currency { get; set; } = null!;
 
     public int UserId { get; set; }
@@ -28,9 +29,6 @@ public partial class Transaction
     public string? Description { get; set; }
 
     public string? ExternalRefCode { get; set; }
-
-    [MaxLength(10)]
-    public string Currency { get; set; } = null!;
 
     public string? Status { get; set; }
 
