@@ -359,6 +359,42 @@ public class VenueLocationController : BaseController
         
         return OkResponse(result, "Venue submitted successfully");
     }
+
+    /// <summary>
+    /// Submit venue with payment - validates venue, generates QR code for payment.
+    /// After payment is confirmed (via webhook), venue status will change to PENDING for admin approval.
+    /// Requires authentication - user must be the venue owner.
+    /// </summary>
+    /// <param name="id">Venue location ID</param>
+    /// <param name="request">Payment request with packageId and quantity</param>
+    /// <returns>Payment QR code and transaction info</returns>
+    [HttpPost("{id}/submit-with-payment")]
+    [Authorize(Roles = "VENUEOWNER")]
+    [ProducesResponseType(typeof(ApiResponse<SubmitVenueWithPaymentResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    public async Task<IActionResult> SubmitVenueWithPayment(int id, [FromBody] SubmitVenueWithPaymentRequest request)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (!currentUserId.HasValue)
+        {
+            return UnauthorizedResponse("User not authenticated");
+        }
+        
+        _logger.LogInformation("User {UserId} submitting venue {VenueId} with payment", currentUserId, id);
+        
+        var result = await _venueLocationService.SubmitVenueWithPaymentAsync(id, currentUserId.Value, request);
+        
+        if (!result.IsSuccess)
+        {
+            // Return validation errors with 200 but IsSuccess = false
+            return OkResponse(result, result.Message);
+        }
+        
+        return OkResponse(result, "Payment QR code generated. Please scan to complete payment.");
+    }
+    
     /// <summary>
     /// Get pending venue locations for admin.
     /// Requires ADMIN role.

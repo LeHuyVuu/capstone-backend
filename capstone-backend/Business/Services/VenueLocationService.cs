@@ -21,13 +21,20 @@ public class VenueLocationService : IVenueLocationService
     private readonly IMapper _mapper;
     private readonly ILogger<VenueLocationService> _logger;
     private readonly ICurrentUser _currentUser;
+    private readonly SepayService _sepayService;
 
-    public VenueLocationService(IUnitOfWork unitOfWork, IMapper mapper, ILogger<VenueLocationService> logger, ICurrentUser currentUser)
+    public VenueLocationService(
+        IUnitOfWork unitOfWork, 
+        IMapper mapper, 
+        ILogger<VenueLocationService> logger, 
+        ICurrentUser currentUser,
+        SepayService sepayService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _logger = logger;
         _currentUser = currentUser;
+        _sepayService = sepayService;
     }
 
     #region Category & Image Helpers
@@ -1045,6 +1052,271 @@ public class VenueLocationService : IVenueLocationService
             Message = "Venue submitted successfully. Please wait for admin approval." 
         };
     }
+
+    /// <summary>
+    /// Submit venue with payment - validates venue, creates subscription & transaction, generates QR code
+    /// </summary>
+    public async Task<SubmitVenueWithPaymentResponse> SubmitVenueWithPaymentAsync(
+        int venueId, 
+        int userId, 
+        SubmitVenueWithPaymentRequest request)
+    {
+        _logger.LogInformation("Submitting venue {VenueId} with payment - UserId: {UserId}, PackageId: {PackageId}, Qty: {Qty}",
+            venueId, userId, request.PackageId, request.Quantity);
+
+        // 1. Validate venue (giống SubmitVenueToAdminAsync)
+        var venue = await _unitOfWork.VenueLocations.GetByIdWithDetailsAsync(venueId);
+        
+        if (venue == null || venue.IsDeleted == true)
+        {
+            return new SubmitVenueWithPaymentResponse 
+            { 
+                IsSuccess = false, 
+                Message = "Venue not found" 
+            };
+        }
+
+        // 2. Validate Owner
+        var ownerProfile = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(userId);
+        if (ownerProfile == null || venue.VenueOwnerId != ownerProfile.Id)
+        {
+            _logger.LogWarning("User {UserId} attempted to submit venue {VenueId} but is not the owner", userId, venueId);
+            return new SubmitVenueWithPaymentResponse 
+            { 
+                IsSuccess = false, 
+                Message = "Unauthorized access" 
+            };
+        }
+
+        // 3. Validate venue status
+        if (venue.Status != "DRAFTED" && venue.Status != "DRAFT")
+        {
+            return new SubmitVenueWithPaymentResponse 
+            { 
+                IsSuccess = false, 
+                Message = $"Venue status is {venue.Status}, cannot submit." 
+            };
+        }
+
+        // 4. Validate required fields
+        var missingFields = new List<string>();
+        if (string.IsNullOrWhiteSpace(venue.Name)) missingFields.Add("Name");
+        if (string.IsNullOrWhiteSpace(venue.Description)) missingFields.Add("Description");
+        if (string.IsNullOrWhiteSpace(venue.Address)) missingFields.Add("Address");
+        
+        var coverImages = DeserializeImages(venue.CoverImage);
+        if (coverImages == null || !coverImages.Any()) missingFields.Add("CoverImage");
+        
+        if (string.IsNullOrWhiteSpace(venue.PhoneNumber)) missingFields.Add("Phone Number");
+        if (string.IsNullOrWhiteSpace(venue.Email)) missingFields.Add("Email");
+        
+        if (!venue.VenueLocationTags.Any()) missingFields.Add("LocationTag");
+        
+        if (venue.Latitude == null || venue.Longitude == null) 
+            missingFields.Add("Location Coordinates (Latitude/Longitude)");
+        
+        if (venue.PriceMin == null || venue.PriceMax == null) 
+            missingFields.Add("Price Range (Min/Max)");
+
+        if (missingFields.Any())
+        {
+            return new SubmitVenueWithPaymentResponse 
+            { 
+                IsSuccess = false, 
+                Message = "Please fill in all required fields before submitting.", 
+                MissingFields = missingFields 
+            };
+        }
+
+        // 5. Validate package
+        var package = await _unitOfWork.Context.Set<SubscriptionPackage>()
+            .FirstOrDefaultAsync(p => p.Id == request.PackageId 
+                && p.IsDeleted != true 
+                && p.IsActive == true);
+
+        if (package == null)
+        {
+            return new SubmitVenueWithPaymentResponse 
+            { 
+                IsSuccess = false, 
+                Message = "Package not found or inactive" 
+            };
+        }
+
+        if (!string.Equals(package.Type, "VENUE", StringComparison.OrdinalIgnoreCase))
+        {
+            return new SubmitVenueWithPaymentResponse 
+            { 
+                IsSuccess = false, 
+                Message = "This package is not for venue subscription" 
+            };
+        }
+
+        if (package.Price == null || package.Price <= 0 || 
+            package.DurationDays == null || package.DurationDays <= 0)
+        {
+            return new SubmitVenueWithPaymentResponse 
+            { 
+                IsSuccess = false, 
+                Message = "Package configuration is invalid" 
+            };
+        }
+
+        // 6. Check if there's already a pending payment
+        var existingPending = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
+            .Where(vsp => vsp.VenueId == venueId 
+                && vsp.Status == "PENDING_PAYMENT"
+                && vsp.CreatedAt > DateTime.UtcNow.AddMinutes(-15))
+            .FirstOrDefaultAsync();
+
+        if (existingPending != null)
+        {
+            return new SubmitVenueWithPaymentResponse 
+            { 
+                IsSuccess = false, 
+                Message = "There is already a pending payment for this venue. Please complete or wait for it to expire." 
+            };
+        }
+
+        // 7. Calculate amount and duration
+        var totalAmount = package.Price.Value * request.Quantity;
+        var totalDays = package.DurationDays.Value * request.Quantity;
+
+        // 8. Start transaction
+        using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
+        
+        try
+        {
+            // 9. Create VenueSubscriptionPackage (PENDING_PAYMENT)
+            var subscription = new VenueSubscriptionPackage
+            {
+                VenueId = venueId,
+                PackageId = request.PackageId,
+                Quantity = request.Quantity,
+                StartDate = null,
+                EndDate = null,
+                Status = "PENDING_PAYMENT",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.Context.Set<VenueSubscriptionPackage>().AddAsync(subscription);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("✅ Created subscription ID: {SubId}", subscription.Id);
+
+            // 10. Create Transaction
+            var paymentContent = $"VSP{subscription.Id}";
+            
+            var transaction = new Transaction
+            {
+                UserId = userId,
+                Amount = totalAmount,
+                Currency = "VND",
+                PaymentMethod = "VIETQR",
+                TransType = 1, // VENUE_SUBSCRIPTION
+                DocNo = subscription.Id,
+                Description = $"Thanh toán gói {package.PackageName} cho {venue.Name} (x{request.Quantity})",
+                Status = "PENDING",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.Context.Set<Transaction>().AddAsync(transaction);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("✅ Created transaction ID: {TxId}", transaction.Id);
+
+            // 11. Create Sepay transaction
+            SepayTransactionResponse sepayResponse;
+            try
+            {
+                // Order code = VSP{subscriptionId} để tracking
+                sepayResponse = await _sepayService.CreateTransactionAsync(
+                    totalAmount, 
+                    paymentContent, 
+                    $"VSP{subscription.Id}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Failed to create Sepay transaction");
+                await dbTransaction.RollbackAsync();
+                return new SubmitVenueWithPaymentResponse 
+                { 
+                    IsSuccess = false, 
+                    Message = "Unable to create payment transaction. Please try again." 
+                };
+            }
+
+            if (sepayResponse.Data == null || string.IsNullOrEmpty(sepayResponse.Data.QrCode))
+            {
+                _logger.LogError("❌ Sepay response invalid - no QR code");
+                await dbTransaction.RollbackAsync();
+                return new SubmitVenueWithPaymentResponse 
+                { 
+                    IsSuccess = false, 
+                    Message = "Failed to generate QR code. Please try again." 
+                };
+            }
+
+            // 12. Update transaction with VietQR info
+            var expireAt = DateTime.UtcNow.AddMinutes(15);
+            var bankInfo = _sepayService.GetBankInfo();
+            
+            var externalRef = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                sepayTransactionId = sepayResponse.Data.Id,
+                qrCodeUrl = sepayResponse.Data.QrCode, // VietQR image URL
+                qrData = sepayResponse.Data.QrData,
+                orderCode = sepayResponse.Data.OrderCode,
+                expireAt,
+                bankInfo = new { bankInfo.BankName, bankInfo.AccountNumber, bankInfo.AccountName }
+            });
+
+            transaction.ExternalRefCode = externalRef;
+            transaction.UpdatedAt = DateTime.UtcNow;
+            
+            _unitOfWork.Context.Set<Transaction>().Update(transaction);
+            await _unitOfWork.SaveChangesAsync();
+
+            await dbTransaction.CommitAsync();
+
+            _logger.LogInformation("✅ Payment initiated - TxId: {TxId}, SubId: {SubId}, SepayId: {SepayId}", 
+                transaction.Id, subscription.Id, sepayResponse.Data.Id);
+
+            // 13. Return response with QR code
+            return new SubmitVenueWithPaymentResponse
+            {
+                IsSuccess = true,
+                Message = "Venue validated successfully. Please complete payment to submit for approval.",
+                TransactionId = transaction.Id,
+                SubscriptionId = subscription.Id,
+                QrCodeUrl = sepayResponse.Data.QrCode, // VietQR image URL
+                Amount = totalAmount,
+                BankInfo = new BankInfo
+                {
+                    BankName = bankInfo.BankName,
+                    AccountNumber = bankInfo.AccountNumber,
+                    AccountName = bankInfo.AccountName
+                },
+                ExpireAt = expireAt,
+                PaymentContent = paymentContent,
+                PackageName = package.PackageName ?? "Unknown",
+                TotalDays = totalDays
+            };
+        }
+        catch (Exception ex)
+        {
+            await dbTransaction.RollbackAsync();
+            _logger.LogError(ex, "❌ Error in submit with payment");
+            return new SubmitVenueWithPaymentResponse 
+            { 
+                IsSuccess = false, 
+                Message = "An error occurred while processing payment. Please try again." 
+            };
+        }
+    }
+    
     /// <summary>
     /// Get pending venue locations for admin approval
     /// </summary>
