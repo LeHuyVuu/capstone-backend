@@ -67,6 +67,13 @@ public class CollectionService : ICollectionService
     {
         var collection = await _unitOfWork.Context.Set<Collection>()
             .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CoupleMoodType)
+            .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CouplePersonalityType)
             .FirstOrDefaultAsync(c => c.Id == collectionId && c.IsDeleted != true, cancellationToken);
 
         return collection == null ? null : MapToResponse(collection);
@@ -77,6 +84,13 @@ public class CollectionService : ICollectionService
         // Tìm collection mặc định của member
         var collection = await _unitOfWork.Context.Set<Collection>()
             .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CoupleMoodType)
+            .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CouplePersonalityType)
             .FirstOrDefaultAsync(c => c.MemberId == memberId 
                 && c.CollectionName == CollectionConstants.DEFAULT_COLLECTION_NAME 
                 && c.IsDeleted != true, cancellationToken);
@@ -95,6 +109,13 @@ public class CollectionService : ICollectionService
     {
         var query = _unitOfWork.Context.Set<Collection>()
             .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CoupleMoodType)
+            .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CouplePersonalityType)
             .Where(c => c.MemberId == memberId && c.IsDeleted != true);
 
         var total = await query.CountAsync(cancellationToken);
@@ -205,6 +226,13 @@ public class CollectionService : ICollectionService
     {
         var collection = await _unitOfWork.Context.Set<Collection>()
             .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CoupleMoodType)
+            .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CouplePersonalityType)
             .FirstOrDefaultAsync(c => c.Id == collectionId && c.MemberId == memberId && c.IsDeleted != true, cancellationToken);
 
         if (collection == null)
@@ -231,7 +259,19 @@ public class CollectionService : ICollectionService
             _logger.LogInformation("Venue {VenueId} already exists in collection {CollectionId}", venueId, collectionId);
         }
 
-        return MapToResponse(collection);
+        // Reload with tags
+        collection = await _unitOfWork.Context.Set<Collection>()
+            .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CoupleMoodType)
+            .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CouplePersonalityType)
+            .FirstOrDefaultAsync(c => c.Id == collectionId, cancellationToken);
+
+        return MapToResponse(collection!);
     }
 
     public async Task<CollectionResponse?> AddVenuesToCollectionAsync(int collectionId, int memberId, PatchCollectionRequest request, CancellationToken cancellationToken = default)
@@ -260,7 +300,19 @@ public class CollectionService : ICollectionService
 
         _logger.LogInformation("Added {Count} venues to collection {CollectionId}", venuesToAdd.Count, collectionId);
 
-        return MapToResponse(collection);
+        // Reload with tags
+        collection = await _unitOfWork.Context.Set<Collection>()
+            .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CoupleMoodType)
+            .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CouplePersonalityType)
+            .FirstOrDefaultAsync(c => c.Id == collectionId, cancellationToken);
+
+        return MapToResponse(collection!);
     }
 
     public async Task<CollectionResponse?> RemoveVenuesFromCollectionAsync(int collectionId, int memberId, PatchCollectionRequest request, CancellationToken cancellationToken = default)
@@ -286,7 +338,19 @@ public class CollectionService : ICollectionService
 
         _logger.LogInformation("Removed {Count} venues from collection {CollectionId}", venuesToRemove.Count, collectionId);
 
-        return MapToResponse(collection);
+        // Reload with tags
+        collection = await _unitOfWork.Context.Set<Collection>()
+            .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CoupleMoodType)
+            .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CouplePersonalityType)
+            .FirstOrDefaultAsync(c => c.Id == collectionId, cancellationToken);
+
+        return MapToResponse(collection!);
     }
 
     private CollectionResponse MapToResponse(Collection collection)
@@ -306,7 +370,27 @@ public class CollectionService : ICollectionService
                 Id = v.Id,
                 Name = v.Name,
                 Description = v.Description,
-                Address = v.Address
+                Address = v.Address,
+                CoverImage = v.CoverImage,
+                InteriorImage = v.InteriorImage,
+                CoupleMoodTypes = v.VenueLocationTags
+                    ?.Where(vlt => vlt.IsDeleted != true && vlt.LocationTag?.CoupleMoodType != null)
+                    .Select(vlt => new DTOs.VenueLocation.CoupleMoodTypeInfo
+                    {
+                        Id = vlt.LocationTag!.CoupleMoodType!.Id,
+                        Name = vlt.LocationTag.CoupleMoodType.Name
+                    })
+                    .DistinctBy(m => m.Id)
+                    .ToList(),
+                CouplePersonalityTypes = v.VenueLocationTags
+                    ?.Where(vlt => vlt.IsDeleted != true && vlt.LocationTag?.CouplePersonalityType != null)
+                    .Select(vlt => new DTOs.VenueLocation.CouplePersonalityTypeInfo
+                    {
+                        Id = vlt.LocationTag!.CouplePersonalityType!.Id,
+                        Name = vlt.LocationTag.CouplePersonalityType.Name
+                    })
+                    .DistinctBy(p => p.Id)
+                    .ToList()
             }).ToList()
         };
     }

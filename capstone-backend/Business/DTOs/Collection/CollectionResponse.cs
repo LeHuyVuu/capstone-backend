@@ -1,4 +1,5 @@
 using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Business.DTOs.VenueLocation;
 
 namespace capstone_backend.Business.DTOs.Collection;
 
@@ -23,4 +24,8 @@ public class VenueSimpleResponse
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
     public string Address { get; set; } = null!;
+    public string? CoverImage { get; set; }
+    public string? InteriorImage { get; set; }
+    public List<CoupleMoodTypeInfo>? CoupleMoodTypes { get; set; }
+    public List<CouplePersonalityTypeInfo>? CouplePersonalityTypes { get; set; }
 }
