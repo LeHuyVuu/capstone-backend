@@ -45,7 +45,7 @@ namespace capstone_backend.Business.Services
                     if (item.Value == null)
                         continue;
 
-                    if (!whiteList.Contains(item.Key)) 
+                    if (!whiteList.Contains(item.Key))
                         throw new Exception($"Key '{item.Key}' không được cho phép trong event '{request.TriggerEvent}'.");
 
                     string key = item.Key;
@@ -176,50 +176,38 @@ namespace capstone_backend.Business.Services
                 var rawRules = items[i].ConditionRules;
                 var targetDto = challengeResponses[i];
 
+                targetDto.RuleData = new Dictionary<string, object>();
+                targetDto.Instructions = new List<string>();
+
+                if (string.IsNullOrEmpty(rawRules))
+                    continue;
+
                 var ruleWrapper = JsonSerializer.Deserialize<ChallengeRuleWrapper>(rawRules);
                 if (ruleWrapper?.Rules != null)
                 {
                     foreach (var r in ruleWrapper.Rules)
                     {
-                        var displayRule = new ChallengeRuleDisplayDto
-                        {
-                            Key = r.Key,
-                            RawValue = r.Value
-                        };
+                        targetDto.RuleData[r.Key] = r.Value;
 
-                        // Translate label
-                        displayRule.Label = r.Key switch
-                        {
-                            ChallengeConstants.RuleKeys.VENUE_ID => "Địa điểm áp dụng",
-                            ChallengeConstants.RuleKeys.HAS_IMAGE => "Yêu cầu hình ảnh",
-                            ChallengeConstants.RuleKeys.HASH_TAG => "Hashtag bắt buộc",
-                            _ => r.Key
-                        };
-
-                        // Translate values and operators
                         if (r.Key == ChallengeConstants.RuleKeys.VENUE_ID)
                         {
-                            displayRule.Operator = "Danh sách";
-
                             if (r.Value is JsonElement valElement && valElement.ValueKind == JsonValueKind.Array)
                             {
                                 var ids = JsonSerializer.Deserialize<List<int>>(valElement);
                                 var names = ids?.Select(id => venueIdToName.ContainsKey(id) ? venueIdToName[id] : id.ToString());
-                                displayRule.DisplayValue = names != null ? string.Join(", ", names) : "";
+                                var venueNameStr = names != null ? string.Join(", ", names) : "N/A";
+
+                                targetDto.Instructions.Add($"📍 Thử thách yêu cầu check-in tại địa điểm: {venueNameStr}");
                             }
                         }
                         else if (r.Key == ChallengeConstants.RuleKeys.HAS_IMAGE)
                         {
-                            displayRule.Operator = "Là";
-                            displayRule.DisplayValue = "Bắt buộc";
+                            targetDto.Instructions.Add("📸 Bắt buộc đính kèm hình ảnh.");
                         }
-                        else
+                        else if (r.Key == ChallengeConstants.RuleKeys.HASH_TAG)
                         {
-                            displayRule.Operator = r.Op == ChallengeConstants.RuleOps.Eq ? "Bằng" : r.Op;
-                            displayRule.DisplayValue = r.Value.ToString();
+                            targetDto.Instructions.Add($"🏷️ Phải có hashtag: {r.Value}");
                         }
-                    
-                        targetDto.Rules.Add(displayRule);
                     }
                 }
             }
@@ -251,6 +239,125 @@ namespace capstone_backend.Business.Services
             if (request.StartDate >= request.EndDate)
                 throw new Exception("Ngày bắt đầu phải nhỏ hơn ngày kết thúc");
         }
+
+        private string ProcessDynamicRules(
+            string triggerEvent,
+            string goalMetric,
+            Dictionary<string, object> ruleData,
+            out int updatedTargetGoal)
+        {
+            updatedTargetGoal = 0;
+            if (ruleData == null || !ruleData.Any())
+                return JsonSerializer.Serialize(new
+                {
+                    logic = "AND",
+                    rules = new List<object>()
+                });
+
+            var allowedKeys = new Dictionary<string, List<string>>
+            {
+                { ChallengeTriggerEvent.REVIEW.ToString(), new List<string> { ChallengeConstants.RuleKeys.VENUE_ID, ChallengeConstants.RuleKeys.HAS_IMAGE } },
+                { ChallengeTriggerEvent.POST.ToString(), new List<string> { ChallengeConstants.RuleKeys.HASH_TAG, ChallengeConstants.RuleKeys.HAS_IMAGE } },
+                { ChallengeTriggerEvent.CHECKIN.ToString(), new List<string> { ChallengeConstants.RuleKeys.VENUE_ID } }
+            };
+
+            var whiteList = allowedKeys.GetValueOrDefault(triggerEvent) ?? new List<string>();
+            var ruleList = new List<object>();
+
+            foreach (var item in ruleData)
+            {
+                if (item.Value == null) 
+                    continue;
+                if (!whiteList.Contains(item.Key))
+                    throw new Exception($"Key '{item.Key}' không được cho phép trong event '{triggerEvent}'.");
+
+                string key = item.Key;
+                object rawValue = item.Value;
+                string op = ChallengeConstants.RuleOps.Eq;
+
+                if (rawValue is JsonElement element)
+                {
+                    switch (element.ValueKind)
+                    {
+                        case JsonValueKind.Array:
+                            op = ChallengeConstants.RuleOps.In;
+                            var list = JsonSerializer.Deserialize<List<object>>(element.GetRawText());
+
+                            if (list != null)
+                            {
+                                if (key == ChallengeConstants.RuleKeys.VENUE_ID)
+                                    list = list.Select(x => x).Distinct().Cast<object>().ToList();
+
+                                rawValue = list;
+                                if (goalMetric == ChallengeConstants.GoalMetrics.UNIQUE_LIST)
+                                    updatedTargetGoal = list.Count;
+                            }
+                            break;
+                        case JsonValueKind.Number: 
+                            rawValue = element.GetDecimal(); 
+                            break;
+                        case JsonValueKind.True: 
+                        case JsonValueKind.False: 
+                            rawValue = element.GetBoolean(); 
+                            break;
+                        default: 
+                            rawValue = element.ToString(); 
+                            break;
+                    }
+                }
+                ruleList.Add(new 
+                { 
+                    key = key, 
+                    op = op, 
+                    value = rawValue 
+                });
+            }
+
+            return JsonSerializer.Serialize(new { logic = "AND", rules = ruleList });
+        }
+
+        public async Task<ChallengeResponse> UpdateChallengeAsync(int challengeId, UpdateChallengeRequest request)
+        {
+            var challenge = await _unitOfWork.Challenges.GetByIdAsync(challengeId);
+            if (challenge == null || (challenge.IsDeleted.HasValue && challenge.IsDeleted != false))
+                throw new Exception("Thử thách không tồn tại");
+
+            bool isModifyingRules = request.RuleData != null || request.TargetGoal != challenge.TargetGoal || request.TriggerEvent != challenge.TriggerEvent;
+            if (challenge.Status == ChallengeStatus.ACTIVE.ToString() && isModifyingRules)
+                throw new Exception("Không thể thay đổi luật, mục tiêu hoặc loại sự kiện khi Thử thách đang diễn ra (ACTIVE). Chỉ có thể sửa tên và mô tả");
+
+            _mapper.Map(request, challenge);
+
+            if (request.StartDate.HasValue) 
+                challenge.StartDate = DateTimeNormalizeUtil.NormalizeToUtc(request.StartDate.Value);
+            if (request.EndDate.HasValue) 
+                challenge.EndDate = DateTimeNormalizeUtil.NormalizeToUtc(request.EndDate.Value);
+
+            if (request.RuleData != null)
+            {
+                challenge.ConditionRules = ProcessDynamicRules(
+                    request.TriggerEvent ?? challenge.TriggerEvent,
+                    request.GoalMetric ?? challenge.GoalMetric,
+                    request.RuleData,
+                    out int updatedTargetGoal
+                );
+
+                if ((request.GoalMetric ?? challenge.GoalMetric) == ChallengeConstants.GoalMetrics.UNIQUE_LIST && updatedTargetGoal > 0)
+                {
+                    challenge.TargetGoal = updatedTargetGoal;
+                }
+            }
+
+            challenge.Status = request.Status ?? challenge.Status;
+            challenge.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.Challenges.Update(challenge);
+            await _unitOfWork.SaveChangesAsync();
+
+            var response = _mapper.Map<ChallengeResponse>(challenge);
+            return response;
+        }
+
         private class ChallengeRuleWrapper
         {
             [JsonPropertyName("logic")]

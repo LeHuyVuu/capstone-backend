@@ -9,6 +9,7 @@ namespace capstone_backend.Business.Mappings
         public ChallengeProfile()
         {
             CreateMap<CreateChallengeRequest, Challenge>();
+            CreateMap<UpdateChallengeRequest, Challenge>();
             CreateMap<Challenge, ChallengeResponse>();
         }
     }

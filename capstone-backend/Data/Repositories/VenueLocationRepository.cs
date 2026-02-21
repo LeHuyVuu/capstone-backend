@@ -342,6 +342,6 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
                 Name = v.Name
             });
 
-        return await query.ToListAsync();
+        return await query.Distinct().ToListAsync();
     }
 }

@@ -12,16 +12,9 @@
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
 
-        public List<ChallengeRuleDisplayDto> Rules { get; set; } = new();
-    }
-    
-    public class ChallengeRuleDisplayDto
-    {
-        public string Key { get; set; }
-        public string Label { get; set; }
-        public object Operator { get; set; }
+        public string Status { get; set; } = null!;
 
-        public object RawValue { get; set; }
-        public string DisplayValue { get; set; }
+        public Dictionary<string, object> RuleData { get; set; } = new();
+        public List<string> Instructions { get; set; } = new();
     }
 }

@@ -249,5 +249,26 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Update a Challenge by ID (Admin only)
+        /// </summary>
+        [HttpPut("{challengeId:int}")]
+        public async Task<IActionResult> UpdateChallenge([FromRoute] int challengeId, [FromBody] UpdateChallengeRequest request)
+        {
+            try
+            {
+                var result = await _challengeService.UpdateChallengeAsync(challengeId, request);
+                if (result == null)
+                {
+                    return BadRequestResponse("Cập nhật thử thách thất bại");
+                }
+                return OkResponse(result, "Cập nhật thử thách thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
