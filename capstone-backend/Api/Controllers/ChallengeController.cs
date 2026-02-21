@@ -270,5 +270,26 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get Details of a Challenge by ID (Admin only)
+        /// </summary>
+        [HttpGet("{challengeId:int}")]
+        public async Task<IActionResult> GetChallengeById([FromRoute] int challengeId)
+        {
+            try
+            {
+                var result = await _challengeService.GetChallengeByIdAsync(challengeId);
+                if (result == null)
+                {
+                    return BadRequestResponse("Lấy thông tin thử thách thất bại");
+                }
+                return OkResponse(result, "Lấy thông tin thử thách thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

@@ -113,8 +113,45 @@ namespace capstone_backend.Business.Services
             if (!validMetrics.Contains(request.GoalMetric))
                 throw new Exception($"GoalMetric '{request.GoalMetric}' không hợp lệ");
 
-            if (request.StartDate >= request.EndDate)
-                throw new Exception("Ngày bắt đầu phải nhỏ hơn ngày kết thúc");
+            if (request.StartDate.HasValue)
+            {
+                if (request.StartDate.Value < DateTime.UtcNow.AddMinutes(-5))
+                    throw new Exception("Ngày bắt đầu không được nằm trong quá khứ");
+
+                if (request.EndDate.HasValue && request.StartDate.Value >= request.EndDate.Value)
+                    throw new Exception("Ngày bắt đầu phải trước ngày kết thúc");
+            }
+        }
+
+        private void Validate(UpdateChallengeRequest request, Challenge existingChallenge)
+        {
+            if (request.RewardPoints <= 0)
+                throw new Exception("Điểm thưởng phải là số dương lớn hơn 0");
+
+            if (request.GoalMetric != ChallengeConstants.GoalMetrics.UNIQUE_LIST && request.TargetGoal <= 0)
+                throw new Exception("Mục tiêu số lượng phải lớn hơn 0");
+
+            if (!Enum.TryParse<ChallengeTriggerEvent>(request.TriggerEvent, out _))
+                throw new Exception($"TriggerEvent '{request.TriggerEvent}' không hợp lệ");
+
+            var validMetrics = ChallengeConstants.AllowedGoalMetrics;
+            if (!validMetrics.Contains(request.GoalMetric))
+                throw new Exception($"GoalMetric '{request.GoalMetric}' không hợp lệ");
+
+            if (!Enum.TryParse<ChallengeStatus>(request.Status, out _))
+                throw new Exception($"Trạng thái (Status) '{request.Status}' không hợp lệ");
+
+            if (request.StartDate.HasValue)
+            {
+                if (existingChallenge.StartDate > DateTime.UtcNow &&
+                    request.StartDate.Value < DateTime.UtcNow.AddMinutes(-5))
+                {
+                    throw new Exception("Không thể lùi ngày bắt đầu về quá khứ");
+                }
+
+                if (request.EndDate.HasValue && request.StartDate.Value >= request.EndDate.Value)
+                    throw new Exception("Ngày bắt đầu phải trước ngày kết thúc");
+            }
         }
 
         private async Task<(string ConditionRules, int UpdatedTargetGoal)> ProcessDynamicRulesAsync(
@@ -125,7 +162,11 @@ namespace capstone_backend.Business.Services
             int updatedTargetGoal = 0;
             if (ruleData == null || !ruleData.Any())
             {
-                // Return Tuple include (JSON, 0)
+                if (goalMetric == ChallengeConstants.GoalMetrics.UNIQUE_LIST)
+                {
+                    throw new Exception($"Mục tiêu '{ChallengeConstants.GoalMetrics.UNIQUE_LIST}' bắt buộc phải đi kèm điều kiện chọn quán (venue_id). Loại sự kiện này không hỗ trợ hoặc bạn chưa chọn quán nào!");
+                }
+
                 var emptyJson = JsonSerializer.Serialize(new 
                 { 
                     logic = "AND", 
@@ -212,6 +253,11 @@ namespace capstone_backend.Business.Services
                 logic = "AND", 
                 rules = ruleList 
             });
+
+            if (goalMetric == ChallengeConstants.GoalMetrics.UNIQUE_LIST && updatedTargetGoal <= 0)
+            {
+                throw new Exception($"Mục tiêu '{ChallengeConstants.GoalMetrics.UNIQUE_LIST}' (Số địa điểm khác nhau) bắt buộc phải đi kèm điều kiện chọn quán (venue_id). Loại sự kiện '{triggerEvent}' không hỗ trợ hoặc bạn chưa chọn quán nào!");
+            }
 
             return (finalJson, updatedTargetGoal);
         }
@@ -315,6 +361,8 @@ namespace capstone_backend.Business.Services
             if (challenge == null || (challenge.IsDeleted.HasValue && challenge.IsDeleted != false))
                 throw new Exception("Thử thách không tồn tại");
 
+            Validate(request, challenge);
+
             bool isModifyingRules = request.RuleData != null || request.TargetGoal != challenge.TargetGoal || request.TriggerEvent != challenge.TriggerEvent;
             if (challenge.Status == ChallengeStatus.ACTIVE.ToString() && isModifyingRules)
                 throw new Exception("Không thể thay đổi luật, mục tiêu hoặc loại sự kiện khi Thử thách đang diễn ra (ACTIVE). Chỉ có thể sửa tên và mô tả");
@@ -350,6 +398,16 @@ namespace capstone_backend.Business.Services
 
             var response = await EnrichChallengeResponseAsync(new List<Challenge> { challenge });
             return response.First();
+        }
+
+        public async Task<ChallengeResponse> GetChallengeByIdAsync(int challengeId)
+        {
+            var challenge = await _unitOfWork.Challenges.GetByIdAsync(challengeId);
+            if (challenge == null || (challenge.IsDeleted.HasValue && challenge.IsDeleted != false))
+                throw new Exception("Thử thách không tồn tại");
+
+            var enriched = await EnrichChallengeResponseAsync(new List<Challenge> { challenge });
+            return enriched.First();
         }
 
         private class ChallengeRuleWrapper
