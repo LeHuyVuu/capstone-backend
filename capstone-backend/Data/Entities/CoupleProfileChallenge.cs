@@ -28,6 +28,8 @@ public partial class CoupleProfileChallenge
 
     public DateTime? UpdatedAt { get; set; }
 
+    public DateTime? JoinedAt { get; set; }
+
     public bool? IsDeleted { get; set; }
 
     [ForeignKey("ChallengeId")]
