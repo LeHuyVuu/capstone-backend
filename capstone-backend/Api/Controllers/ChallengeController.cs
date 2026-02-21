@@ -118,6 +118,68 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Create a new Challenge (Admin only)
         /// </summary>
+        /// <remarks>
+        /// **Tạo thử thách mới cho hệ thống**
+        /// 
+        /// ### Các loại TriggerEvent (Loại nhiệm vụ):
+        /// | Loại | Mô tả |
+        /// |------|-------|
+        /// | CHECKIN | Điểm danh hằng ngày |
+        /// | REVIEW | Viết đánh giá địa điểm |
+        /// | POST | Đăng bài viết |
+        /// 
+        /// ### Các loại GoalMetric (Cách tính mục tiêu):
+        /// | Code | Mô tả |
+        /// |------|-------|
+        /// | COUNT | Cộng dồn số lượng (tích luỹ) |
+        /// | UNIQUE_LIST | Số địa điểm khác nhau |
+        /// | STREAK | Chuỗi ngày liên tiếp |
+        /// 
+        /// ### RuleData theo từng TriggerEvent:
+        /// 
+        /// **1. CHECKIN:** Không cần RuleData
+        /// ```json
+        /// "ruleData": null
+        /// ```
+        /// 
+        /// **2. REVIEW:**
+        /// ```json
+        /// "ruleData": {
+        ///     "venue_id": 123,       // (tuỳ chọn) ID quán cụ thể, bỏ trống = quán nào cũng được
+        ///     "has_image": true      // (tuỳ chọn) Yêu cầu có hình ảnh
+        /// }
+        /// ```
+        /// 
+        /// **3. POST:**
+        /// ```json
+        /// "ruleData": {
+        ///     "hash_tag": "#DateNight",  // (tuỳ chọn) Hashtag bắt buộc trong bài viết
+        ///     "has_image": true          // (tuỳ chọn) Yêu cầu có hình ảnh
+        /// }
+        /// ```
+        /// 
+        /// ### Ví dụ Request Body:
+        /// ```json
+        /// {
+        ///     "title": "Reviewer chăm chỉ",
+        ///     "description": "Viết 5 đánh giá có hình ảnh",
+        ///     "triggerEvent": "REVIEW",
+        ///     "goalMetric": "COUNT",
+        ///     "targetGoal": 5,
+        ///     "rewardPoints": 100,
+        ///     "startDate": "2026-03-01T00:00:00",
+        ///     "endDate": "2026-03-31T23:59:59",
+        ///     "ruleData": {
+        ///         "has_image": true
+        ///     }
+        /// }
+        /// ```
+        /// 
+        /// ### Lưu ý:
+        /// - **startDate/endDate**: Có thể null (không giới hạn thời gian)
+        /// - **targetGoal**: Số lượng cần đạt để hoàn thành thử thách
+        /// - **rewardPoints**: Điểm thưởng khi hoàn thành
+        /// </remarks>
         [HttpPost]
         public async Task<IActionResult> CreateChallenge([FromBody] CreateChallengeRequest request)
         {
