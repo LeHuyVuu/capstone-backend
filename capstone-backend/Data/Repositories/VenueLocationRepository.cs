@@ -342,6 +342,22 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
                 Name = v.Name
             });
 
-        return await query.ToListAsync();
+        return await query.Distinct().ToListAsync();
+    }
+
+    public async Task<List<int>> GetInvalidVenueIdsAsync(List<int> venueIds)
+    {
+        if (venueIds == null || !venueIds.Any()) 
+            return new List<int>();
+
+        var validVenueIds = await _dbSet
+            .AsNoTracking()
+            .Where(v => venueIds.Contains(v.Id) && v.Status == "ACTIVE" && v.IsDeleted == false)
+            .Select(v => v.Id)
+            .ToListAsync();
+
+        var invalidIds = venueIds.Except(validVenueIds).ToList();
+        
+        return invalidIds;
     }
 }
