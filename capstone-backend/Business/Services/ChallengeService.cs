@@ -121,6 +121,17 @@ namespace capstone_backend.Business.Services
             return new { ChallengeId = challenge.Id, Rules = ruleList };
         }
 
+        public async Task<int> DeleteChallengeAsync(int challengeId)
+        {
+            var challenge = await _unitOfWork.Challenges.GetByIdAsync(challengeId);
+            if (challenge == null || (challenge.IsDeleted.HasValue && challenge.IsDeleted != false))
+                throw new Exception("Thử thách không tồn tại");
+
+            challenge.IsDeleted = true;
+            _unitOfWork.Challenges.Update(challenge);
+            return await _unitOfWork.SaveChangesAsync();
+        }
+
         public async Task<PagedResult<ChallengeResponse>> GetAllChallengesAsync(int pageNumber, int pageSize)
         {
             var challenges = await _unitOfWork.Challenges.GetPagedAsync(

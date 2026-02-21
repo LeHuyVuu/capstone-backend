@@ -2,6 +2,7 @@
 {
     public class ChallengeResponse
     {
+        public int Id { get; set; }
         public string? Title { get; set; } = null!;
         public string? Description { get; set; }
         public string? TriggerEvent { get; set; } = null!;

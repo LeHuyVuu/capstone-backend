@@ -10,7 +10,6 @@ namespace capstone_backend.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "ADMIN")]
     public class ChallengeController : BaseController
     {
         private readonly IChallengeService _challengeService;
@@ -21,8 +20,9 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Get Definition of Challenges
+        /// Get Definition of Challenges (Admin only)
         /// </summary>
+        [Authorize(Roles = "ADMIN")]
         [HttpGet("definitions")]
         public async Task<IActionResult> GetChallengeDefinitions()
         {
@@ -180,6 +180,7 @@ namespace capstone_backend.Api.Controllers
         /// - **targetGoal**: Số lượng cần đạt để hoàn thành thử thách
         /// - **rewardPoints**: Điểm thưởng khi hoàn thành
         /// </remarks>
+        [Authorize(Roles = "ADMIN")]
         [HttpPost]
         public async Task<IActionResult> CreateChallenge([FromBody] CreateChallengeRequest request)
         {
@@ -207,6 +208,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Get all Challenges (Admin only)
         /// </summary>
+        [Authorize(Roles = "ADMIN")]
         [HttpGet]
         public async Task<IActionResult> GetAllChallenges([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
@@ -219,6 +221,28 @@ namespace capstone_backend.Api.Controllers
                 }
 
                 return OkResponse(result, "Lấy danh sách thử thách thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Delete a Challenge by ID (Admin only)
+        /// </summary>
+        [Authorize(Roles = "ADMIN")]
+        [HttpDelete]
+        public async Task<IActionResult> DeleteChallenge([FromQuery] int challengeId)
+        {
+            try
+            {
+                var result = await _challengeService.DeleteChallengeAsync(challengeId);
+                if (result <= 0)
+                {
+                    return BadRequestResponse("Xoá thử thách thất bại");
+                }
+                return OkResponse("Xoá thử thách thành công");
             }
             catch (Exception ex)
             {
