@@ -195,9 +195,9 @@ namespace capstone_backend.Api.Controllers
                 var result = await _challengeService.CreateChallengeAsyncV2(userId.Value, request);
                 if (result == null)
                 {
-                    return BadRequestResponse("Failed to create challenge");
+                    return BadRequestResponse("Tạo thử thách thất bại");
                 }
-                return OkResponse(result, "Create challenge successfully");
+                return OkResponse(result, "Tạo thử thách thành công");
             }
             catch (Exception ex)
             {
