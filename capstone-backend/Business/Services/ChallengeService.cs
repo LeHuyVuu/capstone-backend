@@ -410,6 +410,26 @@ namespace capstone_backend.Business.Services
             return enriched.First();
         }
 
+        public async Task<int> ChangeChallengeStatusAsync(int challengeId, string newStatus)
+        {
+            var challenge = await _unitOfWork.Challenges.GetByIdAsync(challengeId);
+            if (challenge == null || (challenge.IsDeleted.HasValue && challenge.IsDeleted != false))
+                throw new Exception("Thử thách không tồn tại");
+
+            if (!Enum.TryParse<ChallengeStatus>(newStatus, out _))
+                throw new Exception($"Trạng thái (Status) '{newStatus}' không hợp lệ");
+
+            // Check same status
+            if (challenge.Status == newStatus)
+                throw new Exception($"Thử thách đã ở trạng thái '{newStatus}'");
+
+            challenge.Status = newStatus;
+            challenge.UpdatedAt = DateTime.UtcNow;
+
+            await _unitOfWork.SaveChangesAsync();
+            return challenge.Id;
+        }
+
         private class ChallengeRuleWrapper
         {
             [JsonPropertyName("logic")]

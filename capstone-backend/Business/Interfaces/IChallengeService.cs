@@ -5,6 +5,7 @@ namespace capstone_backend.Business.Interfaces
 {
     public interface IChallengeService
     {
+        Task<int> ChangeChallengeStatusAsync(int challengeId, string newStatus);
         Task<ChallengeResponse> CreateChallengeAsyncV2(int userId, CreateChallengeRequest request);
         Task<int> DeleteChallengeAsync(int challengeId);
         Task<PagedResult<ChallengeResponse>> GetAllChallengesAsync(int pageNumber, int pageSize);

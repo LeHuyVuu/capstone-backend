@@ -253,6 +253,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Update a Challenge by ID (Admin only)
         /// </summary>
+        [Authorize(Roles = "ADMIN")]
         [HttpPut("{challengeId:int}")]
         public async Task<IActionResult> UpdateChallenge([FromRoute] int challengeId, [FromBody] UpdateChallengeRequest request)
         {
@@ -274,6 +275,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Get Details of a Challenge by ID (Admin only)
         /// </summary>
+        [Authorize(Roles = "ADMIN")]
         [HttpGet("{challengeId:int}")]
         public async Task<IActionResult> GetChallengeById([FromRoute] int challengeId)
         {
@@ -285,6 +287,28 @@ namespace capstone_backend.Api.Controllers
                     return BadRequestResponse("Lấy thông tin thử thách thất bại");
                 }
                 return OkResponse(result, "Lấy thông tin thử thách thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Change Challenge Status (Admin only)
+        /// </summary>
+        [Authorize(Roles = "ADMIN")]
+        [HttpPatch("{challengeId:int}/status")]
+        public async Task<IActionResult> ChangeChallengeStatus([FromRoute] int challengeId, [FromQuery] ChallengeStatus newStatus = ChallengeStatus.INACTIVE)
+        {
+            try
+            {
+                var result = await _challengeService.ChangeChallengeStatusAsync(challengeId, newStatus.ToString());
+                if (result == null)
+                {
+                    return BadRequestResponse("Cập nhật trạng thái thử thách thất bại");
+                }
+                return OkResponse(result, "Cập nhật trạng thái thử thách thành công");
             }
             catch (Exception ex)
             {
