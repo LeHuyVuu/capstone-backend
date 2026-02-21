@@ -20,7 +20,7 @@ public partial class CoupleProfileChallenge
     public string? Status { get; set; }
 
     [Column(TypeName = "jsonb")]
-    public string? CompletedMemberIds { get; set; }
+    public string? ProgressData { get; set; }
 
     public DateTime? CompletedAt { get; set; }
 
