@@ -96,7 +96,7 @@ public class UserService : IUserService
         await CreateMemberProfileAsync(user.Id, request);
 
         // Generate JWT tokens
-        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, "member", request.FullName);
+        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, "MEMBER", request.FullName);
         var refreshToken = _jwtService.GenerateRefreshToken();
         var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
 
