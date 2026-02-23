@@ -39,11 +39,10 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Địa điểm không có tọa độ hợp lệ");
 
             var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
-            if (couple == null)
-                throw new Exception("Bạn cần có một couple để check-in");
+            int? coupleProfileId = couple?.id;
 
             // Check if review already exists
-            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId, couple.id);
+            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId, coupleProfileId);
             if (hasReview)
                 throw new Exception("Bạn đã đánh giá địa điểm này rồi");
 
@@ -173,11 +172,10 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Không tìm thấy địa điểm");
 
             var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
-            if (couple == null)
-                throw new Exception("Bạn cần có một couple để đánh giá địa điểm");
+            int? currentCoupleId = couple?.id;
 
             // Check if review already exists
-            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId, couple.id);
+            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId, currentCoupleId);
             if (hasReview)
                 throw new Exception("Bạn đã đánh giá địa điểm này rồi");
 
@@ -190,7 +188,7 @@ namespace capstone_backend.Business.Services
 
             var review = _mapper.Map<Review>(request);
             review.MemberId = member.Id;
-            review.CoupleProfileId = couple.id;
+            review.CoupleProfileId = currentCoupleId;
             review.VenueId = request.VenueLocationId;
             review.Status = ReviewStatus.PENDING.ToString();
             review.IsAnonymous = request.IsAnonymous;
@@ -372,11 +370,10 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Địa điểm không có tọa độ hợp lệ");
 
             var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
-            if (couple == null)
-                throw new Exception("Bạn cần có một couple để xác thực check-in");
+            int? coupleProfileId = couple?.id;
 
             // Check if review already exists
-            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId, couple.id);
+            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId, coupleProfileId);
             if (hasReview)
                 throw new Exception("Bạn đã đánh giá địa điểm này rồi");
 

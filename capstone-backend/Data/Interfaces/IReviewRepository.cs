@@ -54,6 +54,6 @@ public interface IReviewRepository : IGenericRepository<Review>
         int? month = null, 
         int? year = null,
         bool sortDescending = true);
-    Task<bool> HasMemberReviewedVenueAsync(int memberId, int venueId, int coupleProfileId);
+    Task<bool> HasMemberReviewedVenueAsync(int memberId, int venueId, int? coupleProfileId);
     Task<Review?> GetByIdAndMemberIdAsync(int reviewId, int memberId);
 }

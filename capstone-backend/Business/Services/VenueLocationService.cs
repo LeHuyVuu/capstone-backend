@@ -125,12 +125,11 @@ public class VenueLocationService : IVenueLocationService
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
             var checkin = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(member.Id, venueId);
             var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
-            if (couple == null)
-                throw new Exception("Bạn cần có một couple để check-in");
+            int? coupleProfileId = couple?.id;
 
             response.UserState = new UserStateDto
             {
-                HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId, couple.id),
+                HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId, coupleProfileId),
                 ActiceCheckInId = checkin != null ? checkin.Id : null,
                 CanReview = checkin != null && checkin.IsValid == true
             };
