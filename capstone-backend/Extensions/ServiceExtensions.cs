@@ -103,6 +103,8 @@ public static class ServiceExtensions
         services.AddScoped<IReviewReplyRepository, ReviewReplyRepository>();
         services.AddScoped<IReviewLikeRepository, ReviewLikeRepository>();
         services.AddScoped<IChallengeRepository, ChallengeRepository>();
+        services.AddScoped<IAdvertisementRepository, AdvertisementRepository>();
+        services.AddScoped<ISpecialEventRepository, SpecialEventRepository>();
 
         // Messaging repositories
         services.AddScoped<IConversationRepository, ConversationRepository>();
@@ -174,6 +176,9 @@ public static class ServiceExtensions
 
         // Register Sepay Service for payment (generates VietQR codes + receives webhooks)
         services.AddScoped<SepayService>();
+
+        // Register Advertisement Service
+        services.AddScoped<IAdvertisementService, AdvertisementService>();
 
         return services;
     }
