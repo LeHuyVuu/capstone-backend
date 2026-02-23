@@ -38,8 +38,12 @@ namespace capstone_backend.Business.Services
             if (!venue.Latitude.HasValue || !venue.Longitude.HasValue)
                 throw new Exception("Địa điểm không có tọa độ hợp lệ");
 
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Bạn cần có một couple để check-in");
+
             // Check if review already exists
-            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId);
+            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId, couple.id);
             if (hasReview)
                 throw new Exception("Bạn đã đánh giá địa điểm này rồi");
 
@@ -71,7 +75,7 @@ namespace capstone_backend.Business.Services
                 VenueId = request.VenueLocationId,
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
-                IsValid = false
+                IsValid = null, // Invalid until validated
             };
 
             await _unitOfWork.CheckInHistories.AddAsync(checkIn);
@@ -168,8 +172,12 @@ namespace capstone_backend.Business.Services
             if (venue == null)
                 throw new Exception("Không tìm thấy địa điểm");
 
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Bạn cần có một couple để đánh giá địa điểm");
+
             // Check if review already exists
-            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId);
+            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId, couple.id);
             if (hasReview)
                 throw new Exception("Bạn đã đánh giá địa điểm này rồi");
 
@@ -182,6 +190,7 @@ namespace capstone_backend.Business.Services
 
             var review = _mapper.Map<Review>(request);
             review.MemberId = member.Id;
+            review.CoupleProfileId = couple.id;
             review.VenueId = request.VenueLocationId;
             review.Status = ReviewStatus.PENDING.ToString();
             review.IsAnonymous = request.IsAnonymous;
@@ -362,14 +371,21 @@ namespace capstone_backend.Business.Services
             if (!venue.Latitude.HasValue || !venue.Longitude.HasValue)
                 throw new Exception("Địa điểm không có tọa độ hợp lệ");
 
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Bạn cần có một couple để xác thực check-in");
+
             // Check if review already exists
-            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId);
+            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId, couple.id);
             if (hasReview)
                 throw new Exception("Bạn đã đánh giá địa điểm này rồi");
 
             var checkIn = await _unitOfWork.CheckInHistories.GetByIdAsync(checkInId);
             if (checkIn == null || checkIn.MemberId != member.Id || checkIn.VenueId != request.VenueLocationId)
                 throw new Exception("Không tìm thấy lịch sử check-in hợp lệ");
+
+            if (checkIn.IsValid == null)
+                throw new Exception("Lịch sử check-in chưa được xác thực, vui lòng đợi hệ thống xác thực tự động hoặc liên hệ hỗ trợ");
 
             var distance = GeoCalculator.CalculateDistance(           
                 request.Latitude,
