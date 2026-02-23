@@ -64,6 +64,10 @@ public interface IUnitOfWork : IDisposable
 
     IChallengeRepository Challenges { get; }
 
+    IAdvertisementRepository Advertisements { get; }
+
+    ISpecialEventRepository SpecialEvents { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>
