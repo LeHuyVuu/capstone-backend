@@ -20,13 +20,15 @@ public partial class CoupleProfileChallenge
     public string? Status { get; set; }
 
     [Column(TypeName = "jsonb")]
-    public string? CompletedMemberIds { get; set; }
+    public string? ProgressData { get; set; }
 
     public DateTime? CompletedAt { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
+
+    public DateTime? JoinedAt { get; set; }
 
     public bool? IsDeleted { get; set; }
 

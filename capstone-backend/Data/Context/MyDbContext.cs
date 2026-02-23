@@ -440,7 +440,6 @@ public partial class MyDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("couple_profile_challenges_pkey");
 
-            entity.Property(e => e.CompletedMemberIds).HasDefaultValueSql("'[]'::jsonb");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.CurrentProgress).HasDefaultValue(0);
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
