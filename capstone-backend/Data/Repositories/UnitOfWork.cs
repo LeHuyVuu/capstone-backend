@@ -38,7 +38,9 @@ public class UnitOfWork : IUnitOfWork
         IMediaRepository mediaRepository,
         IReviewReplyRepository reviewReplyRepository,
         IReviewLikeRepository reviewLikeRepository,
-        IChallengeRepository challengeRepository)
+        IChallengeRepository challengeRepository,
+        IAdvertisementRepository advertisementRepository,
+        ISpecialEventRepository specialEventRepository)
     {
         _context = context;
         Users = userRepository;
@@ -65,6 +67,8 @@ public class UnitOfWork : IUnitOfWork
         ReviewReplies = reviewReplyRepository;
         ReviewLikes = reviewLikeRepository;
         Challenges = challengeRepository;
+        Advertisements = advertisementRepository;
+        SpecialEvents = specialEventRepository;
     }
 
     public MyDbContext Context => _context;
@@ -116,6 +120,10 @@ public class UnitOfWork : IUnitOfWork
     public IReviewLikeRepository ReviewLikes { get; }
 
     public IChallengeRepository Challenges { get; }
+
+    public IAdvertisementRepository Advertisements { get; }
+
+    public ISpecialEventRepository SpecialEvents { get; }
 
     public async Task<int> SaveChangesAsync()
     {
