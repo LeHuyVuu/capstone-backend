@@ -141,19 +141,30 @@ public class VenueLocationService : IVenueLocationService
 
     /// <summary>
     /// Get venue open/close status (Đang mở cửa / Sắp mở cửa / Đã đóng cửa)
+    /// Tính toán real-time, không phụ thuộc vào IsClosed trong DB
     /// </summary>
     private string GetVenueStatus(VenueOpeningHour oh, TimeSpan currentTime)
     {
-        if (oh.IsClosed)
-            return "Đã đóng cửa";
+        // Check if venue is currently open using helper method
+        bool isCurrentlyOpen = IsVenueCurrentlyOpen(oh.OpenTime, oh.CloseTime, currentTime);
         
-        if (currentTime < oh.OpenTime)
+        // Nếu đang mở cửa
+        if (isCurrentlyOpen)
+            return "Đang mở cửa";
+        
+        // Handle overnight case
+        bool isOpenOvernight = oh.CloseTime < oh.OpenTime;
+        
+        // Nếu chưa mở cửa (trước giờ mở)
+        if (!isOpenOvernight && currentTime < oh.OpenTime)
             return "Sắp mở cửa";
         
-        if (currentTime >= oh.CloseTime)
-            return "Đã đóng cửa";
+        // Nếu qua đêm và đang trong khoảng giữa CloseTime và OpenTime
+        if (isOpenOvernight && currentTime >= oh.CloseTime && currentTime < oh.OpenTime)
+            return "Sắp mở cửa";
         
-        return "Đang mở cửa";
+        // Các trường hợp còn lại: Đã đóng cửa
+        return "Đã đóng cửa";
     }
 
     /// <summary>
@@ -774,7 +785,14 @@ public class VenueLocationService : IVenueLocationService
 
     /// <summary>
     /// Update venue opening hours for a specific day
-    /// Automatically updates is_closed based on current time
+    /// Automatically updates is_closed based on current time or manual override
+    /// 
+    /// IsClosed Priority:
+    /// 1. Manual override (if request.IsClosed is provided)
+    /// 2. Auto-calculate for TODAY (based on current time vs OpenTime/CloseTime)
+    /// 3. Default to true for other days
+    /// 
+    /// Note: Hangfire job runs every minute and will override manual IsClosed settings
     /// </summary>
     public async Task<VenueOpeningHourResponse?> UpdateVenueOpeningHourAsync(UpdateVenueOpeningHourRequest request)
     {
@@ -798,6 +816,14 @@ public class VenueLocationService : IVenueLocationService
             return null;
         }
 
+        // Validate time range (allow overnight: 23:00 - 02:00 is valid)
+        // But reject same time (00:00 - 00:00) unless it's for 24/7
+        if (openTime == closeTime)
+        {
+            _logger.LogWarning("OpenTime and CloseTime cannot be the same: {Time}", openTime);
+            return null;
+        }
+
         try
         {
             var venueLocationId = request.VenueLocationId;
@@ -817,7 +843,7 @@ public class VenueLocationService : IVenueLocationService
                     Day = request.Day,
                     OpenTime = openTime,
                     CloseTime = closeTime,
-                    IsClosed = request.IsClosed,
+                    // IsClosed will be calculated below based on current time
                 };
 
                 await _unitOfWork.Context.Set<VenueOpeningHour>().AddAsync(openingHour);
@@ -830,11 +856,30 @@ public class VenueLocationService : IVenueLocationService
                 _unitOfWork.Context.Set<VenueOpeningHour>().Update(openingHour);
             }
 
-            // Auto-update IsClosed based on current time
+            // Auto-update IsClosed based on manual override or current time
             var currentTimeVN = DateTime.UtcNow.AddHours(7); // Vietnam time (UTC+7)
             var currentTime = currentTimeVN.TimeOfDay;
+            var todayDbFormat = ConvertDayOfWeekToDbFormat(currentTimeVN.DayOfWeek);
 
-            openingHour.IsClosed = !(currentTime >= openTime && currentTime < closeTime);
+            // Priority 1: Manual override (if provided)
+            if (request.IsClosed.HasValue)
+            {
+                openingHour.IsClosed = request.IsClosed.Value;
+                _logger.LogInformation("Venue {VenueId} IsClosed manually set to {IsClosed}", request.VenueLocationId, request.IsClosed.Value);
+            }
+            // Priority 2: Auto-calculate for TODAY's opening hours
+            else if (day == todayDbFormat)
+            {
+                // Use helper method to check if venue is currently open
+                bool isCurrentlyOpen = IsVenueCurrentlyOpen(openTime, closeTime, currentTime);
+                openingHour.IsClosed = !isCurrentlyOpen;
+                _logger.LogInformation("Venue {VenueId} IsClosed auto-calculated to {IsClosed} based on current time", request.VenueLocationId, openingHour.IsClosed);
+            }
+            // Priority 3: For other days, set IsClosed = true by default
+            else
+            {
+                openingHour.IsClosed = true;
+            }
 
             await _unitOfWork.SaveChangesAsync();
 
@@ -860,6 +905,9 @@ public class VenueLocationService : IVenueLocationService
     /// Automatically update IsClosed status for all venue opening hours based on current time
     /// This method is called by Hangfire as a recurring job every minute
     /// Only updates opening hours for TODAY
+    /// 
+    /// Note: This will override any manual IsClosed settings. 
+    /// If venue owner wants to manually close, they should update again after this job runs.
     /// </summary>
     public async Task UpdateAllVenuesIsClosedStatusAsync()
     {
@@ -880,21 +928,22 @@ public class VenueLocationService : IVenueLocationService
         var updatedCount = 0;
         foreach (var openingHour in todayOpeningHours)
         {
-            bool isCurrentlyOpen = currentTime >= openingHour.OpenTime && currentTime < openingHour.CloseTime;
+            // Use helper method to check if venue is currently open
+            bool isCurrentlyOpen = IsVenueCurrentlyOpen(
+                openingHour.OpenTime, 
+                openingHour.CloseTime, 
+                currentTime
+            );
             
-            // ✨ Nếu user đóng tạm trong giờ mở → Giữ nguyên, không cập nhật
-            if (openingHour.IsClosed && isCurrentlyOpen)
+            // IsClosed phải ngược lại với isCurrentlyOpen
+            bool shouldBeClosed = !isCurrentlyOpen;
+            
+            // Always update to match current time (override manual settings)
+            if (openingHour.IsClosed != shouldBeClosed)
             {
-                _logger.LogInformation($"Skipped Venue {openingHour.VenueLocationId}: User manually closed during opening hours");
-                continue;
-            }
-
-            // Tự động update dựa trên thời gian hiện tại
-            bool newIsClosed = !isCurrentlyOpen;
-            if (openingHour.IsClosed != newIsClosed)
-            {
-                openingHour.IsClosed = newIsClosed;
-                _logger.LogInformation($"Updated Venue {openingHour.VenueLocationId}: OpenTime={openingHour.OpenTime}, CloseTime={openingHour.CloseTime}, IsClosed={openingHour.IsClosed}, IsOpen={isCurrentlyOpen}");
+                openingHour.IsClosed = shouldBeClosed;
+                bool isOpenOvernight = openingHour.CloseTime < openingHour.OpenTime;
+                _logger.LogInformation($"Updated Venue {openingHour.VenueLocationId}: OpenTime={openingHour.OpenTime}, CloseTime={openingHour.CloseTime}, CurrentTime={currentTime}, IsOpenOvernight={isOpenOvernight}, IsClosed={openingHour.IsClosed}, IsOpen={isCurrentlyOpen}");
                 updatedCount++;
             }
         }
@@ -918,6 +967,28 @@ public class VenueLocationService : IVenueLocationService
             DayOfWeek.Saturday => 7,
             _ => 8
         };
+    }
+
+    /// <summary>
+    /// Helper method: Check if venue is currently open based on opening hours
+    /// Handles overnight case (e.g., 23:00 - 02:00)
+    /// </summary>
+    private bool IsVenueCurrentlyOpen(TimeSpan openTime, TimeSpan closeTime, TimeSpan currentTime)
+    {
+        bool isOpenOvernight = closeTime < openTime;
+        
+        if (isOpenOvernight)
+        {
+            // Overnight: Open if currentTime >= openTime OR currentTime < closeTime
+            // Example: Open 23:00-02:00, current 01:00 → TRUE
+            return currentTime >= openTime || currentTime < closeTime;
+        }
+        else
+        {
+            // Normal: Open if currentTime >= openTime AND currentTime < closeTime
+            // Example: Open 09:00-22:00, current 15:00 → TRUE
+            return currentTime >= openTime && currentTime < closeTime;
+        }
     }
 
     /// <summary>

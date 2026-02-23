@@ -17,13 +17,19 @@ public class UpdateVenueOpeningHourRequest
 
     /// <summary>
     /// Opening time in format HH:mm (e.g., "09:00")
+    /// Supports overnight hours (e.g., "23:00" open, "02:00" close)
     /// </summary>
     public string OpenTime { get; set; } = null!;
 
     /// <summary>
     /// Closing time in format HH:mm (e.g., "23:00")
+    /// Can be less than OpenTime for overnight venues (e.g., "02:00")
     /// </summary>
     public string CloseTime { get; set; } = null!;
 
-    public Boolean IsClosed { get; set; }
+    /// <summary>
+    /// Manual override: Set to true to temporarily close venue during opening hours
+    /// If not provided or false, IsClosed will be calculated automatically based on current time
+    /// </summary>
+    public bool? IsClosed { get; set; }
 }
