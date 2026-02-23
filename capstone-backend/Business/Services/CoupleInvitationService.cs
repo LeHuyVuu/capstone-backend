@@ -588,11 +588,25 @@ public class CoupleInvitationService : ICoupleInvitationService
         // Build response
         return pagedMembers.Select(member =>
         {
-            var canSend = currentMember?.RelationshipStatus == "SINGLE" &&
-                         currentHasCouple == null &&
-                         member.RelationshipStatus == "SINGLE" &&
-                         !memberIdsWithCouples.Contains(member.Id) &&
-                         !pendingMemberIds.Contains(member.Id);
+            // Debug: Check each condition
+            var isCurrentSingle = currentMember?.RelationshipStatus == "SINGLE";
+            var currentNoCouple = currentHasCouple == null;
+            var isMemberSingle = member.RelationshipStatus == "SINGLE";
+            var memberNoCouple = !memberIdsWithCouples.Contains(member.Id);
+            var noPendingInvitation = !pendingMemberIds.Contains(member.Id);
+            
+            var canSend = isCurrentSingle && currentNoCouple && isMemberSingle && memberNoCouple && noPendingInvitation;
+
+            // TODO: Remove debug logging after testing
+            if (!canSend)
+            {
+                Console.WriteLine($"[DEBUG] CanSend=false for Member {member.Id} ({member.FullName}):");
+                Console.WriteLine($"  - Current SINGLE: {isCurrentSingle}");
+                Console.WriteLine($"  - Current No Couple: {currentNoCouple}");
+                Console.WriteLine($"  - Member SINGLE: {isMemberSingle}");
+                Console.WriteLine($"  - Member No Couple: {memberNoCouple}");
+                Console.WriteLine($"  - No Pending: {noPendingInvitation}");
+            }
 
             return new MemberProfileResponse
             {
