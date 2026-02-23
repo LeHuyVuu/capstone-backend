@@ -276,7 +276,6 @@ public partial class MyDbContext : DbContext
             entity.HasKey(e => e.Id).HasName("check_in_histories_pkey");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
-            entity.Property(e => e.IsValid).HasDefaultValue(true);
 
             entity.HasOne(d => d.Member).WithMany(p => p.CheckInHistories)
                 .OnDelete(DeleteBehavior.ClientSetNull)

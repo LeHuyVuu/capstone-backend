@@ -124,10 +124,13 @@ public class VenueLocationService : IVenueLocationService
         {
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
             var checkin = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(member.Id, venueId);
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Bạn cần có một couple để check-in");
 
             response.UserState = new UserStateDto
             {
-                HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId),
+                HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId, couple.id),
                 ActiceCheckInId = checkin != null ? checkin.Id : null,
                 CanReview = checkin != null && checkin.IsValid == true
             };
@@ -176,8 +179,27 @@ public class VenueLocationService : IVenueLocationService
     /// </summary>
     public async Task<VenueReviewsWithSummaryResponse> GetReviewsByVenueIdAsync(int venueId, int page = 1, int pageSize = 10)
     {
+        int? currentMemberId = null;
+        int? currentCoupleId = null;
+        int? partnerMemberId = null;
+
+        if (_currentUser?.UserId != null)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
+            if (member != null)
+            {
+                currentMemberId = member.Id;
+                var currentCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+                if (currentCouple != null)
+                {
+                    currentCoupleId = currentCouple.id;
+                    partnerMemberId = currentCouple.MemberId1 == member.Id ? currentCouple.MemberId2 : currentCouple.MemberId1;
+                }
+            }
+        }
+
         // Lấy danh sách reviews (có phân trang)
-        var (reviews, totalCount) = await _unitOfWork.Reviews.GetReviewsByVenueIdAsync(venueId, page, pageSize);
+        var (reviews, totalCount) = await _unitOfWork.Reviews.GetReviewsByVenueIdAsync(venueId, page, pageSize, currentMemberId, currentCoupleId, partnerMemberId);
 
         // Lấy tất cả ratings để tính summary
         var allRatings = await _unitOfWork.Reviews.GetAllRatingsByVenueIdAsync(venueId);
@@ -190,12 +212,12 @@ public class VenueLocationService : IVenueLocationService
         var allMedias = await _unitOfWork.Media.GetByListTargetIdsAsync(reviewIds, ReferenceType.REVIEW.ToString());
         var mediaLookup = allMedias.ToLookup(m => m.TargetId);
 
-        var venue = await _unitOfWork.VenueLocations.GetByIdWithOwnerAsync(venueId);
+        var venue = await _unitOfWork.VenueLocations.GetByIdWithOwnerAsync(venueId);     
 
         // Map reviews sang VenueReviewResponse
         var reviewResponses = reviews.Select(r => 
         {
-            var response = _mapper.Map<VenueReviewResponse>(r);
+            var response = _mapper.Map<VenueReviewResponse>(r);          
 
             // Map member information
             if (r.IsAnonymous == true)

@@ -46,6 +46,16 @@ namespace capstone_backend.Business.Jobs.Review
                 return;
             }
 
+            if (checkInHistory.IsValid != null)
+            {
+                _logger.LogInformation("Check-in history with ID {CheckInHistoryId} has already been processed. IsValid: {IsValid}", checkInHistoryId, checkInHistory.IsValid);
+                return;
+            }
+
+            checkInHistory.IsValid = false;
+            _unitOfWork.CheckInHistories.Update(checkInHistory);
+            await _unitOfWork.SaveChangesAsync();
+
             // Send notification logic goes here
             await _notificationService.SendNotificationAsync(
                 member.UserId,
