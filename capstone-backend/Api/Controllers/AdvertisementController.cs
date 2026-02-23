@@ -29,7 +29,7 @@ public class AdvertisementController : BaseController
     /// Each API call rotates to the next advertisement in the same priority group for fair distribution.
     /// Optionally filter by placement type (e.g., "BANNER", "POPUP", "SIDEBAR").
     /// </summary>
-    /// <param name="placementType">Optional: Filter by placement type (BANNER, POPUP, SIDEBAR, etc.)</param>
+    /// <param name="placementType">Optional: Filter by placement type (HOME_BANNER etc.)</param>
     /// <returns>List of rotating advertisements and special events with venue information</returns>
     [HttpGet]
     [Authorize(Roles = "MEMBER")]
