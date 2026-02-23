@@ -17,7 +17,7 @@ public class SpecialEventController : BaseController
     }
 
     /// <summary>
-    /// Create a new special event (Admin only)
+    /// ADMIN ONLY - Create a new special event
     /// </summary>
     [HttpPost]
     [Authorize(Roles = "admin")]
@@ -28,9 +28,10 @@ public class SpecialEventController : BaseController
     }
 
     /// <summary>
-    /// Get special event by ID
+    /// ADMIN ONLY - Get special event by ID
     /// </summary>
     [HttpGet("{id}")]
+    [Authorize(Roles = "admin")]
     [AllowAnonymous]
     public async Task<IActionResult> GetSpecialEventById(int id)
     {
@@ -64,7 +65,7 @@ public class SpecialEventController : BaseController
     }
 
     /// <summary>
-    /// Update special event (Admin only)
+    /// ADMIN ONLY - Update special event
     /// </summary>
     [HttpPut("{id}")]
     [Authorize(Roles = "admin")]
@@ -78,7 +79,7 @@ public class SpecialEventController : BaseController
     }
 
     /// <summary>
-    /// Patch (partial update) special event (Admin only)
+    /// ADMIN ONLY - Patch (partial update) special event
     /// </summary>
     [HttpPatch("{id}")]
     [Authorize(Roles = "admin")]
@@ -93,7 +94,7 @@ public class SpecialEventController : BaseController
     }
 
     /// <summary>
-    /// Delete special event (Admin only)
+    /// ADMIN ONLY - Delete special event
     /// </summary>
     [HttpDelete("{id}")]
     [Authorize(Roles = "admin")]
