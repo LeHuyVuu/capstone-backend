@@ -156,7 +156,7 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
         return (reviews, totalCount);
     }
 
-    public async Task<bool> HasMemberReviewedVenueAsync(int memberId, int venueId, int coupleProfileId)
+    public async Task<bool> HasMemberReviewedVenueAsync(int memberId, int venueId, int? coupleProfileId)
     {
         return await _dbSet
             .AnyAsync(r => r.MemberId == memberId && r.VenueId == venueId && r.CoupleProfileId == coupleProfileId && r.IsDeleted != true);
