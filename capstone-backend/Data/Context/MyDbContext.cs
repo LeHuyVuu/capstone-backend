@@ -241,6 +241,10 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.LikeCount).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
+            entity.HasIndex(e => e.HashTags)
+                  .HasMethod("gin")
+                  .HasDatabaseName("idx_post_hashtags");
+
             entity.HasOne(d => d.Member).WithMany(p => p.Posts)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("posts_author_id_fkey");

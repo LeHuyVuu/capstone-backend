@@ -19,6 +19,8 @@ public partial class Post
     [Column(TypeName = "jsonb")]
     public List<string> MediaPayload { get; set; } = new();
 
+    public List<string> HashTags { get; set; } = new();
+
     public string? LocationName { get; set; }
 
     public int? LikeCount { get; set; } = 0;
