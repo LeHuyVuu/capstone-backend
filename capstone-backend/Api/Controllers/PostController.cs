@@ -1,0 +1,39 @@
+﻿using capstone_backend.Business.DTOs.Post;
+using capstone_backend.Business.Interfaces;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+
+namespace capstone_backend.Api.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class PostController : BaseController
+    {
+        private readonly IPostService _postService;
+
+        public PostController(IPostService postService)
+        {
+            _postService = postService;
+        }
+
+        [HttpGet("feeds")]
+        public async Task<IActionResult> GetFeeds([FromQuery] FeedRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+
+                var result = await _postService.GetFeedsAsync(userId.Value, request);
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+    }
+}

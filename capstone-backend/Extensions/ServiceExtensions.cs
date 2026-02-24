@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using StackExchange.Redis;
 using System.Text;
 using System.Text.Json;
@@ -66,8 +67,16 @@ public static class ServiceExtensions
         Console.WriteLine($"[INFO] DB User: {dbUser}");
         Console.WriteLine($"[INFO] DB Port: {dbPort}");
 
+        //services.AddDbContext<MyDbContext>(options =>
+        //    options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
+
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        dataSourceBuilder.EnableDynamicJson();
+
+        var dataSource = dataSourceBuilder.Build();
+
         services.AddDbContext<MyDbContext>(options =>
-            options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
+            options.UseNpgsql(dataSource).UseSnakeCaseNamingConvention());
 
         return services;
     }
@@ -158,6 +167,7 @@ public static class ServiceExtensions
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IChallengeService, ChallengeService>();
         services.AddScoped<IMediaService, MediaService>();
+        services.AddScoped<IPostService, PostService>();
 
         // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
         services.AddScoped<ILocationFollowerService, LocationFollowerService>();

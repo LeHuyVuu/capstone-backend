@@ -61,7 +61,7 @@ public partial class MemberProfile
     [InverseProperty("Member")]
     public virtual ICollection<PostLike> PostLikes { get; set; } = new List<PostLike>();
 
-    [InverseProperty("Member")]
+    [InverseProperty("Author")]
     public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
 
     [InverseProperty("Member")]

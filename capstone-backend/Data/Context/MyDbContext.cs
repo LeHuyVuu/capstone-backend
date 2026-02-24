@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using capstone_backend.Data.Entities;
+using System.Text.Json;
 
 namespace capstone_backend.Data.Context;
 
@@ -241,11 +242,23 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.LikeCount).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            entity.Property(e => e.MediaPayload)
+                  .HasColumnType("jsonb")
+                  .HasConversion(
+                      v => JsonSerializer.Serialize(v, jsonOptions),
+                      v => JsonSerializer.Deserialize<List<MediaItem>>(v, jsonOptions) ?? new List<MediaItem>()
+                  );
+
             entity.HasIndex(e => e.HashTags)
                   .HasMethod("gin")
                   .HasDatabaseName("idx_post_hashtags");
 
-            entity.HasOne(d => d.Member).WithMany(p => p.Posts)
+            entity.HasOne(d => d.Author).WithMany(p => p.Posts)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("posts_author_id_fkey");
         });

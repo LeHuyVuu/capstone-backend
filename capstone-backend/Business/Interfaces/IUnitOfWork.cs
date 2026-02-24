@@ -68,6 +68,14 @@ public interface IUnitOfWork : IDisposable
 
     ISpecialEventRepository SpecialEvents { get; }
 
+    IPostRepository Posts { get; }
+
+    IPostLikeRepository PostLikes { get; }
+
+    ICommentRepository Comments { get; }
+
+    ICommentLikeRepository CommentLikes { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>
