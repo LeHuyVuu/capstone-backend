@@ -105,6 +105,10 @@ public static class ServiceExtensions
         services.AddScoped<IChallengeRepository, ChallengeRepository>();
         services.AddScoped<IAdvertisementRepository, AdvertisementRepository>();
         services.AddScoped<ISpecialEventRepository, SpecialEventRepository>();
+        services.AddScoped<IPostRepository, PostRepository>();
+        services.AddScoped<IPostLikeRepository, PostLikeRepository>();
+        services.AddScoped<ICommentRepository, CommentRepository>();
+        services.AddScoped<ICommentLikeRepository, CommentLikeRepository>();
 
         // Messaging repositories
         services.AddScoped<IConversationRepository, ConversationRepository>();
