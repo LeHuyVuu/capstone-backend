@@ -57,33 +57,10 @@ public class CoupleInvitationService : ICoupleInvitationService
             return (false, "Không tìm thấy member này", null);
         }
 
-        // Edge case 1: Sender must be SINGLE
-        if (sender.RelationshipStatus != "SINGLE")
-        {
-            return (false, "Bạn phải ở trạng thái SINGLE để gửi lời mời ghép đôi", null);
-        }
+        // NOTE: Allow sending invitation to anyone, even if they are in a relationship
+        // They must breakup before accepting the invitation
 
-        // Edge case 2: Receiver must be SINGLE
-        if (receiver.RelationshipStatus != "SINGLE")
-        {
-            return (false, $"{receiver.FullName} không ở trạng thái SINGLE", null);
-        }
-
-        // Edge case 3: Sender must not have active couple profile
-        var senderHasCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(senderMemberId);
-        if (senderHasCouple != null)
-        {
-            return (false, "Bạn đã có cặp đôi rồi", null);
-        }
-
-        // Edge case 4: Receiver must not have active couple profile
-        var receiverHasCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(receiverMemberId);
-        if (receiverHasCouple != null)
-        {
-            return (false, $"{receiver.FullName} đã có cặp đôi rồi", null);
-        }
-
-        // Edge case 5: No pending invitation between them
+        // Edge case: No pending invitation between them
         var hasPending = await _unitOfWork.CoupleInvitations.HasPendingInvitationBetweenAsync(senderMemberId, receiverMemberId);
         if (hasPending)
         {
@@ -205,14 +182,20 @@ public class CoupleInvitationService : ICoupleInvitationService
         // Need to check both (sender, receiver) and (receiver, sender) due to unique constraint
         var existingCouple = await _unitOfWork.Context.Set<CoupleProfile>()
             .FirstOrDefaultAsync(c => 
-                (c.MemberId1 == invitation.SenderMemberId && c.MemberId2 == invitation.ReceiverMemberId) ||
-                (c.MemberId1 == invitation.ReceiverMemberId && c.MemberId2 == invitation.SenderMemberId));
+                c.IsDeleted != true &&
+                ((c.MemberId1 == invitation.SenderMemberId && c.MemberId2 == invitation.ReceiverMemberId) ||
+                (c.MemberId1 == invitation.ReceiverMemberId && c.MemberId2 == invitation.SenderMemberId)));
 
         CoupleProfile coupleProfile;
         
         if (existingCouple != null)
         {
-            // Reactivate existing couple profile
+            // Reactivate existing couple profile only if not already ACTIVE
+            if (existingCouple.Status == "ACTIVE")
+            {
+                return (false, "Cặp đôi này đã tồn tại và đang hoạt động", null);
+            }
+            
             existingCouple.Status = "ACTIVE";
             existingCouple.StartDate = DateOnly.FromDateTime(DateTime.UtcNow);
             existingCouple.UpdatedAt = DateTime.UtcNow;
@@ -224,10 +207,14 @@ public class CoupleInvitationService : ICoupleInvitationService
         else
         {
             // Create new couple profile
+            // Ensure MemberId1 < MemberId2 to satisfy constraint and prevent duplicates
+            var smallerId = Math.Min(invitation.SenderMemberId, invitation.ReceiverMemberId);
+            var largerId = Math.Max(invitation.SenderMemberId, invitation.ReceiverMemberId);
+            
             coupleProfile = new CoupleProfile
             {
-                MemberId1 = invitation.SenderMemberId,
-                MemberId2 = invitation.ReceiverMemberId,
+                MemberId1 = smallerId,
+                MemberId2 = largerId,
                 Status = "ACTIVE",
                 StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
                 CreatedAt = DateTime.UtcNow,
@@ -245,14 +232,21 @@ public class CoupleInvitationService : ICoupleInvitationService
         invitation.ReceiverMember.RelationshipStatus = "IN_RELATIONSHIP";
         _unitOfWork.MembersProfile.Update(invitation.ReceiverMember);
 
-        // Cancel all other pending invitations for both members
-        // (Now the current invitation is already ACCEPTED, so it won't be cancelled)
-        await _unitOfWork.CoupleInvitations.CancelAllPendingInvitationsForMemberAsync(invitation.SenderMemberId);
-        await _unitOfWork.CoupleInvitations.CancelAllPendingInvitationsForMemberAsync(invitation.ReceiverMemberId);
+        // NOTE: Keep other pending invitations as PENDING (not cancelled)
+        // This allows accepting them later if this couple breaks up
+        // No need to send invitations again
 
         await _unitOfWork.SaveChangesAsync();
 
         // TODO: Send push notifications to both
+
+        // Map member names correctly based on actual MemberId in couple profile
+        var member1 = coupleProfile.MemberId1 == invitation.SenderMemberId 
+            ? invitation.SenderMember 
+            : invitation.ReceiverMember;
+        var member2 = coupleProfile.MemberId2 == invitation.SenderMemberId 
+            ? invitation.SenderMember 
+            : invitation.ReceiverMember;
 
         var response = new AcceptInvitationResponse
         {
@@ -263,9 +257,9 @@ public class CoupleInvitationService : ICoupleInvitationService
             {
                 CoupleId = coupleProfile.id,
                 MemberId1 = coupleProfile.MemberId1,
-                Member1Name = invitation.SenderMember.FullName ?? "Unknown",
+                Member1Name = member1.FullName ?? "Unknown",
                 MemberId2 = coupleProfile.MemberId2,
-                Member2Name = invitation.ReceiverMember.FullName ?? "Unknown",
+                Member2Name = member2.FullName ?? "Unknown",
                 Status = coupleProfile.Status ?? "ACTIVE",
                 CreatedAt = coupleProfile.CreatedAt ?? DateTime.UtcNow
             }
@@ -294,14 +288,9 @@ public class CoupleInvitationService : ICoupleInvitationService
             return (false, "Không thể từ chối lời mời đã được chấp nhận");
         }
 
-        // Edge case 3: Cannot reject if couple already created
-        var receiverHasCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(currentMemberId);
-        if (receiverHasCouple != null)
-        {
-            return (false, "Bạn đã có cặp đôi, không thể từ chối lời mời này");
-        }
+        // NOTE: Removed check for active couple - allow rejecting even if in a relationship
 
-        // Edge case 4: Must be PENDING
+        // Edge case 3: Must be PENDING
         if (invitation.Status != "PENDING")
         {
             return (false, $"Lời mời này đã được {invitation.Status.ToLower()}");
@@ -340,14 +329,9 @@ public class CoupleInvitationService : ICoupleInvitationService
             return (false, "Không thể hủy lời mời đã được chấp nhận");
         }
 
-        // Edge case 3: Cannot cancel if couple already created
-        var senderHasCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(currentMemberId);
-        if (senderHasCouple != null)
-        {
-            return (false, "Bạn đã có cặp đôi, không thể hủy lời mời này");
-        }
+        // NOTE: Removed check for active couple - allow cancelling even if in a relationship
 
-        // Edge case 4: Must be PENDING
+        // Edge case 3: Must be PENDING
         if (invitation.Status != "PENDING")
         {
             return (false, $"Lời mời này đã được {invitation.Status.ToLower()}");
@@ -557,21 +541,9 @@ public class CoupleInvitationService : ICoupleInvitationService
         MemberProfile currentMember,
         List<MemberProfile> pagedMembers)
     {
-        // Batch queries - get all data at once instead of N queries in loop
-        var currentHasCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(currentMemberId);
-        
+        // Batch queries - get pending invitations to determine CanSendInvitation
         var memberIds = pagedMembers.Select(m => m.Id).ToList();
-        var membersWithCouples = await _unitOfWork.Context.CoupleProfiles
-            .Where(c => c.Status == "ACTIVE" && 
-                       (memberIds.Contains(c.MemberId1) || memberIds.Contains(c.MemberId2)))
-            .Select(c => new { c.MemberId1, c.MemberId2 })
-            .ToListAsync();
         
-        var memberIdsWithCouples = membersWithCouples
-            .SelectMany(c => new[] { c.MemberId1, c.MemberId2 })
-            .Distinct()
-            .ToHashSet();
-
         var pendingInvitations = await _unitOfWork.Context.CoupleInvitations
             .Where(i => i.Status == "PENDING" && i.IsDeleted == false &&
                        ((i.SenderMemberId == currentMemberId && memberIds.Contains(i.ReceiverMemberId)) ||
@@ -588,25 +560,10 @@ public class CoupleInvitationService : ICoupleInvitationService
         // Build response
         return pagedMembers.Select(member =>
         {
-            // Debug: Check each condition
-            var isCurrentSingle = currentMember?.RelationshipStatus == "SINGLE";
-            var currentNoCouple = currentHasCouple == null;
-            var isMemberSingle = member.RelationshipStatus == "SINGLE";
-            var memberNoCouple = !memberIdsWithCouples.Contains(member.Id);
+            // NOTE: Match with Send logic - allow sending invitation to anyone
+            // Only check: no pending invitation between them
             var noPendingInvitation = !pendingMemberIds.Contains(member.Id);
-            
-            var canSend = isCurrentSingle && currentNoCouple && isMemberSingle && memberNoCouple && noPendingInvitation;
-
-            // TODO: Remove debug logging after testing
-            if (!canSend)
-            {
-                Console.WriteLine($"[DEBUG] CanSend=false for Member {member.Id} ({member.FullName}):");
-                Console.WriteLine($"  - Current SINGLE: {isCurrentSingle}");
-                Console.WriteLine($"  - Current No Couple: {currentNoCouple}");
-                Console.WriteLine($"  - Member SINGLE: {isMemberSingle}");
-                Console.WriteLine($"  - Member No Couple: {memberNoCouple}");
-                Console.WriteLine($"  - No Pending: {noPendingInvitation}");
-            }
+            var canSend = noPendingInvitation;
 
             return new MemberProfileResponse
             {
