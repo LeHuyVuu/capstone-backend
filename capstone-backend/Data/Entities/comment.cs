@@ -11,17 +11,17 @@ public partial class Comment
     [Key]
     public int Id { get; set; }
 
-    public int MemberId { get; set; }
+    public int AuthorId { get; set; }
 
-    public int? BlogId { get; set; }
+    public int PostId { get; set; }
 
-    public string? Content { get; set; }
+    public string Content { get; set; } = null!;
 
-    public int? ParentCommentId { get; set; }
+    public int? ParentId { get; set; }
 
-    public int? LikeCount { get; set; }
+    public int? LikeCount { get; set; } = 0;
 
-    public int? CommentCount { get; set; }
+    public int? ReplyCount { get; set; } = 0;
 
     public string? Status { get; set; }
 
@@ -31,14 +31,21 @@ public partial class Comment
 
     public bool? IsDeleted { get; set; }
 
-    [ForeignKey("BlogId")]
+    [ForeignKey("PostId")]
     [InverseProperty("Comments")]
-    public virtual Blog? Blog { get; set; }
+    public virtual Post Post { get; set; } = null!;
 
     [InverseProperty("Comment")]
     public virtual ICollection<CommentLike> CommentLikes { get; set; } = new List<CommentLike>();
 
-    [ForeignKey("MemberId")]
+    [ForeignKey("AuthorId")]
     [InverseProperty("Comments")]
     public virtual MemberProfile Member { get; set; } = null!;
+
+    [ForeignKey("ParentId")]
+    [InverseProperty("Replies")]
+    public virtual Comment? Parent { get; set; }
+
+    [InverseProperty("Parent")]
+    public virtual ICollection<Comment> Replies { get; set; } = new List<Comment>();
 }

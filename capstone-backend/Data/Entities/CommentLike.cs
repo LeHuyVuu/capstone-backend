@@ -6,14 +6,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
+[Index("CommentId", "MemberId", IsUnique = true)]
 public partial class CommentLike
 {
     [Key]
     public int Id { get; set; }
 
-    public int? CommentId { get; set; }
+    public int CommentId { get; set; }
 
-    public int? MemberId { get; set; }
+    public int MemberId { get; set; }
 
     public DateTime? CreatedAt { get; set; }
 

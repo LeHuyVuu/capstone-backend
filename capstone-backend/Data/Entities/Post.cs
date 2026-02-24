@@ -6,21 +6,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
-[Index("MemberId", Name = "idx_blog_member")]
-public partial class Blog
+[Index("CreatedAt", "Id", IsDescending = new[] { true, true }, Name = "idx_posts_feed")]
+public partial class Post
 {
     [Key]
     public int Id { get; set; }
 
-    public int MemberId { get; set; }
-
-    public string? Title { get; set; }
+    public int AuthorId { get; set; }
 
     public string? Content { get; set; }
 
-    public int? LikeCount { get; set; }
+    [Column(TypeName = "jsonb")]
+    public List<string> MediaPayload { get; set; } = new();
 
-    public int? CommentCount { get; set; }
+    public string? LocationName { get; set; }
+
+    public int? LikeCount { get; set; } = 0;
+
+    public int? CommentCount { get; set; } = 0;
 
     public string? Visibility { get; set; }
 
@@ -32,13 +35,13 @@ public partial class Blog
 
     public bool? IsDeleted { get; set; }
 
-    [InverseProperty("Blog")]
-    public virtual ICollection<BlogLike> BlogLikes { get; set; } = new List<BlogLike>();
+    [InverseProperty("Post")]
+    public virtual ICollection<PostLike> PostLikes { get; set; } = new List<PostLike>();
 
-    [InverseProperty("Blog")]
+    [InverseProperty("Post")]
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
-    [ForeignKey("MemberId")]
-    [InverseProperty("Blogs")]
+    [ForeignKey("AuthorId")]
+    [InverseProperty("Posts")]
     public virtual MemberProfile Member { get; set; } = null!;
 }

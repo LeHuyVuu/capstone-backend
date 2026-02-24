@@ -20,9 +20,9 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<AdvertisementPackage> AdvertisementPackages { get; set; }
 
-    public virtual DbSet<Blog> Blogs { get; set; }
+    public virtual DbSet<Post> Posts { get; set; }
 
-    public virtual DbSet<BlogLike> BlogLikes { get; set; }
+    public virtual DbSet<PostLike> PostLikes { get; set; }
 
     public virtual DbSet<Challenge> Challenges { get; set; }
 
@@ -231,9 +231,9 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
         });
 
-        modelBuilder.Entity<Blog>(entity =>
+        modelBuilder.Entity<Post>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("blogs_pkey");
+            entity.HasKey(e => e.Id).HasName("posts_pkey");
 
             entity.Property(e => e.CommentCount).HasDefaultValue(0);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
@@ -241,24 +241,24 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.LikeCount).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.Member).WithMany(p => p.Blogs)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("blogs_member_id_fkey");
+            entity.HasOne(d => d.Member).WithMany(p => p.Posts)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("posts_author_id_fkey");
         });
 
-        modelBuilder.Entity<BlogLike>(entity =>
+        modelBuilder.Entity<PostLike>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("blog_likes_pkey");
+            entity.HasKey(e => e.Id).HasName("post_likes_pkey");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.Blog).WithMany(p => p.BlogLikes)
+            entity.HasOne(d => d.Post).WithMany(p => p.PostLikes)
                 .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("blog_likes_blog_id_fkey");
+                .HasConstraintName("post_likes_post_id_fkey");
 
-            entity.HasOne(d => d.Member).WithMany(p => p.BlogLikes)
+            entity.HasOne(d => d.Member).WithMany(p => p.PostLikes)
                 .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("blog_likes_member_id_fkey");
+                .HasConstraintName("post_likes_member_id_fkey");
         });
 
         modelBuilder.Entity<Challenge>(entity =>
@@ -325,19 +325,36 @@ public partial class MyDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("comments_pkey");
 
-            entity.Property(e => e.CommentCount).HasDefaultValue(0);
+            entity.Property(e => e.ReplyCount).HasDefaultValue(0);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.LikeCount).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.Blog).WithMany(p => p.Comments)
+            entity.HasOne(d => d.Post).WithMany(p => p.Comments)
                 .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("comments_blog_id_fkey");
+                .HasConstraintName("comments_post_id_fkey");
 
             entity.HasOne(d => d.Member).WithMany(p => p.Comments)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("comments_member_id_fkey");
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("comments_author_id_fkey");
+
+            entity.HasOne(e => e.Parent)
+              .WithMany(e => e.Replies)
+              .HasForeignKey(e => e.ParentId)
+              .OnDelete(DeleteBehavior.Cascade)
+              .HasConstraintName("comments_parent_id_fkey");
+
+            // Partial index
+            entity.HasIndex(e => new { e.PostId, e.CreatedAt })
+                  .HasDatabaseName("idx_comments_post")
+                  .IsDescending(false, true)
+                  .HasFilter("parent_id IS NULL AND is_deleted = false");
+
+            entity.HasIndex(e => new { e.ParentId, e.CreatedAt })
+                  .HasDatabaseName("idx_comments_replies")
+                  .IsDescending(false, false)
+                  .HasFilter("parent_id IS NOT NULL AND is_deleted = false");
         });
 
         modelBuilder.Entity<CommentLike>(entity =>
