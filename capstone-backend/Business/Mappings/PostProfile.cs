@@ -11,6 +11,9 @@ namespace capstone_backend.Business.Mappings
             CreateMap<Post, PostFeedResponse>();
             CreateMap<Post, PostResponse>();
             CreateMap<MemberProfile, AuthorResponse>();
+
+            // Mutation
+            CreateMap<CreatePostRequest, Post>();
         }
     }
 }

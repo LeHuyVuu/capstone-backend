@@ -3,6 +3,7 @@ using capstone_backend.Business.Common.Constants;
 using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using Google.Api.Gax;
 
@@ -24,6 +25,40 @@ namespace capstone_backend.Business.Services
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+        }
+
+        public async Task<PostResponse> GetPostDetailsAsync(int userId, int postId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var post = await _unitOfWork.Posts.GetPostWithIncludeById(postId);
+            if (post == null || post.IsDeleted == true)
+                throw new Exception("Bài viết không tồn tại");
+
+            var response = _mapper.Map<PostResponse>(post);
+            response.IsLikedByMe = post.PostLikes.Any(pl => pl.MemberId == member.Id);
+            response.IsOwner = post.AuthorId == member.Id;
+
+            return response;
+        }
+
+        public async Task<PostResponse> CreatePostAsync(int userId, CreatePostRequest request)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var post = _mapper.Map<Post>(request);
+            post.AuthorId = member.Id;
+            post.Status = PostStatus.PENDING.ToString();
+
+            await _unitOfWork.Posts.AddAsync(post);
+            await _unitOfWork.SaveChangesAsync();
+
+            var response = _mapper.Map<PostResponse>(post);
+            return response;
         }
 
         public async Task<FeedResponse> GetFeedsAsync(int userId, FeedRequest request)
@@ -188,23 +223,6 @@ namespace capstone_backend.Business.Services
                 keys.Add("experiences"); 
             
             return keys; 
-        }
-
-        public async Task<PostResponse> GetPostDetailsAsync(int userId, int postId)
-        {
-            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
-            if (member == null)
-                throw new Exception("Hồ sơ thành viên không tồn tại");
-
-            var post = await _unitOfWork.Posts.GetPostWithIncludeById(postId);
-            if (post == null || post.IsDeleted == true)
-                throw new Exception("Bài viết không tồn tại");
-
-            var response = _mapper.Map<PostResponse>(post);
-            response.IsLikedByMe = post.PostLikes.Any(pl => pl.MemberId == member.Id);
-            response.IsOwner = post.AuthorId == member.Id;
-
-            return response;
         }
 
         private class ScoredPost

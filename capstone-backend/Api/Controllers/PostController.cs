@@ -66,5 +66,28 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Create new post
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CreatePost([FromBody] CreatePostRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+
+                var result = await _postService.CreatePostAsync(userId.Value, request);
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
