@@ -202,7 +202,10 @@ public class MoodTypeService : IMoodTypeService
         }
 
         // Tạo description cho couple mood
-        var description = GetCoupleMoodDescription(coupleMood);
+        var description = _unitOfWork.Context.Set<CoupleMoodType>()
+            .Where(cmt => cmt.Name == coupleMood)
+            .Select(cmt => cmt.Description)
+            .FirstOrDefault();
 
         return new CurrentMoodResponse
         {
