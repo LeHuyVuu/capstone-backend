@@ -45,11 +45,17 @@ namespace capstone_backend.Api.Controllers
         /// Get post details by id
         /// </summary>
         [HttpGet("{postId:int}")]
-        public async Task<IActionResult> GetPostDetails([FromQuery] int postId)
+        public async Task<IActionResult> GetPostDetails([FromRoute] int postId)
         {
             try
             {
-                var result = await _postService.GetPostDetailsAsync(postId);
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+
+                var result = await _postService.GetPostDetailsAsync(userId.Value, postId);
                 if (result == null)
                     return NotFoundResponse("Bài viết không tồn tại");
 

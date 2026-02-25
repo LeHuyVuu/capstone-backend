@@ -9,6 +9,7 @@ namespace capstone_backend.Business.Mappings
         public PostProfile()
         {
             CreateMap<Post, PostFeedResponse>();
+            CreateMap<Post, PostResponse>();
             CreateMap<MemberProfile, AuthorResponse>();
         }
     }

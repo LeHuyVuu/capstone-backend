@@ -17,6 +17,7 @@ namespace capstone_backend.Business.DTOs.Post
 
         public int AuthorId { get; set; }
         public bool IsLikedByMe { get; set; }
+        public bool IsOwner { get; set; }
 
         public AuthorResponse Author { get; set; }
     }

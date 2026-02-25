@@ -72,6 +72,7 @@ namespace capstone_backend.Business.Services
                     dto.TotalScore = Math.Round(scored, 2);
 
                 dto.IsLikedByMe = p.PostLikes.Any(pl => pl.MemberId == member.Id);
+                dto.IsOwner = p.AuthorId == member.Id;
 
                 return dto;
             })
@@ -189,9 +190,21 @@ namespace capstone_backend.Business.Services
             return keys; 
         }
 
-        public Task<FeedResponse> GetPostDetailsAsync(int postId)
+        public async Task<PostResponse> GetPostDetailsAsync(int userId, int postId)
         {
-            throw new NotImplementedException();
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var post = await _unitOfWork.Posts.GetPostWithIncludeById(postId);
+            if (post == null || post.IsDeleted == true)
+                throw new Exception("Bài viết không tồn tại");
+
+            var response = _mapper.Map<PostResponse>(post);
+            response.IsLikedByMe = post.PostLikes.Any(pl => pl.MemberId == member.Id);
+            response.IsOwner = post.AuthorId == member.Id;
+
+            return response;
         }
 
         private class ScoredPost
