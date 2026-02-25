@@ -71,6 +71,12 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Create new post
         /// </summary>
+        /// <remarks>
+        /// Visibity options:
+        /// - PUBLIC: Ai cũng có thể xem được
+        /// - PRIVATE: Chỉ mình tác giả mới xem đượ
+        /// - COUPLE_ONLY: Chỉ người yêu mới xem được
+        /// </remarks>
         [HttpPost]
         public async Task<IActionResult> CreatePost([FromBody] CreatePostRequest request)
         {
@@ -96,6 +102,12 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Update post by id
         /// </summary>
+        /// <remarks>
+        /// Visibity options:
+        /// - PUBLIC: Ai cũng có thể xem được
+        /// - PRIVATE: Chỉ mình tác giả mới xem đượ
+        /// - COUPLE_ONLY: Chỉ người yêu mới xem được
+        /// </remarks>
         [HttpPut("{postId:int}")]
         public async Task<IActionResult> UpdatePost([FromRoute] int postId, [FromBody] UpdatePostRequest request)
         {
