@@ -33,7 +33,7 @@ namespace capstone_backend.Business.Services
             // 1. Get Candidate Posts
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null) 
-                throw new Exception("Hồ sơ không tồn tại");
+                throw new Exception("Hồ sơ thành viên không tồn tại");
 
             var memberInterests = string.IsNullOrEmpty(member.Interests)
                 ? new List<string>()
@@ -67,9 +67,11 @@ namespace capstone_backend.Business.Services
             var scoredMap = scoredItems.ToDictionary(s => s.Data.Id, s => s.TotalScore);
             var response = finalItems.Select(p =>
             {
-                var dto = _mapper.Map<PostResponse>(p);
+                var dto = _mapper.Map<PostFeedResponse>(p);
                 if (scoredMap.TryGetValue(p.Id, out var scored))
                     dto.TotalScore = Math.Round(scored, 2);
+
+                dto.IsLikedByMe = p.PostLikes.Any(pl => pl.MemberId == member.Id);
 
                 return dto;
             })
@@ -97,7 +99,7 @@ namespace capstone_backend.Business.Services
             var hoursOld = Math.Max(0.5, (now - post.CreatedAt.Value.ToUniversalTime()).TotalHours);
 
             // Get Topics
-            var postTopics = post.Topic.Split(",").ToList() ?? new List<string>();
+            var postTopics = post.Topic ?? new List<string>();
 
             // 1 & 6 Personality & Preferences
             var matchCount = memberInterests.Count(child => postTopics.Contains(InterestConstants.GetParent(child)));
@@ -185,6 +187,11 @@ namespace capstone_backend.Business.Services
                 keys.Add("experiences"); 
             
             return keys; 
+        }
+
+        public Task<FeedResponse> GetPostDetailsAsync(int postId)
+        {
+            throw new NotImplementedException();
         }
 
         private class ScoredPost

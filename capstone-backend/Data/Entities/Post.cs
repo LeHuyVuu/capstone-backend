@@ -23,7 +23,7 @@ public partial class Post
 
     public string? LocationName { get; set; }
 
-    public string? Topic { get; set; }
+    public List<string>? Topic { get; set; }
 
     public int? LikeCount { get; set; } = 0;
 

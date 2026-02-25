@@ -16,6 +16,7 @@ namespace capstone_backend.Data.Repositories
             var query = _dbSet
                 .AsNoTracking()
                 .Include(p => p.Author)
+                .Include(p => p.PostLikes)
                 .Where(p => p.Visibility == "PUBLIC" && p.Status == "PUBLISHED" && p.IsDeleted == false);
 
             if (cursor.HasValue)

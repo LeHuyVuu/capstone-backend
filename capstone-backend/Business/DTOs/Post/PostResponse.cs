@@ -9,6 +9,7 @@ namespace capstone_backend.Business.DTOs.Post
         public List<MediaItem>? MediaPayload { get; set; }
         public string LocationName { get; set; }
         public List<string> HashTags { get; set; }
+        public List<string> Topic { get; set; }
 
         public int LikeCount { get; set; }
         public int CommentCount { get; set; }
@@ -17,6 +18,6 @@ namespace capstone_backend.Business.DTOs.Post
         public int AuthorId { get; set; }
         public bool IsLikedByMe { get; set; }
 
-        public double TotalScore { get; set; }
+        public AuthorResponse Author { get; set; }
     }
 }
