@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Amazon.Rekognition.Model;
+using AutoMapper;
 using capstone_backend.Business.Common.Constants;
 using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
@@ -58,6 +59,34 @@ namespace capstone_backend.Business.Services
             await _unitOfWork.SaveChangesAsync();
 
             var response = _mapper.Map<PostResponse>(post);
+            response.IsOwner = true;
+            response.IsLikedByMe = false;
+            return response;
+        }
+
+        public async Task<PostResponse> UpdatePostAsync(int userId, int postId, UpdatePostRequest request)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var existingPost = await _unitOfWork.Posts.GetPostWithIncludeById(postId);
+            if (existingPost == null)
+                throw new Exception("Bài viết không tồn tại");
+
+            if (existingPost.AuthorId != member.Id)
+                throw new Exception("Bạn không có quyền chỉnh sửa bài viết này");
+
+            if (existingPost.Status == PostStatus.CANCELLED.ToString())
+                throw new Exception("Bài viết đã bị hủy, không thể chỉnh sửa");
+
+            // Update fields
+            existingPost = _mapper.Map(request, existingPost);
+            await _unitOfWork.SaveChangesAsync();
+
+            var response = _mapper.Map<PostResponse>(existingPost);
+            response.IsOwner = true;
+            response.IsLikedByMe = existingPost.PostLikes.Any(pl => pl.MemberId == member.Id);
             return response;
         }
 

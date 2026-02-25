@@ -31,7 +31,6 @@ namespace capstone_backend.Data.Repositories
         public async Task<Post?> GetPostWithIncludeById(int postId)
         {
             return await _dbSet
-                .AsNoTracking()
                 .Include(p => p.Author)
                 .Include(p => p.PostLikes)
                 .FirstOrDefaultAsync(p => p.Id == postId && p.IsDeleted == false);

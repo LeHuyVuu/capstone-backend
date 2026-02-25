@@ -89,5 +89,28 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Update post by id
+        /// </summary>
+        [HttpPut("{postId:int}")]
+        public async Task<IActionResult> UpdatePost([FromRoute] int postId, [FromBody] UpdatePostRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+
+                var result = await _postService.UpdatePostAsync(userId.Value, postId, request);
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
