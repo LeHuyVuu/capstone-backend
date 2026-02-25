@@ -1,4 +1,5 @@
-﻿using capstone_backend.Business.Common.Constants;
+﻿using capstone_backend.Api.Filters;
+using capstone_backend.Business.Common.Constants;
 using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -77,6 +78,7 @@ namespace capstone_backend.Api.Controllers
         /// - PRIVATE: Chỉ mình tác giả mới xem đượ
         /// - COUPLE_ONLY: Chỉ người yêu mới xem được
         /// </remarks>
+        [Moderation]
         [HttpPost]
         public async Task<IActionResult> CreatePost([FromBody] CreatePostRequest request)
         {
@@ -108,6 +110,7 @@ namespace capstone_backend.Api.Controllers
         /// - PRIVATE: Chỉ mình tác giả mới xem đượ
         /// - COUPLE_ONLY: Chỉ người yêu mới xem được
         /// </remarks>
+        [Moderation]
         [HttpPut("{postId:int}")]
         public async Task<IActionResult> UpdatePost([FromRoute] int postId, [FromBody] UpdatePostRequest request)
         {
