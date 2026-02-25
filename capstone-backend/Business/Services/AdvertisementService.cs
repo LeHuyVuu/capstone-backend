@@ -90,7 +90,7 @@ public class AdvertisementService : IAdvertisementService
             AdvertisementId = null,
             VenueId = null,
             SpecialEventId = se.Id,
-            BannerUrl = null, // TODO: Thêm field banner_url vào bảng special_events nếu cần
+            BannerUrl = se.BannerUrl, // TODO: Thêm field banner_url vào bảng special_events nếu cần
         }).ToList();
 
         // Kết hợp: Quảng cáo trước (priority cao), special events sau

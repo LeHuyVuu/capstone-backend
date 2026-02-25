@@ -32,7 +32,6 @@ public class AdvertisementController : BaseController
     /// <param name="placementType">Optional: Filter by placement type (HOME_BANNER etc.)</param>
     /// <returns>List of rotating advertisements and special events with venue information</returns>
     [HttpGet]
-    [Authorize(Roles = "MEMBER")]
     [ProducesResponseType(typeof(ApiResponse<List<AdvertisementResponse>>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]
     [ProducesResponseType(typeof(ApiResponse<object>), 403)]
