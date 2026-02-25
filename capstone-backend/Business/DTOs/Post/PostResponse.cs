@@ -16,5 +16,7 @@ namespace capstone_backend.Business.DTOs.Post
 
         public int AuthorId { get; set; }
         public bool IsLikedByMe { get; set; }
+
+        public double TotalScore { get; set; }
     }
 }

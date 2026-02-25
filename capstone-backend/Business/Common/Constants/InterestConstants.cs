@@ -4,18 +4,16 @@
     {
         public static readonly List<InterestMetadata> All = new()
         {
-            new() { Key = "date-food", Display = "Hẹn hò & Ăn uống", Icon = "🍔" },
-            new() { Key = "deep-talk", Display = "Tâm sự & Chữa lành", Icon = "🌿" },
-            new() { Key = "memories", Display = "Kỷ niệm & Nhật ký", Icon = "📸" },
-            new() { Key = "love-tips", Display = "Kiến thức & Gắn kết", Icon = "💡" },
-            new() { Key = "experiences", Display = "Trải nghiệm chung", Icon = "✈️" }
+            new("date-food", "Hẹn hò & Ăn uống", "🍔", new[] { "Đi ăn", "Cafe", "Nhậu", "Tự nấu" }),
+            new("deep-talk", "Tâm sự & Chữa lành", "🌿", new[] { "Trải lòng", "Nghe Podcast", "Đọc sách", "Chữa lành" }),
+            new("memories", "Kỷ niệm & Nhật ký", "📸", new[] { "Chụp ảnh", "Quay phim", "Viết nhật ký", "Tặng quà" }),
+            new("love-tips", "Kiến thức & Gắn kết", "💡", new[] { "Xem mẹo yêu", "Hiểu đối phương", "Giải quyết cãi vã" }),
+            new("experiences", "Trải nghiệm chung", "✈️", new[] { "Du lịch", "Xem phim", "Camping", "Thể thao" })
         };
+
+        public static string GetParent(string childDisplay) =>
+            All.FirstOrDefault(x => x.Children.Contains(childDisplay))?.Key ?? "others";
     }
 
-    public class InterestMetadata
-    {
-        public string Key { get; set; }
-        public string Display { get; set; }
-        public string Icon { get; set; }
-    }
+    public record InterestMetadata(string Key, string Display, string Icon, string[] Children);
 }
