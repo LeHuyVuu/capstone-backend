@@ -28,6 +28,7 @@
         <PackageReference Include="Hangfire.PostgreSql" Version="1.20.13" />
         <PackageReference Include="Hangfire.SqlServer" Version="1.8.22" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
+        <PackageReference Include="OpenAI" Version="2.8.0" />
         <PackageReference Include="Scalar.AspNetCore" Version="2.11.10" />
         <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
         <PackageReference Include="StackExchange.Redis" Version="2.10.1" />
