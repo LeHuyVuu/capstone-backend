@@ -17,11 +17,13 @@ public partial class Post
     public string? Content { get; set; }
 
     [Column(TypeName = "jsonb")]
-    public List<string> MediaPayload { get; set; } = new();
+    public List<MediaItem>? MediaPayload { get; set; }
 
     public List<string> HashTags { get; set; } = new();
 
     public string? LocationName { get; set; }
+
+    public List<string>? Topic { get; set; }
 
     public int? LikeCount { get; set; } = 0;
 
@@ -45,5 +47,11 @@ public partial class Post
 
     [ForeignKey("AuthorId")]
     [InverseProperty("Posts")]
-    public virtual MemberProfile Member { get; set; } = null!;
+    public virtual MemberProfile Author { get; set; } = null!;
+}
+
+public class MediaItem
+{
+    public string Url { get; set; } = null!;
+    public string Type { get; set; } = null!;
 }
