@@ -127,8 +127,11 @@ public class MoodTypeService : IMoodTypeService
 
     public async Task<CurrentMoodResponse?> GetCurrentMoodAsync(int userId, CancellationToken cancellationToken = default)
     {
-        // Lấy member profile của user
-        var memberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId, cancellationToken: cancellationToken);
+        // Lấy member profile của user (include User for AvatarUrl)
+        var memberProfile = await _unitOfWork.Context.Set<MemberProfile>()
+            .Include(m => m.User)
+            .Where(m => m.UserId == userId && m.IsDeleted != true)
+            .FirstOrDefaultAsync(cancellationToken);
         if (memberProfile == null)
         {
             _logger.LogWarning($"Không tìm thấy member profile cho user {userId}");
@@ -158,6 +161,7 @@ public class MoodTypeService : IMoodTypeService
 
         // Kiểm tra couple profile
         int? partnerMemberId = null;
+        string? partnerMemberAvatarUrl = null;
         string? partnerMood = null;
         int? partnerMoodId = null;
         DateTime? partnerMoodUpdatedAt = null;
@@ -175,6 +179,16 @@ public class MoodTypeService : IMoodTypeService
             partnerMemberId = coupleProfile.MemberId1 == memberProfile.Id 
                 ? coupleProfile.MemberId2 
                 : coupleProfile.MemberId1;
+
+            // Lấy partner member profile để lấy avatar
+            var partnerMemberProfile = await _unitOfWork.Context.Set<MemberProfile>()
+                .Include(m => m.User)
+                .Where(m => m.Id == partnerMemberId.Value && m.IsDeleted != true)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (partnerMemberProfile != null)
+            {
+                partnerMemberAvatarUrl = partnerMemberProfile.User?.AvatarUrl;
+            }
 
             // Lấy mood log gần nhất của partner
             var partnerMoodLog = await _unitOfWork.Context.Set<MemberMoodLog>()
@@ -210,10 +224,12 @@ public class MoodTypeService : IMoodTypeService
         return new CurrentMoodResponse
         {
             MemberId = memberProfile.Id,
+            MemberAvatarUrl = memberProfile.User?.AvatarUrl,
             CurrentMood = currentMood,
             CurrentMoodId = currentMoodId,
             MoodUpdatedAt = moodUpdatedAt,
             PartnerMemberId = partnerMemberId,
+            PartnerAvatarUrl = partnerMemberAvatarUrl,
             PartnerMood = partnerMood,
             PartnerMoodId = partnerMoodId,
             PartnerMoodUpdatedAt = partnerMoodUpdatedAt,
