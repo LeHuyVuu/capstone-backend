@@ -40,6 +40,23 @@ public class VenueLocationService : IVenueLocationService
     #region Category & Image Helpers
     
     /// <summary>
+    /// Serialize list of categories to string (format: "CATEGORY1 / CATEGORY2 / CATEGORY3")
+    /// </summary>
+    private static string? SerializeCategories(List<string>? categories)
+    {
+        if (categories == null || categories.Count == 0)
+            return null;
+        
+        // Filter out empty strings and join with " / "
+        var validCategories = categories
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Select(c => c.Trim())
+            .ToList();
+        
+        return validCategories.Any() ? string.Join(" / ", validCategories) : null;
+    }
+    
+    /// <summary>
     /// Deserialize category string to list (split by " / ")
     /// </summary>
     private static List<string>? DeserializeCategory(string? categoryString)
@@ -517,6 +534,7 @@ public class VenueLocationService : IVenueLocationService
             PriceMax = request.PriceMax,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
+            Category = SerializeCategories(request.Categories),
             CoverImage = SerializeImages(request.CoverImage),
             InteriorImage = SerializeImages(request.InteriorImage),
             FullPageMenuImage = SerializeImages(request.FullPageMenuImage),
@@ -636,6 +654,11 @@ public class VenueLocationService : IVenueLocationService
         
         if (request.IsOwnerVerified.HasValue)
             venue.IsOwnerVerified = request.IsOwnerVerified;
+        
+        // Update categories only if explicitly provided (not null)
+        // If Categories is null, keep the existing categories unchanged
+        if (request.Categories != null)
+            venue.Category = SerializeCategories(request.Categories);
 
         // Update venue tags if provided (soft delete old, restore or add new)
         if (request.VenueTags != null)

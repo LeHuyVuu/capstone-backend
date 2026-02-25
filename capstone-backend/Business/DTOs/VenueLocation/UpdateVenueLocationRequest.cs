@@ -46,6 +46,15 @@ public class UpdateVenueLocationRequest
     public bool? IsOwnerVerified { get; set; }
 
     /// <summary>
+    /// List of category names for the venue
+    /// Will be stored as "CATEGORY1 / CATEGORY2 / CATEGORY3" format
+    /// Example: ["TRẢI NGHIỆM", "WORKSHOP"]
+    /// If null, existing categories will remain unchanged
+    /// If empty array [], categories will be cleared (set to null in database)
+    /// </summary>
+    public List<string>? Categories { get; set; }
+
+    /// <summary>
     /// List of tag combinations (mood + personality pairs) to update
     /// If provided, will replace all existing tags with new ones
     /// Example: [{ coupleMoodTypeId: 2, couplePersonalityTypeId: 1 }]

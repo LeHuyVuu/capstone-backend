@@ -47,6 +47,13 @@ public class CreateVenueLocationRequest
     public bool? IsOwnerVerified { get; set; }
 
     /// <summary>
+    /// List of category names for the venue
+    /// Will be stored as "CATEGORY1 / CATEGORY2 / CATEGORY3" format
+    /// Example: ["TRẢI NGHIỆM", "WORKSHOP"]
+    /// </summary>
+    public List<string>? Categories { get; set; }
+
+    /// <summary>
     /// List of tag combinations (mood + personality pairs)
     /// Each combination will find corresponding LocationTag in database
     /// Example: [{ coupleMoodTypeId: 2, couplePersonalityTypeId: 1 }]
