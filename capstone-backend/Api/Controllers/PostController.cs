@@ -82,7 +82,9 @@ namespace capstone_backend.Api.Controllers
                 }
 
                 var result = await _postService.CreatePostAsync(userId.Value, request);
-                return OkResponse(result);
+                if (result == null)
+                    return BadRequestResponse("Tạo bài viết thất bại");
+                return OkResponse(result, "Tạo bài viết thành công");
             }
             catch (Exception ex)
             {
@@ -105,7 +107,33 @@ namespace capstone_backend.Api.Controllers
                 }
 
                 var result = await _postService.UpdatePostAsync(userId.Value, postId, request);
-                return OkResponse(result);
+                if (result == null)
+                    return NotFoundResponse("Chỉnh sửa bài viết thất bại");
+                return OkResponse(result, "Chỉnh sửa bài viết thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Delete post by id (soft delete)
+        /// </summary>
+        [HttpDelete("{postId}")]
+        public async Task<IActionResult> DeletePost([FromRoute] int postId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _postService.DeletePostAsync(userId.Value, postId);
+                if (result <= 0)
+                    return NotFoundResponse("Xóa bài viết thất bại");
+                return OkResponse(result, "Xoá bài viết thành công");
             }
             catch (Exception ex)
             {

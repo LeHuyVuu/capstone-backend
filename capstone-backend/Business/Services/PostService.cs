@@ -90,6 +90,26 @@ namespace capstone_backend.Business.Services
             return response;
         }
 
+        public async Task<int> DeletePostAsync(int userId, int postId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var existingPost = await _unitOfWork.Posts.GetPostWithIncludeById(postId);
+            if (existingPost == null)
+                throw new Exception("Bài viết không tồn tại");
+
+            if (existingPost.AuthorId != member.Id)
+                throw new Exception("Bạn không có quyền chỉnh sửa bài viết này");
+
+            if (existingPost.Status == PostStatus.CANCELLED.ToString())
+                throw new Exception("Bài viết đã bị hủy, không thể chỉnh sửa");
+
+            existingPost.IsDeleted = true;
+            return await _unitOfWork.SaveChangesAsync();
+        }
+
         public async Task<FeedResponse> GetFeedsAsync(int userId, FeedRequest request)
         {
             var nowVn = TimezoneUtil.ToVietNamTime(DateTime.UtcNow);
