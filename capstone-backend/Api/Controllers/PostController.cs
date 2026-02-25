@@ -1,4 +1,5 @@
-﻿using capstone_backend.Business.DTOs.Post;
+﻿using capstone_backend.Business.Common.Constants;
+using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -8,7 +9,7 @@ namespace capstone_backend.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "MEMBER, member")]
     public class PostController : BaseController
     {
         private readonly IPostService _postService;
@@ -134,6 +135,25 @@ namespace capstone_backend.Api.Controllers
                 if (result <= 0)
                     return NotFoundResponse("Xóa bài viết thất bại");
                 return OkResponse(result, "Xoá bài viết thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get topics for post creation/editing - FE dùng để hiển thị dropdown chọn chủ đề
+        /// </summary>
+        [HttpGet("topics")]
+        public IActionResult GetTopics()
+        {
+            try
+            {
+                var topics = InterestConstants.All
+                    .Select(x => new { x.Key, x.Display, x.Icon })
+                    .ToList();
+                return OkResponse(topics);
             }
             catch (Exception ex)
             {
