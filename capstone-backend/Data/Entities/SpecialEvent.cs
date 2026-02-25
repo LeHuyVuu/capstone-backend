@@ -21,6 +21,8 @@ public partial class SpecialEvent
 
     public string? BannerUrl { get; set; }
 
+    public bool? IsYearly { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
