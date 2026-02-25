@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
+using OpenAI.Moderations;
 using StackExchange.Redis;
 using System.Text;
 using System.Text.Json;
@@ -183,16 +184,16 @@ public static class ServiceExtensions
         services.AddScoped<IMediaWorker, MediaWorker>();
 
         // Register Messaging Service
-        services.AddScoped<IMessagingService, MessagingService>();
-
-        // Register Moderation Service
-        services.AddSingleton<IModerationService, ModerationService>();
+        services.AddScoped<IMessagingService, MessagingService>();     
 
         // Register Sepay Service for payment (generates VietQR codes + receives webhooks)
         services.AddScoped<SepayService>();
 
         // Register Advertisement Service
         services.AddScoped<IAdvertisementService, AdvertisementService>();
+
+        // Register Moderation Service
+        services.AddOpenAIModerationService();
 
         return services;
     }
@@ -665,6 +666,34 @@ public static class ServiceExtensions
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Firebase initialization failed: {ex.Message}");
+        }
+
+        return services;
+    }
+
+    /// <summary>
+    /// Register OpenAI Service
+    /// </summary>
+    public static IServiceCollection AddOpenAIModerationService(this IServiceCollection services)
+    {
+        var openAiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        if (string.IsNullOrWhiteSpace(openAiKey))
+        {
+            Console.WriteLine("[WARNING] OpenAI API Key not found. Moderation AI will be disabled.");
+            return services;
+        }
+
+        try
+        {
+            services.AddSingleton(new ModerationClient("omni-moderation-latest", openAiKey));
+            // Register Moderation Service
+            services.AddSingleton<IModerationService, ModerationService>();
+
+            Console.WriteLine("[INFO] OpenAI Moderation AI: Initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] OpenAI initialization failed: {ex.Message}");
         }
 
         return services;
