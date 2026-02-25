@@ -4,10 +4,13 @@ using capstone_backend.Business.Common.Constants;
 using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Moderation;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using Google.Api.Gax;
+using Hangfire;
+using Microsoft.Extensions.Hosting;
 using OpenAI.Moderations;
 
 namespace capstone_backend.Business.Services
@@ -55,34 +58,12 @@ namespace capstone_backend.Business.Services
             if (member == null)
                 throw new Exception("Hồ sơ thành viên không tồn tại");
 
-            // Check moderation for text and media
             var toCheck = new List<string> { request.Content };
-            if (request.MediaPayload != null)
-            {
-                toCheck.AddRange(request.MediaPayload.Select(m => m.Url));
-            }
-
+            toCheck.AddRange(request.MediaPayload.Select(m => m.Url));
             var moderationResults = await _moderationService.CheckContentByAIService(toCheck);
 
-            var finalStatus = PostStatus.PUBLISHED; // Default to publish if no issues
-            if (moderationResults != null && moderationResults.Any())
-            {
-                // Case: Block
-                var blocked = moderationResults.Where(r => r.Action == ModerationAction.BLOCK).ToList();
-                if (blocked.Any())
-                {
-                    var reasons = string.Join("; ", blocked.Select(f => $"{f.Label}: {f.Reason}"));
-                    throw new Exception($"Hệ thống từ chối nội dung: {reasons}");
-                }
-
-                // TODO: Send report to Admin
-                //var pending = moderationResults.Where(r => r.Action == ModerationAction.PENDING).ToList();
-                //if (pending.Any())
-                //{
-                //    finalStatus = PostStatus.PENDING;
-                //    moderationNote = string.Join("; ", pending.Select(f => $"{f.Label}: {f.Reason}"));
-                //}
-            }
+            if (moderationResults.Any(r => r.Action == ModerationAction.BLOCK))
+                throw new Exception("Nội dung của bạn đã bị hệ thống chặn vì vi phạm tiêu chuẩn cộng đồng");
 
             var post = _mapper.Map<Post>(request);
             post.AuthorId = member.Id;
@@ -90,6 +71,8 @@ namespace capstone_backend.Business.Services
 
             await _unitOfWork.Posts.AddAsync(post);
             await _unitOfWork.SaveChangesAsync();
+
+            BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessModerationAsync(post.Id, moderationResults));
 
             var response = _mapper.Map<PostResponse>(post);
             response.IsOwner = true;
@@ -113,38 +96,18 @@ namespace capstone_backend.Business.Services
             if (existingPost.Status == PostStatus.CANCELLED.ToString())
                 throw new Exception("Bài viết đã bị hủy, không thể chỉnh sửa");
 
-            // Check moderation for text and media
             var toCheck = new List<string> { request.Content };
-            if (request.MediaPayload != null)
-            {
-                toCheck.AddRange(request.MediaPayload.Select(m => m.Url));
-            }
-
+            toCheck.AddRange(request.MediaPayload.Select(m => m.Url));
             var moderationResults = await _moderationService.CheckContentByAIService(toCheck);
 
-            var finalStatus = PostStatus.PUBLISHED; // Default to publish if no issues
-            if (moderationResults != null && moderationResults.Any())
-            {
-                // Case: Block
-                var blocked = moderationResults.Where(r => r.Action == ModerationAction.BLOCK).ToList();
-                if (blocked.Any())
-                {
-                    var reasons = string.Join("; ", blocked.Select(f => $"{f.Label}: {f.Reason}"));
-                    throw new Exception($"Hệ thống từ chối nội dung: {reasons}");
-                }
-
-                // TODO: Send report to Admin
-                //var pending = moderationResults.Where(r => r.Action == ModerationAction.PENDING).ToList();
-                //if (pending.Any())
-                //{
-                //    finalStatus = PostStatus.PENDING;
-                //    moderationNote = string.Join("; ", pending.Select(f => $"{f.Label}: {f.Reason}"));
-                //}
-            }
+            if (moderationResults.Any(r => r.Action == ModerationAction.BLOCK))
+                throw new Exception("Nội dung của bạn đã bị hệ thống chặn vì vi phạm tiêu chuẩn cộng đồng");
 
             // Update fields
             existingPost = _mapper.Map(request, existingPost);
             await _unitOfWork.SaveChangesAsync();
+
+            BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessModerationAsync(existingPost.Id, moderationResults));
 
             var response = _mapper.Map<PostResponse>(existingPost);
             response.IsOwner = true;
