@@ -15,6 +15,10 @@ namespace capstone_backend.Business.Mappings
             // Mutation
             CreateMap<CreatePostRequest, Post>();
             CreateMap<UpdatePostRequest, Post>();
+
+            // Interaction
+            CreateMap<Comment, CommentResponse>()
+                .ForMember(dest => dest.Author, opt => opt.MapFrom(src => src.Author));
         }
     }
 }

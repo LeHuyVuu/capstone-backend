@@ -1,6 +1,7 @@
 ﻿using Amazon.Rekognition.Model;
 using AutoMapper;
 using capstone_backend.Business.Common.Constants;
+using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
@@ -10,6 +11,7 @@ using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using Google.Api.Gax;
 using Hangfire;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using OpenAI.Moderations;
 
@@ -72,7 +74,7 @@ namespace capstone_backend.Business.Services
             await _unitOfWork.Posts.AddAsync(post);
             await _unitOfWork.SaveChangesAsync();
 
-            BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessModerationAsync(post.Id, moderationResults));
+            BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessPostModerationAsync(post.Id, moderationResults));
 
             var response = _mapper.Map<PostResponse>(post);
             response.IsOwner = true;
@@ -107,7 +109,7 @@ namespace capstone_backend.Business.Services
             existingPost = _mapper.Map(request, existingPost);
             await _unitOfWork.SaveChangesAsync();
 
-            BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessModerationAsync(existingPost.Id, moderationResults));
+            BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessPostModerationAsync(existingPost.Id, moderationResults));
 
             var response = _mapper.Map<PostResponse>(existingPost);
             response.IsOwner = true;
@@ -158,13 +160,11 @@ namespace capstone_backend.Business.Services
                 });
                 await _unitOfWork.SaveChangesAsync();
 
-                await _unitOfWork.Posts.UpdateLikeCountAsync(post.Id, 1);
-
                 await _unitOfWork.CommitTransactionAsync();
 
                 return new PostLikeResponse
                 {
-                    PostLikeCount = post.LikeCount.Value,
+                    PostLikeCount = post.LikeCount.Value + 1,
                     IsLikedByMe = true
                 };
             }
@@ -199,13 +199,12 @@ namespace capstone_backend.Business.Services
                 _unitOfWork.PostLikes.Delete(existingLike);
                 await _unitOfWork.SaveChangesAsync();
 
-                await _unitOfWork.Posts.UpdateLikeCountAsync(post.Id, -1);
 
                 await _unitOfWork.CommitTransactionAsync();
 
                 return new PostLikeResponse
                 {
-                    PostLikeCount = post.LikeCount.Value,
+                    PostLikeCount = post.LikeCount.Value - 1,
                     IsLikedByMe = false
                 };
             }
@@ -215,6 +214,123 @@ namespace capstone_backend.Business.Services
                 await _unitOfWork.RollbackTransactionAsync();
                 throw new Exception("Lỗi khi bỏ thích bài viết");
             }
+        }
+
+        public async Task<CommentResponse> CommentPostAsync(int userId, int postId, CreateCommentRequest request)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var post = await _unitOfWork.Posts.GetPostWithIncludeById(postId);
+            if (post == null || post.IsDeleted == true)
+                throw new Exception("Bài viết không tồn tại");
+
+            var parentComment = new Comment();
+            if (request.ParentId.HasValue)
+            {
+                parentComment = await _unitOfWork.Comments.GetByIdAsync(request.ParentId.Value);
+                if (parentComment == null || parentComment.IsDeleted == true || parentComment.PostId != post.Id)
+                    throw new Exception("Bình luận cha không hợp lệ");
+            }
+
+            var moderationResults = await _moderationService.CheckContentByAIService(new List<string> { request.Content });
+            if (moderationResults.Any(r => r.Action == ModerationAction.BLOCK))
+                throw new Exception("Nội dung của bạn đã bị hệ thống chặn vì vi phạm tiêu chuẩn cộng đồng");
+
+            var comment = new Comment
+            {
+                AuthorId = member.Id,
+                PostId = post.Id,
+                ParentId = request.ParentId,
+                Content = request.Content,
+                Status = CommentStatus.PENDING.ToString()
+            };
+            var response = new CommentResponse();
+
+            await _unitOfWork.Comments.AddAsync(comment);
+            
+            if (request.ParentId.HasValue)
+            {
+                parentComment.ReplyCount = (parentComment.ReplyCount ?? 0) + 1;
+            }
+
+            post.CommentCount = (post.CommentCount ?? 0) + 1;
+
+            await _unitOfWork.SaveChangesAsync();
+
+            response = _mapper.Map<CommentResponse>(comment);
+            response.Author = _mapper.Map<AuthorResponse>(member);
+            response.PostCommentCount = post.CommentCount ?? 0;
+
+            BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessCommentModerationAsync(comment.Id, moderationResults));
+
+            return response;
+        }
+
+        public async Task<int> DeleteCommentAsync(int userId, int commentId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var existingComment = await _unitOfWork.Comments.GetByIdAsync(commentId);
+            if (existingComment == null)
+                throw new Exception("Bình luận không tồn tại");
+
+            var post = await _unitOfWork.Posts.GetByIdAsync(existingComment.PostId);
+            if (post == null)
+                throw new Exception("Bài viết không tồn tại");
+
+            if (existingComment.AuthorId != member.Id)
+                throw new Exception("Bạn không có quyền xóa bình luận này");
+
+            if (existingComment.Status == CommentStatus.PUBLISHED.ToString())
+            {
+                if (existingComment.ParentId.HasValue)
+                {
+                    var parentComment = await _unitOfWork.Comments.GetByIdAsync(existingComment.ParentId.Value);
+                    if (parentComment != null && parentComment.IsDeleted != true)
+                    {
+                        parentComment.ReplyCount = Math.Max(0, (parentComment.ReplyCount ?? 0) - 1);
+                    }
+                }
+                post.CommentCount = Math.Max(0, (post.CommentCount ?? 0) - 1);
+            }
+
+            existingComment.IsDeleted = true;
+            return await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<PagedResult<CommentResponse>> GetCommentsPostAsync(int userId, int postId, int pageNumber = 1, int pageSize = 10)
+        {
+            var post = await _unitOfWork.Posts.GetByIdAsync(postId);
+            if (post == null || post.IsDeleted == true)
+                throw new Exception("Bài viết không tồn tại");
+
+            var (comments, count) = await _unitOfWork.Comments.GetPagedAsync(
+                    pageNumber,
+                    pageSize,
+                    c => c.Post.Id == postId && 
+                         c.IsDeleted == false && 
+                         c.Post.Visibility == PostVisibility.PUBLIC.ToString() && 
+                         c.Post.Status == PostStatus.PUBLISHED.ToString() && 
+                         c.ParentId == null,
+                    c => c.OrderByDescending(c => c.CreatedAt),
+                    c => c.Include(c => c.Author)
+                );
+
+            var items = _mapper.Map<List<CommentResponse>>(comments);
+
+            var pagedResult = new PagedResult<CommentResponse>
+            {
+                Items = items,
+                TotalCount = count,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            return pagedResult;
         }
 
         public async Task<FeedResponse> GetFeedsAsync(int userId, FeedRequest request)
