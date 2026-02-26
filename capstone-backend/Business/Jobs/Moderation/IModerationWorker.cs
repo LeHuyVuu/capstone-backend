@@ -4,6 +4,7 @@ namespace capstone_backend.Business.Jobs.Moderation
 {
     public interface IModerationWorker
     {
-        Task ProcessModerationAsync(int postId, List<ModerationResultDto> results);
+        Task ProcessPostModerationAsync(int postId, List<ModerationResultDto> results);
+        Task ProcessCommentModerationAsync(int commentId, List<ModerationResultDto> results);
     }
 }

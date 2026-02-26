@@ -203,7 +203,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Unlike posts
         /// </summary>
-        [HttpPost("{postId:int}/unlike")]
+        [HttpDelete("{postId:int}/unlike")]
         public async Task<IActionResult> UnlikePost([FromRoute] int postId)
         {
             try
@@ -217,6 +217,55 @@ namespace capstone_backend.Api.Controllers
                 if (result == null)
                     return NotFoundResponse("Bỏ thích bài viết thất bại");
                 return OkResponse(result, "Bỏ thích bài viết thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Comment posts
+        /// </summary>
+        [HttpPost("{postId:int}/comment")]
+        public async Task<IActionResult> CommentPost([FromRoute] int postId, [FromBody] CreateCommentRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+
+                var result = await _postService.CommentPostAsync(userId.Value, postId, request);
+                if (result == null)
+                    return NotFoundResponse("Bình luận bài viết thất bại");
+                return OkResponse(result, "Bình luận bài viết thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Delete comment
+        /// </summary>
+        [HttpDelete("{commentId:int}")]
+        public async Task<IActionResult> DeleteComment([FromRoute] int commentId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _postService.DeleteCommentAsync(userId.Value, commentId);
+                if (result <= 0)
+                    return NotFoundResponse("Xóa bình luận thất bại");
+                return OkResponse(result, "Xóa bình luận thành công");
             }
             catch (Exception ex)
             {

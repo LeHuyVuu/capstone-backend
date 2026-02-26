@@ -15,6 +15,9 @@ namespace capstone_backend.Business.Mappings
             // Mutation
             CreateMap<CreatePostRequest, Post>();
             CreateMap<UpdatePostRequest, Post>();
+
+            // Interaction
+            CreateMap<Comment, CommentResponse>();
         }
     }
 }
