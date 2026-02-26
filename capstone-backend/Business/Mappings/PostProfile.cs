@@ -17,7 +17,8 @@ namespace capstone_backend.Business.Mappings
             CreateMap<UpdatePostRequest, Post>();
 
             // Interaction
-            CreateMap<Comment, CommentResponse>();
+            CreateMap<Comment, CommentResponse>()
+                .ForMember(dest => dest.Author, opt => opt.MapFrom(src => src.Author));
         }
     }
 }

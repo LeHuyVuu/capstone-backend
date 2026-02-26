@@ -73,7 +73,7 @@ public partial class MemberProfile
     [InverseProperty("Member")]
     public virtual ICollection<CommentLike> CommentLikes { get; set; } = new List<CommentLike>();
 
-    [InverseProperty("Member")]
+    [InverseProperty("Author")]
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
     [InverseProperty("MemberId1Navigation")]

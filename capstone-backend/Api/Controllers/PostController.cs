@@ -272,5 +272,29 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get comments for a post
+        /// </summary>
+        [HttpGet("{postId:int}/comments")]
+        public async Task<IActionResult> GetComments([FromRoute] int postId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _postService.GetCommentsPostAsync(userId.Value, postId, pageNumber, pageSize);
+                if (result == null)
+                    return NotFoundResponse("Bài viết không tồn tại");
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

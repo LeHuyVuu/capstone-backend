@@ -40,7 +40,7 @@ public partial class Comment
 
     [ForeignKey("AuthorId")]
     [InverseProperty("Comments")]
-    public virtual MemberProfile Member { get; set; } = null!;
+    public virtual MemberProfile Author { get; set; } = null!;
 
     [ForeignKey("ParentId")]
     [InverseProperty("Replies")]
