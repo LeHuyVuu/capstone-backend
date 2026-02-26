@@ -9,6 +9,7 @@ namespace capstone_backend.Business.Interfaces
         Task<FeedResponse> GetFeedsAsync(int userId, FeedRequest request);
         Task<PostResponse> GetPostDetailsAsync(int userId, int postId);
         Task<PostLikeResponse> LikePostAsync(int userId, int postId);
+        Task<PostLikeResponse> UnlikePostAsync(int userId, int postId);
         Task<PostResponse> UpdatePostAsync(int userId, int postId, UpdatePostRequest request);
     }
 }

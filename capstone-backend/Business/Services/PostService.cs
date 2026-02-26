@@ -145,6 +145,9 @@ namespace capstone_backend.Business.Services
             if (post == null || post.IsDeleted == true)
                 throw new Exception("Bài viết không tồn tại");
 
+            if (post.Visibility != PostVisibility.PUBLIC.ToString() && post.Status != PostStatus.PUBLISHED.ToString())
+                throw new Exception("Bài viết không hợp lệ để like");
+
             await _unitOfWork.BeginTransactionAsync();
             try
             {
@@ -158,12 +161,59 @@ namespace capstone_backend.Business.Services
                 await _unitOfWork.Posts.UpdateLikeCountAsync(post.Id, 1);
 
                 await _unitOfWork.CommitTransactionAsync();
+
+                return new PostLikeResponse
+                {
+                    PostLikeCount = post.LikeCount.Value,
+                    IsLikedByMe = true
+                };
             }
             catch (Exception ex)
             {
                 // Rollback if any error occurs
                 await _unitOfWork.RollbackTransactionAsync();
                 throw new Exception("Bạn đã like bài viết này rồi");
+            }
+        }
+
+        public async Task<PostLikeResponse> UnlikePostAsync(int userId, int postId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var post = await _unitOfWork.Posts.GetPostWithIncludeById(postId);
+            if (post == null || post.IsDeleted == true)
+                throw new Exception("Bài viết không tồn tại");
+
+            if (post.Visibility != PostVisibility.PUBLIC.ToString() && post.Status != PostStatus.PUBLISHED.ToString())
+                throw new Exception("Bài viết không hợp lệ để unlike");
+
+            var existingLike = post.PostLikes.FirstOrDefault(pl => pl.MemberId == member.Id);
+            if (existingLike == null)
+                throw new Exception("Bạn chưa like bài viết này");
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                _unitOfWork.PostLikes.Delete(existingLike);
+                await _unitOfWork.SaveChangesAsync();
+
+                await _unitOfWork.Posts.UpdateLikeCountAsync(post.Id, -1);
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new PostLikeResponse
+                {
+                    PostLikeCount = post.LikeCount.Value,
+                    IsLikedByMe = false
+                };
+            }
+            catch (Exception ex)
+            {
+                // Rollback if any error occurs
+                await _unitOfWork.RollbackTransactionAsync();
+                throw new Exception("Lỗi khi bỏ thích bài viết");
             }
         }
 

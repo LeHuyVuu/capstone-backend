@@ -177,7 +177,7 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Like Post
+        /// Like Posts
         /// </summary>
         [HttpPost("{postId:int}/like")]
         public async Task<IActionResult> LikePost([FromRoute] int postId)
@@ -193,6 +193,30 @@ namespace capstone_backend.Api.Controllers
                 if (result == null)
                     return NotFoundResponse("Thích bài viết thất bại");
                 return OkResponse(result, "Thích bài viết thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Unlike posts
+        /// </summary>
+        [HttpPost("{postId:int}/unlike")]
+        public async Task<IActionResult> UnlikePost([FromRoute] int postId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _postService.UnlikePostAsync(userId.Value, postId);
+                if (result == null)
+                    return NotFoundResponse("Bỏ thích bài viết thất bại");
+                return OkResponse(result, "Bỏ thích bài viết thành công");
             }
             catch (Exception ex)
             {
