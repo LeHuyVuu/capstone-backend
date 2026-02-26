@@ -135,6 +135,38 @@ namespace capstone_backend.Business.Services
             return await _unitOfWork.SaveChangesAsync();
         }
 
+        public async Task<PostLikeResponse> LikePostAsync(int userId, int postId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var post = await _unitOfWork.Posts.GetPostWithIncludeById(postId);
+            if (post == null || post.IsDeleted == true)
+                throw new Exception("Bài viết không tồn tại");
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                await _unitOfWork.PostLikes.AddAsync(new PostLike
+                {
+                    MemberId = member.Id,
+                    PostId = post.Id
+                });
+                await _unitOfWork.SaveChangesAsync();
+
+                await _unitOfWork.Posts.UpdateLikeCountAsync(post.Id, 1);
+
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception ex)
+            {
+                // Rollback if any error occurs
+                await _unitOfWork.RollbackTransactionAsync();
+                throw new Exception("Bạn đã like bài viết này rồi");
+            }
+        }
+
         public async Task<FeedResponse> GetFeedsAsync(int userId, FeedRequest request)
         {
             var nowVn = TimezoneUtil.ToVietNamTime(DateTime.UtcNow);

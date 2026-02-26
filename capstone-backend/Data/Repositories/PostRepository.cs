@@ -35,5 +35,12 @@ namespace capstone_backend.Data.Repositories
                 .Include(p => p.PostLikes)
                 .FirstOrDefaultAsync(p => p.Id == postId && p.IsDeleted == false);
         }
+
+        public async Task UpdateLikeCountAsync(int postId, int delta)
+        {
+            await _dbSet
+                .Where(p => p.Id == postId)
+                .ExecuteUpdateAsync(s => s.SetProperty(p => p.LikeCount, p => p.LikeCount + delta));
+        }
     }
 }

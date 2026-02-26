@@ -7,5 +7,6 @@ namespace capstone_backend.Data.Interfaces
     {
         Task<IEnumerable<Post>> GetPostsByMemberId(int memberId, int pageSize = 20, long? cursor = null);
         Task<Post?> GetPostWithIncludeById(int postId);
+        Task UpdateLikeCountAsync(int postId, int delta);
     }
 }
