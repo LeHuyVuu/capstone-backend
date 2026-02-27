@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
@@ -7,6 +8,7 @@ using capstone_backend.Business.Jobs.Moderation;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Hangfire;
+using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Services
 {
@@ -151,6 +153,30 @@ namespace capstone_backend.Business.Services
             var response = _mapper.Map<CommentResponse>(existingComment);
 
             return response;
+        }
+
+        public async Task<PagedResult<CommentResponse>> GetRepliesAsync(int commentId, int pageNumber, int pageSize)
+        {
+            var comment = await _unitOfWork.Comments.GetByIdAsync(commentId);
+            if (comment == null || comment.IsDeleted == true)
+                throw new Exception("Bình luận không tồn tại");
+
+            var (comments, count) = await _unitOfWork.Comments.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                c => c.ParentId == commentId && c.IsDeleted == false && c.Status == CommentStatus.PUBLISHED.ToString(),
+                c => c.OrderByDescending(c => c.CreatedAt),
+                c => c.Include(c => c.Author)
+            );
+
+            var items = _mapper.Map<List<CommentResponse>>(comments);
+            return new PagedResult<CommentResponse>
+            {
+                Items = items,
+                TotalCount = count,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
         }
     }
 }

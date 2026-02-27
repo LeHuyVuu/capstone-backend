@@ -1,4 +1,5 @@
-﻿using capstone_backend.Business.DTOs.Post;
+﻿using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Business.DTOs.Post;
 
 namespace capstone_backend.Business.Interfaces
 {
@@ -7,5 +8,6 @@ namespace capstone_backend.Business.Interfaces
         Task<CommentResponse> CommentPostAsync(int userId, int postId, CreateCommentRequest request);
         Task<CommentResponse> UpdateCommentAsync(int userId, int commentId, UpdateCommentRequest request);
         Task<int> DeleteCommentAsync(int userId, int commentId);
+        Task<PagedResult<CommentResponse>> GetRepliesAsync(int commentId, int pageNumber, int pageSize);
     }
 }

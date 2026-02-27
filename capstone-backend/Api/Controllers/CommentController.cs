@@ -1,5 +1,6 @@
 ﻿using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +8,7 @@ namespace capstone_backend.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class CommentController : BaseController
     {
         private readonly ICommentService _commentService;
@@ -58,6 +60,23 @@ namespace capstone_backend.Api.Controllers
                 if (result == null)
                     return NotFoundResponse("Chỉnh sửa bình luận thất bại");
                 return OkResponse(result, "Chỉnh sửa bình luận thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get replies for a comment
+        /// </summary>
+        [HttpGet("{commentId:int}/replies")]
+        public async Task<IActionResult> GetReplies([FromRoute] int commentId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var result = await _commentService.GetRepliesAsync(commentId, pageNumber, pageSize);
+                return OkResponse(result, "Lấy danh sách trả lời thành công");
             }
             catch (Exception ex)
             {
