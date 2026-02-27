@@ -2,6 +2,7 @@ using Amazon.Rekognition;
 using Amazon.Runtime;
 using capstone_backend.Api.Filters;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Comment;
 using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Business.Jobs.Media;
 using capstone_backend.Business.Jobs.Moderation;
@@ -170,6 +171,7 @@ public static class ServiceExtensions
         services.AddScoped<IChallengeService, ChallengeService>();
         services.AddScoped<IMediaService, MediaService>();
         services.AddScoped<IPostService, PostService>();
+        services.AddScoped<ICommentService, CommentService>();
 
         // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
         services.AddScoped<ILocationFollowerService, LocationFollowerService>();
@@ -184,6 +186,7 @@ public static class ServiceExtensions
         services.AddScoped<IReviewWorker, ReviewWorker>();
         services.AddScoped<IMediaWorker, MediaWorker>();
         services.AddScoped<IModerationWorker, ModerationWorker>();
+        services.AddScoped<ICommentWorker, CommentWorker>();
 
         // Register Messaging Service
         services.AddScoped<IMessagingService, MessagingService>();     

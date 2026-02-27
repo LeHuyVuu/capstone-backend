@@ -11,7 +11,5 @@
 
         public int LikeCount { get; set; }
         public int ReplyCount { get; set; }
-
-        public int PostCommentCount { get; set; }
     }
 }

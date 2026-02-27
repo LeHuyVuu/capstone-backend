@@ -1,7 +1,9 @@
 ﻿
 using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Comment;
 using capstone_backend.Data.Enums;
+using Hangfire;
 
 namespace capstone_backend.Business.Jobs.Moderation
 {
@@ -30,6 +32,14 @@ namespace capstone_backend.Business.Jobs.Moderation
             _logger.LogInformation($"[MODERATION WORKER] Comment ID {commentId} moderated with status: {comment.Status}");
 
             await _unitOfWork.SaveChangesAsync();
+
+            // Call recount job
+            BackgroundJob.Enqueue<ICommentWorker>(j => j.RecountPostAsync(comment.PostId));
+            if (comment.ParentId.HasValue)
+            {
+                BackgroundJob.Enqueue<ICommentWorker>(
+                    j => j.RecountReplyAsync(comment.ParentId.Value));
+            }
         }
 
         public async Task ProcessPostModerationAsync(int postId, List<ModerationResultDto> results)

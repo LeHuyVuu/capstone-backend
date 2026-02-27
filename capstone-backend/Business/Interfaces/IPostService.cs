@@ -5,9 +5,8 @@ namespace capstone_backend.Business.Interfaces
 {
     public interface IPostService
     {
-        Task<CommentResponse> CommentPostAsync(int userId, int postId, CreateCommentRequest request);
+        
         Task<PostResponse> CreatePostAsync(int userId, CreatePostRequest request);
-        Task<int> DeleteCommentAsync(int userId, int commentId);
         Task<int> DeletePostAsync(int userId, int postId);
         Task<PagedResult<CommentResponse>> GetCommentsPostAsync(int userId, int postId, int pageNumber = 1, int pageSize = 10);
         Task<FeedResponse> GetFeedsAsync(int userId, FeedRequest request);
