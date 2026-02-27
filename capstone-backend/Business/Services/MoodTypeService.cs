@@ -171,7 +171,7 @@ public class MoodTypeService : IMoodTypeService
 
         var coupleProfile = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(memberProfile.Id, cancellationToken: cancellationToken);
 
-        if (coupleProfile != null)
+        if (coupleProfile != null && coupleProfile.Status == "ACTIVE")
         {
             isCouple = true;
             
