@@ -1,6 +1,7 @@
 ﻿using capstone_backend.Data.Context;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Repositories
 {
@@ -8,6 +9,13 @@ namespace capstone_backend.Data.Repositories
     {
         public CommentRepository(MyDbContext context) : base(context)
         {
+        }
+
+        public async Task<IEnumerable<Comment>> GetChildCommentsByParentIdAsync(int parentId)
+        {
+            return await _dbSet
+                .Where(c => c.ParentId == parentId && c.IsDeleted == false)
+                .ToListAsync();
         }
     }
 }
