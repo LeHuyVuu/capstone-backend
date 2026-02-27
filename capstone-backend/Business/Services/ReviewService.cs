@@ -385,7 +385,7 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Lịch sử check-in chưa được xác thực, vui lòng đợi hệ thống xác thực tự động hoặc liên hệ hỗ trợ");
 
             var now = DateTime.UtcNow;
-            if ((now - checkIn.CreatedAt.Value).TotalMinutes <= 10)
+            if ((now - checkIn.CreatedAt.Value).TotalMinutes <= 10 && checkIn.IsValid != false)
                 throw new Exception("Vui lòng đợi hệ thống xác thực tự động sau 10 phút kể từ khi check-in");
 
             var distance = GeoCalculator.CalculateDistance(           
