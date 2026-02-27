@@ -352,7 +352,7 @@ public partial class MyDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("comments_post_id_fkey");
 
-            entity.HasOne(d => d.Member).WithMany(p => p.Comments)
+            entity.HasOne(d => d.Author).WithMany(p => p.Comments)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("comments_author_id_fkey");
 

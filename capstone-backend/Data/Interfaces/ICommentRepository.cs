@@ -5,5 +5,6 @@ namespace capstone_backend.Data.Interfaces
 {
     public interface ICommentRepository : IGenericRepository<Comment>
     {
+        Task<IEnumerable<Comment>> GetChildCommentsByParentIdAsync(int parentId);
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Amazon.Rekognition.Model;
 using AutoMapper;
 using capstone_backend.Business.Common.Constants;
+using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
@@ -10,6 +11,7 @@ using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using Google.Api.Gax;
 using Hangfire;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using OpenAI.Moderations;
 
@@ -72,7 +74,7 @@ namespace capstone_backend.Business.Services
             await _unitOfWork.Posts.AddAsync(post);
             await _unitOfWork.SaveChangesAsync();
 
-            BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessModerationAsync(post.Id, moderationResults));
+            BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessPostModerationAsync(post.Id, moderationResults));
 
             var response = _mapper.Map<PostResponse>(post);
             response.IsOwner = true;
@@ -107,7 +109,7 @@ namespace capstone_backend.Business.Services
             existingPost = _mapper.Map(request, existingPost);
             await _unitOfWork.SaveChangesAsync();
 
-            BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessModerationAsync(existingPost.Id, moderationResults));
+            BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessPostModerationAsync(existingPost.Id, moderationResults));
 
             var response = _mapper.Map<PostResponse>(existingPost);
             response.IsOwner = true;
@@ -133,6 +135,116 @@ namespace capstone_backend.Business.Services
 
             existingPost.IsDeleted = true;
             return await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<PostLikeResponse> LikePostAsync(int userId, int postId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var post = await _unitOfWork.Posts.GetPostWithIncludeById(postId);
+            if (post == null || post.IsDeleted == true)
+                throw new Exception("Bài viết không tồn tại");
+
+            if (post.Visibility != PostVisibility.PUBLIC.ToString() && post.Status != PostStatus.PUBLISHED.ToString())
+                throw new Exception("Bài viết không hợp lệ để like");
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                await _unitOfWork.PostLikes.AddAsync(new PostLike
+                {
+                    MemberId = member.Id,
+                    PostId = post.Id
+                });
+                await _unitOfWork.SaveChangesAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new PostLikeResponse
+                {
+                    PostLikeCount = post.LikeCount.Value + 1,
+                    IsLikedByMe = true
+                };
+            }
+            catch (Exception ex)
+            {
+                // Rollback if any error occurs
+                await _unitOfWork.RollbackTransactionAsync();
+                throw new Exception("Bạn đã like bài viết này rồi");
+            }
+        }
+
+        public async Task<PostLikeResponse> UnlikePostAsync(int userId, int postId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var post = await _unitOfWork.Posts.GetPostWithIncludeById(postId);
+            if (post == null || post.IsDeleted == true)
+                throw new Exception("Bài viết không tồn tại");
+
+            if (post.Visibility != PostVisibility.PUBLIC.ToString() && post.Status != PostStatus.PUBLISHED.ToString())
+                throw new Exception("Bài viết không hợp lệ để unlike");
+
+            var existingLike = post.PostLikes.FirstOrDefault(pl => pl.MemberId == member.Id);
+            if (existingLike == null)
+                throw new Exception("Bạn chưa like bài viết này");
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                _unitOfWork.PostLikes.Delete(existingLike);
+                await _unitOfWork.SaveChangesAsync();
+
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new PostLikeResponse
+                {
+                    PostLikeCount = post.LikeCount.Value - 1,
+                    IsLikedByMe = false
+                };
+            }
+            catch (Exception ex)
+            {
+                // Rollback if any error occurs
+                await _unitOfWork.RollbackTransactionAsync();
+                throw new Exception("Lỗi khi bỏ thích bài viết");
+            }
+        }
+
+        public async Task<PagedResult<CommentResponse>> GetCommentsPostAsync(int userId, int postId, int pageNumber = 1, int pageSize = 10)
+        {
+            var post = await _unitOfWork.Posts.GetByIdAsync(postId);
+            if (post == null || post.IsDeleted == true)
+                throw new Exception("Bài viết không tồn tại");
+
+            var (comments, count) = await _unitOfWork.Comments.GetPagedAsync(
+                    pageNumber,
+                    pageSize,
+                    c => c.Post.Id == postId && 
+                         c.IsDeleted == false && 
+                         c.Post.Visibility == PostVisibility.PUBLIC.ToString() && 
+                         c.Post.Status == PostStatus.PUBLISHED.ToString() && 
+                         c.ParentId == null,
+                    c => c.OrderByDescending(c => c.CreatedAt),
+                    c => c.Include(c => c.Author)
+                );
+
+            var items = _mapper.Map<List<CommentResponse>>(comments);
+
+            var pagedResult = new PagedResult<CommentResponse>
+            {
+                Items = items,
+                TotalCount = count,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            return pagedResult;
         }
 
         public async Task<FeedResponse> GetFeedsAsync(int userId, FeedRequest request)

@@ -2,6 +2,7 @@
 using capstone_backend.Business.Common.Constants;
 using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,10 +15,12 @@ namespace capstone_backend.Api.Controllers
     public class PostController : BaseController
     {
         private readonly IPostService _postService;
+        private readonly ICommentService _commentService;
 
-        public PostController(IPostService postService)
+        public PostController(IPostService postService, ICommentService commentService)
         {
             _postService = postService;
+            _commentService = commentService;
         }
 
         /// <summary>
@@ -169,6 +172,103 @@ namespace capstone_backend.Api.Controllers
                     .Select(x => new { x.Key, x.Display, x.Icon })
                     .ToList();
                 return OkResponse(topics);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Like Posts
+        /// </summary>
+        [HttpPost("{postId:int}/like")]
+        public async Task<IActionResult> LikePost([FromRoute] int postId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _postService.LikePostAsync(userId.Value, postId);
+                if (result == null)
+                    return NotFoundResponse("Thích bài viết thất bại");
+                return OkResponse(result, "Thích bài viết thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Unlike posts
+        /// </summary>
+        [HttpDelete("{postId:int}/unlike")]
+        public async Task<IActionResult> UnlikePost([FromRoute] int postId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _postService.UnlikePostAsync(userId.Value, postId);
+                if (result == null)
+                    return NotFoundResponse("Bỏ thích bài viết thất bại");
+                return OkResponse(result, "Bỏ thích bài viết thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get comments for a post
+        /// </summary>
+        [HttpGet("{postId:int}/comments")]
+        public async Task<IActionResult> GetComments([FromRoute] int postId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _postService.GetCommentsPostAsync(userId.Value, postId, pageNumber, pageSize);
+                if (result == null)
+                    return NotFoundResponse("Bài viết không tồn tại");
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Comment posts
+        /// </summary>
+        [HttpPost("{postId:int}/comment")]
+        public async Task<IActionResult> CommentPost([FromRoute] int postId, [FromBody] CreateCommentRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+
+                var result = await _commentService.CommentPostAsync(userId.Value, postId, request);
+                if (result == null)
+                    return NotFoundResponse("Bình luận bài viết thất bại");
+                return OkResponse(result, "Bình luận bài viết thành công");
             }
             catch (Exception ex)
             {

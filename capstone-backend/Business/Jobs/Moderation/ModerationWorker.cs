@@ -1,7 +1,9 @@
 ﻿
 using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Comment;
 using capstone_backend.Data.Enums;
+using Hangfire;
 
 namespace capstone_backend.Business.Jobs.Moderation
 {
@@ -16,13 +18,35 @@ namespace capstone_backend.Business.Jobs.Moderation
             _logger = logger;
         }
 
-        public async Task ProcessModerationAsync(int postId, List<ModerationResultDto> results)
+        public async Task ProcessCommentModerationAsync(int commentId, List<ModerationResultDto> results)
+        {
+            var comment = await _unitOfWork.Comments.GetByIdAsync(commentId);
+            if (comment == null || comment.IsDeleted == true)
+                return;
+
+            if (results.Any(r => r.Action == ModerationAction.PENDING))
+                comment.Status = CommentStatus.FLAGGED.ToString();
+            else
+                comment.Status = CommentStatus.PUBLISHED.ToString();
+
+            _logger.LogInformation($"[MODERATION WORKER] Comment ID {commentId} moderated with status: {comment.Status}");
+
+            await _unitOfWork.SaveChangesAsync();
+
+            // Call recount job
+            BackgroundJob.Enqueue<ICommentWorker>(j => j.RecountPostAsync(comment.PostId));
+            if (comment.ParentId.HasValue)
+            {
+                BackgroundJob.Enqueue<ICommentWorker>(
+                    j => j.RecountReplyAsync(comment.ParentId.Value));
+            }
+        }
+
+        public async Task ProcessPostModerationAsync(int postId, List<ModerationResultDto> results)
         {
             var post = await _unitOfWork.Posts.GetByIdAsync(postId);
             if (post == null || post.IsDeleted == true)
-            {
                 return;
-            }
 
             if (results.Any(r => r.Action == ModerationAction.PENDING))
                 post.Status = PostStatus.FLAGGED.ToString();
