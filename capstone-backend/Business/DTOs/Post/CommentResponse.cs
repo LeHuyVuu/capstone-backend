@@ -6,7 +6,8 @@
         public int? ParentId { get; set; }
         public string Content { get; set; }
         public int AuthorId { get; set; }
-        public AuthorResponse Author { get; set; }
+        public MemberCommentResponse Author { get; set; }
+        public MemberCommentResponse ReplyToMember { get; set; }
         public DateTime CreatedAt { get; set; }
 
         public int LikeCount { get; set; }

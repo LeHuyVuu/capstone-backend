@@ -1,6 +1,6 @@
 ﻿namespace capstone_backend.Business.DTOs.Post
 {
-    public class AuthorResponse
+    public class MemberCommentResponse
     {
         public int Id { get; set; }
         public string? FullName { get; set; }

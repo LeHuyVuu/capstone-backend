@@ -128,4 +128,7 @@ public partial class MemberProfile
 
     [InverseProperty("ReceiverMember")]
     public virtual ICollection<CoupleInvitation> CoupleInvitationsReceived { get; set; } = new List<CoupleInvitation>();
+
+    [InverseProperty("TargetMember")]
+    public virtual ICollection<Comment> TargetedComments { get; set; } = new List<Comment>();
 }

@@ -10,7 +10,7 @@ namespace capstone_backend.Business.Mappings
         {
             CreateMap<Post, PostFeedResponse>();
             CreateMap<Post, PostResponse>();
-            CreateMap<MemberProfile, AuthorResponse>();
+            CreateMap<MemberProfile, MemberCommentResponse>();
 
             // Mutation
             CreateMap<CreatePostRequest, Post>();
@@ -18,7 +18,8 @@ namespace capstone_backend.Business.Mappings
 
             // Interaction
             CreateMap<Comment, CommentResponse>()
-                .ForMember(dest => dest.Author, opt => opt.MapFrom(src => src.Author));
+                .ForMember(dest => dest.Author, opt => opt.MapFrom(src => src.Author))
+                .ForMember(dest => dest.ReplyToMember, opt => opt.MapFrom(src => src.TargetMember));
         }
     }
 }

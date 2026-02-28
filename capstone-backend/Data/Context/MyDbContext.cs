@@ -356,6 +356,10 @@ public partial class MyDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("comments_author_id_fkey");
 
+            entity.HasOne(c => c.TargetMember)
+                .WithMany(p => p.TargetedComments)
+                .HasConstraintName("comments_target_member_id_fkey");
+
             entity.HasOne(e => e.Parent)
               .WithMany(e => e.Replies)
               .HasForeignKey(e => e.ParentId)
