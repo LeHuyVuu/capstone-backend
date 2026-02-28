@@ -234,5 +234,44 @@ namespace capstone_backend.Business.Services
                 IsLikedByMe = true
             };
         }
+
+        public async Task<CommentLikeResponse> UnlikeCommentAsync(int userId, int commentId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var comment = await _unitOfWork.Comments.GetByIdIncludeAsync(commentId);
+            if (comment == null || comment.IsDeleted == true)
+                throw new Exception("Bình luận không tồn tại");
+
+            if (comment.Status != CommentStatus.PUBLISHED.ToString())
+                throw new Exception("Bình luận chưa được xuất bản");
+
+            var existingLike = comment.CommentLikes.FirstOrDefault(cl => cl.MemberId == member.Id);
+            if (existingLike == null)
+                throw new Exception("Bạn chưa like bình luận này");
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                _unitOfWork.CommentLikes.Delete(existingLike);
+                await _unitOfWork.SaveChangesAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw new Exception("Có lỗi xảy ra khi bạn bỏ thích bình luận này");
+            }
+
+            BackgroundJob.Enqueue<ILikeWorker>(j => j.RecountCommentLikeAsync(comment.Id));
+            return new CommentLikeResponse
+            {
+                CommentLikeCount = Math.Max(0, comment.LikeCount.Value - 1),
+                IsLikedByMe = false
+            };
+        }
     }
 }

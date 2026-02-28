@@ -87,7 +87,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Like comment
         /// </summary>
-        [HttpPost("{commentId}/like")]
+        [HttpPost("{commentId:int}/like")]
         public async Task<IActionResult> LikeComment([FromRoute] int commentId)
         {
             try
@@ -101,6 +101,30 @@ namespace capstone_backend.Api.Controllers
                 if (result == null)
                     return NotFoundResponse("Thích bình luận thất bại");
                 return OkResponse(result, "Thích bình luận thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Unlike comment
+        /// </summary>
+        [HttpDelete("{commentId:int}/unlike")]
+        public async Task<IActionResult> UnlikeComment([FromRoute] int commentId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _commentService.UnlikeCommentAsync(userId.Value, commentId);
+                if (result == null)
+                    return NotFoundResponse("Bỏ thích bình luận thất bại");
+                return OkResponse(result, "Bỏ thích bình luận thành công");
             }
             catch (Exception ex)
             {
