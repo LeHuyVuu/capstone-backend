@@ -5,6 +5,7 @@ using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Like;
 using capstone_backend.Business.Jobs.Moderation;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
@@ -161,12 +162,6 @@ namespace capstone_backend.Business.Services
                 await _unitOfWork.SaveChangesAsync();
 
                 await _unitOfWork.CommitTransactionAsync();
-
-                return new PostLikeResponse
-                {
-                    PostLikeCount = post.LikeCount.Value + 1,
-                    IsLikedByMe = true
-                };
             }
             catch (Exception ex)
             {
@@ -174,6 +169,14 @@ namespace capstone_backend.Business.Services
                 await _unitOfWork.RollbackTransactionAsync();
                 throw new Exception("Bạn đã like bài viết này rồi");
             }
+
+            BackgroundJob.Enqueue<ILikeWorker>(j => j.RecountPostLikeAsync(post.Id));
+
+            return new PostLikeResponse
+            {
+                PostLikeCount = post.LikeCount.Value + 1,
+                IsLikedByMe = true
+            };
         }
 
         public async Task<PostLikeResponse> UnlikePostAsync(int userId, int postId)
@@ -199,14 +202,7 @@ namespace capstone_backend.Business.Services
                 _unitOfWork.PostLikes.Delete(existingLike);
                 await _unitOfWork.SaveChangesAsync();
 
-
                 await _unitOfWork.CommitTransactionAsync();
-
-                return new PostLikeResponse
-                {
-                    PostLikeCount = post.LikeCount.Value - 1,
-                    IsLikedByMe = false
-                };
             }
             catch (Exception ex)
             {
@@ -214,6 +210,14 @@ namespace capstone_backend.Business.Services
                 await _unitOfWork.RollbackTransactionAsync();
                 throw new Exception("Lỗi khi bỏ thích bài viết");
             }
+
+            BackgroundJob.Enqueue<ILikeWorker>(j => j.RecountPostLikeAsync(post.Id));
+
+            return new PostLikeResponse
+            {
+                PostLikeCount = Math.Max(0, post.LikeCount.Value - 1),
+                IsLikedByMe = false
+            };
         }
 
         public async Task<PagedResult<CommentResponse>> GetCommentsPostAsync(int userId, int postId, int pageNumber = 1, int pageSize = 10)
@@ -229,7 +233,7 @@ namespace capstone_backend.Business.Services
                          c.IsDeleted == false && 
                          c.Post.Visibility == PostVisibility.PUBLIC.ToString() && 
                          c.Post.Status == PostStatus.PUBLISHED.ToString() && 
-                         c.ParentId == null,
+                         c.ParentId == null && c.RootId == null,
                     c => c.OrderByDescending(c => c.CreatedAt),
                     c => c.Include(c => c.Author)
                 );
@@ -245,6 +249,28 @@ namespace capstone_backend.Business.Services
             };
 
             return pagedResult;
+        }
+
+        public async Task<List<PostResponse>> GetPostsMemberProfileAsync(int userId, int pageNumber, int pageSize)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var (posts, count) = await _unitOfWork.Posts.GetPagedAsync(
+                    pageNumber,
+                    pageSize,
+                    p => p.AuthorId == member.Id && p.IsDeleted == false,
+                    p => p.OrderByDescending(p => p.CreatedAt),
+                    p => p.Include(p => p.PostLikes)
+                );
+            var response = _mapper.Map<List<PostResponse>>(posts);
+            response.ForEach(r =>
+            {
+                r.IsLikedByMe = posts.First(p => p.Id == r.Id).PostLikes.Any(pl => pl.MemberId == member.Id);
+                r.IsOwner = true;
+            });
+            return response;
         }
 
         public async Task<FeedResponse> GetFeedsAsync(int userId, FeedRequest request)

@@ -19,6 +19,10 @@ public partial class Comment
 
     public int? ParentId { get; set; }
 
+    public int? RootId { get; set; }
+
+    public int? Level { get; set; }
+
     public int? LikeCount { get; set; } = 0;
 
     public int? ReplyCount { get; set; } = 0;
@@ -48,4 +52,11 @@ public partial class Comment
 
     [InverseProperty("Parent")]
     public virtual ICollection<Comment> Replies { get; set; } = new List<Comment>();
+
+    [ForeignKey("RootId")]
+    [InverseProperty("ThreadComments")]
+    public virtual Comment? Root { get; set; }
+
+    [InverseProperty("Root")]
+    public virtual ICollection<Comment> ThreadComments { get; set; } = new List<Comment>();
 }

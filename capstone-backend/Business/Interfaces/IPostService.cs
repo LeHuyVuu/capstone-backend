@@ -11,6 +11,7 @@ namespace capstone_backend.Business.Interfaces
         Task<PagedResult<CommentResponse>> GetCommentsPostAsync(int userId, int postId, int pageNumber = 1, int pageSize = 10);
         Task<FeedResponse> GetFeedsAsync(int userId, FeedRequest request);
         Task<PostResponse> GetPostDetailsAsync(int userId, int postId);
+        Task<List<PostResponse>> GetPostsMemberProfileAsync(int userId, int pageNumber, int pageSize);
         Task<PostLikeResponse> LikePostAsync(int userId, int postId);
         Task<PostLikeResponse> UnlikePostAsync(int userId, int postId);
         Task<PostResponse> UpdatePostAsync(int userId, int postId, UpdatePostRequest request);

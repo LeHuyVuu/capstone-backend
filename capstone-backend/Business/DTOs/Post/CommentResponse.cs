@@ -11,5 +11,8 @@
 
         public int LikeCount { get; set; }
         public int ReplyCount { get; set; }
+
+        public int RootId { get; set; }
+        public int Level { get; set; }
     }
 }

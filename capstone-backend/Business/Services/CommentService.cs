@@ -35,34 +35,44 @@ namespace capstone_backend.Business.Services
             if (post == null || post.IsDeleted == true)
                 throw new Exception("Bài viết không tồn tại");
 
-            var parentComment = new Comment();
+            var moderationResults = await _moderationService.CheckContentByAIService(new List<string> { request.Content });
+            if (moderationResults.Any(r => r.Action == ModerationAction.BLOCK))
+                throw new Exception("Nội dung của bạn đã bị hệ thống chặn vì vi phạm tiêu chuẩn cộng đồng");
+
+            Comment? parentComment = null;
+            int? rootId = null;
+            int? actualParentId = request.ParentId;
+            int level = 1;
+
             if (request.ParentId.HasValue)
             {
                 parentComment = await _unitOfWork.Comments.GetByIdAsync(request.ParentId.Value);
                 if (parentComment == null || parentComment.IsDeleted == true || parentComment.PostId != post.Id)
                     throw new Exception("Bình luận cha không hợp lệ");
-            }
 
-            var moderationResults = await _moderationService.CheckContentByAIService(new List<string> { request.Content });
-            if (moderationResults.Any(r => r.Action == ModerationAction.BLOCK))
-                throw new Exception("Nội dung của bạn đã bị hệ thống chặn vì vi phạm tiêu chuẩn cộng đồng");
+                rootId = parentComment.RootId ?? parentComment.Id;
+
+                // Level
+                level = parentComment.Level >= 2 ? 3 : 2;
+
+                if (parentComment.Level >= 3)
+                    actualParentId = parentComment.ParentId;
+            }
 
             var comment = new Comment
             {
                 AuthorId = member.Id,
                 PostId = post.Id,
-                ParentId = request.ParentId,
+                ParentId = actualParentId,
+                RootId = rootId,
+                Level = level,
                 Content = request.Content,
-                Status = CommentStatus.PENDING.ToString()
+                Status = CommentStatus.PENDING.ToString(),
             };
-            var response = new CommentResponse();
-
             await _unitOfWork.Comments.AddAsync(comment);
-
             await _unitOfWork.SaveChangesAsync();
 
-            response = _mapper.Map<CommentResponse>(comment);
-            response.Author = _mapper.Map<AuthorResponse>(member);
+            var response = _mapper.Map<CommentResponse>(comment);
 
             BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessCommentModerationAsync(comment.Id, moderationResults));
 
@@ -165,7 +175,7 @@ namespace capstone_backend.Business.Services
                 pageNumber,
                 pageSize,
                 c => c.ParentId == commentId && c.IsDeleted == false && c.Status == CommentStatus.PUBLISHED.ToString(),
-                c => c.OrderByDescending(c => c.CreatedAt),
+                c => c.OrderBy(c => c.CreatedAt),
                 c => c.Include(c => c.Author)
             );
 

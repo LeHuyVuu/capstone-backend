@@ -34,11 +34,24 @@ namespace capstone_backend.Business.Jobs.Comment
             if (comment == null || comment.IsDeleted == true)
                 return;
 
-            comment.ReplyCount = await _unitOfWork.Comments.CountAsync(
-                c => c.ParentId == commentId && 
-                c.IsDeleted == false &&
-                c.Status == CommentStatus.PUBLISHED.ToString()
-            );
+            if (comment.ParentId == null)
+            {
+                // Đây là root comment
+                comment.ReplyCount = await _unitOfWork.Comments.CountAsync(
+                    c => c.RootId == commentId &&
+                         c.IsDeleted == false &&
+                         c.Status == CommentStatus.PUBLISHED.ToString()
+                );
+            }
+            else
+            {
+                // Đây là reply
+                comment.ReplyCount = await _unitOfWork.Comments.CountAsync(
+                    c => c.ParentId == commentId &&
+                         c.IsDeleted == false &&
+                         c.Status == CommentStatus.PUBLISHED.ToString()
+                );
+            }
 
             await _unitOfWork.SaveChangesAsync();
         }

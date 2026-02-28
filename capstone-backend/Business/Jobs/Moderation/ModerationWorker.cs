@@ -33,12 +33,16 @@ namespace capstone_backend.Business.Jobs.Moderation
 
             await _unitOfWork.SaveChangesAsync();
 
-            // Call recount job
             BackgroundJob.Enqueue<ICommentWorker>(j => j.RecountPostAsync(comment.PostId));
+
+            if (comment.RootId.HasValue)
+            {
+                BackgroundJob.Enqueue<ICommentWorker>(j => j.RecountReplyAsync(comment.RootId.Value));
+            }
+
             if (comment.ParentId.HasValue)
             {
-                BackgroundJob.Enqueue<ICommentWorker>(
-                    j => j.RecountReplyAsync(comment.ParentId.Value));
+                BackgroundJob.Enqueue<ICommentWorker>(j => j.RecountReplyAsync(comment.ParentId.Value));
             }
         }
 

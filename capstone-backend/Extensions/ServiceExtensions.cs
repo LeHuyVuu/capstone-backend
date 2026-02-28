@@ -4,6 +4,7 @@ using capstone_backend.Api.Filters;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Comment;
 using capstone_backend.Business.Jobs.DatePlan;
+using capstone_backend.Business.Jobs.Like;
 using capstone_backend.Business.Jobs.Media;
 using capstone_backend.Business.Jobs.Moderation;
 using capstone_backend.Business.Jobs.Review;
@@ -187,6 +188,7 @@ public static class ServiceExtensions
         services.AddScoped<IMediaWorker, MediaWorker>();
         services.AddScoped<IModerationWorker, ModerationWorker>();
         services.AddScoped<ICommentWorker, CommentWorker>();
+        services.AddScoped<ILikeWorker, LikeWorker>();
 
         // Register Messaging Service
         services.AddScoped<IMessagingService, MessagingService>();     
