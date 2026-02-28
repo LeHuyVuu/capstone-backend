@@ -362,16 +362,22 @@ public partial class MyDbContext : DbContext
               .OnDelete(DeleteBehavior.Cascade)
               .HasConstraintName("comments_parent_id_fkey");
 
+            entity.HasOne(e => e.Root)
+             .WithMany(e => e.ThreadComments)
+             .HasForeignKey(e => e.RootId)
+             .OnDelete(DeleteBehavior.Cascade)
+             .HasConstraintName("comments_root_id_fkey");
+
             // Partial index
             entity.HasIndex(e => new { e.PostId, e.CreatedAt })
                   .HasDatabaseName("idx_comments_post")
                   .IsDescending(false, true)
                   .HasFilter("parent_id IS NULL AND is_deleted = false");
 
-            entity.HasIndex(e => new { e.ParentId, e.CreatedAt })
-                  .HasDatabaseName("idx_comments_replies")
-                  .IsDescending(false, false)
-                  .HasFilter("parent_id IS NOT NULL AND is_deleted = false");
+            entity.HasIndex(e => new { e.RootId, e.CreatedAt })
+                 .HasDatabaseName("idx_comments_thread")
+                 .IsDescending(false, false)
+                 .HasFilter("root_id IS NOT NULL AND is_deleted = false");
         });
 
         modelBuilder.Entity<CommentLike>(entity =>
