@@ -208,7 +208,7 @@ namespace capstone_backend.Business.Services
             {
                 // Rollback if any error occurs
                 await _unitOfWork.RollbackTransactionAsync();
-                throw new Exception("Lỗi khi bỏ thích bài viết");
+                throw new Exception("Có lỗi xảy ra khi bạn bỏ thích bài viết này");
             }
 
             BackgroundJob.Enqueue<ILikeWorker>(j => j.RecountPostLikeAsync(post.Id));

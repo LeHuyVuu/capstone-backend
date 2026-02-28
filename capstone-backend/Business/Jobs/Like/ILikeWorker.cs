@@ -3,5 +3,6 @@
     public interface ILikeWorker
     {
         Task RecountPostLikeAsync(int postId);
+        Task RecountCommentLikeAsync(int commentId);
     }
 }
