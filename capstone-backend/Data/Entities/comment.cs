@@ -21,6 +21,8 @@ public partial class Comment
 
     public int? RootId { get; set; }
 
+    public int? Level { get; set; }
+
     public int? LikeCount { get; set; } = 0;
 
     public int? ReplyCount { get; set; } = 0;
