@@ -175,7 +175,7 @@ namespace capstone_backend.Business.Services
                 pageNumber,
                 pageSize,
                 c => c.ParentId == commentId && c.IsDeleted == false && c.Status == CommentStatus.PUBLISHED.ToString(),
-                c => c.OrderByDescending(c => c.CreatedAt),
+                c => c.OrderBy(c => c.CreatedAt),
                 c => c.Include(c => c.Author)
             );
 
