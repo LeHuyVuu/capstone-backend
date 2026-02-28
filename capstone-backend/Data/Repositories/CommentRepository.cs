@@ -12,6 +12,15 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<Comment?> GetByIdIncludeAsync(int commentId)
+        {
+            return await _dbSet
+                .Include(c => c.Author)
+                .Include(c => c.TargetMember)
+                .Include(c => c.CommentLikes)
+                .FirstOrDefaultAsync(c => c.Id == commentId && c.IsDeleted == false && c.Status == CommentStatus.PUBLISHED.ToString());
+        }
+
         public async Task<IEnumerable<Comment>> GetChildCommentsByParentIdAsync(int parentId)
         {
             return await _dbSet

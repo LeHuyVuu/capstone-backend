@@ -83,5 +83,29 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Like comment
+        /// </summary>
+        [HttpPost("{commentId}/like")]
+        public async Task<IActionResult> LikeComment([FromRoute] int commentId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _commentService.LikeCommentAsync(userId.Value, commentId);
+                if (result == null)
+                    return NotFoundResponse("Thích bình luận thất bại");
+                return OkResponse(result, "Thích bình luận thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

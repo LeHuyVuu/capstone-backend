@@ -12,6 +12,18 @@ namespace capstone_backend.Business.Jobs.Like
             _unitOfWork = unitOfWork;
         }
 
+        public async Task RecountCommentLikeAsync(int commentId)
+        {
+            var comment = await _unitOfWork.Comments.GetByIdIncludeAsync(commentId);
+            if (comment == null || comment.IsDeleted == true)
+                return;
+
+            comment.LikeCount = comment.CommentLikes.Count(cl => cl.CommentId == commentId);
+
+            _unitOfWork.Comments.Update(comment);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         public async Task RecountPostLikeAsync(int postId)
         {
             var post = await _unitOfWork.Posts.GetPostWithIncludeById(postId);

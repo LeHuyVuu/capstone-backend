@@ -4,6 +4,7 @@ using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Comment;
+using capstone_backend.Business.Jobs.Like;
 using capstone_backend.Business.Jobs.Moderation;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
@@ -142,7 +143,7 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Hồ sơ thành viên không tồn tại");
 
             var existingComment = await _unitOfWork.Comments.GetByIdAsync(commentId);
-            if (existingComment == null && existingComment.IsDeleted == true)
+            if (existingComment == null || existingComment.IsDeleted == true)
                 throw new Exception("Bình luận không tồn tại");
 
             var post = await _unitOfWork.Posts.GetPostWithIncludeById(existingComment.PostId);
@@ -190,6 +191,47 @@ namespace capstone_backend.Business.Services
                 TotalCount = count,
                 PageNumber = pageNumber,
                 PageSize = pageSize
+            };
+        }
+
+        public async Task<CommentLikeResponse> LikeCommentAsync(int userId, int commentId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var comment = await _unitOfWork.Comments.GetByIdAsync(commentId);
+            if (comment == null || comment.IsDeleted == true)
+                throw new Exception("Bình luận không tồn tại");
+
+            if (comment.Status != CommentStatus.PUBLISHED.ToString())
+                throw new Exception("Bình luận chưa được xuất bản");
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                await _unitOfWork.CommentLikes.AddAsync(new CommentLike
+                {
+                    CommentId = commentId,
+                    MemberId = member.Id
+                });
+
+                await _unitOfWork.SaveChangesAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw new Exception("Bạn đã like bình luận này rồi");
+            }
+
+            BackgroundJob.Enqueue<ILikeWorker>(j => j.RecountCommentLikeAsync(comment.Id));
+
+            return new CommentLikeResponse
+            {
+                CommentLikeCount = comment.LikeCount.Value + 1,
+                IsLikedByMe = true
             };
         }
     }
