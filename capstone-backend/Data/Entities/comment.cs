@@ -15,6 +15,8 @@ public partial class Comment
 
     public int PostId { get; set; }
 
+    public int? TargetMemberId { get; set; }
+
     public string Content { get; set; } = null!;
 
     public int? ParentId { get; set; }
@@ -59,4 +61,8 @@ public partial class Comment
 
     [InverseProperty("Root")]
     public virtual ICollection<Comment> ThreadComments { get; set; } = new List<Comment>();
+
+    [ForeignKey("TargetMemberId")]
+    [InverseProperty("TargetedComments")]
+    public virtual MemberProfile? TargetMember { get; set; }
 }

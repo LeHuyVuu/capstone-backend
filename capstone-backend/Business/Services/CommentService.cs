@@ -42,6 +42,7 @@ namespace capstone_backend.Business.Services
             Comment? parentComment = null;
             int? rootId = null;
             int? actualParentId = request.ParentId;
+            int? targetMemberId = null;
             int level = 1;
 
             if (request.ParentId.HasValue)
@@ -49,6 +50,8 @@ namespace capstone_backend.Business.Services
                 parentComment = await _unitOfWork.Comments.GetByIdAsync(request.ParentId.Value);
                 if (parentComment == null || parentComment.IsDeleted == true || parentComment.PostId != post.Id)
                     throw new Exception("Bình luận cha không hợp lệ");
+
+                targetMemberId = parentComment.AuthorId;
 
                 rootId = parentComment.RootId ?? parentComment.Id;
 
@@ -62,6 +65,7 @@ namespace capstone_backend.Business.Services
             var comment = new Comment
             {
                 AuthorId = member.Id,
+                TargetMemberId = targetMemberId,
                 PostId = post.Id,
                 ParentId = actualParentId,
                 RootId = rootId,
@@ -176,7 +180,7 @@ namespace capstone_backend.Business.Services
                 pageSize,
                 c => c.ParentId == commentId && c.IsDeleted == false && c.Status == CommentStatus.PUBLISHED.ToString(),
                 c => c.OrderBy(c => c.CreatedAt),
-                c => c.Include(c => c.Author)
+                c => c.Include(c => c.Author).Include(c => c.TargetMember)
             );
 
             var items = _mapper.Map<List<CommentResponse>>(comments);

@@ -19,6 +19,6 @@ namespace capstone_backend.Business.DTOs.Post
         public bool IsLikedByMe { get; set; }
         public bool IsOwner { get; set; }
 
-        public AuthorResponse Author { get; set; }
+        public MemberCommentResponse Author { get; set; }
     }
 }
