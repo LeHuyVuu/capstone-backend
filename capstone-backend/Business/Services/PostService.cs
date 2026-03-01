@@ -57,6 +57,12 @@ namespace capstone_backend.Business.Services
 
         public async Task<PostResponse> CreatePostAsync(int userId, CreatePostRequest request)
         {
+            // Validate media
+            if (request.MediaPayload != null && request.MediaPayload.Count > 4)
+            {
+                throw new Exception("Bạn chỉ có thể đính kèm tối đa 4 media cho mỗi bài viết");
+            }
+
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Hồ sơ thành viên không tồn tại");
@@ -85,6 +91,12 @@ namespace capstone_backend.Business.Services
 
         public async Task<PostResponse> UpdatePostAsync(int userId, int postId, UpdatePostRequest request)
         {
+            // Validate media
+            if (request.MediaPayload != null && request.MediaPayload.Count > 4)
+            {
+                throw new Exception("Bạn chỉ có thể đính kèm tối đa 4 media cho mỗi bài viết");
+            }
+
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Hồ sơ thành viên không tồn tại");
