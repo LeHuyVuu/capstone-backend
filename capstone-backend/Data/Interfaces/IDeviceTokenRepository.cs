@@ -8,5 +8,6 @@ namespace capstone_backend.Data.Interfaces
         Task<DeviceToken?> GetByTokenAsync(string token);
         Task<List<string>> GetByCoupleId(int coupleId);
         Task<List<string>> GetTokensByUserId(int userId);
+        Task RemoveRangeByTokensAsync(List<string> tokens);
     }
 }

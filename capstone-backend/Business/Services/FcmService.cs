@@ -1,5 +1,6 @@
 ﻿using capstone_backend.Business.DTOs.Notification;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Repositories;
 using FirebaseAdmin.Messaging;
 
 namespace capstone_backend.Business.Services
@@ -7,10 +8,12 @@ namespace capstone_backend.Business.Services
     public class FcmService : IFcmService
     {
         private readonly FirebaseMessaging _messaging;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public FcmService()
+        public FcmService(IUnitOfWork unitOfWork)
         {
             _messaging = FirebaseMessaging.DefaultInstance;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<string> SendMultiNotificationAsync(List<string> tokens, SendNotificationRequest request)
@@ -37,11 +40,33 @@ namespace capstone_backend.Business.Services
 
                 if (response.FailureCount > 0)
                 {
-                    foreach (var failure in response.Responses.Where(r => !r.IsSuccess))
+                    var tokensToRemove = new List<string>();
+
+                    for (int i = 0; i < response.Responses.Count(); i++)
                     {
-                        // todo: remove invalid tokens from database
+                        var result = response.Responses[i];
+                        if (!result.IsSuccess)
+                        {
+                            var failedToken = tokens[i];
+                            if (result.Exception is FirebaseMessagingException ex)
+                            {
+                                if (ex.MessagingErrorCode == MessagingErrorCode.Unregistered || 
+                                    ex.MessagingErrorCode == MessagingErrorCode.InvalidArgument ||
+                                    ex.MessagingErrorCode == MessagingErrorCode.SenderIdMismatch)
+                                {
+                                    tokensToRemove.Add(tokens[i]);
+                                }
+                            }
+                        }
+                    }
+
+                    if (tokensToRemove.Any())
+                    {
+                        await _unitOfWork.DeviceTokens.RemoveRangeByTokensAsync(tokensToRemove);
                     }
                 }
+
+                await _unitOfWork.SaveChangesAsync();
 
                 return $"Success: {response.SuccessCount}, Fail: {response.FailureCount}";
             }

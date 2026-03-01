@@ -666,7 +666,7 @@ public static class ServiceExtensions
                 Console.WriteLine("[INFO] Firebase already initialized");
             }
 
-            services.AddSingleton<IFcmService, FcmService>();
+            services.AddScoped<IFcmService, FcmService>();
 
             return services;
         }

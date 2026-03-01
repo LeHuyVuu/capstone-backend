@@ -7,6 +7,7 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Hubs;
 using Hangfire.Logging.LogProviders;
 using Microsoft.AspNetCore.SignalR;
+using Newtonsoft.Json.Linq;
 
 namespace capstone_backend.Business.Services
 {
@@ -15,12 +16,14 @@ namespace capstone_backend.Business.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly IFcmService? _fcmService;
 
-        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext)
+        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IServiceProvider serviceProvider)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _hubContext = hubContext;
+            _fcmService = serviceProvider.GetService<IFcmService>();
         }
 
         public async Task<NotificationResponse> CreateNotificationService(int userId, NotificationRequest request)
@@ -213,6 +216,23 @@ namespace capstone_backend.Business.Services
 
                 throw;
             }
+        }
+
+        public async Task SendTestPushNotification(int userId)
+        {
+            var tokens = await _unitOfWork.DeviceTokens.GetTokensByUserId(userId);
+
+            await _fcmService.SendMultiNotificationAsync(tokens, new SendNotificationRequest
+            {
+                Title = "Test Push Notification",
+                Body = "This is a test push notification message.",
+                ImageUrl = "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/system/logo.png",
+                Data = new Dictionary<string, string>
+                {
+                    { "key1", "value1" },
+                    { "key2", "value2" }
+                }
+            });
         }
     }
 }

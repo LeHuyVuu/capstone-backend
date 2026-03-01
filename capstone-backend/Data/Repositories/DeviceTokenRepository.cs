@@ -65,5 +65,15 @@ namespace capstone_backend.Data.Repositories
                 .Select(dt => dt.Token)
                 .ToListAsync();
         }
+
+        public async Task RemoveRangeByTokensAsync(List<string> tokens)
+        {
+            await _dbSet
+                .Where(dt => tokens.Contains(dt.Token) && dt.IsDeleted == false)
+                .ExecuteUpdateAsync(s => s
+                .SetProperty(p => p.IsDeleted, true)
+                .SetProperty(p => p.UpdatedAt, DateTime.UtcNow)
+            );
+        }
     }
 }
