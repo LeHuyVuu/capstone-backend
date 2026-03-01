@@ -273,5 +273,16 @@ namespace capstone_backend.Business.Services
                 IsLikedByMe = false
             };
         }
+
+        public async Task<CommentResponse> GetCommentByIdAsync(int commentId)
+        {
+            var existingComment = await _unitOfWork.Comments.GetByIdIncludeAsync(commentId);
+            if (existingComment == null)
+                throw new Exception("Bình luận không tồn tại");
+
+            var response = _mapper.Map<CommentResponse>(existingComment);
+
+            return response;
+        }
     }
 }
