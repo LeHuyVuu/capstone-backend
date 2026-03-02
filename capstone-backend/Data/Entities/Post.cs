@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace capstone_backend.Data.Entities;
 
 [Index("CreatedAt", "Id", IsDescending = new[] { true, true }, Name = "idx_posts_feed")]
+[Index("ShareCode", IsUnique = true)]
 public partial class Post
 {
     [Key]
@@ -28,6 +29,8 @@ public partial class Post
     public int? LikeCount { get; set; } = 0;
 
     public int? CommentCount { get; set; } = 0;
+
+    public string? ShareCode { get; set; }
 
     public string? Visibility { get; set; }
 

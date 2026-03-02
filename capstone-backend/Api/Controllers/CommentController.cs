@@ -131,5 +131,24 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get detail of a comment by id
+        /// </summary>
+        [HttpGet("{commentId:int}")]
+        public async Task<IActionResult> GetCommentById([FromRoute] int commentId)
+        {
+            try
+            {
+                var result = await _commentService.GetCommentByIdAsync(commentId);
+                if (result == null)
+                    return NotFoundResponse("Không tìm thấy bình luận");
+                return OkResponse(result, "Lấy thông tin bình luận thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

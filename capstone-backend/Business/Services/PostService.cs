@@ -14,6 +14,7 @@ using Google.Api.Gax;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
+using NanoidDotNet;
 using OpenAI.Moderations;
 
 namespace capstone_backend.Business.Services
@@ -57,6 +58,12 @@ namespace capstone_backend.Business.Services
 
         public async Task<PostResponse> CreatePostAsync(int userId, CreatePostRequest request)
         {
+            // Validate media
+            if (request.MediaPayload != null && request.MediaPayload.Count > 4)
+            {
+                throw new Exception("Bạn chỉ có thể đính kèm tối đa 4 media cho mỗi bài viết");
+            }
+
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Hồ sơ thành viên không tồn tại");
@@ -85,6 +92,12 @@ namespace capstone_backend.Business.Services
 
         public async Task<PostResponse> UpdatePostAsync(int userId, int postId, UpdatePostRequest request)
         {
+            // Validate media
+            if (request.MediaPayload != null && request.MediaPayload.Count > 4)
+            {
+                throw new Exception("Bạn chỉ có thể đính kèm tối đa 4 media cho mỗi bài viết");
+            }
+
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Hồ sơ thành viên không tồn tại");
@@ -249,6 +262,76 @@ namespace capstone_backend.Business.Services
             };
 
             return pagedResult;
+        }
+
+        public async Task<PostResponse> GetPostDetailsAnonymousAsync(int postId)
+        {
+            var post = await _unitOfWork.Posts.GetPostWithIncludeById(postId);
+            if (post == null || post.IsDeleted == true)
+                throw new Exception("Bài viết không tồn tại");
+
+            if (post.Visibility != PostVisibility.PUBLIC.ToString() || post.Status != PostStatus.PUBLISHED.ToString())
+                throw new Exception("Bài viết không tồn tại");
+
+            var response = _mapper.Map<PostResponse>(post);
+
+            response.IsLikedByMe = false;
+            response.IsOwner = false;
+            return response;
+        }
+
+        public async Task<ShareLinkResponse> GetLinkAsync(int postId)
+        {
+            var post = await _unitOfWork.Posts.GetByIdAsync(postId);
+            if (post == null || post.IsDeleted == true)
+                throw new Exception("Bài viết không tồn tại");
+
+            if (post.Visibility != PostVisibility.PUBLIC.ToString() || post.Status != PostStatus.PUBLISHED.ToString())
+                throw new Exception("Bài viết không tồn tại");
+
+            if (string.IsNullOrEmpty(post.ShareCode))
+            {
+                bool isUnique = false;
+                string newCode = "";
+
+                while (!isUnique)
+                {
+                    newCode = Nanoid.Generate(size: 10);
+                    var existing = await _unitOfWork.Posts.GetByShareCodeAsync(newCode);
+
+                    if (existing == null)
+                    {
+                        isUnique = true;
+                    }
+                }
+
+                post.ShareCode = newCode;
+
+                _unitOfWork.Posts.Update(post);
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            return new ShareLinkResponse
+            {
+                ShareCode = post.ShareCode,
+                ShareLinkUrl = $"{Environment.GetEnvironmentVariable("FE_URL")}/share/p/{post.ShareCode}"
+            };
+        }
+
+        public async Task<PostResponse> GetPostDetailsByShareLinkAsync(string shareCode)
+        {
+            var post = await _unitOfWork.Posts.GetByShareCodeAsync(shareCode);
+            if (post == null || post.IsDeleted == true)
+                throw new Exception("Bài viết không tồn tại");
+
+            if (post.Visibility != PostVisibility.PUBLIC.ToString() || post.Status != PostStatus.PUBLISHED.ToString())
+                throw new Exception("Bài viết không tồn tại");
+
+            var response = _mapper.Map<PostResponse>(post);
+
+            response.IsLikedByMe = false;
+            response.IsOwner = false;
+            return response;
         }
 
         public async Task<List<PostResponse>> GetPostsMemberProfileAsync(int userId, int pageNumber, int pageSize)

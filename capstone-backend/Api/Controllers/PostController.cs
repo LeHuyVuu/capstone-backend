@@ -297,5 +297,50 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get share link for a post (non authenticated)
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("{postId:int}/share-link")]
+        public async Task<IActionResult> GetShareLink([FromRoute] int postId)
+        {
+            try
+            {
+                var post = await _postService.GetPostDetailsAnonymousAsync(postId);
+                if (post == null)
+                    return NotFoundResponse("Bài viết không tồn tại");
+
+                var result = await _postService.GetLinkAsync(postId);
+                if (result == null)
+                    return NotFoundResponse("Không thể tạo link chia sẻ cho bài viết này");
+
+                return OkResponse(result, "Tạo link chia sẽ thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get post details by share link (non authenticated)
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("share/{shareCode}")]
+        public async Task<IActionResult> GetPostDetailsByShareLink([FromRoute] string shareCode)
+        {
+            try
+            {
+                var result = await _postService.GetPostDetailsByShareLinkAsync(shareCode);
+                if (result == null)
+                    return NotFoundResponse("Bài viết không tồn tại hoặc đã bị ẩn");
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
