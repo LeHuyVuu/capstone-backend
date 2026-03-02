@@ -88,6 +88,17 @@ public class CollectionController : BaseController
     }
 
     /// <summary>
+    /// Get collection summaries (basic info only: name, thumbnail, description) for current member
+    /// </summary>
+    [HttpGet("summaries")]
+    public async Task<IActionResult> GetCollectionSummaries()
+    {
+        var memberId = await GetCurrentMemberIdAsync();
+        var summaries = await _collectionService.GetCollectionSummariesByMemberAsync(memberId);
+        return OkResponse(summaries);
+    }
+
+    /// <summary>
     /// Update collection information
     /// </summary>
     [HttpPut("{id}")]

@@ -10,6 +10,7 @@ public interface ICollectionService
     Task<CollectionResponse?> GetCollectionByIdAsync(int collectionId, CancellationToken cancellationToken = default);
     Task<CollectionResponse> GetCurrentCollectionAsync(int memberId, CancellationToken cancellationToken = default);
     Task<PagedResult<CollectionResponse>> GetCollectionsByMemberAsync(int memberId, int page, int pageSize, CancellationToken cancellationToken = default);
+    Task<List<CollectionSummaryResponse>> GetCollectionSummariesByMemberAsync(int memberId, CancellationToken cancellationToken = default);
     Task<CollectionResponse?> UpdateCollectionAsync(int collectionId, int memberId, UpdateCollectionRequest request, CancellationToken cancellationToken = default);
     Task<CollectionResponse?> UpdateCollectionStatusAsync(int collectionId, int memberId, UpdateCollectionStatusRequest request, CancellationToken cancellationToken = default);
     Task<bool> DeleteCollectionAsync(int collectionId, int memberId, CancellationToken cancellationToken = default);
