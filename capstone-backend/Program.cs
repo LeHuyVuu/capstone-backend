@@ -177,13 +177,13 @@ using (var scope = serviceProvider.CreateScope())
     var vnTz = TimeZoneInfo.FindSystemTimeZoneById(
         OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh"
     );
-    var venueLocationService = scope.ServiceProvider.GetRequiredService<IVenueLocationService>();
+    // var venueLocationService = scope.ServiceProvider.GetRequiredService<IVenueLocationService>();
     
-    // Cập nhật IsClosed status mỗi phút
-    recurringJobManager.AddOrUpdate(
-        "update-venue-closed-status",
-        () => venueLocationService.UpdateAllVenuesIsClosedStatusAsync(),
-        Cron.Minutely);
+    // Cập nhật IsClosed status mỗi phút - COMMENTED OUT
+    // recurringJobManager.AddOrUpdate(
+    //     "update-venue-closed-status",
+    //     () => venueLocationService.UpdateAllVenuesIsClosedStatusAsync(),
+    //     Cron.Minutely);
 
     recurringJobManager.AddOrUpdate<IDatePlanWorker>(
         "auto-close-expired-dateplans",

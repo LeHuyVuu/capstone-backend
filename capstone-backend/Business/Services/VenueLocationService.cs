@@ -932,47 +932,49 @@ public class VenueLocationService : IVenueLocationService
     /// </summary>
     public async Task UpdateAllVenuesIsClosedStatusAsync()
     {
-        _logger.LogInformation("Starting automatic IsClosed status update for all venues");
+        // DISABLED: Automatic venue opening hours update
+        _logger.LogInformation("Automatic IsClosed status update is DISABLED");
+        await Task.CompletedTask;
+        
+        // var currentTimeVN = DateTime.UtcNow.AddHours(7); // Vietnam time (UTC+7)
+        // var currentTime = currentTimeVN.TimeOfDay;
+        // var todayDbFormat = ConvertDayOfWeekToDbFormat(currentTimeVN.DayOfWeek);
 
-        var currentTimeVN = DateTime.UtcNow.AddHours(7); // Vietnam time (UTC+7)
-        var currentTime = currentTimeVN.TimeOfDay;
-        var todayDbFormat = ConvertDayOfWeekToDbFormat(currentTimeVN.DayOfWeek);
+        // // ✨ Chỉ lấy opening_hours của HÔM NAY
+        // var todayOpeningHours = await _unitOfWork.Context.Set<VenueOpeningHour>()
+        //     .Where(oh => oh.Day == todayDbFormat)  // Chỉ ngày hôm nay
+        //     .ToListAsync();
 
-        // ✨ Chỉ lấy opening_hours của HÔM NAY
-        var todayOpeningHours = await _unitOfWork.Context.Set<VenueOpeningHour>()
-            .Where(oh => oh.Day == todayDbFormat)  // Chỉ ngày hôm nay
-            .ToListAsync();
+        // _logger.LogInformation($"Today's date: {currentTimeVN:yyyy-MM-dd HH:mm:ss}, Day of week (DB format): {todayDbFormat}, Current time (VN): {currentTime}");
+        // _logger.LogInformation($"Found {todayOpeningHours.Count} opening hour records for today");
 
-        _logger.LogInformation($"Today's date: {currentTimeVN:yyyy-MM-dd HH:mm:ss}, Day of week (DB format): {todayDbFormat}, Current time (VN): {currentTime}");
-        _logger.LogInformation($"Found {todayOpeningHours.Count} opening hour records for today");
-
-        var updatedCount = 0;
-        foreach (var openingHour in todayOpeningHours)
-        {
-            // Use helper method to check if venue is currently open
-            bool isCurrentlyOpen = IsVenueCurrentlyOpen(
-                openingHour.OpenTime, 
-                openingHour.CloseTime, 
-                currentTime
-            );
+        // var updatedCount = 0;
+        // foreach (var openingHour in todayOpeningHours)
+        // {
+        //     // Use helper method to check if venue is currently open
+        //     bool isCurrentlyOpen = IsVenueCurrentlyOpen(
+        //         openingHour.OpenTime, 
+        //         openingHour.CloseTime, 
+        //         currentTime
+        //     );
             
-            // IsClosed phải ngược lại với isCurrentlyOpen
-            bool shouldBeClosed = !isCurrentlyOpen;
+        //     // IsClosed phải ngược lại với isCurrentlyOpen
+        //     bool shouldBeClosed = !isCurrentlyOpen;
             
-            // Always update to match current time (override manual settings)
-            if (openingHour.IsClosed != shouldBeClosed)
-            {
-                openingHour.IsClosed = shouldBeClosed;
-                bool isOpenOvernight = openingHour.CloseTime < openingHour.OpenTime;
-                _logger.LogInformation($"Updated Venue {openingHour.VenueLocationId}: OpenTime={openingHour.OpenTime}, CloseTime={openingHour.CloseTime}, CurrentTime={currentTime}, IsOpenOvernight={isOpenOvernight}, IsClosed={openingHour.IsClosed}, IsOpen={isCurrentlyOpen}");
-                updatedCount++;
-            }
-        }
+        //     // Always update to match current time (override manual settings)
+        //     if (openingHour.IsClosed != shouldBeClosed)
+        //     {
+        //         openingHour.IsClosed = shouldBeClosed;
+        //         bool isOpenOvernight = openingHour.CloseTime < openingHour.OpenTime;
+        //         _logger.LogInformation($"Updated Venue {openingHour.VenueLocationId}: OpenTime={openingHour.OpenTime}, CloseTime={openingHour.CloseTime}, CurrentTime={currentTime}, IsOpenOvernight={isOpenOvernight}, IsClosed={openingHour.IsClosed}, IsOpen={isCurrentlyOpen}");
+        //         updatedCount++;
+        //     }
+        // }
 
-        _unitOfWork.Context.Set<VenueOpeningHour>().UpdateRange(todayOpeningHours);
-        await _unitOfWork.SaveChangesAsync();
+        // _unitOfWork.Context.Set<VenueOpeningHour>().UpdateRange(todayOpeningHours);
+        // await _unitOfWork.SaveChangesAsync();
 
-        _logger.LogInformation($"Completed automatic IsClosed status update. Updated {updatedCount} out of {todayOpeningHours.Count} opening hour records");
+        // _logger.LogInformation($"Completed automatic IsClosed status update. Updated {updatedCount} out of {todayOpeningHours.Count} opening hour records");
     }
 
     private int ConvertDayOfWeekToDbFormat(DayOfWeek dayOfWeek)
