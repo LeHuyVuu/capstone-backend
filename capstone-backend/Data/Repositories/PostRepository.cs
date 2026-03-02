@@ -11,6 +11,15 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<Post?> GetByShareCodeAsync(string shareCode)
+        {
+            return await _dbSet
+                .AsNoTracking()
+                .Include(p => p.Author)
+                .Include(p => p.PostLikes)
+                .FirstOrDefaultAsync(p => p.ShareCode == shareCode && p.IsDeleted == false);
+        }
+
         public async Task<IEnumerable<Post>> GetPostsByMemberId(int memberId, int pageSize = 20, long? cursor = null)
         {
             var query = _dbSet
