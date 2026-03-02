@@ -313,9 +313,25 @@ namespace capstone_backend.Business.Services
 
             return new ShareLinkResponse
             {
-                ShareToken = post.ShareCode,
+                ShareCode = post.ShareCode,
                 ShareLinkUrl = $"{Environment.GetEnvironmentVariable("FE_URL")}/share/p/{post.ShareCode}"
             };
+        }
+
+        public async Task<PostResponse> GetPostDetailsByShareLinkAsync(string shareCode)
+        {
+            var post = await _unitOfWork.Posts.GetByShareCodeAsync(shareCode);
+            if (post == null || post.IsDeleted == true)
+                throw new Exception("Bài viết không tồn tại");
+
+            if (post.Visibility != PostVisibility.PUBLIC.ToString() || post.Status != PostStatus.PUBLISHED.ToString())
+                throw new Exception("Bài viết không tồn tại");
+
+            var response = _mapper.Map<PostResponse>(post);
+
+            response.IsLikedByMe = false;
+            response.IsOwner = false;
+            return response;
         }
 
         public async Task<List<PostResponse>> GetPostsMemberProfileAsync(int userId, int pageNumber, int pageSize)

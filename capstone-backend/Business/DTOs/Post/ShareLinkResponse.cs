@@ -2,7 +2,7 @@
 {
     public class ShareLinkResponse
     {
-        public string ShareToken { get; set; }
+        public string ShareCode { get; set; }
         public string ShareLinkUrl { get; set; }
     }
 }
