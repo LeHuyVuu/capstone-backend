@@ -134,6 +134,24 @@ public class CollectionService : ICollectionService
         };
     }
 
+    public async Task<List<CollectionSummaryResponse>> GetCollectionSummariesByMemberAsync(int memberId, CancellationToken cancellationToken = default)
+    {
+        var collections = await _unitOfWork.Context.Set<Collection>()
+            .Where(c => c.MemberId == memberId && c.IsDeleted != true)
+            .OrderByDescending(c => c.CreatedAt)
+            .Select(c => new CollectionSummaryResponse
+            {
+                Id = c.Id,
+                CollectionName = c.CollectionName,
+                Description = c.Description,
+                Img = c.Img,
+                Status = c.Status
+            })
+            .ToListAsync(cancellationToken);
+
+        return collections;
+    }
+
     public async Task<CollectionResponse?> UpdateCollectionAsync(int collectionId, int memberId, UpdateCollectionRequest request, CancellationToken cancellationToken = default)
     {
         var collection = await _unitOfWork.Context.Set<Collection>()
