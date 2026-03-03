@@ -31,4 +31,27 @@ public class AdvertisementRepository : GenericRepository<Advertisement>, IAdvert
             .ThenByDescending(vla => vla.Advertisement.CreatedAt)
             .ToListAsync();
     }
+
+    public async Task<List<Advertisement>> GetByVenueOwnerIdAsync(int venueOwnerId)
+    {
+        return await _context.Advertisements
+            .Include(a => a.VenueLocationAdvertisements)
+                .ThenInclude(vla => vla.Venue)
+            .Include(a => a.AdsOrders)
+                .ThenInclude(ao => ao.Package)
+            .Where(a => a.VenueOwnerId == venueOwnerId && a.IsDeleted != true)
+            .OrderByDescending(a => a.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<Advertisement?> GetByIdWithDetailsAsync(int id)
+    {
+        return await _context.Advertisements
+            .Include(a => a.VenueOwner)
+            .Include(a => a.VenueLocationAdvertisements)
+                .ThenInclude(vla => vla.Venue)
+            .Include(a => a.AdsOrders)
+                .ThenInclude(ao => ao.Package)
+            .FirstOrDefaultAsync(a => a.Id == id && a.IsDeleted != true);
+    }
 }

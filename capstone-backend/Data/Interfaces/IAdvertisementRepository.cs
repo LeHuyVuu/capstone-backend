@@ -6,4 +6,6 @@ namespace capstone_backend.Data.Interfaces;
 public interface IAdvertisementRepository : IGenericRepository<Advertisement>
 {
     Task<List<VenueLocationAdvertisement>> GetActiveAdvertisementsAsync();
+    Task<List<Advertisement>> GetByVenueOwnerIdAsync(int venueOwnerId);
+    Task<Advertisement?> GetByIdWithDetailsAsync(int id);
 }

@@ -87,37 +87,88 @@ public class SepayWebhookController : ControllerBase
                 return BadRequest(new { message = "Invalid webhook data" });
             }
 
-            // 4. Parse payment code (format: VSP{subscriptionId})
-            // Tìm VSP trong chuỗi - hỗ trợ nhiều format: "VSP123", "VSP 123", "VSP-123", "Chuyen khoan VSP123"
+            // 4. Parse payment code (format: VSP{subscriptionId} or ADO{adsOrderId})
+            // Determine payment type and extract ID
+            string paymentType;
+            int paymentId;
+            
             var vspIndex = paymentCode.IndexOf("VSP", StringComparison.OrdinalIgnoreCase);
-            if (vspIndex == -1)
-            {
-                _logger.LogWarning("[{RequestId}] ⚠️ Invalid payment code - VSP not found: {Code}", requestId, paymentCode);
-                return BadRequest(new { message = "Payment code does not contain VSP" });
-            }
-
-            // Extract all text after "VSP" and remove non-digit characters
-            var afterVsp = paymentCode.Substring(vspIndex + 3); // After "VSP"
+            var adoIndex = paymentCode.IndexOf("ADO", StringComparison.OrdinalIgnoreCase);
             
-            // Extract only digits (skip spaces, dashes, etc.)
-            // Supports: "VSP123", "VSP 123", "VSP-123", "VSP_123", "vsp 10 abc"
-            var digits = new string(afterVsp.Where(char.IsDigit).ToArray());
-            
-            if (string.IsNullOrEmpty(digits) || !int.TryParse(digits, out int subscriptionId))
+            if (vspIndex >= 0)
             {
-                _logger.LogWarning("[{RequestId}] ⚠️ Cannot parse subscription ID from payment code: {Code}", requestId, paymentCode);
-                return BadRequest(new { message = "Invalid subscription ID format" });
+                // VSP payment - Venue Subscription
+                paymentType = "VSP";
+                var afterVsp = paymentCode.Substring(vspIndex + 3); // After "VSP"
+                var digits = new string(afterVsp.Where(char.IsDigit).ToArray());
+                
+                if (string.IsNullOrEmpty(digits) || !int.TryParse(digits, out paymentId))
+                {
+                    _logger.LogWarning("[{RequestId}] ⚠️ Cannot parse subscription ID from payment code: {Code}", requestId, paymentCode);
+                    return BadRequest(new { message = "Invalid subscription ID format" });
+                }
+                
+                if (paymentId <= 0 || paymentId > int.MaxValue)
+                {
+                    _logger.LogWarning("[{RequestId}] ⚠️ Invalid subscription ID: {SubId}", requestId, paymentId);
+                    return BadRequest(new { message = "Invalid subscription ID" });
+                }
+                
+                _logger.LogInformation("[{RequestId}] 📋 Extracted subscription ID: {SubId} from payment code: {Code}", requestId, paymentId, paymentCode);
             }
-
-            // Validate subscription ID range (prevent invalid IDs)
-            if (subscriptionId <= 0 || subscriptionId > int.MaxValue)
+            else if (adoIndex >= 0)
             {
-                _logger.LogWarning("[{RequestId}] ⚠️ Invalid subscription ID: {SubId}", requestId, subscriptionId);
-                return BadRequest(new { message = "Invalid subscription ID" });
+                // ADO payment - Advertisement Order
+                paymentType = "ADO";
+                var afterAdo = paymentCode.Substring(adoIndex + 3); // After "ADO"
+                var digits = new string(afterAdo.Where(char.IsDigit).ToArray());
+                
+                if (string.IsNullOrEmpty(digits) || !int.TryParse(digits, out paymentId))
+                {
+                    _logger.LogWarning("[{RequestId}] ⚠️ Cannot parse ads order ID from payment code: {Code}", requestId, paymentCode);
+                    return BadRequest(new { message = "Invalid ads order ID format" });
+                }
+                
+                if (paymentId <= 0 || paymentId > int.MaxValue)
+                {
+                    _logger.LogWarning("[{RequestId}] ⚠️ Invalid ads order ID: {AdoId}", requestId, paymentId);
+                    return BadRequest(new { message = "Invalid ads order ID" });
+                }
+                
+                _logger.LogInformation("[{RequestId}] 📋 Extracted ads order ID: {AdoId} from payment code: {Code}", requestId, paymentId, paymentCode);
+            }
+            else
+            {
+                _logger.LogWarning("[{RequestId}] ⚠️ Invalid payment code - VSP or ADO not found: {Code}", requestId, paymentCode);
+                return BadRequest(new { message = "Payment code must contain VSP or ADO" });
             }
             
-            _logger.LogInformation("[{RequestId}] 📋 Extracted subscription ID: {SubId} from payment code: {Code}", requestId, subscriptionId, paymentCode);
+            // Route to appropriate handler
+            if (paymentType == "VSP")
+            {
+                return await ProcessVenueSubscriptionPayment(requestId, paymentId, webhook);
+            }
+            else // ADO
+            {
+                return await ProcessAdvertisementOrderPayment(requestId, paymentId, webhook);
+            }
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogError(ex, "[{RequestId}] ❌ Concurrency conflict - another request may have processed this payment", requestId);
+            return Conflict(new { message = "Payment is being processed by another request" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[{RequestId}] ❌ Webhook processing failed", requestId);
+            return StatusCode(500, new { message = "Internal server error", requestId });
+        }
+    }
 
+    private async Task<IActionResult> ProcessVenueSubscriptionPayment(string requestId, int subscriptionId, SepayWebhookData webhook)
+    {
+        try
+        {
             // ========== DATABASE OPERATIONS WITH LOCKING ==========
             
             // 5. Load subscription and transaction WITH ROW LOCK (prevent race conditions)
@@ -362,7 +413,252 @@ public class SepayWebhookController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{RequestId}] ❌ Webhook processing failed", requestId);
+            _logger.LogError(ex, "[{RequestId}] ❌ VSP webhook processing failed", requestId);
+            return StatusCode(500, new { message = "Internal server error", requestId });
+        }
+    }
+
+    private async Task<IActionResult> ProcessAdvertisementOrderPayment(string requestId, int adsOrderId, SepayWebhookData webhook)
+    {
+        try
+        {
+            // ========== DATABASE OPERATIONS WITH LOCKING ==========
+            
+            // 5. Load ads order and transaction
+            var adsOrder = await _unitOfWork.Context.Set<AdsOrder>()
+                .Include(ao => ao.Package)
+                .Include(ao => ao.Advertisement)
+                    .ThenInclude(ad => ad.VenueLocationAdvertisements)
+                        .ThenInclude(vla => vla.Venue)
+                .FirstOrDefaultAsync(ao => ao.Id == adsOrderId);
+
+            if (adsOrder == null)
+            {
+                _logger.LogWarning("[{RequestId}] ⚠️ AdsOrder not found: {Id}", requestId, adsOrderId);
+                return NotFound(new { message = $"AdsOrder {adsOrderId} not found" });
+            }
+
+            // Validate order status
+            if (adsOrder.Status == "COMPLETED")
+            {
+                _logger.LogInformation("[{RequestId}] ℹ️ AdsOrder already COMPLETED: {Id}", requestId, adsOrderId);
+            }
+
+            var transaction = await _unitOfWork.Context.Set<Transaction>()
+                .FirstOrDefaultAsync(t => t.TransType == 2 // ADS_ORDER
+                    && t.DocNo == adsOrderId);
+
+            if (transaction == null)
+            {
+                _logger.LogWarning("[{RequestId}] ⚠️ Transaction not found for ads order: {Id}", requestId, adsOrderId);
+                return NotFound(new { message = $"Transaction for ads order {adsOrderId} not found" });
+            }
+
+            // ========== IDEMPOTENCY & STATE VALIDATION ==========
+            
+            // 6. Check if already processed (IDEMPOTENCY)
+            if (transaction.Status == "SUCCESS")
+            {
+                _logger.LogInformation("[{RequestId}] ℹ️ Transaction already processed: {Id}. Returning success (idempotent).", requestId, transaction.Id);
+                return Ok(new { 
+                    message = "Transaction already processed",
+                    transactionId = transaction.Id,
+                    adsOrderId = adsOrder.Id,
+                    status = "SUCCESS",
+                    idempotent = true
+                });
+            }
+
+            // 7. Validate transaction state
+            if (transaction.Status == "EXPIRED")
+            {
+                _logger.LogWarning("[{RequestId}] ⚠️ Transaction expired: {Id}", requestId, transaction.Id);
+                return BadRequest(new { message = "Transaction has expired" });
+            }
+
+            if (transaction.Status == "CANCELLED")
+            {
+                _logger.LogWarning("[{RequestId}] ⚠️ Transaction cancelled: {Id}", requestId, transaction.Id);
+                return BadRequest(new { message = "Transaction has been cancelled" });
+            }
+
+            if (transaction.Status != "PENDING")
+            {
+                _logger.LogWarning("[{RequestId}] ⚠️ Unexpected transaction status: {Status} for transaction {Id}", 
+                    requestId, transaction.Status, transaction.Id);
+                return BadRequest(new { message = $"Transaction status is {transaction.Status}" });
+            }
+
+            // 8. Validate amount (CRITICAL SECURITY CHECK)
+            if (webhook.Amount != (int)transaction.Amount)
+            {
+                _logger.LogError("[{RequestId}] ❌ SECURITY ALERT: Amount mismatch - Expected: {Expected}, Received: {Received}",
+                    requestId, transaction.Amount, webhook.Amount);
+                    
+                transaction.Status = "FAILED";
+                transaction.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Context.Set<Transaction>().Update(transaction);
+                await _unitOfWork.SaveChangesAsync();
+                
+                return BadRequest(new { message = "Payment amount mismatch" });
+            }
+
+            // 9. Validate transaction not too old
+            if (transaction.CreatedAt.HasValue)
+            {
+                var transactionAge = DateTime.UtcNow - transaction.CreatedAt.Value;
+                if (transactionAge.TotalHours > 24)
+                {
+                    _logger.LogWarning("[{RequestId}] ⚠️ Transaction created more than 24h ago: {CreatedAt}", 
+                        requestId, transaction.CreatedAt);
+                    
+                    transaction.Status = "EXPIRED";
+                    transaction.UpdatedAt = DateTime.UtcNow;
+                    _unitOfWork.Context.Set<Transaction>().Update(transaction);
+                    await _unitOfWork.SaveChangesAsync();
+                    
+                    return BadRequest(new { message = "Transaction expired (created more than 24 hours ago)" });
+                }
+            }
+
+            // 10. Check payment status
+            if (!string.Equals(webhook.Status, "success", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("[{RequestId}] ⚠️ Payment not successful - Status: {Status}", requestId, webhook.Status);
+                
+                transaction.Status = "FAILED";
+                transaction.UpdatedAt = DateTime.UtcNow;
+                adsOrder.Status = "PAYMENT_FAILED";
+                adsOrder.UpdatedAt = DateTime.UtcNow;
+                
+                _unitOfWork.Context.Set<Transaction>().Update(transaction);
+                _unitOfWork.Context.Set<AdsOrder>().Update(adsOrder);
+                await _unitOfWork.SaveChangesAsync();
+                
+                return Ok(new { message = "Payment failed, transaction status updated" });
+            }
+
+            // ========== PROCESS SUCCESSFUL PAYMENT ==========
+            
+            // 11. Use database transaction with SERIALIZABLE isolation level
+            using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.Serializable);
+            
+            try
+            {
+                // Re-check status after acquiring lock
+                await _unitOfWork.Context.Entry(transaction).ReloadAsync();
+                if (transaction.Status == "SUCCESS")
+                {
+                    _logger.LogInformation("[{RequestId}] ℹ️ Transaction already processed by concurrent request: {Id}", requestId, transaction.Id);
+                    await dbTransaction.RollbackAsync();
+                    return Ok(new { message = "Transaction already processed", idempotent = true });
+                }
+
+                // 12. Update transaction with webhook data
+                var externalRefData = new Dictionary<string, object>();
+                
+                try
+                {
+                    if (!string.IsNullOrEmpty(transaction.ExternalRefCode))
+                    {
+                        externalRefData = JsonSerializer.Deserialize<Dictionary<string, object>>(transaction.ExternalRefCode) 
+                            ?? new Dictionary<string, object>();
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning("[{RequestId}] Failed to parse existing ExternalRefCode: {Error}", requestId, ex.Message);
+                    externalRefData = new Dictionary<string, object>();
+                }
+
+                externalRefData["sepayWebhookId"] = webhook.Id;
+                externalRefData["paidAt"] = DateTime.UtcNow.ToString("O");
+                externalRefData["transactionDate"] = webhook.TransactionDate ?? string.Empty;
+                externalRefData["gateway"] = webhook.Gateway ?? "Unknown";
+                externalRefData["referenceCode"] = webhook.ReferenceCode ?? string.Empty;
+                externalRefData["requestId"] = requestId;
+
+                transaction.Status = "SUCCESS";
+                transaction.ExternalRefCode = JsonSerializer.Serialize(externalRefData);
+                transaction.UpdatedAt = DateTime.UtcNow;
+
+                // 13. Update AdsOrder
+                var now = DateTime.UtcNow;
+                adsOrder.Status = "COMPLETED";
+                adsOrder.PricePaid = webhook.Amount;
+                adsOrder.UpdatedAt = now;
+
+                // 14. Update Advertisement status to PENDING for admin approval
+                if (adsOrder.Advertisement != null)
+                {
+                    if (adsOrder.Advertisement.Status == "DRAFTED" || adsOrder.Advertisement.Status == "DRAFT")
+                    {
+                        adsOrder.Advertisement.Status = "PENDING";
+                        adsOrder.Advertisement.UpdatedAt = now;
+                        _unitOfWork.Context.Set<Advertisement>().Update(adsOrder.Advertisement);
+                        _logger.LogInformation("[{RequestId}] Updated advertisement {AdId} status to PENDING", requestId, adsOrder.Advertisement.Id);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("[{RequestId}] Advertisement {AdId} status is {Status}, not updating to PENDING", 
+                            requestId, adsOrder.Advertisement.Id, adsOrder.Advertisement.Status);
+                    }
+
+                    // 15. Update VenueLocationAdvertisement - activate when admin approves
+                    var venueLocationAd = adsOrder.Advertisement.VenueLocationAdvertisements.FirstOrDefault();
+                    if (venueLocationAd != null)
+                    {
+                        // Set dates based on package duration
+                        var durationDays = adsOrder.Package?.DurationDays ?? 7;
+                        venueLocationAd.Status = "PENDING_APPROVAL"; // Wait for admin approval
+                        venueLocationAd.StartDate = now;
+                        venueLocationAd.EndDate = now.AddDays(durationDays);
+                        venueLocationAd.UpdatedAt = now;
+                        _unitOfWork.Context.Set<VenueLocationAdvertisement>().Update(venueLocationAd);
+                        
+                        _logger.LogInformation("[{RequestId}] Updated VenueLocationAdvertisement {VlaId} to PENDING_APPROVAL, will be active from {Start} to {End}",
+                            requestId, venueLocationAd.Id, venueLocationAd.StartDate, venueLocationAd.EndDate);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("[{RequestId}] Advertisement not found for ads order {AdoId}", requestId, adsOrder.Id);
+                }
+
+                _unitOfWork.Context.Set<Transaction>().Update(transaction);
+                _unitOfWork.Context.Set<AdsOrder>().Update(adsOrder);
+                await _unitOfWork.SaveChangesAsync();
+
+                await dbTransaction.CommitAsync();
+
+                _logger.LogInformation("[{RequestId}] ✅ ADO Payment processed successfully - TxId: {TxId}, AdoId: {AdoId}, AdStatus: {AdStatus}",
+                    requestId, transaction.Id, adsOrder.Id, adsOrder.Advertisement?.Status ?? "N/A");
+
+                return Ok(new { 
+                    message = "Advertisement payment processed successfully",
+                    transactionId = transaction.Id,
+                    adsOrderId = adsOrder.Id,
+                    advertisementId = adsOrder.Advertisement?.Id,
+                    advertisementStatus = adsOrder.Advertisement?.Status ?? "N/A",
+                    requestId = requestId
+                });
+            }
+            catch (Exception ex)
+            {
+                await dbTransaction.RollbackAsync();
+                _logger.LogError(ex, "[{RequestId}] ❌ Error processing ADO webhook - rolling back transaction", requestId);
+                throw;
+            }
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogError(ex, "[{RequestId}] ❌ Concurrency conflict - another request may have processed this payment", requestId);
+            return Conflict(new { message = "Payment is being processed by another request" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[{RequestId}] ❌ ADO webhook processing failed", requestId);
             return StatusCode(500, new { message = "Internal server error", requestId });
         }
     }
