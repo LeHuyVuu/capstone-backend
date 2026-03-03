@@ -6,5 +6,6 @@ namespace capstone_backend.Data.Interfaces
     public interface ICoupleProfileChallengeRepository : IGenericRepository<CoupleProfileChallenge>
     {
         Task<IEnumerable<CoupleProfileChallenge>> GetByCoupleIdAndChallengeIdsAsync(int coupleId, List<int> challengeIds);
+        Task<CoupleProfileChallenge?> GetByCoupleIdAndChallengeIdAsync(int coupleId, int challengeId);
     }
 }

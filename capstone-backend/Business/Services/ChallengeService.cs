@@ -524,5 +524,63 @@ namespace capstone_backend.Business.Services
                 PageSize = pageSize
             };
         }
+
+        public async Task<MemberChallengeDetailResponse> GetMemberChallengeByIdAsync(int userId, int challengeId)
+        {
+            // Find member profile
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            // Find couple profile
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            // Find challenge
+            var challenge = await _unitOfWork.Challenges.GetByIdAsync(challengeId);
+            if (challenge == null || (challenge.IsDeleted.HasValue && challenge.IsDeleted != false))
+                throw new Exception("Thử thách không tồn tại");
+
+            if (challenge.Status != ChallengeStatus.ACTIVE.ToString())
+                throw new Exception("Thử thách chưa khả dụng");
+
+            // Re-use enrich
+            var enriched = await EnrichChallengeResponseAsync(new List<Challenge> { challenge });
+            var x = enriched.First();
+
+            var response = new MemberChallengeDetailResponse
+            {
+                Id = x.Id,
+                Title = x.Title,
+                Description = x.Description,
+                TriggerEvent = x.TriggerEvent,
+                RewardPoints = x.RewardPoints,
+                GoalMetric = x.GoalMetric,
+                TargetGoal = x.TargetGoal,
+                StartDate = x.StartDate,
+                EndDate = x.EndDate,
+                Status = x.Status,
+                RuleData = x.RuleData,
+                Instructions = x.Instructions,
+
+                IsJoined = false
+            };
+
+            if (couple != null)
+            {
+                var coupleChallenge = await _unitOfWork.CoupleProfileChallenges.GetByCoupleIdAndChallengeIdAsync(couple.id, challengeId);
+                if (coupleChallenge != null)
+                {
+                    response.IsJoined = true;
+                    response.CoupleChallengeId = coupleChallenge.Id;
+                    response.CoupleChallengeStatus = coupleChallenge.Status;
+                    response.CurrentProgress = coupleChallenge.CurrentProgress ?? 0;
+                    response.JoinedAt = coupleChallenge.JoinedAt;
+                }
+            }
+
+            return response;
+        }
     }
 }

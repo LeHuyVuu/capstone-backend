@@ -11,6 +11,15 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<CoupleProfileChallenge?> GetByCoupleIdAndChallengeIdAsync(int coupleId, int challengeId)
+        {
+            return await _dbSet
+                .Where(c => c.IsDeleted == false && 
+                            c.CoupleId == coupleId && 
+                            c.ChallengeId == challengeId)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<IEnumerable<CoupleProfileChallenge>> GetByCoupleIdAndChallengeIdsAsync(int coupleId, List<int> challengeIds)
         {
             return await _dbSet
