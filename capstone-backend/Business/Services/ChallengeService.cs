@@ -450,5 +450,79 @@ namespace capstone_backend.Business.Services
             [JsonPropertyName("value")]
             public object Value { get; set; }
         }
+
+        public async Task<PagedResult<MemberChallengeResponse>> GetMemberChallengesAsync(int userId, int pageNumber, int pageSize)
+        {
+            // Find member profile
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+            
+            // Find couple profile
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            var now = DateTime.UtcNow;
+
+            // Get active challenges
+            var (challenges, totalCount) = await _unitOfWork.Challenges.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                c => c.IsDeleted == false &&
+                     c.Status == ChallengeStatus.ACTIVE.ToString() &&
+                     (c.StartDate == null || c.StartDate <= now) &&
+                     (c.EndDate == null || c.EndDate >= now),
+                c => c.OrderByDescending(c => c.CreatedAt)
+            );
+
+            // Enrich challenge response
+            var enriched = await EnrichChallengeResponseAsync(challenges);
+            var result = enriched.Select(x => new MemberChallengeResponse
+            {
+                Id = x.Id,
+                Title = x.Title,
+                Description = x.Description,
+                TriggerEvent = x.TriggerEvent,
+                RewardPoints = x.RewardPoints,
+                GoalMetric = x.GoalMetric,
+                TargetGoal = x.TargetGoal,
+                StartDate = x.StartDate,
+                EndDate = x.EndDate,
+                Status = x.Status,
+                RuleData = x.RuleData,
+                Instructions = x.Instructions,
+
+                IsJoined = false
+            }).ToList();
+
+            // Get joined challenges for this couple if exists
+            if (couple != null && result.Any())
+            {
+                var challengeIds = result.Select(r => r.Id).ToList();
+
+                var joinedRows = await _unitOfWork.CoupleProfileChallenges.GetByCoupleIdAndChallengeIdsAsync(couple.id, challengeIds);
+                var map = joinedRows.ToDictionary(x => x.ChallengeId, x => x);
+
+                foreach (var item in result)
+                {
+                    if (map.TryGetValue(item.Id, out var cc))
+                    {
+                        item.IsJoined = true;
+                        item.CoupleChallengeId = cc.Id;
+                        item.CoupleChallengeStatus = cc.Status;
+                        item.CurrentProgress = cc.CurrentProgress ?? 0;
+                    }
+                }
+            }
+
+            return new PagedResult<MemberChallengeResponse>
+            {
+                Items = result,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
     }
 }
