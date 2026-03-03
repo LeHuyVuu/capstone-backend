@@ -13,6 +13,9 @@
         public int LikeCount { get; set; }
         public int ReplyCount { get; set; }
 
+        public bool IsLikedByMe { get; set; }
+        public bool IsOwner { get; set; }
+
         public int RootId { get; set; }
         public int Level { get; set; }
     }

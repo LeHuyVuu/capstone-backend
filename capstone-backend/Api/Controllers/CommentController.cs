@@ -75,7 +75,12 @@ namespace capstone_backend.Api.Controllers
         {
             try
             {
-                var result = await _commentService.GetRepliesAsync(commentId, pageNumber, pageSize);
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _commentService.GetRepliesAsync(userId.Value, commentId, pageNumber, pageSize);
                 return OkResponse(result, "Lấy danh sách trả lời thành công");
             }
             catch (Exception ex)
@@ -140,7 +145,12 @@ namespace capstone_backend.Api.Controllers
         {
             try
             {
-                var result = await _commentService.GetCommentByIdAsync(commentId);
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _commentService.GetCommentByIdAsync(userId.Value, commentId);
                 if (result == null)
                     return NotFoundResponse("Không tìm thấy bình luận");
                 return OkResponse(result, "Lấy thông tin bình luận thành công");

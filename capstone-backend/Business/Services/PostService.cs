@@ -239,6 +239,10 @@ namespace capstone_backend.Business.Services
             if (post == null || post.IsDeleted == true)
                 throw new Exception("Bài viết không tồn tại");
 
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
             var (comments, count) = await _unitOfWork.Comments.GetPagedAsync(
                     pageNumber,
                     pageSize,
@@ -248,10 +252,21 @@ namespace capstone_backend.Business.Services
                          c.Post.Status == PostStatus.PUBLISHED.ToString() && 
                          c.ParentId == null && c.RootId == null,
                     c => c.OrderByDescending(c => c.CreatedAt),
-                    c => c.Include(c => c.Author)
+                    c => c.Include(c => c.Author).Include(c => c.CommentLikes)
                 );
 
             var items = _mapper.Map<List<CommentResponse>>(comments);
+            var commentById = comments.ToDictionary(x => x.Id);
+            foreach (var item in items)
+            {
+                if (!commentById.TryGetValue(item.Id, out var entity))
+                    continue;
+
+                item.IsLikedByMe = entity.CommentLikes?.Any(cl => cl.MemberId == member.Id) == true;
+
+                item.IsOwner = entity.AuthorId == member.Id;
+            }
+
 
             var pagedResult = new PagedResult<CommentResponse>
             {
