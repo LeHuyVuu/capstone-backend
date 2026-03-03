@@ -7,7 +7,9 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using CsvHelper;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -581,6 +583,95 @@ namespace capstone_backend.Business.Services
             }
 
             return response;
+        }
+
+        public async Task<PagedResult<CoupleChallengeListItemResponse>> GetMyCoupleChallengesAsync(int userId, CoupleChallengeQuery query)
+        {
+            // Find member profile
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            // Find couple profile
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            var now = DateTime.UtcNow;
+
+            // Normalize paging
+            var pageNumber = query.PageNumber <= 0 ? 1 : query.PageNumber;
+            var pageSize = query.PageSize <= 0 ? 10 : query.PageSize;
+
+            // Normalize status
+            string? status = null;
+            if (query.Status != null)
+            {
+                status = query.Status.ToString();
+
+                var allowedStatuses = Enum.GetNames(typeof(CoupleProfileChallengeStatus));
+                if (!allowedStatuses.Contains(status))
+                    throw new Exception($"Trạng thái thử thách của cặp đôi '{status}' không hợp lệ");
+            }
+
+            // Normalize q
+            var q = string.IsNullOrWhiteSpace(query.Q) ? null : query.Q.Trim();
+
+            // Normalize dates
+            var from = query.From;
+            var to = query.To;
+
+            // Normalize sort
+            var sort = string.IsNullOrWhiteSpace(query.Sort) ? "updatedAtDesc" : query.Sort.Trim();
+
+            // Create predicate
+            Expression<Func<CoupleProfileChallenge, bool>> predicate = cc =>
+                cc.CoupleId == couple.id &&
+                cc.IsDeleted == false &&
+                (status == null || cc.Status == status) &&
+                (
+                    q == null ||
+                    (cc.Challenge != null && (
+                           (cc.Challenge.Title != null && cc.Challenge.Title.Contains(q))
+                        || (cc.Challenge.Description != null && cc.Challenge.Description.Contains(q))
+                    ))
+                ) &&
+                (from.HasValue == false || (cc.Challenge != null && cc.Challenge.StartDate >= from.Value)) &&
+                (to.HasValue == false || (cc.Challenge != null && cc.Challenge.EndDate <= to.Value));
+
+            // Order by
+            Func<IQueryable<CoupleProfileChallenge>, IOrderedQueryable<CoupleProfileChallenge>> orderBy =
+                sort.ToLowerInvariant() switch
+                {
+                    "updatedAtAsc" => x => x.OrderBy(cc => cc.UpdatedAt),
+                    "updatedAtDesc" => x => x.OrderByDescending(cc => cc.UpdatedAt),
+
+                    "joinedAtAsc" => x => x.OrderBy(cc => cc.JoinedAt),
+                    "joinedAtDesc" => x => x.OrderByDescending(cc => cc.JoinedAt),
+
+                    // fallback
+                    _ => x => x.OrderByDescending(cc => cc.UpdatedAt)
+                };
+
+            // Query with paging
+            var (coupleChallenges, totalCount) = await _unitOfWork.CoupleProfileChallenges.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                predicate,
+                orderBy,
+                cc => cc.Include(cc => cc.Challenge)
+            );
+
+            // Map to response
+            var response = _mapper.Map<List<CoupleChallengeListItemResponse>>(coupleChallenges);
+
+            return new PagedResult<CoupleChallengeListItemResponse>
+            {
+                Items = response,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+             };
         }
     }
 }

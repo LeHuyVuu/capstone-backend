@@ -1,4 +1,5 @@
-﻿using capstone_backend.Business.Interfaces;
+﻿using capstone_backend.Business.DTOs.Challenge;
+using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -56,6 +57,30 @@ namespace capstone_backend.Api.Controllers
                 if (challenge == null)
                     return NotFoundResponse("Thử thách không tồn tại");
                 return OkResponse(challenge, "Lấy chi tiết thử thách thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get doing challenges for member
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetDoingChallenges([FromQuery] CoupleChallengeQuery query)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _challengeService.GetMyCoupleChallengesAsync(userId.Value, query);
+                if (result == null)
+                    return NotFoundResponse("Không tìm thấy thử thách nào đang thực hiện");
+                return OkResponse(result, "Lấy danh sách thử thách đang thực hiện thành công");
             }
             catch (Exception ex)
             {
