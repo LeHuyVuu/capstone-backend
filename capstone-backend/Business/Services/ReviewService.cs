@@ -48,14 +48,14 @@ namespace capstone_backend.Business.Services
 
             var lastCheckin = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(member.Id, request.VenueLocationId);
 
-            if (lastCheckin != null)
-            {
-                var timeSinceLastCheckin = DateTime.UtcNow - lastCheckin.CreatedAt;
-                if (timeSinceLastCheckin.Value.TotalMinutes < 10)
-                {
-                    throw new InvalidOperationException("Bạn vừa check-in rồi, hãy đợi thông báo xác thực nhé!");
-                }
-            }
+            //if (lastCheckin != null)
+            //{
+            //    var timeSinceLastCheckin = DateTime.UtcNow - lastCheckin.CreatedAt;
+            //    if (timeSinceLastCheckin.Value.TotalMinutes < 10 && lastCheckin.IsValid == null)
+            //    {
+            //        throw new InvalidOperationException("Bạn vừa check-in rồi, hãy đợi thông báo xác thực nhé!");
+            //    }
+            //}
 
             var distance = GeoCalculator.CalculateDistance(
                 request.Latitude,
@@ -385,8 +385,15 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Lịch sử check-in chưa được xác thực, vui lòng đợi hệ thống xác thực tự động hoặc liên hệ hỗ trợ");
 
             var now = DateTime.UtcNow;
-            if ((now - checkIn.CreatedAt.Value).TotalMinutes <= 10 && checkIn.IsValid != false)
-                throw new Exception("Vui lòng đợi hệ thống xác thực tự động sau 10 phút kể từ khi check-in");
+            var minutes = (now - checkIn.CreatedAt.Value).TotalMinutes;
+            //if (minutes < 10)
+            //    throw new Exception("Vui lòng đợi đủ 10 phút kể từ khi check-in");
+
+            //if (checkIn.IsValid == null)
+            //    throw new Exception("Chưa đến bước xác thực (vui lòng đợi thông báo)");
+
+            //if (checkIn.IsValid != false)
+            //    throw new Exception("Trạng thái check-in không hợp lệ để xác thực");
 
             var distance = GeoCalculator.CalculateDistance(           
                 request.Latitude,
