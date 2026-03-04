@@ -61,8 +61,6 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<Leaderboard> Leaderboards { get; set; }
 
-    public virtual DbSet<LocationFollower> LocationFollowers { get; set; }
-
     public virtual DbSet<LocationTag> LocationTags { get; set; }
 
     public virtual DbSet<Media> Media { get; set; }
@@ -78,8 +76,6 @@ public partial class MyDbContext : DbContext
     public virtual DbSet<MoodType> MoodTypes { get; set; }
 
     public virtual DbSet<Notification> Notifications { get; set; }
-
-    public virtual DbSet<OwnerMember> OwnerMembers { get; set; }
 
     public virtual DbSet<PersonalityTest> PersonalityTests { get; set; }
 
@@ -134,8 +130,6 @@ public partial class MyDbContext : DbContext
     public virtual DbSet<Wallet> Wallets { get; set; }
 
     public virtual DbSet<WithdrawRequest> WithdrawRequests { get; set; }
-
-    public virtual DbSet<Category> Categories { get; set; }
 
     // Messaging entities
     public virtual DbSet<Conversation> Conversations { get; set; }
@@ -569,25 +563,6 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.Couple).WithMany(p => p.Leaderboards).HasConstraintName("leaderboards_couple_id_fkey");
         });
 
-        modelBuilder.Entity<LocationFollower>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("location_followers_pkey");
-
-            entity.ToTable(tb => tb.HasComment("Bảng quan hệ theo dõi / chia sẻ vị trí giữa users"));
-
-            entity.Property(e => e.Id).UseIdentityAlwaysColumn();
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.FollowerShareStatus).HasDefaultValueSql("'SHARING'::character varying");
-            entity.Property(e => e.FollowerUserId).HasComment("User theo dõi");
-            entity.Property(e => e.IsMuted).HasDefaultValue(false);
-            entity.Property(e => e.OwnerShareStatus).HasDefaultValueSql("'SHARING'::character varying");
-            entity.Property(e => e.OwnerUserId).HasComment("User trung tâm");
-            entity.Property(e => e.Status)
-                .HasDefaultValueSql("'ACTIVE'::character varying")
-                .HasComment("ACTIVE, REMOVED, BLOCKED, PENDING");
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-        });
-
         modelBuilder.Entity<LocationTag>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("location_tags_pkey");
@@ -695,15 +670,6 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.Notifications).HasConstraintName("notifications_user_id_fkey");
         });
 
-        modelBuilder.Entity<OwnerMember>(entity =>
-        {
-            entity.HasKey(e => new { e.OwnerUserId, e.MemberUserId }).HasName("owner_members_pkey");
-
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.Status).HasDefaultValueSql("'ACTIVE'::character varying");
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-        });
-
         modelBuilder.Entity<PersonalityTest>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("personality_tests_pkey");
@@ -787,6 +753,11 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.LikeCount).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
+
+            entity.HasIndex(r => new { r.MemberId, r.VenueId, r.CoupleProfileId })
+                  .HasDatabaseName("idx_review_couple_profile")
+                  .IsUnique()
+                  .HasFilter("is_deleted = false");
 
             entity.HasOne(d => d.Member).WithMany(p => p.Reviews)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -1083,15 +1054,6 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.Wallet).WithMany(p => p.WithdrawRequests)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("withdraw_requests_wallet_id_fkey");
-        });
-
-
-        modelBuilder.Entity<Category>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("categories_pkey");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
-            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
-            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
         });
 
         // Messaging entities configuration
