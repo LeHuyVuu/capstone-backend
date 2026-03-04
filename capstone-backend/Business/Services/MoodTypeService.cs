@@ -169,9 +169,14 @@ public class MoodTypeService : IMoodTypeService
         bool isCouple = false;
         bool hasCoupleMood = false;
 
-        var coupleProfile = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(memberProfile.Id, cancellationToken: cancellationToken);
+        // Lấy couple profile ACTIVE (không lấy couple cũ đã chia tay)
+        var coupleProfile = await _unitOfWork.Context.Set<CoupleProfile>()
+            .Where(c => (c.MemberId1 == memberProfile.Id || c.MemberId2 == memberProfile.Id)
+                     && c.Status == "ACTIVE"
+                     && c.IsDeleted != true)
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (coupleProfile != null && coupleProfile.Status == "ACTIVE")
+        if (coupleProfile != null)
         {
             isCouple = true;
             
@@ -244,11 +249,16 @@ public class MoodTypeService : IMoodTypeService
     {
         try
         {
-            // Kiểm tra xem member có couple không
-            var coupleProfile = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(memberId);
-            if (coupleProfile == null || coupleProfile.Status != "ACTIVE")
+            // Kiểm tra xem member có couple ACTIVE không (không lấy couple cũ)
+            var coupleProfile = await _unitOfWork.Context.Set<CoupleProfile>()
+                .Where(c => (c.MemberId1 == memberId || c.MemberId2 == memberId)
+                         && c.Status == "ACTIVE"
+                         && c.IsDeleted != true)
+                .FirstOrDefaultAsync(cancellationToken);
+                
+            if (coupleProfile == null)
             {
-                _logger.LogInformation($"Member {memberId} không có couple hoặc couple không active");
+                _logger.LogInformation($"Member {memberId} không có couple active");
                 return;
             }
 
