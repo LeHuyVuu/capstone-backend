@@ -729,6 +729,8 @@ namespace capstone_backend.Business.Services
 
                 existProgress.MemberState[actorKey].IsJoined = true;
                 existProgress.MemberState[actorKey].JoinedAt = DateTime.UtcNow;
+                existProgress.MemberState[actorKey].IsActive = true;
+                existProgress.MemberState[actorKey].LeftAt = null;
 
                 existing.ProgressData = JsonConverterUtil.Serialize(existProgress);
                 existing.UpdatedAt = DateTime.UtcNow;
@@ -754,7 +756,7 @@ namespace capstone_backend.Business.Services
                     },
                     MemberState = new Dictionary<string, MemberState>()
                     {
-                        { couple.MemberId1.ToString(), new MemberState { IsJoined = true, JoinedAt = DateTime.UtcNow } },
+                        { couple.MemberId1.ToString(), new MemberState() },
                         { couple.MemberId2.ToString(), new MemberState() }
                     },
                     Unique = challenge.GoalMetric == ChallengeConstants.GoalMetrics.UNIQUE_LIST ? new ProgressUnique
@@ -784,6 +786,11 @@ namespace capstone_backend.Business.Services
                         Months = new Dictionary<string, Dictionary<string, int>>()
                     } : null
                 };
+
+                coupleChallengeProgress.MemberState[actorKey].IsJoined = true;
+                coupleChallengeProgress.MemberState[actorKey].JoinedAt = DateTime.UtcNow;
+                coupleChallengeProgress.MemberState[actorKey].IsActive = true;
+                coupleChallengeProgress.MemberState[actorKey].LeftAt = null;
 
                 // Serialize progress data to JSON
                 var progressJson = JsonConverterUtil.Serialize(coupleChallengeProgress);
@@ -854,6 +861,40 @@ namespace capstone_backend.Business.Services
             {
                 throw new Exception("Lỗi khi phân tích điều kiện thử thách");
             }
+        }
+
+        public async Task<int> LeaveCoupleChallengeAsync(int userId, int coupleChallengeId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            var coupleChallenge = await _unitOfWork.CoupleProfileChallenges.GetByIdAsync(coupleChallengeId);
+            if (coupleChallenge == null || coupleChallenge.CoupleId != couple.id || coupleChallenge.IsDeleted == true)
+                throw new Exception("Thử thách của cặp đôi không tồn tại");
+
+            var progressData = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(coupleChallenge.ProgressData);
+            if (progressData?.MemberState == null)
+                throw new Exception("Dữ liệu tiến độ thử thách không hợp lệ");
+
+            var memberKey = member.Id.ToString();
+            if (!progressData.MemberState.TryGetValue(memberKey, out var state) || state == null || !state.IsJoined)
+                throw new Exception("Bạn chưa tham gia thử thách này");
+
+            state.IsJoined = false;
+            state.IsActive = false;
+            state.LeftAt = DateTime.UtcNow;
+
+            coupleChallenge.ProgressData = JsonConverterUtil.Serialize(progressData);
+            coupleChallenge.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.CoupleProfileChallenges.Update(coupleChallenge);
+            await _unitOfWork.SaveChangesAsync();
+            return coupleChallenge.Id;
         }
     }
 }

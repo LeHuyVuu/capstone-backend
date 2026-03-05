@@ -53,7 +53,7 @@
     {
         public bool IsJoined { get; set; } = false;
         public DateTime? JoinedAt { get; set; } = null;
-        public bool IsActive { get; set; } = true;
+        public bool IsActive { get; set; } = false;
         public DateTime? LeftAt { get; set; } = null;
     }
 

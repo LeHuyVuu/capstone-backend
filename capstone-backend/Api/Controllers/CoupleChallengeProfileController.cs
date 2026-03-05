@@ -112,5 +112,29 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Leave a challenge for member
+        /// </summary>
+        [HttpPost("{coupleChallengeId:int}/leave")]
+        public async Task<IActionResult> LeaveChallenge([FromRoute] int coupleChallengeId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _challengeService.LeaveCoupleChallengeAsync(userId.Value, coupleChallengeId);
+                if (result <= 0)
+                    return NotFoundResponse("Thử thách không tồn tại hoặc chưa tham gia");
+                return OkResponse("Rời khỏi thử thách thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
