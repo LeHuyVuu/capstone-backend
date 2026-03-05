@@ -11,6 +11,9 @@ namespace capstone_backend.Business.Mappings
             CreateMap<CreateChallengeRequest, Challenge>();
             CreateMap<UpdateChallengeRequest, Challenge>();
             CreateMap<Challenge, ChallengeResponse>();
+
+            // Couple challenge
+            CreateMap<CoupleProfileChallenge, CoupleChallengeListItemResponse>();
         }
     }
 }

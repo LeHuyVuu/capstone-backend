@@ -8,7 +8,7 @@ namespace capstone_backend.Business.Common.Constants
         {
             public const string COUNT = "COUNT";
             public const string UNIQUE_LIST = "UNIQUE_LIST";
-            public const string Streak = "STREAK";
+            public const string STREAK = "STREAK";
         }
 
         public static class RuleKeys
@@ -36,7 +36,7 @@ namespace capstone_backend.Business.Common.Constants
         {
             GoalMetrics.COUNT,
             GoalMetrics.UNIQUE_LIST,
-            GoalMetrics.Streak
+            GoalMetrics.STREAK
         };
     }
 }

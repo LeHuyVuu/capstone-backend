@@ -1,5 +1,6 @@
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Interfaces;
+using capstone_backend.Data.Repositories;
 
 namespace capstone_backend.Business.Interfaces;
 
@@ -75,6 +76,8 @@ public interface IUnitOfWork : IDisposable
     ICommentRepository Comments { get; }
 
     ICommentLikeRepository CommentLikes { get; }
+
+    ICoupleProfileChallengeRepository CoupleProfileChallenges { get; }
 
     /// <summary>
     /// Save all changes to database

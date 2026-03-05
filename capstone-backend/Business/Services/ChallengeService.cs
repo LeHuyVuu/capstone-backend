@@ -7,7 +7,9 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using CsvHelper;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -204,7 +206,7 @@ namespace capstone_backend.Business.Services
                             op = ChallengeConstants.RuleOps.In;
                             if (key == ChallengeConstants.RuleKeys.VENUE_ID)
                             {
-                                var intList = JsonSerializer.Deserialize<List<int>>(element.GetRawText());
+                                var intList = JsonSerializer.Deserialize<List<string>>(element.GetRawText());
                                 if (intList != null && intList.Any())
                                 {
                                     var uniqueIds = intList.Distinct().ToList();
@@ -220,7 +222,7 @@ namespace capstone_backend.Business.Services
                                 }
                                 else
                                 {
-                                    rawValue = new List<int>();
+                                    rawValue = new List<string>();
                                 }
                             }
                             else
@@ -265,7 +267,7 @@ namespace capstone_backend.Business.Services
         private async Task<List<ChallengeResponse>> EnrichChallengeResponseAsync(IEnumerable<Challenge> challenges)
         {
             var challengeResponses = _mapper.Map<List<ChallengeResponse>>(challenges);
-            var allVenueIds = new List<int>();
+            var allVenueIds = new List<string>();
 
             // Extract all venue IDs from rules
             foreach (var challenge in challenges)
@@ -282,7 +284,7 @@ namespace capstone_backend.Business.Services
                         {
                             if (rule.Key == ChallengeConstants.RuleKeys.VENUE_ID && rule.Value is JsonElement valElement)
                             {
-                                var ids = JsonSerializer.Deserialize<List<int>>(valElement);
+                                var ids = JsonSerializer.Deserialize<List<string>>(valElement);
                                 if (ids != null)
                                     allVenueIds.AddRange(ids);
                             }
@@ -298,7 +300,7 @@ namespace capstone_backend.Business.Services
 
             // Get venue names
             var venueLookup = await _unitOfWork.VenueLocations.GetNamesByIdsAsync(allVenueIds);
-            var venueIdToName = venueLookup.ToDictionary(v => v.Id, v => v.Name);
+            var venueIdToName = venueLookup.ToDictionary(v => v.Id.ToString(), v => v.Name);
 
             var items = challenges.ToList();
 
@@ -314,6 +316,11 @@ namespace capstone_backend.Business.Services
                 if (string.IsNullOrEmpty(rawRules))
                     continue;
 
+                if (targetDto.TriggerEvent == ChallengeTriggerEvent.CHECKIN.ToString())
+                {
+                    targetDto.Instructions.Add("📍 Thử thách yêu cầu điểm danh hằng ngày");
+                }
+
                 try
                 {
                     var ruleWrapper = JsonSerializer.Deserialize<ChallengeRuleWrapper>(rawRules);
@@ -327,7 +334,7 @@ namespace capstone_backend.Business.Services
                             {
                                 if (r.Value is JsonElement valElement && valElement.ValueKind == JsonValueKind.Array)
                                 {
-                                    var ids = JsonSerializer.Deserialize<List<int>>(valElement);
+                                    var ids = JsonSerializer.Deserialize<List<string>>(valElement);
                                     var names = ids?.Select(id => venueIdToName.ContainsKey(id) ? venueIdToName[id] : id.ToString());
                                     var venueNameStr = names != null ? string.Join(", ", names) : "N/A";
 
@@ -449,6 +456,445 @@ namespace capstone_backend.Business.Services
 
             [JsonPropertyName("value")]
             public object Value { get; set; }
+        }
+
+        public async Task<PagedResult<MemberChallengeResponse>> GetMemberChallengesAsync(int userId, int pageNumber, int pageSize)
+        {
+            // Find member profile
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+            
+            // Find couple profile
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            var now = DateTime.UtcNow;
+
+            // Get active challenges
+            var (challenges, totalCount) = await _unitOfWork.Challenges.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                c => c.IsDeleted == false &&
+                     c.Status == ChallengeStatus.ACTIVE.ToString() &&
+                     (c.StartDate == null || c.StartDate <= now) &&
+                     (c.EndDate == null || c.EndDate >= now),
+                c => c.OrderByDescending(c => c.CreatedAt)
+            );
+
+            // Enrich challenge response
+            var enriched = await EnrichChallengeResponseAsync(challenges);
+            var result = enriched.Select(x => new MemberChallengeResponse
+            {
+                Id = x.Id,
+                Title = x.Title,
+                Description = x.Description,
+                TriggerEvent = x.TriggerEvent,
+                RewardPoints = x.RewardPoints,
+                GoalMetric = x.GoalMetric,
+                TargetGoal = x.TargetGoal,
+                StartDate = x.StartDate,
+                EndDate = x.EndDate,
+                Status = x.Status,
+                RuleData = x.RuleData,
+                Instructions = x.Instructions,
+
+                IsJoined = false
+            }).ToList();
+
+            // Get joined challenges for this couple if exists
+            if (couple != null && result.Any())
+            {
+                var challengeIds = result.Select(r => r.Id).ToList();
+
+                var joinedRows = await _unitOfWork.CoupleProfileChallenges.GetByCoupleIdAndChallengeIdsAsync(couple.id, challengeIds);
+                var map = joinedRows.ToDictionary(x => x.ChallengeId, x => x);
+
+                foreach (var item in result)
+                {
+                    if (map.TryGetValue(item.Id, out var cc))
+                    {
+                        item.IsJoined = true;
+                        item.CoupleChallengeId = cc.Id;
+                        item.CoupleChallengeStatus = cc.Status;
+                        item.CurrentProgress = cc.CurrentProgress ?? 0;
+                    }
+                }
+            }
+
+            return new PagedResult<MemberChallengeResponse>
+            {
+                Items = result,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
+
+        public async Task<MemberChallengeDetailResponse> GetMemberChallengeByIdAsync(int userId, int challengeId)
+        {
+            // Find member profile
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            // Find couple profile
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            // Find challenge
+            var challenge = await _unitOfWork.Challenges.GetByIdAsync(challengeId);
+            if (challenge == null || (challenge.IsDeleted.HasValue && challenge.IsDeleted != false))
+                throw new Exception("Thử thách không tồn tại");
+
+            if (challenge.Status != ChallengeStatus.ACTIVE.ToString())
+                throw new Exception("Thử thách chưa khả dụng");
+
+            // Re-use enrich
+            var enriched = await EnrichChallengeResponseAsync(new List<Challenge> { challenge });
+            var x = enriched.First();
+
+            var response = new MemberChallengeDetailResponse
+            {
+                Id = x.Id,
+                Title = x.Title,
+                Description = x.Description,
+                TriggerEvent = x.TriggerEvent,
+                RewardPoints = x.RewardPoints,
+                GoalMetric = x.GoalMetric,
+                TargetGoal = x.TargetGoal,
+                StartDate = x.StartDate,
+                EndDate = x.EndDate,
+                Status = x.Status,
+                RuleData = x.RuleData,
+                Instructions = x.Instructions,
+
+                IsJoined = false
+            };
+
+            if (couple != null)
+            {
+                var coupleChallenge = await _unitOfWork.CoupleProfileChallenges.GetByCoupleIdAndChallengeIdAsync(couple.id, challengeId);
+                if (coupleChallenge != null)
+                {
+                    response.IsJoined = true;
+                    response.CoupleChallengeId = coupleChallenge.Id;
+                    response.CoupleChallengeStatus = coupleChallenge.Status;
+                    response.CurrentProgress = coupleChallenge.CurrentProgress ?? 0;
+                    response.JoinedAt = coupleChallenge.JoinedAt;
+                }
+            }
+
+            return response;
+        }
+
+        public async Task<PagedResult<CoupleChallengeListItemResponse>> GetMyCoupleChallengesAsync(int userId, CoupleChallengeQuery query)
+        {
+            // Find member profile
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            // Find couple profile
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            var now = DateTime.UtcNow;
+
+            // Normalize paging
+            var pageNumber = query.PageNumber <= 0 ? 1 : query.PageNumber;
+            var pageSize = query.PageSize <= 0 ? 10 : query.PageSize;
+
+            // Normalize status
+            string? status = null;
+            if (query.Status != null)
+            {
+                status = query.Status.ToString();
+
+                var allowedStatuses = Enum.GetNames(typeof(CoupleProfileChallengeStatus));
+                if (!allowedStatuses.Contains(status))
+                    throw new Exception($"Trạng thái thử thách của cặp đôi '{status}' không hợp lệ");
+            }
+
+            // Normalize q
+            var q = string.IsNullOrWhiteSpace(query.Q) ? null : query.Q.Trim();
+
+            // Normalize dates
+            var from = query.From;
+            var to = query.To;
+
+            // Normalize sort
+            var sort = string.IsNullOrWhiteSpace(query.Sort) ? "updatedAtDesc" : query.Sort.Trim();
+
+            // Create predicate
+            Expression<Func<CoupleProfileChallenge, bool>> predicate = cc =>
+                cc.CoupleId == couple.id &&
+                cc.IsDeleted == false &&
+                (status == null || cc.Status == status) &&
+                (
+                    q == null ||
+                    (cc.Challenge != null && (
+                           (cc.Challenge.Title != null && cc.Challenge.Title.Contains(q))
+                        || (cc.Challenge.Description != null && cc.Challenge.Description.Contains(q))
+                    ))
+                ) &&
+                (from.HasValue == false || (cc.Challenge != null && cc.Challenge.StartDate >= from.Value)) &&
+                (to.HasValue == false || (cc.Challenge != null && cc.Challenge.EndDate <= to.Value));
+
+            // Order by
+            Func<IQueryable<CoupleProfileChallenge>, IOrderedQueryable<CoupleProfileChallenge>> orderBy =
+                sort.ToLowerInvariant() switch
+                {
+                    "updatedAtAsc" => x => x.OrderBy(cc => cc.UpdatedAt),
+                    "updatedAtDesc" => x => x.OrderByDescending(cc => cc.UpdatedAt),
+
+                    "joinedAtAsc" => x => x.OrderBy(cc => cc.JoinedAt),
+                    "joinedAtDesc" => x => x.OrderByDescending(cc => cc.JoinedAt),
+
+                    // fallback
+                    _ => x => x.OrderByDescending(cc => cc.UpdatedAt)
+                };
+
+            // Query with paging
+            var (coupleChallenges, totalCount) = await _unitOfWork.CoupleProfileChallenges.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                predicate,
+                orderBy,
+                cc => cc.Include(cc => cc.Challenge)
+            );
+
+            var memberKey = member.Id.ToString();
+            var filtered = coupleChallenges.Where(cc =>
+            {
+                var p = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(cc.ProgressData);
+                if (p?.MemberState == null)
+                    return false;
+
+                return p.MemberState.TryGetValue(memberKey, out var st) && st != null && st.IsJoined;
+            }).ToList();
+
+            // Map to response
+            var challengeResponse = await EnrichChallengeResponseAsync(filtered.Select(cc => cc.Challenge).ToList());
+            var challengeMap = challengeResponse.ToDictionary(c => c.Id);
+            var response = _mapper.Map<List<CoupleChallengeListItemResponse>>(filtered);
+
+            response.ForEach(r =>
+            {
+                if (challengeMap.TryGetValue(r.ChallengeId, out var challenge))
+                    r.Challenge = challenge;
+            });
+
+            return new PagedResult<CoupleChallengeListItemResponse>
+            {
+                Items = response,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+             };
+        }
+
+        public async Task<CoupleChallengeListItemResponse> JoinChallengeAsync(int userId, int challengeId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            var challenge = await _unitOfWork.Challenges.GetByIdAsync(challengeId);
+            if (challenge == null || (challenge.IsDeleted.HasValue && challenge.IsDeleted != false))
+                throw new Exception("Thử thách không tồn tại");
+
+            if (challenge.Status != ChallengeStatus.ACTIVE.ToString())
+                throw new Exception("Thử thách chưa khả dụng");
+
+            var existing = await _unitOfWork.CoupleProfileChallenges.GetByCoupleIdAndChallengeIdAsync(couple.id, challengeId);
+            var coupleChallenge = existing;
+            var actorKey = member.Id.ToString();
+            if (coupleChallenge != null)
+            {
+                var existProgress = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(existing.ProgressData);
+
+                EnsureMemberState(existProgress, couple.MemberId1, couple.MemberId2);
+
+                // Member already joined
+                if (existProgress.MemberState.TryGetValue(actorKey, out var st) && st.IsJoined)
+                    throw new Exception("Bạn đã tham gia thử thách này");
+
+                existProgress.MemberState[actorKey].IsJoined = true;
+                existProgress.MemberState[actorKey].JoinedAt = DateTime.UtcNow;
+                existProgress.MemberState[actorKey].IsActive = true;
+                existProgress.MemberState[actorKey].LeftAt = null;
+
+                existing.ProgressData = JsonConverterUtil.Serialize(existProgress);
+                existing.UpdatedAt = DateTime.UtcNow;
+
+                _unitOfWork.CoupleProfileChallenges.Update(existing);
+            }
+            else
+            {
+                var items = GetVenueIdsFromChallenge(challenge);
+
+                // Create default progress data
+                var coupleChallengeProgress = new CoupleChallengeProgressData
+                {
+                    Trigger = challenge.TriggerEvent,
+                    Metric = challenge.GoalMetric,
+                    Target = challenge.TargetGoal.Value,
+                    Current = 0,
+                    IsCompleted = false,
+                    Members = new Dictionary<string, ProgressMember>()
+                    {
+                        { couple.MemberId1.ToString(), new ProgressMember() },
+                        { couple.MemberId2.ToString(), new ProgressMember() }
+                    },
+                    MemberState = new Dictionary<string, MemberState>()
+                    {
+                        { couple.MemberId1.ToString(), new MemberState() },
+                        { couple.MemberId2.ToString(), new MemberState() }
+                    },
+                    Unique = challenge.GoalMetric == ChallengeConstants.GoalMetrics.UNIQUE_LIST ? new ProgressUnique
+                    {
+                        Items = items,
+                        ByMember = new Dictionary<string, List<string>>()
+                    {
+                        { couple.MemberId1.ToString(), new List<string>() },
+                        { couple.MemberId2.ToString(), new List<string>() }
+                    }
+                    } : new(),
+                    Streak = challenge.GoalMetric == ChallengeConstants.GoalMetrics.STREAK ? new ProgressStreak
+                    {
+                        Mode = "DAILY",
+                        Current = 0,
+                        Best = 0,
+                        LastActionAt = null,
+                        ByMember = new Dictionary<string, StreakByMember>()
+                    {
+                        { couple.MemberId1.ToString(), new StreakByMember() },
+                        { couple.MemberId2.ToString(), new StreakByMember() }
+                    }
+                    } : new(),
+                    Events = challenge.TriggerEvent != ChallengeTriggerEvent.CHECKIN.ToString() ? new List<ProgressEvent>() : null,
+                    DailyHistory = challenge.TriggerEvent == ChallengeTriggerEvent.CHECKIN.ToString() ? new DailyHistory
+                    {
+                        Months = new Dictionary<string, Dictionary<string, int>>()
+                    } : null
+                };
+
+                coupleChallengeProgress.MemberState[actorKey].IsJoined = true;
+                coupleChallengeProgress.MemberState[actorKey].JoinedAt = DateTime.UtcNow;
+                coupleChallengeProgress.MemberState[actorKey].IsActive = true;
+                coupleChallengeProgress.MemberState[actorKey].LeftAt = null;
+
+                // Serialize progress data to JSON
+                var progressJson = JsonConverterUtil.Serialize(coupleChallengeProgress);
+
+                coupleChallenge = new CoupleProfileChallenge
+                {
+                    CoupleId = couple.id,
+                    ChallengeId = challengeId,
+                    CurrentProgress = 0,
+                    Status = CoupleProfileChallengeStatus.IN_PROGRESS.ToString(),
+                    ProgressData = progressJson,
+                };
+
+                await _unitOfWork.CoupleProfileChallenges.AddAsync(coupleChallenge);
+            }
+            await _unitOfWork.SaveChangesAsync();
+            var response = _mapper.Map<CoupleChallengeListItemResponse>(coupleChallenge);
+            var challengeResponse = await EnrichChallengeResponseAsync(new List<Challenge> { challenge });
+            var challengeMap = challengeResponse.ToDictionary(c => c.Id);
+
+            if (challengeMap.TryGetValue(response.ChallengeId, out var challengeRes))
+                response.Challenge = challengeRes;
+
+            return response;
+        }
+
+        private static void EnsureMemberState(CoupleChallengeProgressData p, int memberId1, int memberId2)
+        {
+            p.MemberState ??= new Dictionary<string, MemberState>();
+
+            void ensure(int mid)
+            {
+                var key = mid.ToString();
+                if (!p.MemberState.TryGetValue(key, out var st) || st == null)
+                    p.MemberState[key] = new MemberState();
+            }
+
+            ensure(memberId1);
+            ensure(memberId2);
+        }
+
+        private List<string> GetVenueIdsFromChallenge(Challenge challenge)
+        {
+            var allVenueIds = new List<string>();
+
+            if (string.IsNullOrEmpty(challenge.ConditionRules))
+                return allVenueIds;
+
+            try
+            {
+                var ruleWrapper = JsonConverterUtil.DeserializeOrDefault<ChallengeRuleWrapper>(challenge.ConditionRules);
+                if (ruleWrapper?.Rules != null)
+                {
+                    foreach (var rule in ruleWrapper.Rules)
+                    {
+                        if (rule.Key == ChallengeConstants.RuleKeys.VENUE_ID && rule.Value is JsonElement valElement)
+                        {
+                            var ids = JsonSerializer.Deserialize<List<string>>(valElement);
+                            if (ids != null)
+                                allVenueIds.AddRange(ids);
+                        }
+                    }
+                }
+
+                return allVenueIds;
+            }
+            catch (JsonException)
+            {
+                throw new Exception("Lỗi khi phân tích điều kiện thử thách");
+            }
+        }
+
+        public async Task<int> LeaveCoupleChallengeAsync(int userId, int coupleChallengeId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            var coupleChallenge = await _unitOfWork.CoupleProfileChallenges.GetByIdAsync(coupleChallengeId);
+            if (coupleChallenge == null || coupleChallenge.CoupleId != couple.id || coupleChallenge.IsDeleted == true)
+                throw new Exception("Thử thách của cặp đôi không tồn tại");
+
+            var progressData = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(coupleChallenge.ProgressData);
+            if (progressData?.MemberState == null)
+                throw new Exception("Dữ liệu tiến độ thử thách không hợp lệ");
+
+            var memberKey = member.Id.ToString();
+            if (!progressData.MemberState.TryGetValue(memberKey, out var state) || state == null || !state.IsJoined)
+                throw new Exception("Bạn chưa tham gia thử thách này");
+
+            state.IsJoined = false;
+            state.IsActive = false;
+            state.LeftAt = DateTime.UtcNow;
+
+            coupleChallenge.ProgressData = JsonConverterUtil.Serialize(progressData);
+            coupleChallenge.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.CoupleProfileChallenges.Update(coupleChallenge);
+            await _unitOfWork.SaveChangesAsync();
+            return coupleChallenge.Id;
         }
     }
 }
