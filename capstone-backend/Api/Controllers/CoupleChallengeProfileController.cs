@@ -87,5 +87,30 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Join a challenge for member
+        /// </summary>
+        [HttpPost("{challengeId:int}/join")]
+        public async Task<IActionResult> JoinChallenge([FromRoute] int challengeId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _challengeService.JoinChallengeAsync(userId.Value, challengeId);
+                if (result == null)
+                    return NotFoundResponse("Thử thách không tồn tại hoặc đã tham gia");
+
+                return OkResponse(result, "Tham gia thử thách thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

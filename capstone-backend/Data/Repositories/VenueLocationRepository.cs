@@ -331,11 +331,11 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
             .FirstOrDefaultAsync(vl => vl.Id == id);
     }
 
-    public async Task<IEnumerable<VenueLocation>> GetNamesByIdsAsync(List<int> venueIds)
+    public async Task<IEnumerable<VenueLocation>> GetNamesByIdsAsync(List<string> venueIds)
     {
         var query = _dbSet
             .AsNoTracking()
-            .Where(v => venueIds.Contains(v.Id) && v.IsDeleted == false && v.Status == "ACTIVE")
+            .Where(v => venueIds.Contains(v.Id.ToString()) && v.IsDeleted == false && v.Status == "ACTIVE")
             .Select(v => new VenueLocation
             {
                 Id = v.Id,
@@ -345,15 +345,15 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
         return await query.Distinct().ToListAsync();
     }
 
-    public async Task<List<int>> GetInvalidVenueIdsAsync(List<int> venueIds)
+    public async Task<List<string>> GetInvalidVenueIdsAsync(List<string> venueIds)
     {
         if (venueIds == null || !venueIds.Any()) 
-            return new List<int>();
+            return new List<string>();
 
         var validVenueIds = await _dbSet
             .AsNoTracking()
-            .Where(v => venueIds.Contains(v.Id) && v.Status == "ACTIVE" && v.IsDeleted == false)
-            .Select(v => v.Id)
+            .Where(v => venueIds.Contains(v.Id.ToString()) && v.Status == "ACTIVE" && v.IsDeleted == false)
+            .Select(v => v.Id.ToString())
             .ToListAsync();
 
         var invalidIds = venueIds.Except(validVenueIds).ToList();

@@ -69,7 +69,7 @@ namespace capstone_backend.Api.Controllers
 
                     new
                     {
-                        Code = ChallengeConstants.GoalMetrics.Streak,
+                        Code = ChallengeConstants.GoalMetrics.STREAK,
                         Label = "Chuỗi ngày liên tiếp"
                     }
                 },

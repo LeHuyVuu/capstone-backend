@@ -206,7 +206,7 @@ namespace capstone_backend.Business.Services
                             op = ChallengeConstants.RuleOps.In;
                             if (key == ChallengeConstants.RuleKeys.VENUE_ID)
                             {
-                                var intList = JsonSerializer.Deserialize<List<int>>(element.GetRawText());
+                                var intList = JsonSerializer.Deserialize<List<string>>(element.GetRawText());
                                 if (intList != null && intList.Any())
                                 {
                                     var uniqueIds = intList.Distinct().ToList();
@@ -222,7 +222,7 @@ namespace capstone_backend.Business.Services
                                 }
                                 else
                                 {
-                                    rawValue = new List<int>();
+                                    rawValue = new List<string>();
                                 }
                             }
                             else
@@ -267,7 +267,7 @@ namespace capstone_backend.Business.Services
         private async Task<List<ChallengeResponse>> EnrichChallengeResponseAsync(IEnumerable<Challenge> challenges)
         {
             var challengeResponses = _mapper.Map<List<ChallengeResponse>>(challenges);
-            var allVenueIds = new List<int>();
+            var allVenueIds = new List<string>();
 
             // Extract all venue IDs from rules
             foreach (var challenge in challenges)
@@ -284,7 +284,7 @@ namespace capstone_backend.Business.Services
                         {
                             if (rule.Key == ChallengeConstants.RuleKeys.VENUE_ID && rule.Value is JsonElement valElement)
                             {
-                                var ids = JsonSerializer.Deserialize<List<int>>(valElement);
+                                var ids = JsonSerializer.Deserialize<List<string>>(valElement);
                                 if (ids != null)
                                     allVenueIds.AddRange(ids);
                             }
@@ -300,7 +300,7 @@ namespace capstone_backend.Business.Services
 
             // Get venue names
             var venueLookup = await _unitOfWork.VenueLocations.GetNamesByIdsAsync(allVenueIds);
-            var venueIdToName = venueLookup.ToDictionary(v => v.Id, v => v.Name);
+            var venueIdToName = venueLookup.ToDictionary(v => v.Id.ToString(), v => v.Name);
 
             var items = challenges.ToList();
 
@@ -316,6 +316,11 @@ namespace capstone_backend.Business.Services
                 if (string.IsNullOrEmpty(rawRules))
                     continue;
 
+                if (targetDto.TriggerEvent == ChallengeTriggerEvent.CHECKIN.ToString())
+                {
+                    targetDto.Instructions.Add("📍 Thử thách yêu cầu điểm danh hằng ngày");
+                }
+
                 try
                 {
                     var ruleWrapper = JsonSerializer.Deserialize<ChallengeRuleWrapper>(rawRules);
@@ -329,7 +334,7 @@ namespace capstone_backend.Business.Services
                             {
                                 if (r.Value is JsonElement valElement && valElement.ValueKind == JsonValueKind.Array)
                                 {
-                                    var ids = JsonSerializer.Deserialize<List<int>>(valElement);
+                                    var ids = JsonSerializer.Deserialize<List<string>>(valElement);
                                     var names = ids?.Select(id => venueIdToName.ContainsKey(id) ? venueIdToName[id] : id.ToString());
                                     var venueNameStr = names != null ? string.Join(", ", names) : "N/A";
 
@@ -663,7 +668,15 @@ namespace capstone_backend.Business.Services
             );
 
             // Map to response
+            var challengeResponse = await EnrichChallengeResponseAsync(coupleChallenges.Select(cc => cc.Challenge).ToList());
+            var challengeMap = challengeResponse.ToDictionary(c => c.Id);
             var response = _mapper.Map<List<CoupleChallengeListItemResponse>>(coupleChallenges);
+
+            response.ForEach(r =>
+            {
+                if (challengeMap.TryGetValue(r.ChallengeId, out var challenge))
+                    r.Challenge = challenge;
+            });
 
             return new PagedResult<CoupleChallengeListItemResponse>
             {
@@ -672,6 +685,126 @@ namespace capstone_backend.Business.Services
                 PageNumber = pageNumber,
                 PageSize = pageSize
              };
+        }
+
+        public async Task<CoupleChallengeListItemResponse> JoinChallengeAsync(int userId, int challengeId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            var challenge = await _unitOfWork.Challenges.GetByIdAsync(challengeId);
+            if (challenge == null || (challenge.IsDeleted.HasValue && challenge.IsDeleted != false))
+                throw new Exception("Thử thách không tồn tại");
+
+            if (challenge.Status != ChallengeStatus.ACTIVE.ToString())
+                throw new Exception("Thử thách chưa khả dụng");
+
+            var existing = await _unitOfWork.CoupleProfileChallenges.GetByCoupleIdAndChallengeIdAsync(couple.id, challengeId);
+            if (existing != null)
+                throw new Exception("Cặp đôi đã tham gia thử thách này");
+
+            var items = GetVenueIdsFromChallenge(challenge);
+
+            // Create default progress data
+            var coupleChallengeProgress = new CoupleChallengeProgressData
+            {
+                Trigger = challenge.TriggerEvent,
+                Metric = challenge.GoalMetric,
+                Target = challenge.TargetGoal.Value,
+                Current = 0,
+                IsCompleted = false,
+                Members = new Dictionary<string, ProgressMember>()
+                {
+                    { couple.MemberId1.ToString(), new ProgressMember() },
+                    { couple.MemberId2.ToString(), new ProgressMember() }
+                },
+                Unique = challenge.GoalMetric == ChallengeConstants.GoalMetrics.UNIQUE_LIST ? new ProgressUnique
+                {
+                    Items = items,
+                    ByMember = new Dictionary<string, List<string>>()
+                    {
+                        { couple.MemberId1.ToString(), new List<string>() },
+                        { couple.MemberId2.ToString(), new List<string>() }
+                    }
+                } : new(),
+                Streak = challenge.GoalMetric == ChallengeConstants.GoalMetrics.STREAK ? new ProgressStreak
+                {
+                    Mode = "DAILY",
+                    Current = 0,
+                    Best = 0,
+                    LastActionAt = null,
+                    ByMember = new Dictionary<string, StreakByMember>()
+                    {
+                        { couple.MemberId1.ToString(), new StreakByMember() },
+                        { couple.MemberId2.ToString(), new StreakByMember() }
+                    }
+                } : new(),
+                Events = challenge.TriggerEvent != ChallengeTriggerEvent.CHECKIN.ToString() ? new List<ProgressEvent>() : null,
+                DailyHistory = challenge.TriggerEvent == ChallengeTriggerEvent.CHECKIN.ToString() ? new DailyHistory
+                {
+                    Months = new Dictionary<string, Dictionary<string, int>>()
+                } : null
+            };
+
+            // Serialize progress data to JSON
+            var progressJson = JsonConverterUtil.Serialize(coupleChallengeProgress);
+
+            var coupleChallenge = new CoupleProfileChallenge
+            {
+                CoupleId = couple.id,
+                ChallengeId = challengeId,
+                CurrentProgress = 0,
+                Status = CoupleProfileChallengeStatus.IN_PROGRESS.ToString(),
+                ProgressData = progressJson,
+            };
+
+            await _unitOfWork.CoupleProfileChallenges.AddAsync(coupleChallenge);
+            await _unitOfWork.SaveChangesAsync();
+
+            var response = _mapper.Map<CoupleChallengeListItemResponse>(coupleChallenge);
+            var challengeResponse = await EnrichChallengeResponseAsync(new List<Challenge> { challenge });
+            var challengeMap = challengeResponse.ToDictionary(c => c.Id);
+
+            if (challengeMap.TryGetValue(response.ChallengeId, out var challengeRes))
+                response.Challenge = challengeRes;
+
+            return response;
+        }
+
+        private List<string> GetVenueIdsFromChallenge(Challenge challenge)
+        {
+            var allVenueIds = new List<string>();
+
+            if (string.IsNullOrEmpty(challenge.ConditionRules))
+                return allVenueIds;
+
+            try
+            {
+                var ruleWrapper = JsonConverterUtil.DeserializeOrDefault<ChallengeRuleWrapper>(challenge.ConditionRules);
+                if (ruleWrapper?.Rules != null)
+                {
+                    foreach (var rule in ruleWrapper.Rules)
+                    {
+                        if (rule.Key == ChallengeConstants.RuleKeys.VENUE_ID && rule.Value is JsonElement valElement)
+                        {
+                            var ids = JsonSerializer.Deserialize<List<string>>(valElement);
+                            if (ids != null)
+                                allVenueIds.AddRange(ids);
+                        }
+                    }
+                }
+
+                return allVenueIds;
+            }
+            catch (JsonException)
+            {
+                throw new Exception("Lỗi khi phân tích điều kiện thử thách");
+            }
         }
     }
 }
