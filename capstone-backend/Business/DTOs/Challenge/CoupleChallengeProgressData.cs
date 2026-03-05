@@ -31,6 +31,8 @@
 
         public Dictionary<string, ProgressMember> Members { get; set; } = new();
 
+        public Dictionary<string, MemberState> MemberState { get; set; } = new();
+
         public ProgressUnique Unique { get; set; } = new();
 
         public ProgressStreak Streak { get; set; } = new();
@@ -45,6 +47,14 @@
         public int Current { get; set; } = 0;
         public int Streak { get; set; } = 0;
         public DateTime? LastActionAt { get; set; } = null;
+    }
+
+    public class MemberState
+    {
+        public bool IsJoined { get; set; } = false;
+        public DateTime? JoinedAt { get; set; } = null;
+        public bool IsActive { get; set; } = true;
+        public DateTime? LeftAt { get; set; } = null;
     }
 
     public class ProgressUnique

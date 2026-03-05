@@ -667,10 +667,20 @@ namespace capstone_backend.Business.Services
                 cc => cc.Include(cc => cc.Challenge)
             );
 
+            var memberKey = member.Id.ToString();
+            var filtered = coupleChallenges.Where(cc =>
+            {
+                var p = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(cc.ProgressData);
+                if (p?.MemberState == null)
+                    return false;
+
+                return p.MemberState.TryGetValue(memberKey, out var st) && st != null && st.IsJoined;
+            }).ToList();
+
             // Map to response
-            var challengeResponse = await EnrichChallengeResponseAsync(coupleChallenges.Select(cc => cc.Challenge).ToList());
+            var challengeResponse = await EnrichChallengeResponseAsync(filtered.Select(cc => cc.Challenge).ToList());
             var challengeMap = challengeResponse.ToDictionary(c => c.Id);
-            var response = _mapper.Map<List<CoupleChallengeListItemResponse>>(coupleChallenges);
+            var response = _mapper.Map<List<CoupleChallengeListItemResponse>>(filtered);
 
             response.ForEach(r =>
             {
@@ -705,67 +715,91 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Thử thách chưa khả dụng");
 
             var existing = await _unitOfWork.CoupleProfileChallenges.GetByCoupleIdAndChallengeIdAsync(couple.id, challengeId);
-            if (existing != null)
-                throw new Exception("Cặp đôi đã tham gia thử thách này");
-
-            var items = GetVenueIdsFromChallenge(challenge);
-
-            // Create default progress data
-            var coupleChallengeProgress = new CoupleChallengeProgressData
+            var coupleChallenge = existing;
+            var actorKey = member.Id.ToString();
+            if (coupleChallenge != null)
             {
-                Trigger = challenge.TriggerEvent,
-                Metric = challenge.GoalMetric,
-                Target = challenge.TargetGoal.Value,
-                Current = 0,
-                IsCompleted = false,
-                Members = new Dictionary<string, ProgressMember>()
+                var existProgress = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(existing.ProgressData);
+
+                EnsureMemberState(existProgress, couple.MemberId1, couple.MemberId2);
+
+                // Member already joined
+                if (existProgress.MemberState.TryGetValue(actorKey, out var st) && st.IsJoined)
+                    throw new Exception("Bạn đã tham gia thử thách này");
+
+                existProgress.MemberState[actorKey].IsJoined = true;
+                existProgress.MemberState[actorKey].JoinedAt = DateTime.UtcNow;
+
+                existing.ProgressData = JsonConverterUtil.Serialize(existProgress);
+                existing.UpdatedAt = DateTime.UtcNow;
+
+                _unitOfWork.CoupleProfileChallenges.Update(existing);
+            }
+            else
+            {
+                var items = GetVenueIdsFromChallenge(challenge);
+
+                // Create default progress data
+                var coupleChallengeProgress = new CoupleChallengeProgressData
                 {
-                    { couple.MemberId1.ToString(), new ProgressMember() },
-                    { couple.MemberId2.ToString(), new ProgressMember() }
-                },
-                Unique = challenge.GoalMetric == ChallengeConstants.GoalMetrics.UNIQUE_LIST ? new ProgressUnique
-                {
-                    Items = items,
-                    ByMember = new Dictionary<string, List<string>>()
+                    Trigger = challenge.TriggerEvent,
+                    Metric = challenge.GoalMetric,
+                    Target = challenge.TargetGoal.Value,
+                    Current = 0,
+                    IsCompleted = false,
+                    Members = new Dictionary<string, ProgressMember>()
+                    {
+                        { couple.MemberId1.ToString(), new ProgressMember() },
+                        { couple.MemberId2.ToString(), new ProgressMember() }
+                    },
+                    MemberState = new Dictionary<string, MemberState>()
+                    {
+                        { couple.MemberId1.ToString(), new MemberState { IsJoined = true, JoinedAt = DateTime.UtcNow } },
+                        { couple.MemberId2.ToString(), new MemberState() }
+                    },
+                    Unique = challenge.GoalMetric == ChallengeConstants.GoalMetrics.UNIQUE_LIST ? new ProgressUnique
+                    {
+                        Items = items,
+                        ByMember = new Dictionary<string, List<string>>()
                     {
                         { couple.MemberId1.ToString(), new List<string>() },
                         { couple.MemberId2.ToString(), new List<string>() }
                     }
-                } : new(),
-                Streak = challenge.GoalMetric == ChallengeConstants.GoalMetrics.STREAK ? new ProgressStreak
-                {
-                    Mode = "DAILY",
-                    Current = 0,
-                    Best = 0,
-                    LastActionAt = null,
-                    ByMember = new Dictionary<string, StreakByMember>()
+                    } : new(),
+                    Streak = challenge.GoalMetric == ChallengeConstants.GoalMetrics.STREAK ? new ProgressStreak
+                    {
+                        Mode = "DAILY",
+                        Current = 0,
+                        Best = 0,
+                        LastActionAt = null,
+                        ByMember = new Dictionary<string, StreakByMember>()
                     {
                         { couple.MemberId1.ToString(), new StreakByMember() },
                         { couple.MemberId2.ToString(), new StreakByMember() }
                     }
-                } : new(),
-                Events = challenge.TriggerEvent != ChallengeTriggerEvent.CHECKIN.ToString() ? new List<ProgressEvent>() : null,
-                DailyHistory = challenge.TriggerEvent == ChallengeTriggerEvent.CHECKIN.ToString() ? new DailyHistory
+                    } : new(),
+                    Events = challenge.TriggerEvent != ChallengeTriggerEvent.CHECKIN.ToString() ? new List<ProgressEvent>() : null,
+                    DailyHistory = challenge.TriggerEvent == ChallengeTriggerEvent.CHECKIN.ToString() ? new DailyHistory
+                    {
+                        Months = new Dictionary<string, Dictionary<string, int>>()
+                    } : null
+                };
+
+                // Serialize progress data to JSON
+                var progressJson = JsonConverterUtil.Serialize(coupleChallengeProgress);
+
+                coupleChallenge = new CoupleProfileChallenge
                 {
-                    Months = new Dictionary<string, Dictionary<string, int>>()
-                } : null
-            };
+                    CoupleId = couple.id,
+                    ChallengeId = challengeId,
+                    CurrentProgress = 0,
+                    Status = CoupleProfileChallengeStatus.IN_PROGRESS.ToString(),
+                    ProgressData = progressJson,
+                };
 
-            // Serialize progress data to JSON
-            var progressJson = JsonConverterUtil.Serialize(coupleChallengeProgress);
-
-            var coupleChallenge = new CoupleProfileChallenge
-            {
-                CoupleId = couple.id,
-                ChallengeId = challengeId,
-                CurrentProgress = 0,
-                Status = CoupleProfileChallengeStatus.IN_PROGRESS.ToString(),
-                ProgressData = progressJson,
-            };
-
-            await _unitOfWork.CoupleProfileChallenges.AddAsync(coupleChallenge);
+                await _unitOfWork.CoupleProfileChallenges.AddAsync(coupleChallenge);
+            }
             await _unitOfWork.SaveChangesAsync();
-
             var response = _mapper.Map<CoupleChallengeListItemResponse>(coupleChallenge);
             var challengeResponse = await EnrichChallengeResponseAsync(new List<Challenge> { challenge });
             var challengeMap = challengeResponse.ToDictionary(c => c.Id);
@@ -774,6 +808,21 @@ namespace capstone_backend.Business.Services
                 response.Challenge = challengeRes;
 
             return response;
+        }
+
+        private static void EnsureMemberState(CoupleChallengeProgressData p, int memberId1, int memberId2)
+        {
+            p.MemberState ??= new Dictionary<string, MemberState>();
+
+            void ensure(int mid)
+            {
+                var key = mid.ToString();
+                if (!p.MemberState.TryGetValue(key, out var st) || st == null)
+                    p.MemberState[key] = new MemberState();
+            }
+
+            ensure(memberId1);
+            ensure(memberId2);
         }
 
         private List<string> GetVenueIdsFromChallenge(Challenge challenge)
