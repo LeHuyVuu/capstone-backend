@@ -577,4 +577,98 @@ public class AdvertisementService : IAdvertisementService
     }
 
     #endregion
+
+    #region Admin Advertisement Management
+
+    public async Task<AdvertisementApprovalResult> ApproveAdvertisementAsync(ApproveAdvertisementRequest request)
+    {
+        _logger.LogInformation("Admin approving advertisement {AdId}", request.AdvertisementId);
+
+        var advertisement = await _unitOfWork.Advertisements.GetByIdWithDetailsAsync(request.AdvertisementId);
+        
+        if (advertisement == null)
+        {
+            return new AdvertisementApprovalResult 
+            { 
+                IsSuccess = false, 
+                Message = "Advertisement not found" 
+            };
+        }
+
+        if (advertisement.Status != "PENDING")
+        {
+            return new AdvertisementApprovalResult 
+            { 
+                IsSuccess = false, 
+                Message = $"Cannot approve advertisement with status '{advertisement.Status}'. Only 'PENDING' advertisements can be processed." 
+            };
+        }
+
+        advertisement.Status = "APPROVED";
+        advertisement.UpdatedAt = DateTime.UtcNow;
+        advertisement.RejectionReason = null;
+        
+        if (advertisement.VenueLocationAdvertisements != null && advertisement.VenueLocationAdvertisements.Any())
+        {
+            foreach (var vla in advertisement.VenueLocationAdvertisements.Where(v => v.Status == "PENDING"))
+            {
+                vla.Status = "ACTIVE";
+                vla.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        _unitOfWork.Advertisements.Update(advertisement);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("Advertisement {AdId} approved and activated", request.AdvertisementId);
+
+        return new AdvertisementApprovalResult 
+        { 
+            IsSuccess = true, 
+            Message = "Advertisement approved successfully" 
+        };
+    }
+
+    public async Task<AdvertisementApprovalResult> RejectAdvertisementAsync(RejectAdvertisementRequest request)
+    {
+        _logger.LogInformation("Admin rejecting advertisement {AdId}", request.AdvertisementId);
+
+        var advertisement = await _unitOfWork.Advertisements.GetByIdWithDetailsAsync(request.AdvertisementId);
+        
+        if (advertisement == null)
+        {
+            return new AdvertisementApprovalResult 
+            { 
+                IsSuccess = false, 
+                Message = "Advertisement not found" 
+            };
+        }
+
+        if (advertisement.Status != "PENDING")
+        {
+            return new AdvertisementApprovalResult 
+            { 
+                IsSuccess = false, 
+                Message = $"Cannot reject advertisement with status '{advertisement.Status}'. Only 'PENDING' advertisements can be processed." 
+            };
+        }
+
+        advertisement.Status = "REJECTED";
+        advertisement.UpdatedAt = DateTime.UtcNow;
+        advertisement.RejectionReason = request.Reason;
+
+        _unitOfWork.Advertisements.Update(advertisement);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("Advertisement {AdId} rejected. Reason: {Reason}", 
+            request.AdvertisementId, request.Reason ?? "No reason provided");
+
+        return new AdvertisementApprovalResult 
+        { 
+            IsSuccess = true, 
+            Message = "Advertisement rejected successfully" 
+        };
+    }
+
+    #endregion
 }

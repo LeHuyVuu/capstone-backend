@@ -241,4 +241,60 @@ public class AdvertisementController : BaseController
             return BadRequestResponse("Failed to submit advertisement with payment");
         }
     }
+
+    [HttpPost("approve")]
+    [Authorize(Roles = "ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<AdvertisementApprovalResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> ApproveAdvertisement([FromBody] ApproveAdvertisementRequest request)
+    {
+        _logger.LogInformation("Admin approving advertisement {AdId}", request.AdvertisementId);
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequestResponse("Invalid request data");
+        }
+
+        var result = await _advertisementService.ApproveAdvertisementAsync(request);
+
+        if (!result.IsSuccess)
+        {
+            if (result.Message == "Advertisement not found") 
+                return NotFoundResponse(result.Message);
+            return BadRequestResponse(result.Message);
+        }
+
+        return OkResponse(result, result.Message);
+    }
+
+    [HttpPost("reject")]
+    [Authorize(Roles = "ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<AdvertisementApprovalResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> RejectAdvertisement([FromBody] RejectAdvertisementRequest request)
+    {
+        _logger.LogInformation("Admin rejecting advertisement {AdId}", request.AdvertisementId);
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequestResponse("Invalid request data");
+        }
+
+        var result = await _advertisementService.RejectAdvertisementAsync(request);
+
+        if (!result.IsSuccess)
+        {
+            if (result.Message == "Advertisement not found") 
+                return NotFoundResponse(result.Message);
+            return BadRequestResponse(result.Message);
+        }
+
+        return OkResponse(result, result.Message);
+    }
 }
