@@ -579,11 +579,16 @@ namespace capstone_backend.Business.Services
                 var coupleChallenge = await _unitOfWork.CoupleProfileChallenges.GetByCoupleIdAndChallengeIdAsync(couple.id, challengeId);
                 if (coupleChallenge != null)
                 {
-                    response.IsJoined = true;
-                    response.CoupleChallengeId = coupleChallenge.Id;
-                    response.CoupleChallengeStatus = coupleChallenge.Status;
-                    response.CurrentProgress = coupleChallenge.CurrentProgress ?? 0;
-                    response.JoinedAt = coupleChallenge.JoinedAt;
+                    var progressData = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(coupleChallenge.ProgressData);
+
+                    if (progressData?.MemberState != null && progressData.MemberState.TryGetValue(member.Id.ToString(), out var st) && st != null && st.IsJoined)
+                    {
+                        response.IsJoined = st.IsJoined;
+                        response.CoupleChallengeId = coupleChallenge.Id;
+                        response.CoupleChallengeStatus = coupleChallenge.Status;
+                        response.CurrentProgress = coupleChallenge.CurrentProgress ?? 0;
+                        response.JoinedAt = st.JoinedAt;
+                    }
                 }
             }
 
@@ -601,8 +606,6 @@ namespace capstone_backend.Business.Services
             var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
             if (couple == null)
                 throw new Exception("Thành viên chưa thuộc cặp đôi nào");
-
-            var now = DateTime.UtcNow;
 
             // Normalize paging
             var pageNumber = query.PageNumber <= 0 ? 1 : query.PageNumber;
@@ -627,7 +630,9 @@ namespace capstone_backend.Business.Services
             var to = query.To;
 
             // Normalize sort
-            var sort = string.IsNullOrWhiteSpace(query.Sort) ? "updatedAtDesc" : query.Sort.Trim();
+            var sort = string.IsNullOrWhiteSpace(query.Sort)
+                ? "updatedatdesc"
+                : query.Sort.Trim().ToLowerInvariant();
 
             // Create predicate
             Expression<Func<CoupleProfileChallenge, bool>> predicate = cc =>
@@ -644,49 +649,65 @@ namespace capstone_backend.Business.Services
                 (from.HasValue == false || (cc.Challenge != null && cc.Challenge.StartDate >= from.Value)) &&
                 (to.HasValue == false || (cc.Challenge != null && cc.Challenge.EndDate <= to.Value));
 
-            // Order by
-            Func<IQueryable<CoupleProfileChallenge>, IOrderedQueryable<CoupleProfileChallenge>> orderBy =
-                sort.ToLowerInvariant() switch
-                {
-                    "updatedAtAsc" => x => x.OrderBy(cc => cc.UpdatedAt),
-                    "updatedAtDesc" => x => x.OrderByDescending(cc => cc.UpdatedAt),
+            // Get all raw data
+            var allCoupleChallenges = await _unitOfWork.CoupleProfileChallenges.GetAsync(predicate, cc => cc.Include(c => c.Challenge));
 
-                    "joinedAtAsc" => x => x.OrderBy(cc => cc.JoinedAt),
-                    "joinedAtDesc" => x => x.OrderByDescending(cc => cc.JoinedAt),
-
-                    // fallback
-                    _ => x => x.OrderByDescending(cc => cc.UpdatedAt)
-                };
-
-            // Query with paging
-            var (coupleChallenges, totalCount) = await _unitOfWork.CoupleProfileChallenges.GetPagedAsync(
-                pageNumber,
-                pageSize,
-                predicate,
-                orderBy,
-                cc => cc.Include(cc => cc.Challenge)
-            );
-
+            // Get couple challenge and progress into memory
             var memberKey = member.Id.ToString();
-            var filtered = coupleChallenges.Where(cc =>
-            {
-                var p = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(cc.ProgressData);
-                if (p?.MemberState == null)
-                    return false;
+            var filtered = allCoupleChallenges
+                .Select(cc => new
+                {
+                    CoupleChallenge = cc,
+                    Progress = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(cc.ProgressData)
+                })
+                .Where(x => 
+                    x.Progress?.MemberState != null &&
+                    x.Progress.MemberState.TryGetValue(memberKey, out var st) &&
+                    st != null &&
+                    st.IsJoined
+                ).ToList();
 
-                return p.MemberState.TryGetValue(memberKey, out var st) && st != null && st.IsJoined;
-            }).ToList();
+            // Apply sorting in memory
+            filtered = sort switch
+            {
+                "updatedatasc" => filtered.OrderBy(x => x.CoupleChallenge.UpdatedAt).ToList(),
+                "updatedatdesc" => filtered.OrderByDescending(x => x.CoupleChallenge.UpdatedAt).ToList(),
+
+                "joinedatasc" => filtered.OrderBy(x =>
+                    x.Progress!.MemberState![memberKey].JoinedAt ?? DateTime.MaxValue).ToList(),
+                "joinedatdesc" => filtered.OrderByDescending(x =>
+                    x.Progress!.MemberState![memberKey].JoinedAt ?? DateTime.MinValue).ToList(),
+
+                _ => filtered.OrderByDescending(x => x.CoupleChallenge.UpdatedAt).ToList()
+            };
+
+            var totalCount = filtered.Count;
+            var paged = filtered
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
 
             // Map to response
-            var challengeResponse = await EnrichChallengeResponseAsync(filtered.Select(cc => cc.Challenge).ToList());
+            var filteredEntities = paged.Select(x => x.CoupleChallenge).ToList();
+            var challengeResponse = await EnrichChallengeResponseAsync(filteredEntities.Select(cc => cc.Challenge).ToList());
             var challengeMap = challengeResponse.ToDictionary(c => c.Id);
-            var response = _mapper.Map<List<CoupleChallengeListItemResponse>>(filtered);
+            var response = _mapper.Map<List<CoupleChallengeListItemResponse>>(filteredEntities);
 
-            response.ForEach(r =>
+            for (int i = 0; i < paged.Count; i++)
             {
+                var item = paged[i];
+                var r = response[i];
+
                 if (challengeMap.TryGetValue(r.ChallengeId, out var challenge))
                     r.Challenge = challenge;
-            });
+
+                if (item.Progress?.MemberState != null &&
+                    item.Progress.MemberState.TryGetValue(memberKey, out var st) &&
+                    st != null)
+                {
+                    r.JoinedAt = st.JoinedAt;
+                }
+            }
 
             return new PagedResult<CoupleChallengeListItemResponse>
             {
@@ -695,6 +716,17 @@ namespace capstone_backend.Business.Services
                 PageNumber = pageNumber,
                 PageSize = pageSize
              };
+        }
+
+        private DateTime? GetJoinedAt(CoupleProfileChallenge cc, int memberId)
+        {
+            var key = memberId.ToString();
+            var progressData = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(cc.ProgressData);
+            if (progressData?.MemberState != null && progressData.MemberState.TryGetValue(key, out var st) && st != null)
+            {
+                return st.JoinedAt;
+            }
+            return null;
         }
 
         public async Task<CoupleChallengeListItemResponse> JoinChallengeAsync(int userId, int challengeId)

@@ -91,7 +91,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Join a challenge for member
         /// </summary>
-        [HttpPost("{challengeId:int}/join")]
+        [HttpPost("challenges/{challengeId:int}/join")]
         public async Task<IActionResult> JoinChallenge([FromRoute] int challengeId)
         {
             try
