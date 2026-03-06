@@ -60,8 +60,7 @@ public class UserService : IUserService
             AccessToken = accessToken,
             RefreshToken = refreshToken,
             ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes),
-            AvartarUrl = user.AvatarUrl,
-            Gender = gender
+            User = MapToUserResponse(user)
         };
     }
 

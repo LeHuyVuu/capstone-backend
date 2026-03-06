@@ -1,3 +1,5 @@
+using capstone_backend.Business.DTOs.User;
+
 namespace capstone_backend.Business.DTOs.Auth;
 
 /// <summary>
@@ -22,8 +24,5 @@ public class LoginResponse
     /// </summary>
     public DateTime ExpiresAt { get; set; }
 
-    public string Gender { get; set; } = string.Empty;
-
-        public string? AvartarUrl { get; set; }
-
+    public UserResponse User { get; set; } = new();
 }
