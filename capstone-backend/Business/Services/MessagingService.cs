@@ -49,6 +49,14 @@ public class MessagingService : IMessagingService
         if (!memberIds.Contains(currentUserId))
             memberIds.Add(currentUserId);
 
+        // Validate all member users exist in database
+        foreach (var memberId in memberIds)
+        {
+            var user = await _unitOfWork.Users.GetByIdAsync(memberId);
+            if (user == null)
+                throw new BadRequestException($"User with ID {memberId} not found", "USER_NOT_FOUND");
+        }
+
         // For direct conversation, must have exactly 2 members
         if (request.Type == "DIRECT")
         {
@@ -129,6 +137,11 @@ public class MessagingService : IMessagingService
 
         if (currentUserId == otherUserId)
             throw new Exception("Cannot create conversation with yourself");
+
+        // Validate other user exists
+        var otherUser = await _unitOfWork.Users.GetByIdAsync(otherUserId);
+        if (otherUser == null)
+            throw new BadRequestException($"User with ID {otherUserId} not found", "USER_NOT_FOUND");
 
         // Check if conversation exists
         var existing = await _conversationRepository.GetDirectConversationAsync(currentUserId, otherUserId, cancellationToken);
@@ -474,17 +487,21 @@ public class MessagingService : IMessagingService
         _messageRepository.Update(message);
         await _unitOfWork.SaveChangesAsync();
 
-        // Notify conversation members via SignalR
+        // Notify conversation members via SignalR (including sender for multi-device sync)
         if (message.ConversationId != null)
         {
             var members = await _memberRepository.GetActiveConversationMembersAsync(message.ConversationId.Value, cancellationToken);
             foreach (var member in members)
             {
-                if (member.UserId == null || member.UserId == currentUserId)
+                if (member.UserId == null)
                     continue;
                     
                 await _hubContext.Clients.User(member.UserId.Value.ToString())
-                    .SendAsync("MessageDeleted", messageId, cancellationToken);
+                    .SendAsync("MessageDeleted", new 
+                    { 
+                        messageId = messageId, 
+                        conversationId = message.ConversationId.Value 
+                    }, cancellationToken);
             }
         }
     }
