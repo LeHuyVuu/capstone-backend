@@ -29,6 +29,8 @@ public class UserResponse
     /// </summary>
     public string? PhoneNumber { get; set; }
 
+    public string? AvatarUrl { get; set; }
+
     /// <summary>
     /// User's role
     /// </summary>

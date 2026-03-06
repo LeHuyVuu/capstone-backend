@@ -381,6 +381,7 @@ public class UserService : IUserService
             Email = user.Email,
             FullName = user.DisplayName ?? string.Empty,
             PhoneNumber = user.PhoneNumber,
+            AvatarUrl = user.AvatarUrl,
             Role = user.Role ?? "User",
             IsActive = user.IsActive ?? false,
             LastLoginAt = user.LastLoginAt,
