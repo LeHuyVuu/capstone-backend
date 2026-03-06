@@ -7,13 +7,13 @@ namespace capstone_backend.Business.Common.Helpers
 {
     public static class ChallengeProgressExtraBuilder
     {
-        public static CoupleChallengeProgressExtraResponse? Build(CoupleChallengeProgressData? progress)
+        public static CoupleChallengeProgressExtraResponse? Build(CoupleChallengeProgressData? progress, int currentMemberId)
         {
             if (progress == null || string.IsNullOrWhiteSpace(progress.Trigger))
                 return null;
 
             if (string.Equals(progress.Trigger, ChallengeTriggerEvent.CHECKIN.ToString(), StringComparison.OrdinalIgnoreCase))
-                return BuildCheckinExtra(progress);
+                return BuildCheckinExtra(progress, currentMemberId);
 
             if (string.Equals(progress.Trigger, ChallengeTriggerEvent.REVIEW.ToString(), StringComparison.OrdinalIgnoreCase))
                 return BuildReviewExtra(progress);
@@ -73,6 +73,37 @@ namespace capstone_backend.Business.Common.Helpers
 
             var bitIndex = day - 1;
             return (monthMask & (1 << bitIndex)) != 0;
+        }
+
+        private static ReviewChallengeProgressExtraResponse BuildReviewExtra(CoupleChallengeProgressData progress)
+        {
+            var qualifiedCount = progress.Current;
+            DateTime? lastQualifiedReviewAt = null;
+            int? lastVenueId = null;
+            string? lastVenueName = null;
+
+            var orderedQualifiedItems = progress.QualifiedItems?
+                .OrderByDescending(item => item.ActionAt);
+
+            if (orderedQualifiedItems != null)
+            {
+                var lastQualifiedItem = orderedQualifiedItems.FirstOrDefault();
+                if (lastQualifiedItem != null)
+                {
+                    lastQualifiedReviewAt = lastQualifiedItem.ActionAt;
+                    lastVenueId = lastQualifiedItem.RefId;
+                    lastVenueName = lastQualifiedItem.Name;
+                }
+            }
+
+            return new ReviewChallengeProgressExtraResponse
+            {
+                Type = ChallengeTriggerEvent.REVIEW.ToString(),
+                QualifiedReviewCount = qualifiedCount,
+                LastQualifiedReviewAt = lastQualifiedReviewAt,
+                LastVenueId = lastVenueId,
+                LastVenueName = lastVenueName
+            };
         }
     }
 }

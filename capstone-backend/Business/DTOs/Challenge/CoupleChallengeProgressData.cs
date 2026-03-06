@@ -84,6 +84,8 @@
     public class QualifiedProgressItem
     {
         public int RefId { get; set; }
+        public string Name { get; set; }
+        public string Type { get; set; } // VENUE | POST | REVIEW
         public int MemberId { get; set; }
         public DateTime ActionAt { get; set; }
     }
