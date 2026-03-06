@@ -487,17 +487,21 @@ public class MessagingService : IMessagingService
         _messageRepository.Update(message);
         await _unitOfWork.SaveChangesAsync();
 
-        // Notify conversation members via SignalR
+        // Notify conversation members via SignalR (including sender for multi-device sync)
         if (message.ConversationId != null)
         {
             var members = await _memberRepository.GetActiveConversationMembersAsync(message.ConversationId.Value, cancellationToken);
             foreach (var member in members)
             {
-                if (member.UserId == null || member.UserId == currentUserId)
+                if (member.UserId == null)
                     continue;
                     
                 await _hubContext.Clients.User(member.UserId.Value.ToString())
-                    .SendAsync("MessageDeleted", messageId, cancellationToken);
+                    .SendAsync("MessageDeleted", new 
+                    { 
+                        messageId = messageId, 
+                        conversationId = message.ConversationId.Value 
+                    }, cancellationToken);
             }
         }
     }
