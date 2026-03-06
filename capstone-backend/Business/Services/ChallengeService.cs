@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using capstone_backend.Business.Common.Constants;
+using capstone_backend.Business.Common.Helpers;
 using capstone_backend.Business.DTOs.Challenge;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.Interfaces;
@@ -707,6 +708,8 @@ namespace capstone_backend.Business.Services
                 {
                     r.JoinedAt = st.JoinedAt;
                 }
+
+                r.CurrentProgress = item.CoupleChallenge.CurrentProgress ?? 0;
             }
 
             return new PagedResult<CoupleChallengeListItemResponse>
@@ -849,6 +852,7 @@ namespace capstone_backend.Business.Services
                 response.Challenge = challengeRes;
                 response.JoinedAt = GetJoinedAt(coupleChallenge, member.Id);
                 response.TargetProgress = challenge.TargetGoal.Value;
+                response.ProgressText = ChallengeProgressTextFormatter.Build(challenge.TriggerEvent, challenge.GoalMetric, 0, challenge.TargetGoal.Value, false);
             }
 
             return response;
