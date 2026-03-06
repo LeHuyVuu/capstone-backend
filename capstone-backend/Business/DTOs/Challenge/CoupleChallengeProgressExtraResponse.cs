@@ -54,4 +54,34 @@
 
         public int? LastPostId { get; set; }
     }
+
+    public class ReviewChallengeDetailProgressExtraResponse : ReviewChallengeProgressExtraResponse
+    {
+        public List<ReviewChallengeQualifiedItemResponse> RecentQualifiedItems { get; set; } = new();
+    }
+
+    public class PostChallengeDetailProgressExtraResponse : PostChallengeProgressExtraResponse
+    {
+        public List<PostChallengeQualifiedItemResponse> RecentQualifiedItems { get; set; } = new();
+    }
+
+    public class ReviewChallengeQualifiedItemResponse
+    {
+        public int ReviewId { get; set; }
+        public int VenueId { get; set; }
+        public string? VenueName { get; set; }
+
+        public int MemberId { get; set; }
+        public string? MemberName { get; set; }
+
+        public DateTime QualifiedAt { get; set; }
+    }
+
+    public class PostChallengeQualifiedItemResponse
+    {
+        public int PostId { get; set; }
+        public int MemberId { get; set; }
+        public string? MemberName { get; set; }
+        public DateTime QualifiedAt { get; set; }
+    }
 }
