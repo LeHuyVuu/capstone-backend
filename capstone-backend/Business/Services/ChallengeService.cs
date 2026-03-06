@@ -845,7 +845,11 @@ namespace capstone_backend.Business.Services
             var challengeMap = challengeResponse.ToDictionary(c => c.Id);
 
             if (challengeMap.TryGetValue(response.ChallengeId, out var challengeRes))
+            {
                 response.Challenge = challengeRes;
+                response.JoinedAt = GetJoinedAt(coupleChallenge, member.Id);
+                response.TargetProgress = challenge.TargetGoal.Value;
+            }
 
             return response;
         }
