@@ -812,6 +812,7 @@ namespace capstone_backend.Business.Services
                         { couple.MemberId2.ToString(), new StreakByMember() }
                     }
                     } : new(),
+                    QualifiedItems = challenge.GoalMetric != ChallengeConstants.GoalMetrics.STREAK ? new List<QualifiedProgressItem>() : null,
                     Events = challenge.TriggerEvent != ChallengeTriggerEvent.CHECKIN.ToString() ? new List<ProgressEvent>() : null,
                     DailyHistory = challenge.TriggerEvent == ChallengeTriggerEvent.CHECKIN.ToString() ? new DailyHistory
                     {

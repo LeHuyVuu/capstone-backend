@@ -37,6 +37,8 @@
 
         public ProgressStreak Streak { get; set; } = new();
 
+        public List<QualifiedProgressItem>? QualifiedItems { get; set; } = new();
+
         public List<ProgressEvent>? Events { get; set; } = null;
 
         public DailyHistory? DailyHistory { get; set; } = null;
@@ -77,6 +79,13 @@
         public int Current { get; set; } = 0;
         public int Best { get; set; } = 0;
         public DateTime? LastAt { get; set; } = null;
+    }
+
+    public class QualifiedProgressItem
+    {
+        public int RefId { get; set; }
+        public int MemberId { get; set; }
+        public DateTime ActionAt { get; set; }
     }
 
     public class ProgressEvent
