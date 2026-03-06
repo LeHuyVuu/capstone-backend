@@ -156,17 +156,17 @@ public class MessagingController : BaseController
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddMembers(
         [FromRoute] int conversationId,
-        [FromBody] List<int> memberIds,
+        [FromBody] AddMembersBodyRequest request,
         CancellationToken cancellationToken)
     {
-        if (memberIds == null || !memberIds.Any())
-            return BadRequest("At least one member is required");
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
 
         var userId = GetCurrentUserId() ?? 0;
         await _messagingService.AddMembersAsync(userId, new AddMembersRequest
         {
             ConversationId = conversationId,
-            MemberIds = memberIds
+            MemberIds = request.MemberIds
         }, cancellationToken);
         
         return NoContent();
