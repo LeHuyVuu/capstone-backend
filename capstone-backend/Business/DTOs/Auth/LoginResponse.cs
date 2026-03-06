@@ -24,5 +24,10 @@ public class LoginResponse
     /// </summary>
     public DateTime ExpiresAt { get; set; }
 
-    public UserResponse User { get; set; } = new();
+    public string Gender { get; set; } = string.Empty;
+    public string? AvatarUrl { get; set; }
+
+    public string? FullName { get; set; }
+    public DateOnly? DateOfBirth { get; set; }
+    public string? InviteCode { get; set; }
 }
