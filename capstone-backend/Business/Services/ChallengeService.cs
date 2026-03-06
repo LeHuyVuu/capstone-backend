@@ -710,6 +710,15 @@ namespace capstone_backend.Business.Services
                 }
 
                 r.CurrentProgress = item.CoupleChallenge.CurrentProgress ?? 0;
+                r.TargetProgress = r.Challenge != null ? r.Challenge.TargetGoal : 0;
+                r.ProgressText = ChallengeProgressTextFormatter.Build(
+                    r.Challenge.TriggerEvent,
+                    r.Challenge.GoalMetric,
+                    r.CurrentProgress,
+                    r.TargetProgress,
+                    item.Progress.IsCompleted,
+                    ChallengeProgressExtraBuilder.Build(item.Progress, member.Id)
+                );
             }
 
             return new PagedResult<CoupleChallengeListItemResponse>

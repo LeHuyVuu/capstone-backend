@@ -23,16 +23,16 @@ namespace capstone_backend.Business.Common.Helpers
             {
                 if (progressExtra is CheckinChallengeProgressExtraResponse checkinExtra)
                     return $"{checkinExtra.DoneMembersToday}/{checkinExtra.TotalMembers} người đã điểm danh mood hôm nay";
-            }
 
-            return $"{current}/{target} điểm danh hợp lệ";
+                return $"{current}/{target} điểm danh hợp lệ";
+            }
 
             // STREAK
             if (string.Equals(metric, ChallengeConstants.GoalMetrics.STREAK, StringComparison.OrdinalIgnoreCase))
             {
                 if (progressExtra is CheckinChallengeProgressExtraResponse checkinExtra)
                 {
-                    return $"Chuỗi hiện tại: {checkinExtra.CurrentStreak} ngày";
+                    return $"Chuỗi hiện tại: {checkinExtra.CoupleCurrentStreak} ngày";
                 }
 
                 return $"Chuỗi hiện tại: {current} ngày";
