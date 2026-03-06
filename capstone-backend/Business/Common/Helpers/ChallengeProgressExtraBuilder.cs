@@ -1,7 +1,6 @@
 ﻿using capstone_backend.Business.DTOs.Challenge;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
-using Microsoft.IdentityModel.Tokens;
 
 namespace capstone_backend.Business.Common.Helpers
 {
@@ -52,6 +51,15 @@ namespace capstone_backend.Business.Common.Helpers
                     currentMemberCheckedInToday = IsDayChecked(currentMemberMask, day);
             }
 
+            var memberCurrentStreak = 0;
+            var memberLongestStreak = 0;
+
+            if (progress.Members != null && progress.Members.TryGetValue(memberKey, out var memberProgress))
+            {
+                memberCurrentStreak = memberProgress.Current;
+                memberLongestStreak = memberProgress.Streak;
+            }
+
             return new CheckinChallengeProgressExtraResponse
             {
                 Type = ChallengeTriggerEvent.CHECKIN.ToString(),
@@ -59,8 +67,8 @@ namespace capstone_backend.Business.Common.Helpers
                 CanCheckinToday = !currentMemberCheckedInToday,
                 DoneMembersToday = doneMembersToday,
                 TotalMembers = totalMembers,
-                MemberCurrentStreak = progress.Members[memberKey].Current,
-                MemberLongestStreak = progress.Members[memberKey].Streak,
+                MemberCurrentStreak = memberCurrentStreak,
+                MemberLongestStreak = memberLongestStreak,
                 CoupleCurrentStreak = progress.Streak.Current,
                 CoupleLongestStreak = progress.Streak.Best
             };
@@ -103,6 +111,33 @@ namespace capstone_backend.Business.Common.Helpers
                 LastQualifiedReviewAt = lastQualifiedReviewAt,
                 LastVenueId = lastVenueId,
                 LastVenueName = lastVenueName
+            };
+        }
+
+        private static PostChallengeProgressExtraResponse BuildPostExtra(CoupleChallengeProgressData progress)
+        {
+            var qualifiedCount = progress.Current;
+            DateTime? lastQualifiedPostAt = null;
+            int? lastPostId = null;
+
+            var orderedQualifiedItems = progress.QualifiedItems?
+                .OrderByDescending(item => item.ActionAt);
+
+            if (orderedQualifiedItems != null)
+            {
+                var lastQualifiedItem = orderedQualifiedItems.FirstOrDefault();
+                if (lastQualifiedItem != null)
+                {
+                    lastQualifiedPostAt = lastQualifiedItem.ActionAt;
+                    lastPostId = lastQualifiedItem.RefId;
+                }
+            }
+            return new PostChallengeProgressExtraResponse
+            {
+                Type = ChallengeTriggerEvent.POST.ToString(),
+                QualifiedPostCount = qualifiedCount,
+                LastQualifiedPostAt = lastQualifiedPostAt,
+                LastPostId = lastPostId
             };
         }
     }
