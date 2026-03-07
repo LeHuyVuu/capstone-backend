@@ -500,9 +500,15 @@ namespace capstone_backend.Business.Services
                 Status = x.Status,
                 RuleData = x.RuleData,
                 Instructions = x.Instructions,
+                CreatedAt = x.CreatedAt,
 
                 IsJoined = false
             }).ToList();
+
+            result = result
+                .OrderByDescending(x => x.Id == 14)
+                .ThenByDescending(x => x.CreatedAt)
+                .ToList();
 
             // Get joined challenges for this couple if exists
             if (couple != null && result.Any())
