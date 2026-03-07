@@ -98,4 +98,33 @@ public class CoupleProfileRepository : GenericRepository<CoupleProfile>, ICouple
 
         return (couple.Member1UserId, couple.Member2UserId);
     }
+
+    public async Task<IEnumerable<MemberProfile>> GetCoupleMemberAsync(int coupleId)
+    {
+        var couple = await _dbSet
+            .Include(c => c.MemberId1Navigation)
+                .ThenInclude(m => m.User)
+            .Include(c => c.MemberId2Navigation)
+                .ThenInclude(m => m.User)
+            .Where(c => c.id == coupleId && c.IsDeleted == false)
+            .Select(c => new
+            {
+                c.MemberId1Navigation,
+                c.MemberId2Navigation
+            })
+            .FirstOrDefaultAsync();
+
+        if (couple == null)
+            return Enumerable.Empty<MemberProfile>();
+
+        var members = new List<MemberProfile>();
+
+        if (couple.MemberId1Navigation != null)
+            members.Add(couple.MemberId1Navigation);
+
+        if (couple.MemberId2Navigation != null)
+            members.Add(couple.MemberId2Navigation);
+
+        return members;
+    }
 }

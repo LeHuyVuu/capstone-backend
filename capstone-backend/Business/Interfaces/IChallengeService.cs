@@ -10,6 +10,7 @@ namespace capstone_backend.Business.Interfaces
         Task<int> DeleteChallengeAsync(int challengeId);
         Task<PagedResult<ChallengeResponse>> GetAllChallengesAsync(int pageNumber, int pageSize);
         Task<ChallengeResponse> GetChallengeByIdAsync(int challengeId);
+        Task<CoupleChallengeDetailResponse> GetCoupleChallengeProgressAsync(int userId, int coupleChallengeId);
         Task<MemberChallengeDetailResponse> GetMemberChallengeByIdAsync(int userId, int challengeId);
         Task<PagedResult<MemberChallengeResponse>> GetMemberChallengesAsync(int userId, int pageNumber, int pageSize);
         Task<PagedResult<CoupleChallengeListItemResponse>> GetMyCoupleChallengesAsync(int userId, CoupleChallengeQuery query);
