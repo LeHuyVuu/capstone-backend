@@ -265,8 +265,7 @@ public class MessagingService : IMessagingService
                     plannedEndAt = datePlan.PlannedEndAt,
                     estimatedBudget = datePlan.EstimatedBudget,
                     totalCount = datePlan.DatePlanItems?.Count ?? 0,
-                    imageUrl = imageUrl,
-                    venueName = firstVenue?.Name
+                    imageDatePlanUrl = "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/images/46/e783d6de-d417-4bb7-88a4-9ddce30bd8bc.jpg"
                 };
                 metadata = System.Text.Json.JsonSerializer.Serialize(datePlanInfo);
                 Console.WriteLine($"[DEBUG] DatePlan metadata serialized: {metadata}");
