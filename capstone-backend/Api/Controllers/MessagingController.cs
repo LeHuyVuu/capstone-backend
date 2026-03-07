@@ -1,4 +1,5 @@
 using capstone_backend.Api.Controllers;
+using capstone_backend.Api.Filters;
 using capstone_backend.Business.DTOs.Messaging;
 using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -12,6 +13,7 @@ namespace capstone_backend.Controllers;
 /// </summary>
 [Authorize]
 [Route("api/[controller]")]
+[Moderation]
 public class MessagingController : BaseController
 {
     private readonly IMessagingService _messagingService;
