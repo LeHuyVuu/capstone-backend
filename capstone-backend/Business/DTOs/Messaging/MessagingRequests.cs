@@ -89,6 +89,16 @@ public class AddMembersRequest
 }
 
 /// <summary>
+/// DTO for adding members body (without conversationId in route)
+/// </summary>
+public class AddMembersBodyRequest
+{
+    [Required(ErrorMessage = "At least one member is required")]
+    [MinLength(1, ErrorMessage = "At least one member is required")]
+    public List<int> MemberIds { get; set; } = new();
+}
+
+/// <summary>
 /// DTO for removing member from group
 /// </summary>
 public class RemoveMemberRequest

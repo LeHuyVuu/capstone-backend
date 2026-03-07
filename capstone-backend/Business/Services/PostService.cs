@@ -52,6 +52,7 @@ namespace capstone_backend.Business.Services
             var response = _mapper.Map<PostResponse>(post);
             response.IsLikedByMe = post.PostLikes.Any(pl => pl.MemberId == member.Id);
             response.IsOwner = post.AuthorId == member.Id;
+            response.Author.Avatar = post.Author.User.AvatarUrl;
 
             return response;
         }
@@ -239,6 +240,10 @@ namespace capstone_backend.Business.Services
             if (post == null || post.IsDeleted == true)
                 throw new Exception("Bài viết không tồn tại");
 
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
             var (comments, count) = await _unitOfWork.Comments.GetPagedAsync(
                     pageNumber,
                     pageSize,
@@ -248,10 +253,21 @@ namespace capstone_backend.Business.Services
                          c.Post.Status == PostStatus.PUBLISHED.ToString() && 
                          c.ParentId == null && c.RootId == null,
                     c => c.OrderByDescending(c => c.CreatedAt),
-                    c => c.Include(c => c.Author)
+                    c => c.Include(c => c.Author).Include(c => c.CommentLikes)
                 );
 
             var items = _mapper.Map<List<CommentResponse>>(comments);
+            var commentById = comments.ToDictionary(x => x.Id);
+            foreach (var item in items)
+            {
+                if (!commentById.TryGetValue(item.Id, out var entity))
+                    continue;
+
+                item.IsLikedByMe = entity.CommentLikes?.Any(cl => cl.MemberId == member.Id) == true;
+
+                item.IsOwner = entity.AuthorId == member.Id;
+            }
+
 
             var pagedResult = new PagedResult<CommentResponse>
             {
@@ -277,6 +293,8 @@ namespace capstone_backend.Business.Services
 
             response.IsLikedByMe = false;
             response.IsOwner = false;
+            response.Author.Avatar = post.Author.User.AvatarUrl;
+
             return response;
         }
 
@@ -320,6 +338,7 @@ namespace capstone_backend.Business.Services
 
         public async Task<PostResponse> GetPostDetailsByShareLinkAsync(string shareCode)
         {
+
             var post = await _unitOfWork.Posts.GetByShareCodeAsync(shareCode);
             if (post == null || post.IsDeleted == true)
                 throw new Exception("Bài viết không tồn tại");
@@ -331,11 +350,16 @@ namespace capstone_backend.Business.Services
 
             response.IsLikedByMe = false;
             response.IsOwner = false;
+            response.Author.Avatar = post.Author.User.AvatarUrl;
             return response;
         }
 
         public async Task<List<PostResponse>> GetPostsMemberProfileAsync(int userId, int pageNumber, int pageSize)
         {
+            var user = await _unitOfWork.Users.GetByIdAsync(userId);
+            if (user == null)
+                throw new Exception("Người dùng không tồn tại");
+
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Hồ sơ thành viên không tồn tại");
@@ -345,13 +369,15 @@ namespace capstone_backend.Business.Services
                     pageSize,
                     p => p.AuthorId == member.Id && p.IsDeleted == false,
                     p => p.OrderByDescending(p => p.CreatedAt),
-                    p => p.Include(p => p.PostLikes)
+                    p => p.Include(p => p.PostLikes).Include(p => p.Author)
                 );
             var response = _mapper.Map<List<PostResponse>>(posts);
             response.ForEach(r =>
             {
                 r.IsLikedByMe = posts.First(p => p.Id == r.Id).PostLikes.Any(pl => pl.MemberId == member.Id);
                 r.IsOwner = true;
+
+                r.Author.Avatar = user.AvatarUrl;
             });
             return response;
         }
@@ -403,6 +429,8 @@ namespace capstone_backend.Business.Services
 
                 dto.IsLikedByMe = p.PostLikes.Any(pl => pl.MemberId == member.Id);
                 dto.IsOwner = p.AuthorId == member.Id;
+
+                dto.Author.Avatar = p.Author.User.AvatarUrl;
 
                 return dto;
             })

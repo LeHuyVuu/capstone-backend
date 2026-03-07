@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using AutoMapper.Execution;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Post;
@@ -170,21 +171,35 @@ namespace capstone_backend.Business.Services
             return response;
         }
 
-        public async Task<PagedResult<CommentResponse>> GetRepliesAsync(int commentId, int pageNumber, int pageSize)
+        public async Task<PagedResult<CommentResponse>> GetRepliesAsync(int userId, int commentId, int pageNumber, int pageSize)
         {
             var comment = await _unitOfWork.Comments.GetByIdAsync(commentId);
             if (comment == null || comment.IsDeleted == true)
                 throw new Exception("Bình luận không tồn tại");
+
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
 
             var (comments, count) = await _unitOfWork.Comments.GetPagedAsync(
                 pageNumber,
                 pageSize,
                 c => c.ParentId == commentId && c.IsDeleted == false && c.Status == CommentStatus.PUBLISHED.ToString(),
                 c => c.OrderBy(c => c.CreatedAt),
-                c => c.Include(c => c.Author).Include(c => c.TargetMember)
+                c => c.Include(c => c.Author).Include(c => c.TargetMember).Include(c => c.CommentLikes)
             );
 
             var items = _mapper.Map<List<CommentResponse>>(comments);
+            var commentById = comments.ToDictionary(c => c.Id);
+            foreach(var item in items)
+            {
+                if (!commentById.TryGetValue(item.Id, out var entity))
+                    continue;
+
+                item.IsLikedByMe = entity.CommentLikes?.Any(cl => cl.MemberId == member.Id) == true;
+                item.IsOwner = entity.AuthorId == member.Id;
+            }
+
             return new PagedResult<CommentResponse>
             {
                 Items = items,
@@ -274,13 +289,20 @@ namespace capstone_backend.Business.Services
             };
         }
 
-        public async Task<CommentResponse> GetCommentByIdAsync(int commentId)
+        public async Task<CommentResponse> GetCommentByIdAsync(int userId, int commentId)
         {
             var existingComment = await _unitOfWork.Comments.GetByIdIncludeAsync(commentId);
             if (existingComment == null)
                 throw new Exception("Bình luận không tồn tại");
 
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
             var response = _mapper.Map<CommentResponse>(existingComment);
+            
+            response.IsLikedByMe = existingComment.CommentLikes?.Any(cl => cl.MemberId == member.Id) == true;
+            response.IsOwner = existingComment.AuthorId == member.Id;
 
             return response;
         }

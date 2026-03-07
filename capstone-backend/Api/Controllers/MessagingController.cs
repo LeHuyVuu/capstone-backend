@@ -1,4 +1,5 @@
 using capstone_backend.Api.Controllers;
+using capstone_backend.Api.Filters;
 using capstone_backend.Business.DTOs.Messaging;
 using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -12,6 +13,7 @@ namespace capstone_backend.Controllers;
 /// </summary>
 [Authorize]
 [Route("api/[controller]")]
+[Moderation]
 public class MessagingController : BaseController
 {
     private readonly IMessagingService _messagingService;
@@ -156,17 +158,17 @@ public class MessagingController : BaseController
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddMembers(
         [FromRoute] int conversationId,
-        [FromBody] List<int> memberIds,
+        [FromBody] AddMembersBodyRequest request,
         CancellationToken cancellationToken)
     {
-        if (memberIds == null || !memberIds.Any())
-            return BadRequest("At least one member is required");
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
 
         var userId = GetCurrentUserId() ?? 0;
         await _messagingService.AddMembersAsync(userId, new AddMembersRequest
         {
             ConversationId = conversationId,
-            MemberIds = memberIds
+            MemberIds = request.MemberIds
         }, cancellationToken);
         
         return NoContent();

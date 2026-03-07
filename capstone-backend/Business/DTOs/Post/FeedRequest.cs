@@ -2,6 +2,7 @@
 {
     public class FeedRequest
     {
+        /// <example>10</example>
         public int PageSize { get; set; } = 20;
         public long? Cursor { get; set; }
 

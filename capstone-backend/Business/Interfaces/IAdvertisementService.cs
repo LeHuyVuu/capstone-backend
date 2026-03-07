@@ -14,4 +14,8 @@ public interface IAdvertisementService
     
     // Advertisement packages
     Task<List<AdvertisementPackageResponse>> GetAdvertisementPackagesAsync();
+    
+    // Admin advertisement management
+    Task<AdvertisementApprovalResult> ApproveAdvertisementAsync(ApproveAdvertisementRequest request);
+    Task<AdvertisementApprovalResult> RejectAdvertisementAsync(RejectAdvertisementRequest request);
 }

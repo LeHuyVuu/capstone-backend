@@ -22,7 +22,7 @@ namespace capstone_backend.Business.DTOs.Challenge
         /// - IN_PROGRESS: Thử thách đang thực hiện
         /// - COMPLETED: Thử thách đã hoàn thành
         /// - IN_COMPLETED: Thử thách chưa hoàn thành
-        /// - Nếu truyền gì, sẽ trả về tất cả thử thách bất kể trạng thái
+        /// - Nếu không truyền gì, sẽ trả về tất cả thử thách bất kể trạng thái
         /// </summary>
         public CoupleProfileChallengeStatus? Status { get; set; }     // IN_PROGRESS | COMPLETED | IN_COMPLETED
 

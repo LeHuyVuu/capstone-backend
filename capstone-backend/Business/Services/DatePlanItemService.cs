@@ -28,7 +28,7 @@ namespace capstone_backend.Business.Services
                 if (member == null)
                     throw new Exception("Không tìm thấy hồ sơ thành viên");
 
-                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
                 if (couple == null)
                     throw new Exception("Thành viên chưa thuộc cặp đôi nào");
 
@@ -172,7 +172,7 @@ namespace capstone_backend.Business.Services
                 if (member == null)
                     throw new Exception("Không tìm thấy hồ sơ thành viên");
 
-                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
                 if (couple == null)
                     throw new Exception("Thành viên chưa thuộc cặp đôi nào");
 
@@ -205,7 +205,7 @@ namespace capstone_backend.Business.Services
                 if (member == null)
                     throw new Exception("Không tìm thấy hồ sơ thành viên");
 
-                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
                 if (couple == null)
                     throw new Exception("Thành viên chưa thuộc cặp đôi nào");
 
@@ -247,7 +247,7 @@ namespace capstone_backend.Business.Services
                 if (member == null)
                     throw new Exception("Không tìm thấy hồ sơ thành viên");
 
-                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
                 if (couple == null)
                     throw new Exception("Thành viên chưa thuộc cặp đôi nào");
 
@@ -280,7 +280,7 @@ namespace capstone_backend.Business.Services
                 if (member == null)
                     throw new Exception("Không tìm thấy hồ sơ thành viên");
 
-                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
                 if (couple == null)
                     throw new Exception("Thành viên chưa thuộc cặp đôi nào");
 
@@ -350,7 +350,7 @@ namespace capstone_backend.Business.Services
                 if (member == null)
                     throw new Exception("Không tìm thấy hồ sơ thành viên");
 
-                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
                 if (couple == null)
                     throw new Exception("Thành viên chưa thuộc cặp đôi nào");
 

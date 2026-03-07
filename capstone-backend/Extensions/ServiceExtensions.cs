@@ -175,9 +175,6 @@ public static class ServiceExtensions
         services.AddScoped<IPostService, PostService>();
         services.AddScoped<ICommentService, CommentService>();
 
-        // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
-        services.AddScoped<ILocationFollowerService, LocationFollowerService>();
-
         // Register Subscription Package Service
         services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
 

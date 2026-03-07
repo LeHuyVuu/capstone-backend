@@ -13,6 +13,7 @@ public class AdvertisementService : IAdvertisementService
     private readonly SepayService _sepayService;
     private static int _rotationIndex = 0;
     private static readonly object _lock = new object();
+    private static readonly Random _random = new Random();
 
     public AdvertisementService(
         IUnitOfWork unitOfWork, 
@@ -43,9 +44,6 @@ public class AdvertisementService : IAdvertisementService
             _logger.LogInformation("Filtered ads by PlacementType '{PlacementType}': {Count} ads found", 
                 placementType, venueLocationAds.Count);
         }
-
-        // Lấy special events active
-        var specialEvents = await _unitOfWork.SpecialEvents.GetActiveSpecialEventsAsync();
 
         // Nhóm quảng cáo theo priority score
         var groupedByPriority = venueLocationAds
@@ -81,6 +79,7 @@ public class AdvertisementService : IAdvertisementService
                             VenueId = vla.Venue.Id,
                             SpecialEventId = null,
                             BannerUrl = vla.Advertisement.BannerUrl,
+                            PlacementType = vla.Advertisement.PlacementType
                         });
                     }
 
@@ -90,22 +89,62 @@ public class AdvertisementService : IAdvertisementService
             }
         }
 
-        // Trộn special events vào (priority thấp hơn, đặt ở cuối)
-        var specialEventResponses = specialEvents.Select(se => new AdvertisementResponse
+        // Chỉ thêm special events khi KHÔNG có placementType (không trộn lẫn khi có filter)
+        List<AdvertisementResponse> result;
+        if (string.IsNullOrEmpty(placementType))
         {
-            Type = "SPECIAL_EVENT",
-            AdvertisementId = null,
-            VenueId = null,
-            SpecialEventId = se.Id,
-            BannerUrl = se.BannerUrl,
-        }).ToList();
+            // Lấy special events active
+            var specialEvents = await _unitOfWork.SpecialEvents.GetActiveSpecialEventsAsync();
+            
+            // Trộn special events vào (priority thấp hơn, đặt ở cuối)
+            var specialEventResponses = specialEvents.Select(se => new AdvertisementResponse
+            {
+                Type = "SPECIAL_EVENT",
+                AdvertisementId = null,
+                VenueId = null,
+                SpecialEventId = se.Id,
+                BannerUrl = se.BannerUrl,
+                PlacementType = null
+            }).ToList();
 
-        // Kết hợp: Quảng cáo trước (priority cao), special events sau
-        var result = rotatedAds.Concat(specialEventResponses).ToList();
-
-        _logger.LogInformation(
-            "Retrieved {TotalCount} items: {AdCount} advertisement(s) + {SpecialEventCount} special event(s) (PlacementType: {PlacementType}, RotationIndex: {RotationIndex})",
-            result.Count, rotatedAds.Count, specialEventResponses.Count, placementType ?? "all", _rotationIndex);
+            // Kết hợp: Quảng cáo trước (priority cao), special events sau
+            result = rotatedAds.Concat(specialEventResponses).ToList();
+            
+            _logger.LogInformation(
+                "Retrieved {TotalCount} items: {AdCount} advertisement(s) + {SpecialEventCount} special event(s) (PlacementType: all, RotationIndex: {RotationIndex})",
+                result.Count, rotatedAds.Count, specialEventResponses.Count, _rotationIndex);
+        }
+        else if (placementType.Trim().ToUpper() == "POPUP")
+        {
+            // POP_UP: Chỉ trả về 1 quảng cáo, lấy ngẫu nhiên
+            if (rotatedAds.Any())
+            {
+                int randomIndex;
+                lock (_lock)
+                {
+                    randomIndex = _random.Next(rotatedAds.Count);
+                }
+                result = new List<AdvertisementResponse> { rotatedAds[randomIndex] };
+                
+                _logger.LogInformation(
+                    "Retrieved 1 random POP_UP advertisement (Index: {RandomIndex}/{TotalCount})",
+                    randomIndex, rotatedAds.Count);
+            }
+            else
+            {
+                result = new List<AdvertisementResponse>();
+                _logger.LogInformation("No POP_UP advertisements found");
+            }
+        }
+        else
+        {
+            // Các placementType khác: Trả về toàn bộ quảng cáo đã filter
+            result = rotatedAds;
+            
+            _logger.LogInformation(
+                "Retrieved {TotalCount} advertisement(s) for PlacementType '{PlacementType}' (RotationIndex: {RotationIndex})",
+                result.Count, placementType, _rotationIndex);
+        }
 
         return result;
     }
@@ -573,6 +612,100 @@ public class AdvertisementService : IAdvertisementService
                 Status = ao.Status ?? string.Empty,
                 CreatedAt = ao.CreatedAt ?? DateTime.UtcNow
             }).ToList()
+        };
+    }
+
+    #endregion
+
+    #region Admin Advertisement Management
+
+    public async Task<AdvertisementApprovalResult> ApproveAdvertisementAsync(ApproveAdvertisementRequest request)
+    {
+        _logger.LogInformation("Admin approving advertisement {AdId}", request.AdvertisementId);
+
+        var advertisement = await _unitOfWork.Advertisements.GetByIdWithDetailsAsync(request.AdvertisementId);
+        
+        if (advertisement == null)
+        {
+            return new AdvertisementApprovalResult 
+            { 
+                IsSuccess = false, 
+                Message = "Advertisement not found" 
+            };
+        }
+
+        if (advertisement.Status != "PENDING")
+        {
+            return new AdvertisementApprovalResult 
+            { 
+                IsSuccess = false, 
+                Message = $"Cannot approve advertisement with status '{advertisement.Status}'. Only 'PENDING' advertisements can be processed." 
+            };
+        }
+
+        advertisement.Status = "APPROVED";
+        advertisement.UpdatedAt = DateTime.UtcNow;
+        advertisement.RejectionReason = null;
+        
+        if (advertisement.VenueLocationAdvertisements != null && advertisement.VenueLocationAdvertisements.Any())
+        {
+            foreach (var vla in advertisement.VenueLocationAdvertisements.Where(v => v.Status == "PENDING"))
+            {
+                vla.Status = "ACTIVE";
+                vla.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        _unitOfWork.Advertisements.Update(advertisement);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("Advertisement {AdId} approved and activated", request.AdvertisementId);
+
+        return new AdvertisementApprovalResult 
+        { 
+            IsSuccess = true, 
+            Message = "Advertisement approved successfully" 
+        };
+    }
+
+    public async Task<AdvertisementApprovalResult> RejectAdvertisementAsync(RejectAdvertisementRequest request)
+    {
+        _logger.LogInformation("Admin rejecting advertisement {AdId}", request.AdvertisementId);
+
+        var advertisement = await _unitOfWork.Advertisements.GetByIdWithDetailsAsync(request.AdvertisementId);
+        
+        if (advertisement == null)
+        {
+            return new AdvertisementApprovalResult 
+            { 
+                IsSuccess = false, 
+                Message = "Advertisement not found" 
+            };
+        }
+
+        if (advertisement.Status != "PENDING")
+        {
+            return new AdvertisementApprovalResult 
+            { 
+                IsSuccess = false, 
+                Message = $"Cannot reject advertisement with status '{advertisement.Status}'. Only 'PENDING' advertisements can be processed." 
+            };
+        }
+
+        advertisement.Status = "REJECTED";
+        advertisement.UpdatedAt = DateTime.UtcNow;
+        advertisement.RejectionReason = request.Reason;
+
+        _unitOfWork.Advertisements.Update(advertisement);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("Advertisement {AdId} rejected. Reason: {Reason}", 
+            request.AdvertisementId, request.Reason ?? "No reason provided");
+
+        return new AdvertisementApprovalResult 
+        { 
+            IsSuccess = true, 
+            Message = "Advertisement rejected successfully" 
         };
     }
 

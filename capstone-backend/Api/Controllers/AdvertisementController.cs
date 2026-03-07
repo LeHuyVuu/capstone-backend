@@ -21,15 +21,8 @@ public class AdvertisementController : BaseController
         _logger = logger;
     }
 
-    /// <summary>
-    /// Get rotating advertisements and special events for members to view.
-    /// Returns a mix of advertisements (rotated by priority) and active special events.
-    /// Special events are displayed first with highest priority (999).
-    /// Advertisements are grouped by priority score and rotated within each group.
-    /// Each API call rotates to the next advertisement in the same priority group for fair distribution.
-    /// Optionally filter by placement type (e.g., "BANNER", "POPUP", "SIDEBAR").
-    /// </summary>
-    /// <param name="placementType">Optional: Filter by placement type (HOME_BANNER etc.)</param>
+
+    /// <param name="placementType">Optional: Filter by placement type (HOME_BANNER, POPUP, AND leave blank is random to display in carousel etc.)</param>
     /// <returns>List of rotating advertisements and special events with venue information</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<AdvertisementResponse>>), 200)]
@@ -240,5 +233,61 @@ public class AdvertisementController : BaseController
             _logger.LogError(ex, "Error submitting advertisement {AdId} with payment for user {UserId}", id, currentUserId);
             return BadRequestResponse("Failed to submit advertisement with payment");
         }
+    }
+
+    [HttpPost("approve")]
+    [Authorize(Roles = "ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<AdvertisementApprovalResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> ApproveAdvertisement([FromBody] ApproveAdvertisementRequest request)
+    {
+        _logger.LogInformation("Admin approving advertisement {AdId}", request.AdvertisementId);
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequestResponse("Invalid request data");
+        }
+
+        var result = await _advertisementService.ApproveAdvertisementAsync(request);
+
+        if (!result.IsSuccess)
+        {
+            if (result.Message == "Advertisement not found") 
+                return NotFoundResponse(result.Message);
+            return BadRequestResponse(result.Message);
+        }
+
+        return OkResponse(result, result.Message);
+    }
+
+    [HttpPost("reject")]
+    [Authorize(Roles = "ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<AdvertisementApprovalResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> RejectAdvertisement([FromBody] RejectAdvertisementRequest request)
+    {
+        _logger.LogInformation("Admin rejecting advertisement {AdId}", request.AdvertisementId);
+
+        if (!ModelState.IsValid)
+        {
+            return BadRequestResponse("Invalid request data");
+        }
+
+        var result = await _advertisementService.RejectAdvertisementAsync(request);
+
+        if (!result.IsSuccess)
+        {
+            if (result.Message == "Advertisement not found") 
+                return NotFoundResponse(result.Message);
+            return BadRequestResponse(result.Message);
+        }
+
+        return OkResponse(result, result.Message);
     }
 }

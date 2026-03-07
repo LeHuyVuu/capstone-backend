@@ -16,6 +16,7 @@ namespace capstone_backend.Data.Repositories
             return await _dbSet
                 .AsNoTracking()
                 .Include(p => p.Author)
+                    .ThenInclude(a => a.User)
                 .Include(p => p.PostLikes)
                 .FirstOrDefaultAsync(p => p.ShareCode == shareCode && p.IsDeleted == false);
         }
@@ -25,6 +26,7 @@ namespace capstone_backend.Data.Repositories
             var query = _dbSet
                 .AsNoTracking()
                 .Include(p => p.Author)
+                    .ThenInclude(a => a.User)
                 .Include(p => p.PostLikes)
                 .Where(p => p.Visibility == "PUBLIC" && p.Status == "PUBLISHED" && p.IsDeleted == false);
 
@@ -41,6 +43,7 @@ namespace capstone_backend.Data.Repositories
         {
             return await _dbSet
                 .Include(p => p.Author)
+                    .ThenInclude(a => a.User)
                 .Include(p => p.PostLikes)
                 .FirstOrDefaultAsync(p => p.Id == postId && p.IsDeleted == false);
         }

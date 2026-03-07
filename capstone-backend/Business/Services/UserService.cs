@@ -47,6 +47,8 @@ public class UserService : IUserService
         var memberProfile = user.MemberProfiles?.FirstOrDefault();
         Console.Write(memberProfile);
         var gender = memberProfile?.Gender ?? string.Empty;
+        var dateOfBirth = memberProfile?.DateOfBirth;
+        var inviteCode = memberProfile?.InviteCode;
 
         // Generate  JWT tokens
         var role = user.Role ?? "MEMBER";
@@ -60,8 +62,11 @@ public class UserService : IUserService
             AccessToken = accessToken,
             RefreshToken = refreshToken,
             ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes),
-            AvartarUrl = user.AvatarUrl,
-            Gender = gender
+            Gender = gender,
+            AvatarUrl = user.AvatarUrl,
+            FullName = fullName,
+            DateOfBirth = dateOfBirth,
+            InviteCode = inviteCode
         };
     }
 
@@ -376,6 +381,7 @@ public class UserService : IUserService
             Email = user.Email,
             FullName = user.DisplayName ?? string.Empty,
             PhoneNumber = user.PhoneNumber,
+            AvatarUrl = user.AvatarUrl,
             Role = user.Role ?? "User",
             IsActive = user.IsActive ?? false,
             LastLoginAt = user.LastLoginAt,

@@ -4,6 +4,7 @@ using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Hubs;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Services;
 
@@ -225,7 +226,7 @@ public class MessagingService : IMessagingService
             string.IsNullOrWhiteSpace(request.FileUrl))
             throw new Exception($"File URL is required for {request.MessageType} messages");
 
-        // Build metadata JSON for file attachments
+        // Build metadata JSON for file attachments or date plan
         string? metadata = request.Metadata;
         if (!string.IsNullOrWhiteSpace(request.FileUrl))
         {
@@ -236,6 +237,46 @@ public class MessagingService : IMessagingService
                 fileSize = request.FileSize
             };
             metadata = System.Text.Json.JsonSerializer.Serialize(fileInfo);
+        }
+        // Populate DatePlan info into metadata for rich card display
+        else if (request.ReferenceType == "DATE_PLAN" && request.ReferenceId.HasValue)
+        {
+            // Get member and couple to validate ownership
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(currentUserId);
+            if (member != null)
+            {
+                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
+                if (couple != null)
+                {
+                    // Query DatePlan with items and venue location
+                    var datePlan = await _unitOfWork.Context.DatePlans
+                        .AsNoTracking()
+                        .Include(dp => dp.DatePlanItems.Where(dpi => dpi.IsDeleted == false).OrderBy(dpi => dpi.OrderIndex))
+                            .ThenInclude(dpi => dpi.VenueLocation)
+                        .Where(dp => dp.Id == request.ReferenceId.Value 
+                                  && dp.CoupleId == couple.id 
+                                  && dp.IsDeleted == false)
+                        .FirstOrDefaultAsync(cancellationToken);
+
+                    if (datePlan != null)
+                    {
+                        var firstVenue = datePlan.DatePlanItems?.FirstOrDefault()?.VenueLocation;
+                        var datePlanInfo = new
+                        {
+                            datePlanId = datePlan.Id,
+                            title = datePlan.Title,
+                            status = datePlan.Status,
+                            plannedStartAt = datePlan.PlannedStartAt,
+                            plannedEndAt = datePlan.PlannedEndAt,
+                            estimatedBudget = datePlan.EstimatedBudget,
+                            totalCount = datePlan.DatePlanItems?.Count ?? 0,
+                            imageUrl = firstVenue?.CoverImage,
+                            venueName = firstVenue?.Name
+                        };
+                        metadata = System.Text.Json.JsonSerializer.Serialize(datePlanInfo);
+                    }
+                }
+            }
         }
 
         // Create message
@@ -487,17 +528,21 @@ public class MessagingService : IMessagingService
         _messageRepository.Update(message);
         await _unitOfWork.SaveChangesAsync();
 
-        // Notify conversation members via SignalR
+        // Notify conversation members via SignalR (including sender for multi-device sync)
         if (message.ConversationId != null)
         {
             var members = await _memberRepository.GetActiveConversationMembersAsync(message.ConversationId.Value, cancellationToken);
             foreach (var member in members)
             {
-                if (member.UserId == null || member.UserId == currentUserId)
+                if (member.UserId == null)
                     continue;
                     
                 await _hubContext.Clients.User(member.UserId.Value.ToString())
-                    .SendAsync("MessageDeleted", messageId, cancellationToken);
+                    .SendAsync("MessageDeleted", new 
+                    { 
+                        messageId = messageId, 
+                        conversationId = message.ConversationId.Value 
+                    }, cancellationToken);
             }
         }
     }
@@ -593,28 +638,58 @@ public class MessagingService : IMessagingService
             MessageType = message.MessageType ?? "TEXT",
             ReferenceId = message.ReferenceId,
             ReferenceType = message.ReferenceType,
-            Metadata = message.Metadata,
             CreatedAt = message.CreatedAt,
             UpdatedAt = message.UpdatedAt,
             IsMine = message.SenderId == currentUserId
         };
 
-        // Parse file info from metadata if exists
+        // Parse metadata and populate appropriate fields
         if (!string.IsNullOrWhiteSpace(message.Metadata))
         {
             try
             {
+                // Try parse as file metadata
                 var fileInfo = System.Text.Json.JsonSerializer.Deserialize<FileMetadata>(message.Metadata);
-                if (fileInfo != null)
+                if (fileInfo != null && !string.IsNullOrWhiteSpace(fileInfo.FileUrl))
                 {
                     response.FileUrl = fileInfo.FileUrl;
                     response.FileName = fileInfo.FileName;
                     response.FileSize = fileInfo.FileSize;
+                    response.Metadata = fileInfo;
+                }
+                else
+                {
+                    // Try parse as date plan metadata
+                    var datePlanInfo = System.Text.Json.JsonSerializer.Deserialize<DatePlanMetadata>(message.Metadata);
+                    if (datePlanInfo != null && datePlanInfo.DatePlanId > 0)
+                    {
+                        response.DatePlanInfo = new DatePlanInfoDto
+                        {
+                            DatePlanId = datePlanInfo.DatePlanId,
+                            Title = datePlanInfo.Title,
+                            Status = datePlanInfo.Status,
+                            PlannedStartAt = datePlanInfo.PlannedStartAt,
+                            PlannedEndAt = datePlanInfo.PlannedEndAt,
+                            EstimatedBudget = datePlanInfo.EstimatedBudget,
+                            TotalCount = datePlanInfo.TotalCount,
+                            ImageUrl = datePlanInfo.ImageUrl,
+                            VenueName = datePlanInfo.VenueName
+                        };
+                        response.Metadata = datePlanInfo;
+                    }
                 }
             }
             catch
             {
-                // Ignore parse errors, metadata might be other format
+                // If parse fails, keep metadata as raw string in object form
+                try
+                {
+                    response.Metadata = System.Text.Json.JsonSerializer.Deserialize<object>(message.Metadata);
+                }
+                catch
+                {
+                    response.Metadata = message.Metadata;
+                }
             }
         }
 
@@ -623,8 +698,43 @@ public class MessagingService : IMessagingService
 
     private class FileMetadata
     {
+        [System.Text.Json.Serialization.JsonPropertyName("fileUrl")]
         public string? FileUrl { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("fileName")]
         public string? FileName { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("fileSize")]
         public long? FileSize { get; set; }
+    }
+
+    private class DatePlanMetadata
+    {
+        [System.Text.Json.Serialization.JsonPropertyName("datePlanId")]
+        public int DatePlanId { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        public string? Title { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        public string? Status { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("plannedStartAt")]
+        public DateTime? PlannedStartAt { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("plannedEndAt")]
+        public DateTime? PlannedEndAt { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("estimatedBudget")]
+        public decimal? EstimatedBudget { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("totalCount")]
+        public int TotalCount { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("imageUrl")]
+        public string? ImageUrl { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("venueName")]
+        public string? VenueName { get; set; }
     }
 }

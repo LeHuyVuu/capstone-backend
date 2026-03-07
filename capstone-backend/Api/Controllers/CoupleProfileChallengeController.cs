@@ -9,11 +9,11 @@ namespace capstone_backend.Api.Controllers
     [Route("api/couple-challenges")]
     [ApiController]
     [Authorize(Roles = "MEMBER, member")]
-    public class CoupleChallengeProfileController : BaseController
+    public class CoupleProfileChallengeController : BaseController
     {
         private readonly IChallengeService _challengeService;
 
-        public CoupleChallengeProfileController(IChallengeService challengeService)
+        public CoupleProfileChallengeController(IChallengeService challengeService)
         {
             _challengeService = challengeService;
         }
