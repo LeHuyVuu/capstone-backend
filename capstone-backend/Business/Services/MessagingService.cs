@@ -228,8 +228,58 @@ public class MessagingService : IMessagingService
 
         // Build metadata JSON for file attachments or date plan
         string? metadata = request.Metadata;
-        if (!string.IsNullOrWhiteSpace(request.FileUrl))
+        
+        // Populate DatePlan info into metadata for rich card display (check DATE_PLAN first)
+        if (request.ReferenceType == "DATE_PLAN" && request.ReferenceId.HasValue)
         {
+            Console.WriteLine($"[DEBUG] Loading DatePlan ID: {request.ReferenceId.Value}");
+            
+            // Query DatePlan directly - trust the user has permission if they know the ID
+            var datePlan = await _unitOfWork.Context.DatePlans
+                .AsNoTracking()
+                .Include(dp => dp.DatePlanItems.Where(dpi => dpi.IsDeleted == false).OrderBy(dpi => dpi.OrderIndex))
+                    .ThenInclude(dpi => dpi.VenueLocation)
+                .Where(dp => dp.Id == request.ReferenceId.Value 
+                          && dp.IsDeleted == false)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            Console.WriteLine($"[DEBUG] DatePlan found: {datePlan != null}, Items count: {datePlan?.DatePlanItems?.Count ?? 0}");
+
+            if (datePlan != null)
+            {
+                var firstVenue = datePlan.DatePlanItems?.FirstOrDefault()?.VenueLocation;
+                
+                // Extract first image from comma-separated CoverImage string
+                var imageUrl = firstVenue?.CoverImage;
+                if (!string.IsNullOrWhiteSpace(imageUrl) && imageUrl.Contains(','))
+                {
+                    imageUrl = imageUrl.Split(',')[0].Trim();
+                }
+                
+                var datePlanInfo = new
+                {
+                    datePlanId = datePlan.Id,
+                    title = datePlan.Title,
+                    status = datePlan.Status,
+                    plannedStartAt = datePlan.PlannedStartAt,
+                    plannedEndAt = datePlan.PlannedEndAt,
+                    estimatedBudget = datePlan.EstimatedBudget,
+                    totalCount = datePlan.DatePlanItems?.Count ?? 0,
+                    imageUrl = imageUrl,
+                    venueName = firstVenue?.Name
+                };
+                metadata = System.Text.Json.JsonSerializer.Serialize(datePlanInfo);
+                Console.WriteLine($"[DEBUG] DatePlan metadata serialized: {metadata}");
+            }
+            else
+            {
+                Console.WriteLine($"[DEBUG] DatePlan ID {request.ReferenceId.Value} NOT FOUND or IsDeleted=true");
+            }
+        }
+        // Handle file attachments (images, videos, files, audio)
+        else if (!string.IsNullOrWhiteSpace(request.FileUrl))
+        {
+            Console.WriteLine($"[DEBUG] File attachment detected");
             var fileInfo = new
             {
                 fileUrl = request.FileUrl,
@@ -238,45 +288,9 @@ public class MessagingService : IMessagingService
             };
             metadata = System.Text.Json.JsonSerializer.Serialize(fileInfo);
         }
-        // Populate DatePlan info into metadata for rich card display
-        else if (request.ReferenceType == "DATE_PLAN" && request.ReferenceId.HasValue)
+        else
         {
-            // Get member and couple to validate ownership
-            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(currentUserId);
-            if (member != null)
-            {
-                var couple = await _unitOfWork.CoupleProfiles.GetByMemberIdAsync(member.Id);
-                if (couple != null)
-                {
-                    // Query DatePlan with items and venue location
-                    var datePlan = await _unitOfWork.Context.DatePlans
-                        .AsNoTracking()
-                        .Include(dp => dp.DatePlanItems.Where(dpi => dpi.IsDeleted == false).OrderBy(dpi => dpi.OrderIndex))
-                            .ThenInclude(dpi => dpi.VenueLocation)
-                        .Where(dp => dp.Id == request.ReferenceId.Value 
-                                  && dp.CoupleId == couple.id 
-                                  && dp.IsDeleted == false)
-                        .FirstOrDefaultAsync(cancellationToken);
-
-                    if (datePlan != null)
-                    {
-                        var firstVenue = datePlan.DatePlanItems?.FirstOrDefault()?.VenueLocation;
-                        var datePlanInfo = new
-                        {
-                            datePlanId = datePlan.Id,
-                            title = datePlan.Title,
-                            status = datePlan.Status,
-                            plannedStartAt = datePlan.PlannedStartAt,
-                            plannedEndAt = datePlan.PlannedEndAt,
-                            estimatedBudget = datePlan.EstimatedBudget,
-                            totalCount = datePlan.DatePlanItems?.Count ?? 0,
-                            imageUrl = firstVenue?.CoverImage,
-                            venueName = firstVenue?.Name
-                        };
-                        metadata = System.Text.Json.JsonSerializer.Serialize(datePlanInfo);
-                    }
-                }
-            }
+            Console.WriteLine($"[DEBUG] No DATE_PLAN or FileUrl: ReferenceType={request.ReferenceType}, ReferenceId={request.ReferenceId}");
         }
 
         // Create message
