@@ -106,7 +106,7 @@ namespace capstone_backend.Business.Services
             if (request.RewardPoints <= 0)
                 throw new Exception("Điểm thưởng phải là số dương lớn hơn 0");
 
-            if (request.GoalMetric != ChallengeConstants.GoalMetrics.UNIQUE_LIST && request.TargetGoal <= 0)
+            if (request.GoalMetric == ChallengeConstants.GoalMetrics.UNIQUE_LIST && request.TargetGoal <= 0)
                 throw new Exception("Mục tiêu số lượng phải lớn hơn 0");
 
             if (!Enum.TryParse<ChallengeTriggerEvent>(request.TriggerEvent, out _))
