@@ -946,5 +946,136 @@ namespace capstone_backend.Business.Services
             await _unitOfWork.SaveChangesAsync();
             return coupleChallenge.Id;
         }
+
+        public async Task<CoupleChallengeDetailResponse> GetCoupleChallengeProgressAsync(int userId, int coupleChallengeId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            var coupleChallenge = await _unitOfWork.CoupleProfileChallenges.GetByIdAsync(coupleChallengeId);
+            if (coupleChallenge == null || coupleChallenge.CoupleId != couple.id || coupleChallenge.IsDeleted == true)
+                throw new Exception("Thử thách của cặp đôi không tồn tại");
+
+            var challenge = await _unitOfWork.Challenges.GetByIdAsync(coupleChallenge.ChallengeId);
+            if (challenge == null || (challenge.IsDeleted.HasValue && challenge.IsDeleted != false))
+                throw new Exception("Thử thách không tồn tại");
+
+            var progressData = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(coupleChallenge.ProgressData);
+            if (progressData?.MemberState == null)
+                throw new Exception("Dữ liệu tiến độ thử thách không hợp lệ");
+
+            var memberKey = member.Id.ToString();
+            if (!progressData.MemberState.TryGetValue(memberKey, out var state) || state == null || !state.IsJoined)
+                throw new Exception("Bạn chưa tham gia thử thách này");
+
+            // Map first
+            var response = _mapper.Map<CoupleChallengeDetailResponse>(coupleChallenge);
+
+            // Then enrich
+            var challengeEnriched = await EnrichChallengeResponseAsync(new List<Challenge> { challenge });
+            response.Challenge = challengeEnriched.First();
+
+            // memberMap
+            var coupleMembers = await _unitOfWork.CoupleProfiles.GetCoupleMemberAsync(couple.id);
+            var memberNameMap = coupleMembers
+                .GroupBy(x => x.Id)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.First().FullName ?? string.Empty
+                );
+
+            // Build extra progress info
+            var extra = ChallengeProgressExtraBuilder.BuildDetail(progressData, member.Id, memberNameMap);
+
+            response.JoinedAt = state.JoinedAt;
+            response.IsJoined = state.IsJoined;
+            response.IsCompleted = progressData.IsCompleted;
+            response.TargetProgress = challenge.TargetGoal ?? 0;
+            response.ProgressText = ChallengeProgressTextFormatter.Build(
+                challenge.TriggerEvent,
+                challenge.GoalMetric,
+                coupleChallenge.CurrentProgress ?? 0,
+                challenge.TargetGoal ?? 0,
+                progressData.IsCompleted,
+                extra
+            );
+            response.ProgressExtra = extra;
+
+            // Build members
+            response.Members = BuildMemberProgress(
+                challenge.TriggerEvent,
+                progressData,
+                coupleMembers.ToList(),
+                member.Id
+            );
+
+            return response;
+        }
+
+        private static List<CoupleChallengeMemberProgressResponse> BuildMemberProgress(
+            string? triggerEvent,
+            CoupleChallengeProgressData progressData,
+            List<MemberProfile> coupleMembers,
+            int currentMemberId)
+        {
+            var result = new List<CoupleChallengeMemberProgressResponse>();
+
+            foreach ( var member in coupleMembers )
+            {
+                var memberKey = member.Id.ToString();
+                progressData.MemberState.TryGetValue(memberKey, out var state);
+                progressData.Members.TryGetValue(memberKey, out var memberProgress);
+
+                var item = new CoupleChallengeMemberProgressResponse
+                {
+                    MemberId = member.Id,
+                    MemberName = member.FullName ?? string.Empty,
+                    AvatarUrl = member.User != null ? member.User.AvatarUrl : null,
+                    IsCurrentUser = member.Id == currentMemberId,
+
+                    IsJoined = state != null && state.IsJoined,
+                    JoinedAt = state?.JoinedAt,
+                    LeftAt = state?.LeftAt,
+
+                    HasDoneToday = BuildHasDoneToday(triggerEvent, progressData, member.Id),
+                    LastActionAt = memberProgress?.LastActionAt,
+                    ContributionCount = memberProgress?.Current
+                };
+
+                result.Add(item);
+            }
+
+            return result
+                .OrderByDescending(x => x.IsCurrentUser)
+                .ThenByDescending(x => x.IsJoined)
+                .ThenBy(x => x.MemberId)
+                .ToList();
+        }
+
+        private static bool? BuildHasDoneToday(
+            string? triggerEvent,
+            CoupleChallengeProgressData progressData,
+            int memberId)
+        {
+            var memberKey = memberId.ToString();
+
+            if (progressData.Members == null ||
+                !progressData.Members.TryGetValue(memberKey, out var memberProgress) ||
+                memberProgress?.LastActionAt == null)
+            {
+                return false;
+            }
+
+            var nowVn = TimezoneUtil.ToVietNamTime(DateTime.UtcNow);
+            var today = DateOnly.FromDateTime(nowVn);
+
+            var lastActionVn = TimezoneUtil.ToVietNamTime(memberProgress.LastActionAt.Value);
+            return DateOnly.FromDateTime(lastActionVn) == today;
+        }
     }
 }

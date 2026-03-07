@@ -83,10 +83,16 @@
 
     public class QualifiedProgressItem
     {
-        public int RefId { get; set; }
-        public string Name { get; set; }
+        public string Type { get; set; } = default!; // REVIEW / POST
+
         public int MemberId { get; set; }
         public DateTime ActionAt { get; set; }
+
+        public int? ReviewId { get; set; }
+        public int? PostId { get; set; }
+
+        public int? VenueId { get; set; }
+        public string? VenueName { get; set; }
     }
 
     public class ProgressEvent

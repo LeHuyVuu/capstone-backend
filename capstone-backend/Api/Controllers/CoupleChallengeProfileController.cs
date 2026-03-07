@@ -136,5 +136,29 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get defail couple challenge progress for member
+        /// </summary>
+        [HttpGet("{coupleChallengeId:int}")]
+        public async Task<IActionResult> GetCoupleChallengeProgress([FromRoute] int coupleChallengeId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _challengeService.GetCoupleChallengeProgressAsync(userId.Value, coupleChallengeId);
+                if (result == null)
+                    return NotFoundResponse("Thử thách không tồn tại hoặc chưa tham gia");
+                return OkResponse(result, "Lấy tiến độ thử thách thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

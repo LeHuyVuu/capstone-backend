@@ -1,4 +1,6 @@
-﻿namespace capstone_backend.Business.DTOs.Challenge
+﻿using System.Text.Json.Serialization;
+
+namespace capstone_backend.Business.DTOs.Challenge
 {
     public class CoupleChallengeProgressExtraResponse
     {

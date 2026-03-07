@@ -17,7 +17,7 @@
         public DateTime? CompletedAt { get; set; }
 
         public string? ProgressText { get; set; }
-        public CoupleChallengeProgressExtraResponse? ProgressExtra { get; set; }
+        public object? ProgressExtra { get; set; } 
 
         public List<CoupleChallengeMemberProgressResponse> Members { get; set; } = new();
 

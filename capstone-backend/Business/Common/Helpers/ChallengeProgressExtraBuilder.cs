@@ -23,6 +23,34 @@ namespace capstone_backend.Business.Common.Helpers
             return null;
         }
 
+        public static CoupleChallengeProgressExtraResponse BuildDetail(
+            CoupleChallengeProgressData progress,
+            int currentMemberId,
+            Dictionary<int, string>? memberNameMap = null)
+        {
+            if (progress == null)
+            {
+                return new CoupleChallengeProgressExtraResponse
+                {
+                    Type = string.Empty
+                };
+            }
+
+            if (string.Equals(progress.Trigger, ChallengeTriggerEvent.CHECKIN.ToString(), StringComparison.OrdinalIgnoreCase))
+                return BuildCheckinExtra(progress, currentMemberId);
+
+            if (string.Equals(progress.Trigger, ChallengeTriggerEvent.REVIEW.ToString(), StringComparison.OrdinalIgnoreCase))
+                return BuildReviewDetailExtra(progress, memberNameMap);
+
+            if (string.Equals(progress.Trigger, ChallengeTriggerEvent.POST.ToString(), StringComparison.OrdinalIgnoreCase))
+                return BuildPostDetailExtra(progress, memberNameMap);
+
+            return new CoupleChallengeProgressExtraResponse
+            {
+                Type = progress.Trigger ?? string.Empty
+            };
+        }
+
         private static CheckinChallengeProgressExtraResponse BuildCheckinExtra(CoupleChallengeProgressData progress, int currentMemberId)
         {
             // turn time tot VN time
@@ -99,8 +127,8 @@ namespace capstone_backend.Business.Common.Helpers
                 if (lastQualifiedItem != null)
                 {
                     lastQualifiedReviewAt = lastQualifiedItem.ActionAt;
-                    lastVenueId = lastQualifiedItem.RefId;
-                    lastVenueName = lastQualifiedItem.Name;
+                    lastVenueId = lastQualifiedItem.VenueId;
+                    lastVenueName = lastQualifiedItem.VenueName;
                 }
             }
 
@@ -129,7 +157,7 @@ namespace capstone_backend.Business.Common.Helpers
                 if (lastQualifiedItem != null)
                 {
                     lastQualifiedPostAt = lastQualifiedItem.ActionAt;
-                    lastPostId = lastQualifiedItem.RefId;
+                    lastPostId = lastQualifiedItem.PostId;
                 }
             }
             return new PostChallengeProgressExtraResponse
@@ -138,6 +166,78 @@ namespace capstone_backend.Business.Common.Helpers
                 QualifiedPostCount = qualifiedCount,
                 LastQualifiedPostAt = lastQualifiedPostAt,
                 LastPostId = lastPostId
+            };
+        }
+
+        private static ReviewChallengeDetailProgressExtraResponse BuildReviewDetailExtra(CoupleChallengeProgressData progress, Dictionary<int, string>? memberNameMap = null)
+        {
+            var orderedQualifiedItems = progress.QualifiedItems?
+                .Where(item =>
+                    string.Equals(item.Type, ChallengeTriggerEvent.REVIEW.ToString(), StringComparison.OrdinalIgnoreCase)
+                    && item.ReviewId.HasValue)
+                .OrderByDescending(item => item.ActionAt)
+                .ToList() ?? new List<QualifiedProgressItem>();
+
+            var lastQualifiedItem = orderedQualifiedItems.FirstOrDefault();
+
+            return new ReviewChallengeDetailProgressExtraResponse
+            {
+                Type = ChallengeTriggerEvent.REVIEW.ToString(),
+                QualifiedReviewCount = orderedQualifiedItems.Count,
+                LastQualifiedReviewAt = lastQualifiedItem?.ActionAt,
+
+                LastVenueId = lastQualifiedItem?.VenueId,
+                LastVenueName = lastQualifiedItem?.VenueName,
+
+                RecentQualifiedItems = orderedQualifiedItems
+                    .Select(item => new ReviewChallengeQualifiedItemResponse
+                    {
+                        ReviewId = item.ReviewId!.Value,
+                        VenueId = item.VenueId ?? 0,
+                        VenueName = item.VenueName,
+
+                        MemberId = item.MemberId,
+                        MemberName = memberNameMap != null &&
+                                     memberNameMap.TryGetValue(item.MemberId, out var memberName)
+                                     ? memberName
+                                     : null,
+
+                        QualifiedAt = item.ActionAt
+                    })
+                    .ToList()
+            };
+        }
+
+        private static PostChallengeDetailProgressExtraResponse BuildPostDetailExtra(CoupleChallengeProgressData progress, Dictionary<int, string>? memberNameMap = null)
+        {
+            var orderedQualifiedItems = progress.QualifiedItems?
+                .Where(item =>
+                    string.Equals(item.Type, ChallengeTriggerEvent.POST.ToString(), StringComparison.OrdinalIgnoreCase)
+                    && item.PostId.HasValue)
+                .OrderByDescending(item => item.ActionAt)
+                .ToList() ?? new List<QualifiedProgressItem>();
+
+            var lastQualifiedItem = orderedQualifiedItems.FirstOrDefault();
+
+            return new PostChallengeDetailProgressExtraResponse
+            {
+                Type = ChallengeTriggerEvent.POST.ToString(),
+                QualifiedPostCount = orderedQualifiedItems.Count,
+                LastQualifiedPostAt = lastQualifiedItem?.ActionAt,
+                LastPostId = lastQualifiedItem?.PostId,
+
+                RecentQualifiedItems = orderedQualifiedItems
+                    .Select(item => new PostChallengeQualifiedItemResponse
+                    {
+                        PostId = item.PostId!.Value,
+                        MemberId = item.MemberId,
+                        MemberName = memberNameMap != null &&
+                                     memberNameMap.TryGetValue(item.MemberId, out var memberName)
+                                     ? memberName
+                                     : null,
+                        QualifiedAt = item.ActionAt
+                    })
+                    .ToList()
             };
         }
     }
