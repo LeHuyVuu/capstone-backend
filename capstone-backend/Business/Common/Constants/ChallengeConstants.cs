@@ -14,7 +14,7 @@ namespace capstone_backend.Business.Common.Constants
         public static class RuleKeys
         {
             public const string VENUE_ID = "venue_id";
-            public const string HASH_TAG = "hashtags";
+            public const string HASH_TAG = "hash_tags";
             public const string HAS_IMAGE = "has_image";
         }
 
