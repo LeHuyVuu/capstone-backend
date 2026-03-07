@@ -7,4 +7,5 @@ public class AdvertisementResponse
     public int? VenueId { get; set; } // ID của venue (nếu type = ADVERTISEMENT)
     public int? SpecialEventId { get; set; } // ID của special event (nếu type = SPECIAL_EVENT)
     public string? BannerUrl { get; set; } // URL ảnh banner
+    public string? PlacementType { get; set; } // Vị trí đặt quảng cáo (chỉ có khi type = ADVERTISEMENT)
 }

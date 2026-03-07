@@ -21,15 +21,8 @@ public class AdvertisementController : BaseController
         _logger = logger;
     }
 
-    /// <summary>
-    /// Get rotating advertisements and special events for members to view.
-    /// Returns a mix of advertisements (rotated by priority) and active special events.
-    /// Special events are displayed first with highest priority (999).
-    /// Advertisements are grouped by priority score and rotated within each group.
-    /// Each API call rotates to the next advertisement in the same priority group for fair distribution.
-    /// Optionally filter by placement type (e.g., "BANNER", "POPUP", "SIDEBAR").
-    /// </summary>
-    /// <param name="placementType">Optional: Filter by placement type (HOME_BANNER etc.)</param>
+
+    /// <param name="placementType">Optional: Filter by placement type (HOME_BANNER, POPUP, AND leave blank is random to display in carousel etc.)</param>
     /// <returns>List of rotating advertisements and special events with venue information</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<List<AdvertisementResponse>>), 200)]
