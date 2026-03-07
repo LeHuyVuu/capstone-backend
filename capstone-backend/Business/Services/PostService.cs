@@ -430,6 +430,8 @@ namespace capstone_backend.Business.Services
                 dto.IsLikedByMe = p.PostLikes.Any(pl => pl.MemberId == member.Id);
                 dto.IsOwner = p.AuthorId == member.Id;
 
+                dto.Author.Avatar = p.Author.User.AvatarUrl;
+
                 return dto;
             })
             .ToList();
