@@ -710,4 +710,172 @@ public class AdvertisementService : IAdvertisementService
     }
 
     #endregion
+
+    #region Public Detail APIs
+
+    public async Task<PublicAdvertisementDetailResponse> GetPublicAdvertisementDetailAsync(int advertisementId)
+    {
+        _logger.LogInformation("Getting public advertisement detail for ID {AdId}", advertisementId);
+
+        var venueLocationAds = await _unitOfWork.Context.Set<VenueLocationAdvertisement>()
+            .Include(vla => vla.Advertisement)
+            .Include(vla => vla.Venue)
+            .Where(vla => vla.AdvertisementId == advertisementId 
+                && vla.Status == "ACTIVE"
+                && vla.Advertisement.IsDeleted != true
+                && vla.Advertisement.Status == "APPROVED")
+            .ToListAsync();
+
+        if (venueLocationAds == null || !venueLocationAds.Any())
+        {
+            throw new KeyNotFoundException($"Không tìm thấy quảng cáo với ID {advertisementId}");
+        }
+
+        var firstAd = venueLocationAds.First();
+        var ad = firstAd.Advertisement;
+
+        var venues = venueLocationAds.Select(vla => new VenueDetailInfo
+        {
+            VenueId = vla.Venue.Id,
+            VenueName = vla.Venue.Name ?? string.Empty,
+            VenueDescription = vla.Venue.Description,
+            VenueAddress = vla.Venue.Address ?? string.Empty,
+            VenuePhoneNumber = vla.Venue.PhoneNumber,
+            VenueEmail = vla.Venue.Email,
+            VenueWebsiteUrl = vla.Venue.WebsiteUrl,
+            VenuePriceMin = vla.Venue.PriceMin,
+            VenuePriceMax = vla.Venue.PriceMax,
+            VenueLatitude = vla.Venue.Latitude,
+            VenueLongitude = vla.Venue.Longitude,
+            VenueAverageRating = vla.Venue.AverageRating,
+            VenueReviewCount = vla.Venue.ReviewCount,
+            VenueCoverImage = ParseImageField(vla.Venue.CoverImage),
+            VenueInteriorImage = ParseImageField(vla.Venue.InteriorImage),
+            VenueCategory = ParseCategoryField(vla.Venue.Category)
+        }).ToList();
+
+        var response = new PublicAdvertisementDetailResponse
+        {
+            AdvertisementId = ad.Id,
+            Title = ad.Title ?? string.Empty,
+            Content = ad.Content,
+            BannerUrl = ad.BannerUrl ?? string.Empty,
+            TargetUrl = ad.TargetUrl,
+            PlacementType = ad.PlacementType ?? string.Empty,
+            Venues = venues
+        };
+
+        _logger.LogInformation("Retrieved advertisement detail with {Count} venue(s)", venues.Count);
+
+        return response;
+    }
+
+    public async Task<SpecialEventDetailResponse> GetSpecialEventDetailAsync(int specialEventId)
+    {
+        _logger.LogInformation("Getting special event detail for ID {EventId}", specialEventId);
+
+        var specialEvent = await _unitOfWork.Context.Set<SpecialEvent>()
+            .Where(se => se.Id == specialEventId && se.IsDeleted != true)
+            .FirstOrDefaultAsync();
+
+        if (specialEvent == null)
+        {
+            throw new KeyNotFoundException($"Không tìm thấy sự kiện đặc biệt với ID {specialEventId}");
+        }
+
+        var response = new SpecialEventDetailResponse
+        {
+            Id = specialEvent.Id,
+            EventName = specialEvent.EventName ?? string.Empty,
+            Description = specialEvent.Description,
+            StartDate = specialEvent.StartDate,
+            EndDate = specialEvent.EndDate,
+            BannerUrl = specialEvent.BannerUrl ?? string.Empty,
+            IsYearly = specialEvent.IsYearly ?? false,
+            CreatedAt = specialEvent.CreatedAt ?? DateTime.UtcNow
+        };
+
+        _logger.LogInformation("Retrieved special event detail: '{EventName}'", specialEvent.EventName);
+
+        return response;
+    }
+
+    private static List<string> ParseImageField(string? imageField)
+    {
+        if (string.IsNullOrWhiteSpace(imageField))
+            return new List<string>();
+
+        var trimmed = imageField.Trim();
+
+        // Remove outer quotes if present (handles both ' and ")
+        while ((trimmed.StartsWith("'") && trimmed.EndsWith("'")) ||
+               (trimmed.StartsWith("\"") && trimmed.EndsWith("\"")))        {
+            trimmed = trimmed.Substring(1, trimmed.Length - 2).Trim();
+        }
+
+        // Check if it's a JSON array
+        if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+        {
+            try
+            {
+                // Unescape any escaped quotes before deserializing
+                var unescaped = trimmed.Replace("\\\"", "\"");
+                
+                var parsed = System.Text.Json.JsonSerializer.Deserialize<List<string>>(unescaped);
+                if (parsed != null && parsed.Any())
+                {
+                    return parsed.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                }
+                return new List<string>();
+            }
+            catch
+            {
+                // If parsing fails, treat as single URL
+            }
+        }
+
+        // Single URL string
+        return new List<string> { trimmed };
+    }
+
+    private static List<string> ParseCategoryField(string? categoryField)
+    {
+        if (string.IsNullOrWhiteSpace(categoryField))
+            return new List<string>();
+
+        var trimmed = categoryField.Trim();
+
+        // Remove outer quotes if present (handles both ' and ")
+        while ((trimmed.StartsWith("'") && trimmed.EndsWith("'")) ||
+               (trimmed.StartsWith("\"") && trimmed.EndsWith("\"")))        {
+            trimmed = trimmed.Substring(1, trimmed.Length - 2).Trim();
+        }
+
+        // Check if it's a JSON array
+        if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+        {
+            try
+            {
+                // Unescape any escaped quotes before deserializing
+                var unescaped = trimmed.Replace("\\\"", "\"");
+                
+                var parsed = System.Text.Json.JsonSerializer.Deserialize<List<string>>(unescaped);
+                if (parsed != null && parsed.Any())
+                {
+                    return parsed.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                }
+                return new List<string>();
+            }
+            catch
+            {
+                // If parsing fails, return empty
+                return new List<string>();
+            }
+        }
+
+        // Single category string
+        return new List<string> { trimmed };
+    }
+
+    #endregion
 }

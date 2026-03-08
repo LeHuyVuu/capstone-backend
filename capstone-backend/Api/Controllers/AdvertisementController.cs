@@ -290,4 +290,58 @@ public class AdvertisementController : BaseController
 
         return OkResponse(result, result.Message);
     }
+
+    #region Public Detail Endpoints
+
+    /// <summary>
+    /// Get advertisement or special event detail (public endpoint)
+    /// </summary>
+    /// <param name="id">Advertisement ID or Special Event ID</param>
+    /// <param name="type">Type: ADVERTISEMENT or SPECIAL_EVENT</param>
+    [HttpGet("detail/{id}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetDetail(int id, [FromQuery] string type)
+    {
+        _logger.LogInformation("Public request for {Type} detail ID {Id}", type, id);
+
+        if (string.IsNullOrWhiteSpace(type))
+        {
+            return BadRequestResponse("Type parameter is required (ADVERTISEMENT or SPECIAL_EVENT)");
+        }
+
+        var typeUpper = type.Trim().ToUpper();
+
+        try
+        {
+            if (typeUpper == "ADVERTISEMENT")
+            {
+                var detail = await _advertisementService.GetPublicAdvertisementDetailAsync(id);
+                return OkResponse(detail, "Advertisement detail retrieved successfully");
+            }
+            else if (typeUpper == "SPECIAL_EVENT")
+            {
+                var detail = await _advertisementService.GetSpecialEventDetailAsync(id);
+                return OkResponse(detail, "Special event detail retrieved successfully");
+            }
+            else
+            {
+                return BadRequestResponse($"Invalid type '{type}'. Must be ADVERTISEMENT or SPECIAL_EVENT");
+            }
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning("{Type} {Id} not found: {Message}", typeUpper, id, ex.Message);
+            return NotFoundResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving {Type} detail for ID {Id}", typeUpper, id);
+            return BadRequestResponse($"Failed to retrieve {typeUpper.ToLower()} detail");
+        }
+    }
+
+    #endregion
 }
