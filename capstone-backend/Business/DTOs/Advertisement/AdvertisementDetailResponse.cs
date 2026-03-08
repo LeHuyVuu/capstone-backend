@@ -11,6 +11,7 @@ public class AdvertisementDetailResponse
     public string PlacementType { get; set; } = null!;
     public string Status { get; set; } = null!; // DRAFT, PENDING, ACTIVE, REJECTED, EXPIRED
     public string? RejectionReason { get; set; }
+    public DateTime? DesiredStartDate { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     

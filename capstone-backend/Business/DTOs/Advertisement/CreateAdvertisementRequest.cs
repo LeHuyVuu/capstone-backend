@@ -20,4 +20,11 @@ public class CreateAdvertisementRequest
     [Required(ErrorMessage = "PlacementType is required")]
     [StringLength(50, ErrorMessage = "PlacementType cannot exceed 50 characters")]
     public string PlacementType { get; set; } = null!;
+
+    /// <summary>
+    /// Desired start date for the advertisement campaign
+    /// If admin approves after this date, start date will be auto-adjusted to approval date
+    /// </summary>
+    [Required(ErrorMessage = "DesiredStartDate is required")]
+    public DateTime DesiredStartDate { get; set; }
 }

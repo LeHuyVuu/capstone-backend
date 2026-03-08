@@ -605,19 +605,17 @@ public class SepayWebhookController : ControllerBase
                             requestId, adsOrder.Advertisement.Id, adsOrder.Advertisement.Status);
                     }
 
-                    // 15. Update VenueLocationAdvertisement - activate when admin approves
+                    // 15. Update VenueLocationAdvertisement status - keep desired dates unchanged
                     var venueLocationAd = adsOrder.Advertisement.VenueLocationAdvertisements.FirstOrDefault();
                     if (venueLocationAd != null)
                     {
-                        // Set dates based on package duration
-                        var durationDays = adsOrder.Package?.DurationDays ?? 7;
+                        // Only update status, keep original desired StartDate and EndDate
+                        // Dates will be auto-adjusted by admin approval logic if needed
                         venueLocationAd.Status = "PENDING_APPROVAL"; // Wait for admin approval
-                        venueLocationAd.StartDate = now;
-                        venueLocationAd.EndDate = now.AddDays(durationDays);
                         venueLocationAd.UpdatedAt = now;
                         _unitOfWork.Context.Set<VenueLocationAdvertisement>().Update(venueLocationAd);
                         
-                        _logger.LogInformation("[{RequestId}] Updated VenueLocationAdvertisement {VlaId} to PENDING_APPROVAL, will be active from {Start} to {End}",
+                        _logger.LogInformation("[{RequestId}] Updated VenueLocationAdvertisement {VlaId} to PENDING_APPROVAL, desired dates: {Start} to {End}",
                             requestId, venueLocationAd.Id, venueLocationAd.StartDate, venueLocationAd.EndDate);
                     }
                 }
