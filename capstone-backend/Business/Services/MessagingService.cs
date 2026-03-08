@@ -685,8 +685,7 @@ public class MessagingService : IMessagingService
                             PlannedEndAt = datePlanInfo.PlannedEndAt,
                             EstimatedBudget = datePlanInfo.EstimatedBudget,
                             TotalCount = datePlanInfo.TotalCount,
-                            ImageUrl = datePlanInfo.ImageUrl,
-                            VenueName = datePlanInfo.VenueName
+                            ImageDatePlanUrl = datePlanInfo.ImageDatePlanUrl
                         };
                         response.Metadata = datePlanInfo;
                     }
@@ -744,10 +743,7 @@ public class MessagingService : IMessagingService
         [System.Text.Json.Serialization.JsonPropertyName("totalCount")]
         public int TotalCount { get; set; }
         
-        [System.Text.Json.Serialization.JsonPropertyName("imageUrl")]
-        public string? ImageUrl { get; set; }
-        
-        [System.Text.Json.Serialization.JsonPropertyName("venueName")]
-        public string? VenueName { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("imageDatePlanUrl")]
+        public string? ImageDatePlanUrl { get; set; }
     }
 }

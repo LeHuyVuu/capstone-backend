@@ -68,8 +68,7 @@ public class DatePlanInfoDto
     public DateTime? PlannedEndAt { get; set; }
     public decimal? EstimatedBudget { get; set; }
     public int TotalCount { get; set; }
-    public string? ImageUrl { get; set; }
-    public string? VenueName { get; set; }
+    public string? ImageDatePlanUrl { get; set; }
 }
 
 /// <summary>
