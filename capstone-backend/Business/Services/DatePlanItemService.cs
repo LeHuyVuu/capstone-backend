@@ -322,6 +322,8 @@ namespace capstone_backend.Business.Services
                 if (check <= 0)
                     throw new Exception("Cập nhật mục trong lịch trình thất bại");
 
+                // Reload with VenueLocation
+                datePlanItem = await _unitOfWork.DatePlanItems.GetByIdAndDatePlanIdAsync(datePlanItemId, datePlanId, includeVenueLocation: true);
                 var response = _mapper.Map<DatePlanItemResponse>(datePlanItem);
 
                 return response;
