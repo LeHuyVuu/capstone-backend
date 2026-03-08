@@ -6,6 +6,10 @@ public interface IAdvertisementService
 {
     Task<List<AdvertisementResponse>> GetRotatingAdvertisementsAsync(string? placementType = null);
     
+    // Public detail endpoints (for when user clicks on banner)
+    Task<PublicAdvertisementDetailResponse> GetPublicAdvertisementDetailAsync(int advertisementId);
+    Task<SpecialEventDetailResponse> GetSpecialEventDetailAsync(int specialEventId);
+    
     // Venue owner advertisement management (userId is UserAccount.Id, service will find VenueOwnerProfile.Id)
     Task<AdvertisementDetailResponse> CreateAdvertisementAsync(CreateAdvertisementRequest request, int userId);
     Task<List<MyAdvertisementResponse>> GetMyAdvertisementsAsync(int userId);
