@@ -140,4 +140,11 @@ public interface IVenueLocationService
     /// <param name="locationTagId">Location tag ID to delete</param>
     /// <returns>True if successful, False if not found or cannot delete</returns>
     Task<bool> DeleteVenueLocationTagAsync(int venueId, int locationTagId);
+
+    /// <summary>
+    /// Get venue statistics for debugging search functionality
+    /// Returns counts by status to help diagnose why search may not return results
+    /// </summary>
+    /// <returns>Tuple with total, active, pending, drafted, deleted counts and status breakdown</returns>
+    Task<(int Total, int Active, int Pending, int Drafted, int Deleted, Dictionary<string, int> StatusBreakdown)> GetAllVenuesForStatsAsync();
 }

@@ -7,6 +7,8 @@ public class CurrentMoodResponse
     /// </summary>
     public int MemberId { get; set; }
 
+    public string? MemberName { get; set; }
+
     public string? MemberAvatarUrl { get; set; } = null;
 
     /// <summary>
@@ -28,6 +30,8 @@ public class CurrentMoodResponse
     /// ID của partner trong cặp đôi (nếu có)
     /// </summary>
     public int? PartnerMemberId { get; set; }
+    
+    public string? PartnerMemberName { get; set; }
 
     public string? PartnerAvatarUrl { get; set; } = null;
 
