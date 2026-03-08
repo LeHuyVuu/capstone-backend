@@ -1658,4 +1658,30 @@ public class VenueLocationService : IVenueLocationService
 
         return true;
     }
+
+    /// <summary>
+    /// Get venue statistics for debugging search functionality
+    /// </summary>
+    public async Task<(int Total, int Active, int Pending, int Drafted, int Deleted, Dictionary<string, int> StatusBreakdown)> GetAllVenuesForStatsAsync()
+    {
+        _logger.LogInformation("Getting venue statistics for search debugging");
+
+        var allVenues = await _unitOfWork.VenueLocations.GetAllAsync();
+        
+        var total = allVenues.Count();
+        var active = allVenues.Count(v => v.Status == "ACTIVE" && v.IsDeleted != true);
+        var pending = allVenues.Count(v => v.Status == "PENDING" && v.IsDeleted != true);
+        var drafted = allVenues.Count(v => v.Status == "DRAFTED" && v.IsDeleted != true);
+        var deleted = allVenues.Count(v => v.IsDeleted == true);
+
+        var statusBreakdown = allVenues
+            .Where(v => v.IsDeleted != true)
+            .GroupBy(v => v.Status ?? "NULL")
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        _logger.LogInformation("Stats: Total={Total}, Active={Active}, Pending={Pending}, Drafted={Drafted}, Deleted={Deleted}", 
+            total, active, pending, drafted, deleted);
+
+        return (total, active, pending, drafted, deleted, statusBreakdown);
+    }
 }

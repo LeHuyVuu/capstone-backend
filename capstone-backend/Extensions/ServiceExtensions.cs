@@ -1,6 +1,7 @@
 using Amazon.Rekognition;
 using Amazon.Runtime;
 using capstone_backend.Api.Filters;
+using capstone_backend.Api.VenueRecommendation.Service;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Comment;
 using capstone_backend.Business.Jobs.DatePlan;
@@ -146,7 +147,7 @@ public static class ServiceExtensions
 
         // Register AI Recommendation Services
         services.AddScoped<IMoodMappingService, MoodMappingService>();
-        services.AddScoped<IPersonalityMappingService, PersonalityMappingService>();
+        services.AddScoped<PersonalityMappingService>();
         services.AddScoped<IRecommendationService, OpenAIRecommendationService>();
 
         // Đăng ký AWS Rekognition Service để phân tích cảm xúc khuôn mặt
@@ -199,6 +200,9 @@ public static class ServiceExtensions
 
         // Register Moderation Service
         services.AddOpenAIModerationService();
+
+        // Register Meilisearch Service
+        services.AddScoped<IMeilisearchService, MeilisearchService>();
 
         return services;
     }

@@ -449,4 +449,49 @@ public class VenueLocationController : BaseController
 
         return OkResponse(result, result.Message);
     }
+
+    [HttpGet("search/stats")]
+    [Tags("Meilisearch")]
+    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+    public async Task<IActionResult> GetSearchStats()
+    {
+        _logger.LogInformation("Getting Meilisearch index statistics");
+
+        try
+        {
+            // Get all venues from database grouped by status
+            var allVenues = await _venueLocationService.GetAllVenuesForStatsAsync();
+            
+            var stats = new
+            {
+                database = new
+                {
+                    totalVenues = allVenues.Total,
+                    activeVenues = allVenues.Active,
+                    pendingVenues = allVenues.Pending,
+                    draftedVenues = allVenues.Drafted,
+                    deletedVenues = allVenues.Deleted,
+                    statusBreakdown = allVenues.StatusBreakdown
+                },
+                recommendation = new
+                {
+                    message = "To make venues searchable, they must have status = 'ACTIVE'",
+                    steps = new[]
+                    {
+                        "1. Create venue (Status = DRAFTED)",
+                        "2. Submit venue via POST /api/VenueLocation/{id}/submit (Status = PENDING)",
+                        "3. Admin approves via POST /api/VenueLocation/approve (Status = ACTIVE)",
+                        "4. Sync to Meilisearch via POST /api/VenueLocation/search/sync"
+                    }
+                }
+            };
+
+            return OkResponse(stats, "Retrieved search statistics");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting search statistics");
+            return BadRequestResponse("Error retrieving statistics");
+        }
+    }
 }

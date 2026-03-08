@@ -229,11 +229,16 @@ public class MoodTypeService : IMoodTypeService
         return new CurrentMoodResponse
         {
             MemberId = memberProfile.Id,
+            MemberName = memberProfile.FullName,
             MemberAvatarUrl = memberProfile.User?.AvatarUrl,
             CurrentMood = currentMood,
             CurrentMoodId = currentMoodId,
             MoodUpdatedAt = moodUpdatedAt,
             PartnerMemberId = partnerMemberId,
+            PartnerMemberName = partnerMemberId.HasValue ? await _unitOfWork.Context.Set<MemberProfile>()
+                .Where(m => m.Id == partnerMemberId.Value)
+                .Select(m => m.FullName)
+                .FirstOrDefaultAsync(cancellationToken) : null,
             PartnerAvatarUrl = partnerMemberAvatarUrl,
             PartnerMood = partnerMood,
             PartnerMoodId = partnerMoodId,
