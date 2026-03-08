@@ -322,13 +322,13 @@ public class MessagingService : IMessagingService
                 continue;
                 
             // Create response specific to this member so IsMine is correct
-            var memberResponse = MapToMessageResponse(messageWithSender, member.UserId.Value);
+            var memberResponse = await MapToMessageResponseAsync(messageWithSender, member.UserId.Value);
             await _hubContext.Clients.User(member.UserId.Value.ToString())
                 .SendAsync("ReceiveMessage", memberResponse, cancellationToken);
         }
 
         // Return response for sender with IsMine = true
-        var response = MapToMessageResponse(messageWithSender, currentUserId);
+        var response = await MapToMessageResponseAsync(messageWithSender, currentUserId);
         return response;
     }
 
@@ -358,9 +358,12 @@ public class MessagingService : IMessagingService
         var messages = await _messageRepository.GetConversationMessagesAsync(
             conversationId, pageNumber, pageSize, cancellationToken);
 
+        var messageTasks = messages.Select(m => MapToMessageResponseAsync(m, currentUserId));
+        var messageResponses = await Task.WhenAll(messageTasks);
+
         return new MessagesPageResponse
         {
-            Messages = messages.Select(m => MapToMessageResponse(m, currentUserId)).ToList(),
+            Messages = messageResponses.ToList(),
             PageNumber = pageNumber,
             PageSize = pageSize,
             TotalPages = 0, // Can calculate if needed
@@ -582,7 +585,9 @@ public class MessagingService : IMessagingService
             throw new Exception("You are not a member of this conversation");
 
         var messages = await _messageRepository.SearchMessagesAsync(conversationId, searchTerm, cancellationToken);
-        return messages.Select(m => MapToMessageResponse(m, currentUserId)).ToList();
+        
+        var messageTasks = messages.Select(m => MapToMessageResponseAsync(m, currentUserId));
+        return (await Task.WhenAll(messageTasks)).ToList();
     }
 
     // Helper methods
@@ -616,7 +621,7 @@ public class MessagingService : IMessagingService
         var lastMessage = conversation.Messages?.OrderByDescending(m => m.CreatedAt).FirstOrDefault();
         if (lastMessage != null)
         {
-            response.LastMessage = MapToMessageResponse(lastMessage, currentUserId);
+            response.LastMessage = await MapToMessageResponseAsync(lastMessage, currentUserId);
         }
 
         // Get unread count
@@ -636,7 +641,7 @@ public class MessagingService : IMessagingService
         return response;
     }
 
-    private MessageResponse MapToMessageResponse(Message message, int currentUserId)
+    private async Task<MessageResponse> MapToMessageResponseAsync(Message message, int currentUserId)
     {
         var response = new MessageResponse
         {
@@ -676,15 +681,22 @@ public class MessagingService : IMessagingService
                     var datePlanInfo = System.Text.Json.JsonSerializer.Deserialize<DatePlanMetadata>(message.Metadata);
                     if (datePlanInfo != null && datePlanInfo.DatePlanId > 0)
                     {
+                        // Refresh DatePlan status from database
+                        var currentDatePlan = await _unitOfWork.Context.DatePlans
+                            .AsNoTracking()
+                            .Where(dp => dp.Id == datePlanInfo.DatePlanId && dp.IsDeleted == false)
+                            .Select(dp => new { dp.Status, dp.Title, dp.TotalCount })
+                            .FirstOrDefaultAsync();
+
                         response.DatePlanInfo = new DatePlanInfoDto
                         {
                             DatePlanId = datePlanInfo.DatePlanId,
-                            Title = datePlanInfo.Title,
-                            Status = datePlanInfo.Status,
+                            Title = currentDatePlan?.Title ?? datePlanInfo.Title,
+                            Status = currentDatePlan?.Status ?? datePlanInfo.Status, // Use current status from DB
                             PlannedStartAt = datePlanInfo.PlannedStartAt,
                             PlannedEndAt = datePlanInfo.PlannedEndAt,
                             EstimatedBudget = datePlanInfo.EstimatedBudget,
-                            TotalCount = datePlanInfo.TotalCount,
+                            TotalCount = currentDatePlan?.TotalCount ?? datePlanInfo.TotalCount,
                             ImageDatePlanUrl = datePlanInfo.ImageDatePlanUrl
                         };
                         response.Metadata = datePlanInfo;
