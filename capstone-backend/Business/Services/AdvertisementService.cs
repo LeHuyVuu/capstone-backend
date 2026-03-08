@@ -163,6 +163,18 @@ public class AdvertisementService : IAdvertisementService
             throw new InvalidOperationException("You are not registered as a venue owner. Please create a venue owner profile first.");
         }
 
+        // Validate desired start date
+        var now = DateTime.UtcNow;
+        if (request.DesiredStartDate < now.AddHours(-1)) // Allow 1 hour grace period for timezone issues
+        {
+            throw new InvalidOperationException("Desired start date cannot be in the past");
+        }
+
+        if (request.DesiredStartDate > now.AddYears(1))
+        {
+            throw new InvalidOperationException("Desired start date cannot be more than 1 year in the future");
+        }
+
         // Create advertisement (venue will be assigned when submitting payment)
         var advertisement = new Advertisement
         {
@@ -172,6 +184,7 @@ public class AdvertisementService : IAdvertisementService
             BannerUrl = request.BannerUrl,
             TargetUrl = request.TargetUrl,
             PlacementType = request.PlacementType,
+            DesiredStartDate = request.DesiredStartDate,
             Status = "DRAFT", // Default to DRAFT, will be updated to PENDING after payment
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -181,8 +194,8 @@ public class AdvertisementService : IAdvertisementService
         await _unitOfWork.Advertisements.AddAsync(advertisement);
         await _unitOfWork.SaveChangesAsync();
 
-        _logger.LogInformation("Created advertisement ID {AdId} for venue owner {VenueOwnerId}", 
-            advertisement.Id, venueOwnerProfile.Id);
+        _logger.LogInformation("Created advertisement ID {AdId} for venue owner {VenueOwnerId} with DesiredStartDate {StartDate}", 
+            advertisement.Id, venueOwnerProfile.Id, request.DesiredStartDate);
 
         // Load with details for response
         var created = await _unitOfWork.Advertisements.GetByIdWithDetailsAsync(advertisement.Id);
@@ -221,6 +234,7 @@ public class AdvertisementService : IAdvertisementService
                 PlacementType = ad.PlacementType ?? string.Empty,
                 Status = ad.Status ?? "DRAFT",
                 RejectionReason = ad.RejectionReason,
+                DesiredStartDate = ad.DesiredStartDate,
                 CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
                 UpdatedAt = ad.UpdatedAt,
                 VenueLocationCount = ad.VenueLocationAdvertisements.Count,
@@ -393,6 +407,18 @@ public class AdvertisementService : IAdvertisementService
             };
         }
 
+        // 7.5. Get desired start date from advertisement
+        if (!advertisement.DesiredStartDate.HasValue)
+        {
+            return new SubmitAdvertisementWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "Advertisement does not have a desired start date. Please recreate the advertisement."
+            };
+        }
+
+        var desiredStartDate = advertisement.DesiredStartDate.Value;
+
         // 8. Calculate amount
         var totalAmount = package.Price;
 
@@ -417,14 +443,14 @@ public class AdvertisementService : IAdvertisementService
 
             _logger.LogInformation("✅ Created AdsOrder ID: {OrderId}", adsOrder.Id);
 
-            // 10.5 Create VenueLocationAdvertisement  
+            // 10.5 Create VenueLocationAdvertisement with desired start date
             var venueLocationAd = new VenueLocationAdvertisement
             {
                 AdvertisementId = advertisementId,
                 VenueId = request.VenueId,
                 PriorityScore = package.PriorityScore, // Set from package
-                StartDate = DateTime.UtcNow, // Will be updated when payment is confirmed
-                EndDate = DateTime.UtcNow.AddDays(package.DurationDays), // Will be updated when payment is confirmed
+                StartDate = desiredStartDate, // Use desired start date from advertisement
+                EndDate = desiredStartDate.AddDays(package.DurationDays),
                 Status = "PENDING_PAYMENT",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -433,8 +459,8 @@ public class AdvertisementService : IAdvertisementService
             await _unitOfWork.Context.Set<VenueLocationAdvertisement>().AddAsync(venueLocationAd);
             await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("✅ Created VenueLocationAdvertisement ID: {VlaId} for VenueId: {VenueId}", 
-                venueLocationAd.Id, request.VenueId);
+            _logger.LogInformation("✅ Created VenueLocationAdvertisement ID: {VlaId} for VenueId: {VenueId}, DesiredStartDate: {StartDate}", 
+                venueLocationAd.Id, request.VenueId, desiredStartDate);
 
             // 11. Create Transaction
             var paymentContent = $"ADO{adsOrder.Id}";
@@ -592,6 +618,7 @@ public class AdvertisementService : IAdvertisementService
             PlacementType = ad.PlacementType ?? string.Empty,
             Status = ad.Status ?? "DRAFT",
             RejectionReason = ad.RejectionReason,
+            DesiredStartDate = ad.DesiredStartDate,
             CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
             UpdatedAt = ad.UpdatedAt,
             VenueLocationAds = ad.VenueLocationAdvertisements?.Select(vla => new VenueLocationAdInfo
@@ -647,24 +674,51 @@ public class AdvertisementService : IAdvertisementService
         advertisement.UpdatedAt = DateTime.UtcNow;
         advertisement.RejectionReason = null;
         
+        var approvalDate = DateTime.UtcNow;
+        var adjustedCount = 0;
+        
         if (advertisement.VenueLocationAdvertisements != null && advertisement.VenueLocationAdvertisements.Any())
         {
-            foreach (var vla in advertisement.VenueLocationAdvertisements.Where(v => v.Status == "PENDING"))
+            // Process both PENDING and PENDING_APPROVAL status
+            foreach (var vla in advertisement.VenueLocationAdvertisements
+                .Where(v => v.Status == "PENDING" || v.Status == "PENDING_APPROVAL"))
             {
+                // Auto-adjust dates if admin approves after desired start date
+                if (approvalDate > vla.StartDate)
+                {
+                    var originalStart = vla.StartDate;
+                    var originalEnd = vla.EndDate;
+                    var duration = (vla.EndDate - vla.StartDate).Days;
+                    
+                    // Adjust to start from approval date
+                    vla.StartDate = approvalDate;
+                    vla.EndDate = approvalDate.AddDays(duration);
+                    
+                    adjustedCount++;
+                    _logger.LogInformation(
+                        "Auto-adjusted VenueLocationAd {VlaId}: StartDate {OriginalStart} → {NewStart}, EndDate {OriginalEnd} → {NewEnd} (Approved late by {DelayDays} days)",
+                        vla.Id, originalStart, vla.StartDate, originalEnd, vla.EndDate, (approvalDate - originalStart).Days);
+                }
+                
                 vla.Status = "ACTIVE";
-                vla.UpdatedAt = DateTime.UtcNow;
+                vla.UpdatedAt = approvalDate;
             }
         }
 
         _unitOfWork.Advertisements.Update(advertisement);
         await _unitOfWork.SaveChangesAsync();
 
-        _logger.LogInformation("Advertisement {AdId} approved and activated", request.AdvertisementId);
+        var message = adjustedCount > 0
+            ? $"Advertisement approved successfully. {adjustedCount} venue location(s) had start dates auto-adjusted due to late approval."
+            : "Advertisement approved successfully";
+
+        _logger.LogInformation("Advertisement {AdId} approved and activated. Adjusted venues: {Count}", 
+            request.AdvertisementId, adjustedCount);
 
         return new AdvertisementApprovalResult 
         { 
             IsSuccess = true, 
-            Message = "Advertisement approved successfully" 
+            Message = message
         };
     }
 
