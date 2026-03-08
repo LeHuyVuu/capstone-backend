@@ -2,6 +2,7 @@ using AutoMapper;
 using capstone_backend.Business.DTOs.User;
 using capstone_backend.Business.DTOs.VenueLocation;
 using capstone_backend.Data.Entities;
+using capstone_backend.Extensions.Common;
 
 namespace capstone_backend.Business.Mappings;
 
@@ -17,11 +18,11 @@ public class VenueLocationProfile : Profile
         CreateMap<VenueLocation, VenueLocationDetailResponse>()
             .ForMember(dest => dest.Category, opt => opt.Ignore())
             .ForMember(dest => dest.CoverImage,
-                opt => opt.MapFrom(s => string.IsNullOrWhiteSpace(s.CoverImage) ? null : new List<string> { s.CoverImage }))
+                opt => opt.MapFrom(s => JsonConverterUtil.ParseImageList(s.CoverImage)))
             .ForMember(dest => dest.InteriorImage,
-                opt => opt.MapFrom(s => string.IsNullOrWhiteSpace(s.InteriorImage) ? null : new List<string> { s.InteriorImage }))
+                opt => opt.MapFrom(s => JsonConverterUtil.ParseImageList(s.InteriorImage)))
             .ForMember(dest => dest.FullPageMenuImage,
-                opt => opt.MapFrom(s => string.IsNullOrWhiteSpace(s.FullPageMenuImage) ? null : new List<string> { s.FullPageMenuImage }))
+                opt => opt.MapFrom(s => JsonConverterUtil.ParseImageList(s.FullPageMenuImage)))
             .AfterMap((src, dest) =>
             {
                 // Map và gom nhóm LocationTags thành CoupleMoodTypes và CouplePersonalityTypes riêng biệt

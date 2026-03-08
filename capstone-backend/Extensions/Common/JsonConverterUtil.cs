@@ -41,5 +41,53 @@ namespace capstone_backend.Extensions.Common
         {
             return JsonSerializer.Serialize(data, Options);
         }
+
+        /// <summary>
+        /// Parse image list from database JSON string format
+        /// Handles formats like: '["url1", "url2"]' or ["url1", "url2"]
+        /// </summary>
+        public static List<string>? ParseImageList(string? imageString)
+        {
+            if (string.IsNullOrWhiteSpace(imageString))
+                return null;
+
+            try
+            {
+                // Remove outer quotes first
+                var trimmed = imageString.Trim();
+
+                // Remove leading/trailing single or double quotes
+                if ((trimmed.StartsWith("'") && trimmed.EndsWith("'")) ||
+                    (trimmed.StartsWith("\"") && trimmed.EndsWith("\"")))
+                {
+                    trimmed = trimmed.Substring(1, trimmed.Length - 2);
+                }
+
+                // Now check if it's a JSON array
+                trimmed = trimmed.Trim();
+                if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+                {
+                    var deserializedArray = JsonSerializer.Deserialize<List<string>>(trimmed, Options);
+                    if (deserializedArray != null && deserializedArray.Any())
+                    {
+                        return deserializedArray
+                            .Where(s => !string.IsNullOrWhiteSpace(s))
+                            .Select(s => s.Trim())
+                            .ToList();
+                    }
+                }
+            }
+            catch
+            {
+                // Fallback: parse as comma-separated string
+                return imageString
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim().Trim('\'', '"', '[', ']', '\\'))
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .ToList();
+            }
+
+            return null;
+        }
     }
 }
