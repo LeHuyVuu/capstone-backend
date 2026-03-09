@@ -228,8 +228,8 @@ app.UseStaticFiles();
 
 app.Logger.LogInformation("Application starting...");
 
-// Hubs
 app.MapHub<NotificationHub>("/hubs/notification");
 app.MapHub<MessagingHub>("/hubs/messaging");
+app.MapHub<LocationTrackingHub>("/hubs/location");
 
 app.Run();
