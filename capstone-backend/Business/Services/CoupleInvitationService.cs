@@ -10,10 +10,12 @@ namespace capstone_backend.Business.Services;
 public class CoupleInvitationService : ICoupleInvitationService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMessagingService _messagingService;
 
-    public CoupleInvitationService(IUnitOfWork unitOfWork)
+    public CoupleInvitationService(IUnitOfWork unitOfWork, IMessagingService messagingService)
     {
         _unitOfWork = unitOfWork;
+        _messagingService = messagingService;
     }
 
     public async Task<(bool Success, string Message, CoupleInvitationResponse? Data)> SendInvitationDirectAsync(
@@ -237,6 +239,18 @@ public class CoupleInvitationService : ICoupleInvitationService
         // No need to send invitations again
 
         await _unitOfWork.SaveChangesAsync();
+
+        // Create conversation between couple members
+        try
+        {
+            await _messagingService.GetOrCreateDirectConversationAsync(
+                invitation.SenderMemberId, 
+                invitation.ReceiverMemberId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to create conversation for couple: {ex.Message}");
+        }
 
         // TODO: Send push notifications to both
 

@@ -28,6 +28,11 @@ public interface IMessagingService
     Task<ConversationResponse> GetConversationByIdAsync(int currentUserId, int conversationId, CancellationToken cancellationToken = default);
     
     /// <summary>
+    /// Get conversation with current couple partner
+    /// </summary>
+    Task<ConversationResponse> GetCoupleConversationAsync(int currentUserId, CancellationToken cancellationToken = default);
+    
+    /// <summary>
     /// Send a message
     /// </summary>
     Task<MessageResponse> SendMessageAsync(int currentUserId, SendMessageRequest request, CancellationToken cancellationToken = default);

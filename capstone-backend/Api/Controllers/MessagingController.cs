@@ -88,6 +88,17 @@ public class MessagingController : BaseController
         return Ok(result);
     }
 
+    [HttpGet("conversations/couple")]
+    [ProducesResponseType(typeof(ConversationResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetCoupleConversation(CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId() ?? 0;
+        var result = await _messagingService.GetCoupleConversationAsync(userId, cancellationToken);
+        return Ok(result);
+    }
+
     /// <summary>
     /// Send a message
     /// </summary>
