@@ -1113,5 +1113,224 @@ namespace capstone_backend.Business.Services
                 CheckedInAt = checkin?.CreatedAt
             };
         }
+
+        public async Task HandleCheckinChallengeProgressAsync(int userId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                //throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+                return;
+
+            bool isNew = false;
+
+            var nowUtc = DateTime.UtcNow;
+            var nowVn = TimezoneUtil.ToVietNamTime(nowUtc);
+            var today = DateOnly.FromDateTime(nowVn);
+            var monthKey = $"{today:yyyy-MM}";
+            var memberKey = member.Id.ToString();
+            var todayDay = today.Day;
+
+            var challenge = await _unitOfWork.Challenges.GetFirstAsync(
+                c => c.IsDeleted == false &&
+                     c.Status == ChallengeStatus.ACTIVE.ToString() &&
+                     c.TriggerEvent == ChallengeTriggerEvent.CHECKIN.ToString() &&
+                     (c.StartDate == null || c.StartDate <= nowUtc) &&
+                     (c.EndDate == null || c.EndDate >= nowUtc),
+                q => q.OrderByDescending(c => c.CreatedAt)
+            );
+
+            if (challenge == null)
+                return;
+
+            var coupleChallenge = await _unitOfWork.CoupleProfileChallenges.GetFirstAsync(cc =>
+                cc.CoupleId == couple.id &&
+                cc.ChallengeId == challenge.Id &&
+                cc.IsDeleted == false
+            );
+
+            if (coupleChallenge == null)
+            {
+                isNew = true;
+                // Lazy create couple challenge if not exist
+                var initProgress = CreateInitialCheckinProgressData(couple);
+                coupleChallenge = new CoupleProfileChallenge
+                {
+                    CoupleId = couple.id,
+                    ChallengeId = challenge.Id,
+                    Status = CoupleProfileChallengeStatus.IN_PROGRESS.ToString(),
+                    CurrentProgress = 0,
+                    ProgressData = JsonConverterUtil.Serialize(initProgress),
+                    CompletedAt = null,
+                };
+
+                await _unitOfWork.CoupleProfileChallenges.AddAsync(coupleChallenge);
+            }
+
+            if (coupleChallenge.Status == CoupleProfileChallengeStatus.COMPLETED.ToString())
+                return;
+
+            // Deserialize progress data
+            var progress = string.IsNullOrWhiteSpace(coupleChallenge.ProgressData)
+                ? new CoupleChallengeProgressData()
+                : JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(coupleChallenge.ProgressData) ?? new CoupleChallengeProgressData();
+
+
+            // Ensure data not null
+            progress.DailyHistory ??= new DailyHistory
+            {
+                Tz = "Asia/Ho_Chi_Minh",
+                Months = new Dictionary<string, Dictionary<string, int>>()
+            };
+
+            progress.DailyHistory.Months ??= new Dictionary<string, Dictionary<string, int>>();
+
+            progress.MemberState ??= new Dictionary<string, MemberState>();
+            progress.Members ??= new Dictionary<string, ProgressMember>();
+
+            if (!progress.MemberState.ContainsKey(memberKey))
+            {
+                progress.MemberState[memberKey] = new MemberState
+                {
+                    IsJoined = true,
+                    JoinedAt = nowUtc,
+                    IsActive = true,
+                    LeftAt = null
+                };
+            }
+
+            if (!progress.Members.ContainsKey(memberKey))
+            {
+                progress.Members[memberKey] = new ProgressMember
+                {
+                    Current = 0,
+                    Streak = 0,
+                    LastActionAt = null
+                };
+            }
+
+            if (!progress.DailyHistory.Months.TryGetValue(monthKey, out var membermap) && membermap == null)
+            {
+                membermap = new Dictionary<string, int>();
+                progress.DailyHistory.Months[monthKey] = membermap;
+            }
+
+            var currentMask = membermap.TryGetValue(memberKey, out var mask) ? mask : 0;
+
+            // If already checked in today, do nothing
+            if (CheckinBitMaskUtil.HasCheckin(currentMask, todayDay))
+                return;
+
+            // Mark check-in for today
+            currentMask = CheckinBitMaskUtil.MarkCheckin(currentMask, todayDay);
+            membermap[memberKey] = currentMask;
+
+            // Update member progress
+            // MEMBER
+            // a. update streak
+            var (memberCurrent, memberBest) = CheckinBitMaskUtil.CalculateCrossMonthStreak(progress.DailyHistory.Months, memberKey, null, today);
+
+            var memberStreakObject = progress.Streak.ByMember[memberKey];
+            memberStreakObject.Current = memberCurrent;
+            memberStreakObject.Best = memberBest;
+            memberStreakObject.LastAt = nowUtc;
+
+            // b. update member
+            var memberProgressObj = progress.Members[memberKey];
+            memberProgressObj.Current += 1;
+            memberProgressObj.Streak = memberCurrent;
+            memberProgressObj.LastActionAt = nowUtc;
+
+            // COUPLE
+            // a. update streak
+            var partnerKey = member.Id == couple.MemberId1 ? couple.MemberId2.ToString() : couple.MemberId1.ToString();
+
+            int partnerMask = membermap.TryGetValue(partnerKey, out var pMask) ? pMask : 0;
+            int coupleMask = currentMask & partnerMask;
+
+            var (coupleCurrent, coupleBest) = CheckinBitMaskUtil.CalculateCrossMonthStreak(progress.DailyHistory.Months, memberKey, partnerKey, today);
+
+            progress.Streak.Current = coupleCurrent;
+            progress.Streak.Best = coupleBest;
+
+            // Goal check
+            int memberTodayScore = 1;
+            int partnerTodayScore = CheckinBitMaskUtil.HasCheckin(partnerMask, todayDay) ? 1 : 0;
+
+            coupleChallenge.CurrentProgress = memberTodayScore + partnerTodayScore;
+            progress.Current = memberTodayScore + partnerTodayScore;
+            if (coupleChallenge.CurrentProgress >= challenge.TargetGoal && !progress.IsCompleted)
+            {
+                coupleChallenge.Status = CoupleProfileChallengeStatus.COMPLETED.ToString();
+                coupleChallenge.CompletedAt = nowUtc;
+                progress.IsCompleted = true;
+            }
+
+            // Add points
+            couple.TotalPoints += challenge.RewardPoints;
+
+            // Serialize and save
+            coupleChallenge.ProgressData = JsonConverterUtil.Serialize(progress);
+            coupleChallenge.UpdatedAt = nowUtc;
+
+            if (!isNew)
+                _unitOfWork.CoupleProfileChallenges.Update(coupleChallenge);
+        }
+
+        private static CoupleChallengeProgressData CreateInitialCheckinProgressData(CoupleProfile couple)
+        {
+            var memberIds = new List<int>();
+
+            if (couple.MemberId1 > 0)
+                memberIds.Add(couple.MemberId1);
+
+            if (couple.MemberId2 > 0)
+                memberIds.Add(couple.MemberId2);
+
+            var progress = new CoupleChallengeProgressData
+            {
+                DailyHistory = new DailyHistory
+                {
+                    Tz = "Asia/Ho_Chi_Minh",
+                    Months = new Dictionary<string, Dictionary<string, int>>()
+                },
+                MemberState = new Dictionary<string, MemberState>(),
+                Members = new Dictionary<string, ProgressMember>(),
+                Streak = new ProgressStreak
+                {
+                    ByMember = new Dictionary<string, StreakByMember>()
+                    {
+                        { couple.MemberId1.ToString(), new StreakByMember() },
+                        { couple.MemberId2.ToString(), new StreakByMember() }
+                    }
+                },
+                Trigger = ChallengeTriggerEvent.CHECKIN.ToString(),
+                Metric = ChallengeConstants.GoalMetrics.STREAK,
+                Target = 2
+            };
+
+            foreach (var memberId in memberIds)
+            {
+                var key = memberId.ToString();
+                progress.MemberState[key] = new MemberState
+                {
+                    IsJoined = true,
+                    JoinedAt = DateTime.UtcNow,
+                    IsActive = true,
+                    LeftAt = null
+                };
+                progress.Members[key] = new ProgressMember
+                {
+                    Current = 0,
+                    Streak = 0,
+                    LastActionAt = null
+                };
+            }
+
+            return progress;
+        }
     }
 }

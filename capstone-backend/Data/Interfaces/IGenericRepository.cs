@@ -7,6 +7,7 @@ namespace capstone_backend.Business.Interfaces
     public interface IGenericRepository<T> where T : class
     {
         Task<T?> GetByIdAsync(int id);
+        Task<T?> GetFirstAsync(Expression<Func<T, bool>> predicate, Func<IQueryable<T>, IQueryable<T>>? include = null);
         Task<IEnumerable<T>> GetAllAsync();
         Task<IEnumerable<T>> GetAsync(Expression<Func<T, bool>> predicate, Func<IQueryable<T>, IQueryable<T>>? include = null);
         Task<(IEnumerable<T> Items, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize, Expression<Func<T, bool>>? filter = null, Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null, Func<IQueryable<T>, IQueryable<T>>? include = null);

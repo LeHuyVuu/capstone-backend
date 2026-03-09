@@ -20,13 +20,15 @@ public class EmotionController : BaseController
     private readonly ILogger<EmotionController> _logger;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMoodMappingService _moodMappingService;
+    private readonly IChallengeService _challengeService;
 
-    public EmotionController(FaceEmotionService emotionService, ILogger<EmotionController> logger, IUnitOfWork unitOfWork, IMoodMappingService moodMappingService)
+    public EmotionController(FaceEmotionService emotionService, ILogger<EmotionController> logger, IUnitOfWork unitOfWork, IMoodMappingService moodMappingService, IChallengeService challengeService)
     {
         _emotionService = emotionService;
         _logger = logger;
         _unitOfWork = unitOfWork;
         _moodMappingService = moodMappingService;
+        _challengeService = challengeService;
     }
 
     /// <summary>
@@ -169,6 +171,7 @@ public class EmotionController : BaseController
                                 };
                                 
                                 await _unitOfWork.MemberMoodLogs.AddAsync(moodLog);
+                                await _challengeService.HandleCheckinChallengeProgressAsync(userId.Value);
                                 await _unitOfWork.SaveChangesAsync();
                                 
                                 _logger.LogInformation($"✅ Đã cập nhật MoodTypesId={moodType.Id} ({moodType.Name}) và tạo MoodLog cho MemberId={memberProfile.Id}");
