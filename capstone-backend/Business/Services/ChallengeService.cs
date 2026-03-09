@@ -1083,5 +1083,35 @@ namespace capstone_backend.Business.Services
             var lastActionVn = TimezoneUtil.ToVietNamTime(memberProgress.LastActionAt.Value);
             return DateOnly.FromDateTime(lastActionVn) == today;
         }
+
+        public async Task<TodayMoodCheckinStatusResponse> CheckTodayCheckinStatusAsync(int userId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            var nowVn = TimezoneUtil.ToVietNamTime(DateTime.UtcNow);
+            var startOfDayVn = nowVn.Date;
+            var endOfDayVn = startOfDayVn.AddDays(1);
+
+            var startUtc = DateTimeNormalizeUtil.NormalizeToUtc(startOfDayVn);
+            var endUtc = DateTimeNormalizeUtil.NormalizeToUtc(endOfDayVn);
+
+            var checkins = await _unitOfWork.MemberMoodLogs.GetByMemberIdAsync(member.Id);
+            var checkin = checkins
+                .Where(c => c.CreatedAt >= startUtc && c.CreatedAt < endUtc)
+                .OrderByDescending(c => c.CreatedAt)
+                .FirstOrDefault();
+
+            return new TodayMoodCheckinStatusResponse
+            {
+                HasCheckedInToday = checkin != null,
+                CheckedInAt = checkin?.CreatedAt
+            };
+        }
     }
 }

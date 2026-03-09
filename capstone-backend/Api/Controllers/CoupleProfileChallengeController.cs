@@ -160,5 +160,27 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Check if this member checkin today
+        /// </summary>
+        [HttpGet("checkin/today-status")]
+        public async Task<IActionResult> CheckTodayCheckinStatus()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _challengeService.CheckTodayCheckinStatusAsync(userId.Value);
+                return OkResponse(result, "Lấy trạng thái check-in hôm nay thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
