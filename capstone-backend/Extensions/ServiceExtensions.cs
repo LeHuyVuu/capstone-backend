@@ -198,6 +198,9 @@ public static class ServiceExtensions
         // Register Advertisement Service
         services.AddScoped<IAdvertisementService, AdvertisementService>();
 
+        // Register Interaction Tracking Service
+        services.AddScoped<IInteractionTrackingService, InteractionTrackingService>();
+
         // Register Moderation Service
         services.AddOpenAIModerationService();
 

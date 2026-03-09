@@ -12,6 +12,7 @@ namespace capstone_backend.Data.Entities
         public string? InteractionType { get; set; }
         public string? TargetType { get; set; }
         public int? TargetId { get; set; }
+        public string? CategoryInteraction { get; set; }
         public DateTime CreatedAt { get; set; }
 
         [ForeignKey("MemberId")]
