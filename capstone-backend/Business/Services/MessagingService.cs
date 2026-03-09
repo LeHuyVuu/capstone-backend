@@ -358,12 +358,36 @@ public class MessagingService : IMessagingService
         var messages = await _messageRepository.GetConversationMessagesAsync(
             conversationId, pageNumber, pageSize, cancellationToken);
 
-        var messageTasks = messages.Select(m => MapToMessageResponseAsync(m, currentUserId));
-        var messageResponses = await Task.WhenAll(messageTasks);
+        // Pre-fetch all DatePlans for DATE_PLAN messages to avoid DbContext threading issues
+        var datePlanIds = messages
+            .Where(m => m.MessageType == "DATE_PLAN" && m.ReferenceId.HasValue)
+            .Select(m => m.ReferenceId!.Value)
+            .Distinct()
+            .ToList();
+
+        var datePlans = new Dictionary<int, DatePlan>();
+        if (datePlanIds.Any())
+        {
+            var datePlanList = await _unitOfWork.Context.DatePlans
+                .AsNoTracking()
+                .Include(dp => dp.DatePlanItems.Where(dpi => dpi.IsDeleted == false).OrderBy(dpi => dpi.OrderIndex))
+                    .ThenInclude(dpi => dpi.VenueLocation)
+                .Where(dp => datePlanIds.Contains(dp.Id) && dp.IsDeleted == false)
+                .ToListAsync(cancellationToken);
+
+            datePlans = datePlanList.ToDictionary(dp => dp.Id);
+        }
+
+        // Map messages sequentially to avoid threading issues
+        var messageResponses = new List<MessageResponse>();
+        foreach (var message in messages)
+        {
+            messageResponses.Add(await MapToMessageResponseAsync(message, currentUserId, datePlans));
+        }
 
         return new MessagesPageResponse
         {
-            Messages = messageResponses.ToList(),
+            Messages = messageResponses,
             PageNumber = pageNumber,
             PageSize = pageSize,
             TotalPages = 0, // Can calculate if needed
@@ -586,8 +610,34 @@ public class MessagingService : IMessagingService
 
         var messages = await _messageRepository.SearchMessagesAsync(conversationId, searchTerm, cancellationToken);
         
-        var messageTasks = messages.Select(m => MapToMessageResponseAsync(m, currentUserId));
-        return (await Task.WhenAll(messageTasks)).ToList();
+        // Pre-fetch all DatePlans for DATE_PLAN messages to avoid DbContext threading issues
+        var datePlanIds = messages
+            .Where(m => m.MessageType == "DATE_PLAN" && m.ReferenceId.HasValue)
+            .Select(m => m.ReferenceId!.Value)
+            .Distinct()
+            .ToList();
+
+        var datePlans = new Dictionary<int, DatePlan>();
+        if (datePlanIds.Any())
+        {
+            var datePlanList = await _unitOfWork.Context.DatePlans
+                .AsNoTracking()
+                .Include(dp => dp.DatePlanItems.Where(dpi => dpi.IsDeleted == false).OrderBy(dpi => dpi.OrderIndex))
+                    .ThenInclude(dpi => dpi.VenueLocation)
+                .Where(dp => datePlanIds.Contains(dp.Id) && dp.IsDeleted == false)
+                .ToListAsync(cancellationToken);
+
+            datePlans = datePlanList.ToDictionary(dp => dp.Id);
+        }
+
+        // Map messages sequentially
+        var messageResponses = new List<MessageResponse>();
+        foreach (var message in messages)
+        {
+            messageResponses.Add(await MapToMessageResponseAsync(message, currentUserId, datePlans));
+        }
+
+        return messageResponses;
     }
 
     // Helper methods
@@ -641,7 +691,10 @@ public class MessagingService : IMessagingService
         return response;
     }
 
-    private async Task<MessageResponse> MapToMessageResponseAsync(Message message, int currentUserId)
+    private async Task<MessageResponse> MapToMessageResponseAsync(
+        Message message, 
+        int currentUserId, 
+        Dictionary<int, DatePlan>? datePlans = null)
     {
         var response = new MessageResponse
         {
@@ -662,39 +715,68 @@ public class MessagingService : IMessagingService
         };
 
         // Parse metadata and populate appropriate fields based on MessageType
-        if (!string.IsNullOrWhiteSpace(message.Metadata))
+        // For DATE_PLAN messages, use pre-fetched data if available
+        if (message.MessageType == "DATE_PLAN" && message.ReferenceId.HasValue)
+        {
+            DatePlan? datePlan = null;
+            
+            // Try to get from pre-fetched dictionary first
+            if (datePlans != null && datePlans.TryGetValue(message.ReferenceId.Value, out var cachedPlan))
+            {
+                datePlan = cachedPlan;
+            }
+            else
+            {
+                // Fallback: query database (for single message operations like SendMessage)
+                datePlan = await _unitOfWork.Context.DatePlans
+                    .AsNoTracking()
+                    .Include(dp => dp.DatePlanItems.Where(dpi => dpi.IsDeleted == false).OrderBy(dpi => dpi.OrderIndex))
+                        .ThenInclude(dpi => dpi.VenueLocation)
+                    .Where(dp => dp.Id == message.ReferenceId.Value && dp.IsDeleted == false)
+                    .FirstOrDefaultAsync();
+            }
+
+            if (datePlan != null)
+            {
+                var firstVenue = datePlan.DatePlanItems?.FirstOrDefault()?.VenueLocation;
+                var imageUrl = firstVenue?.CoverImage;
+                if (!string.IsNullOrWhiteSpace(imageUrl) && imageUrl.Contains(','))
+                {
+                    imageUrl = imageUrl.Split(',')[0].Trim();
+                }
+
+                var datePlanInfo = new DatePlanInfoDto
+                {
+                    DatePlanId = datePlan.Id,
+                    Title = datePlan.Title,
+                    Status = datePlan.Status,
+                    PlannedStartAt = datePlan.PlannedStartAt,
+                    PlannedEndAt = datePlan.PlannedEndAt,
+                    EstimatedBudget = datePlan.EstimatedBudget,
+                    TotalCount = datePlan.DatePlanItems?.Count ?? 0,
+                    ImageDatePlanUrl = imageUrl ?? "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/images/46/e783d6de-d417-4bb7-88a4-9ddce30bd8bc.jpg"
+                };
+
+                response.DatePlanInfo = datePlanInfo;
+                response.Metadata = new
+                {
+                    datePlanId = datePlan.Id,
+                    title = datePlan.Title,
+                    status = datePlan.Status,
+                    plannedStartAt = datePlan.PlannedStartAt,
+                    plannedEndAt = datePlan.PlannedEndAt,
+                    estimatedBudget = datePlan.EstimatedBudget,
+                    totalCount = datePlan.DatePlanItems?.Count ?? 0,
+                    imageDatePlanUrl = datePlanInfo.ImageDatePlanUrl
+                };
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(message.Metadata))
         {
             try
             {
                 // Parse based on message type for better reliability
-                if (message.MessageType == "DATE_PLAN")
-                {
-                    // Parse as date plan metadata
-                    var datePlanInfo = System.Text.Json.JsonSerializer.Deserialize<DatePlanMetadata>(message.Metadata);
-                    if (datePlanInfo != null && datePlanInfo.DatePlanId > 0)
-                    {
-                        // Refresh DatePlan info from database to get current status
-                        var currentDatePlan = await _unitOfWork.Context.DatePlans
-                            .AsNoTracking()
-                            .Where(dp => dp.Id == datePlanInfo.DatePlanId && dp.IsDeleted == false)
-                            .Select(dp => new { dp.Status, dp.Title, dp.TotalCount })
-                            .FirstOrDefaultAsync();
-
-                        response.DatePlanInfo = new DatePlanInfoDto
-                        {
-                            DatePlanId = datePlanInfo.DatePlanId,
-                            Title = currentDatePlan?.Title ?? datePlanInfo.Title,
-                            Status = currentDatePlan?.Status ?? datePlanInfo.Status, // Use current status from DB
-                            PlannedStartAt = datePlanInfo.PlannedStartAt,
-                            PlannedEndAt = datePlanInfo.PlannedEndAt,
-                            EstimatedBudget = datePlanInfo.EstimatedBudget,
-                            TotalCount = currentDatePlan?.TotalCount ?? datePlanInfo.TotalCount,
-                            ImageDatePlanUrl = datePlanInfo.ImageDatePlanUrl
-                        };
-                        response.Metadata = datePlanInfo;
-                    }
-                }
-                else if (message.MessageType == "FILE" || message.MessageType == "IMAGE")
+                if (message.MessageType == "FILE" || message.MessageType == "IMAGE")
                 {
                     // Parse as file metadata
                     var fileInfo = System.Text.Json.JsonSerializer.Deserialize<FileMetadata>(message.Metadata);
