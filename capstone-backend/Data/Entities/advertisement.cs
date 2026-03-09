@@ -27,6 +27,8 @@ public partial class Advertisement
 
     public string? Status { get; set; }
 
+    public string? Category { get; set; }
+
     public DateTime? DesiredStartDate { get; set; }
 
     public DateTime? CreatedAt { get; set; }
