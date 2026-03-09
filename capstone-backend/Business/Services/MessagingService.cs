@@ -205,15 +205,30 @@ public class MessagingService : IMessagingService
         CancellationToken cancellationToken = default)
     {
         if (currentUserId <= 0)
-            throw new Exception("Invalid user");
+            throw new BadRequestException("User ID không hợp lệ", "INVALID_USER");
 
-        var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(currentUserId);
+        var user = await _unitOfWork.Users.GetByIdAsync(currentUserId);
+        if (user == null)
+            throw new BadRequestException("Không tìm thấy user", "USER_NOT_FOUND");
+
+        var memberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(currentUserId);
+        if (memberProfile == null)
+            throw new BadRequestException("Không tìm thấy member profile", "MEMBER_PROFILE_NOT_FOUND");
+
+        var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(memberProfile.Id);
         if (couple == null)
-            throw new Exception("You are not in an active couple relationship");
+            throw new BadRequestException("Bạn chưa có cặp đôi hoặc đang ở trạng thái SINGLE", "NO_ACTIVE_COUPLE");
 
-        var partnerId = couple.MemberId1 == currentUserId ? couple.MemberId2 : couple.MemberId1;
+        var partnerMemberId = couple.MemberId1 == memberProfile.Id ? couple.MemberId2 : couple.MemberId1;
 
-        return await GetOrCreateDirectConversationAsync(currentUserId, partnerId, cancellationToken);
+        if (partnerMemberId <= 0)
+            throw new BadRequestException("Partner member ID không hợp lệ", "INVALID_PARTNER");
+
+        var partnerMember = await _unitOfWork.MembersProfile.GetByIdAsync(partnerMemberId);
+        if (partnerMember == null)
+            throw new BadRequestException("Không tìm thấy người yêu của bạn", "PARTNER_NOT_FOUND");
+
+        return await GetOrCreateDirectConversationAsync(currentUserId, partnerMember.UserId, cancellationToken);
     }
 
     public async Task<MessageResponse> SendMessageAsync(
@@ -693,14 +708,12 @@ public class MessagingService : IMessagingService
         // Get unread count
         response.UnreadCount = await _memberRepository.GetUnreadCountAsync(conversation.Id, currentUserId, cancellationToken);
 
-        // For DIRECT conversation, set OtherUser for easy FE display
         if (conversation.Type == "DIRECT")
         {
-            response.OtherUser = response.Members.FirstOrDefault(m => m.UserId != currentUserId);
-            // Override Name with other user's name for convenience
-            if (response.OtherUser != null)
+            var otherUser = response.Members.FirstOrDefault(m => m.UserId != currentUserId);
+            if (otherUser != null)
             {
-                response.Name = response.OtherUser.FullName;
+                response.Name = otherUser.FullName;
             }
         }
 

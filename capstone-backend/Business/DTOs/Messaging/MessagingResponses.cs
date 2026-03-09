@@ -11,7 +11,6 @@ public class ConversationResponse
     public int? CreatedBy { get; set; }
     public DateTime? CreatedAt { get; set; }
     public List<ConversationMemberResponse> Members { get; set; } = new();
-    public ConversationMemberResponse? OtherUser { get; set; } // Thông tin người đang chat (chỉ cho DIRECT conversation)
     public MessageResponse? LastMessage { get; set; }
     public int UnreadCount { get; set; }
 }
