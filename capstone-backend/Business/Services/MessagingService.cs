@@ -200,6 +200,22 @@ public class MessagingService : IMessagingService
         return await MapToConversationResponse(conversation, currentUserId, cancellationToken);
     }
 
+    public async Task<ConversationResponse> GetCoupleConversationAsync(
+        int currentUserId, 
+        CancellationToken cancellationToken = default)
+    {
+        if (currentUserId <= 0)
+            throw new Exception("Invalid user");
+
+        var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(currentUserId);
+        if (couple == null)
+            throw new Exception("You are not in an active couple relationship");
+
+        var partnerId = couple.MemberId1 == currentUserId ? couple.MemberId2 : couple.MemberId1;
+
+        return await GetOrCreateDirectConversationAsync(currentUserId, partnerId, cancellationToken);
+    }
+
     public async Task<MessageResponse> SendMessageAsync(
         int currentUserId, 
         SendMessageRequest request, 
