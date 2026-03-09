@@ -162,7 +162,10 @@ app.UseAuthentication();
 // 7. Authorization
 app.UseAuthorization();
 
-// 8. Map Controllers
+// 8. Auto Interaction Tracking (tracks user behavior based on configured routes)
+app.UseMiddleware<AutoInteractionTrackingMiddleware>();
+
+// 9. Map Controllers
 app.MapControllers();
 
 // ========================================
