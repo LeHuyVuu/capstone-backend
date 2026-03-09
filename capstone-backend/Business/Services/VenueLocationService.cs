@@ -585,6 +585,7 @@ public class VenueLocationService : IVenueLocationService
             InteriorImage = SerializeImages(request.InteriorImage),
             FullPageMenuImage = SerializeImages(request.FullPageMenuImage),
             IsOwnerVerified = request.IsOwnerVerified ?? false,
+            BusinessLicenseUrl = request.BusinessLicenseUrl,
             VenueOwnerId = venueOwnerProfile.Id,
             Status = "DRAFTED",
             CreatedAt = DateTime.UtcNow,
@@ -700,6 +701,9 @@ public class VenueLocationService : IVenueLocationService
         
         if (request.IsOwnerVerified.HasValue)
             venue.IsOwnerVerified = request.IsOwnerVerified;
+        
+        if (request.BusinessLicenseUrl != null)
+            venue.BusinessLicenseUrl = request.BusinessLicenseUrl;
         
         // Update categories only if explicitly provided (not null)
         // If Categories is null, keep the existing categories unchanged
