@@ -1221,7 +1221,7 @@ namespace capstone_backend.Business.Services
                 };
             }
 
-            if (!progress.DailyHistory.Months.TryGetValue(monthKey, out var membermap) && membermap == null)
+            if (!progress.DailyHistory.Months.TryGetValue(monthKey, out var membermap) || membermap == null)
             {
                 membermap = new Dictionary<string, int>();
                 progress.DailyHistory.Months[monthKey] = membermap;

@@ -1,6 +1,7 @@
 using capstone_backend.Api.Middleware;
 using capstone_backend.Api.Models;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Challenge;
 using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Business.Jobs.Media;
 using capstone_backend.Business.Jobs.Review;
@@ -201,6 +202,16 @@ using (var scope = serviceProvider.CreateScope())
         "delete-media-daily",
         job => job.DeleteMediaFileAsync(),
         Cron.Daily(2),
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
+    recurringJobManager.AddOrUpdate<IChallengeWorker>(
+        
+        "daily-renew-checkin-challenges",
+        job => job.RenewDailyCheckinChallengesAsync(),
+        "1 0 * * *",
         new RecurringJobOptions
         {
             TimeZone = vnTz
