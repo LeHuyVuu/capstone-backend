@@ -661,27 +661,19 @@ public class MessagingService : IMessagingService
             IsMine = message.SenderId == currentUserId
         };
 
-        // Parse metadata and populate appropriate fields
+        // Parse metadata and populate appropriate fields based on MessageType
         if (!string.IsNullOrWhiteSpace(message.Metadata))
         {
             try
             {
-                // Try parse as file metadata
-                var fileInfo = System.Text.Json.JsonSerializer.Deserialize<FileMetadata>(message.Metadata);
-                if (fileInfo != null && !string.IsNullOrWhiteSpace(fileInfo.FileUrl))
+                // Parse based on message type for better reliability
+                if (message.MessageType == "DATE_PLAN")
                 {
-                    response.FileUrl = fileInfo.FileUrl;
-                    response.FileName = fileInfo.FileName;
-                    response.FileSize = fileInfo.FileSize;
-                    response.Metadata = fileInfo;
-                }
-                else
-                {
-                    // Try parse as date plan metadata
+                    // Parse as date plan metadata
                     var datePlanInfo = System.Text.Json.JsonSerializer.Deserialize<DatePlanMetadata>(message.Metadata);
                     if (datePlanInfo != null && datePlanInfo.DatePlanId > 0)
                     {
-                        // Refresh DatePlan status from database
+                        // Refresh DatePlan info from database to get current status
                         var currentDatePlan = await _unitOfWork.Context.DatePlans
                             .AsNoTracking()
                             .Where(dp => dp.Id == datePlanInfo.DatePlanId && dp.IsDeleted == false)
@@ -701,6 +693,23 @@ public class MessagingService : IMessagingService
                         };
                         response.Metadata = datePlanInfo;
                     }
+                }
+                else if (message.MessageType == "FILE" || message.MessageType == "IMAGE")
+                {
+                    // Parse as file metadata
+                    var fileInfo = System.Text.Json.JsonSerializer.Deserialize<FileMetadata>(message.Metadata);
+                    if (fileInfo != null && !string.IsNullOrWhiteSpace(fileInfo.FileUrl))
+                    {
+                        response.FileUrl = fileInfo.FileUrl;
+                        response.FileName = fileInfo.FileName;
+                        response.FileSize = fileInfo.FileSize;
+                        response.Metadata = fileInfo;
+                    }
+                }
+                else
+                {
+                    // For other message types, try to parse as generic object
+                    response.Metadata = System.Text.Json.JsonSerializer.Deserialize<object>(message.Metadata);
                 }
             }
             catch
