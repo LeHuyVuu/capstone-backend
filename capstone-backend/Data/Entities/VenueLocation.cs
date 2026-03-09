@@ -63,6 +63,8 @@ public partial class VenueLocation
 
     public bool? IsOwnerVerified { get; set; }
 
+    public string? BusinessLicenseUrl { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

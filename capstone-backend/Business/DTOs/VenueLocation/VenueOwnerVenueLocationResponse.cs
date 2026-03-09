@@ -27,6 +27,7 @@ public class VenueOwnerVenueLocationResponse
     public string? Category { get; set; }
     public List<string>? FullPageMenuImage { get; set; }
     public bool? IsOwnerVerified { get; set; }
+    public string? BusinessLicenseUrl { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
