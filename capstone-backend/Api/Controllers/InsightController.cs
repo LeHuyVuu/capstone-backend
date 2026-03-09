@@ -81,43 +81,6 @@ public class InsightController : BaseController
                 Percentage = totalMoodLogs > 0 ? Math.Round((double)hm.Count / totalMoodLogs * 100, 0) : 0
             }).Take(3).ToList();
 
-            // Popular Preferences - from Interactions with LocationTags
-            var interactionQuery = _unitOfWork.Context.Interactions
-                .Where(i => i.TargetType == "VenueLocation");
-
-            if (startDate.HasValue)
-                interactionQuery = interactionQuery.Where(i => i.CreatedAt >= startDate.Value);
-
-            var interactionTags = await interactionQuery
-                .Join(_unitOfWork.Context.VenueLocations
-                        .Include(v => v.VenueLocationTags)
-                            .ThenInclude(vlt => vlt.LocationTag),
-                    i => i.TargetId,
-                    v => v.Id,
-                    (i, v) => v)
-                .SelectMany(v => v.VenueLocationTags)
-                .Where(vlt => !vlt.IsDeleted.HasValue || !vlt.IsDeleted.Value)
-                .Select(vlt => vlt.LocationTag.DetailTag)
-                .Where(tags => tags != null)
-                .ToListAsync();
-
-            // Flatten all tags and count
-            var tagCounts = interactionTags
-                .SelectMany(tags => tags!)
-                .GroupBy(tag => tag)
-                .Select(g => new { Tag = g.Key, Count = g.Count() })
-                .OrderByDescending(x => x.Count)
-                .Take(10)
-                .ToList();
-
-            var totalTags = tagCounts.Sum(x => x.Count);
-            var popularPreferenceInsights = tagCounts.Select(tc => new
-            {
-                Tag = tc.Tag,
-                Count = tc.Count,
-                Percentage = totalTags > 0 ? Math.Round((double)tc.Count / totalTags * 100, 0) : 0
-            }).Take(3).ToList();
-
             // Mood Trends by Month (last 12 months)
             var yearAgo = now.AddYears(-1);
             var moodTrends = await _unitOfWork.Context.CoupleMoodLogs
@@ -148,14 +111,123 @@ public class InsightController : BaseController
                 .OrderBy(x => x.Month)
                 .ToList();
 
+            // ========================================
+            // FAVORITES & INTERACTIONS STATISTICS
+            // ========================================
+            
+            // Base interaction query with timeframe filter
+            var baseInteractionQuery = _unitOfWork.Context.Interactions.AsQueryable();
+            if (startDate.HasValue)
+                baseInteractionQuery = baseInteractionQuery.Where(i => i.CreatedAt >= startDate.Value);
+
+            // 1. TOP VENUE CATEGORIES BY INTERACTIONS
+            var venueInteractionQuery = baseInteractionQuery
+                .Where(i => i.TargetType == "VenueLocation" && i.TargetId.HasValue);
+
+            // Fetch data first, then process in memory
+            var venueInteractionData = await venueInteractionQuery
+                .Join(_unitOfWork.Context.VenueLocations,
+                    i => i.TargetId!.Value,
+                    v => v.Id,
+                    (i, v) => new { i.InteractionType, v.Category, i.MemberId })
+                .Where(x => !string.IsNullOrEmpty(x.Category))
+                .ToListAsync();
+
+            // Process category splits in memory
+            var topVenueCategories = venueInteractionData
+                .SelectMany(x => x.Category!.Split(new[] { " / ", "/" }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(cat => new { Category = cat.Trim(), x.InteractionType, x.MemberId }))
+                .GroupBy(x => x.Category)
+                .Select(g => new
+                {
+                    Category = g.Key,
+                    TotalInteractions = g.Count(),
+                    UniqueUsers = g.Select(x => x.MemberId).Distinct().Count(),
+                    InteractionBreakdown = g.GroupBy(x => x.InteractionType ?? "UNKNOWN")
+                        .Select(ig => new { Type = ig.Key, Count = ig.Count() })
+                        .ToList()
+                })
+                .OrderByDescending(x => x.TotalInteractions)
+                .Take(5)
+                .ToList();
+
+            // 2. ADVERTISEMENT PERFORMANCE BY CATEGORY
+            var adPerformanceQuery = baseInteractionQuery
+                .Where(i => i.TargetType == "Advertisement" && i.TargetId.HasValue)
+                .Join(_unitOfWork.Context.Advertisements,
+                    i => i.TargetId!.Value,
+                    a => a.Id,
+                    (i, a) => new { i.InteractionType, a.Category, a.PlacementType, i.MemberId });
+
+            var adPerformanceByCategory = await adPerformanceQuery
+                .Where(x => !string.IsNullOrEmpty(x.Category))
+                .GroupBy(x => new { x.Category, x.PlacementType })
+                .Select(g => new
+                {
+                    Category = g.Key.Category,
+                    PlacementType = g.Key.PlacementType,
+                    Views = g.Count(x => x.InteractionType == "VIEW"),
+                    Clicks = g.Count(x => x.InteractionType == "CLICK"),
+                    UniqueViewers = g.Where(x => x.InteractionType == "VIEW")
+                        .Select(x => x.MemberId).Distinct().Count(),
+                    CTR = g.Count(x => x.InteractionType == "VIEW") > 0
+                        ? Math.Round((double)g.Count(x => x.InteractionType == "CLICK") / 
+                            g.Count(x => x.InteractionType == "VIEW") * 100, 2)
+                        : 0
+                })
+                .OrderByDescending(x => x.Clicks)
+                .ThenByDescending(x => x.Views)
+                .ToListAsync();
+
+            // 5. CHECK-IN STATISTICS
+            var checkInQuery = _unitOfWork.Context.CheckInHistories
+                .Where(ch => ch.IsValid == true);
+
+            if (startDate.HasValue)
+                checkInQuery = checkInQuery.Where(ch => ch.CreatedAt >= startDate.Value);
+
+            var topCheckInVenues = await checkInQuery
+                .GroupBy(ch => ch.VenueId)
+                .Select(g => new { VenueId = g.Key, CheckInCount = g.Count() })
+                .OrderByDescending(x => x.CheckInCount)
+                .Take(10)
+                .ToListAsync();
+
+            var topCheckInVenueIds = topCheckInVenues.Select(tc => tc.VenueId).ToList();
+            var topCheckInVenueDetails = await _unitOfWork.Context.VenueLocations
+                .Where(v => topCheckInVenueIds.Contains(v.Id) && v.IsDeleted != true)
+                .Select(v => new { v.Id, v.Name, v.Category, v.AverageRating, v.Status })
+                .ToListAsync();
+
+            var topCheckInVenuesWithDetails = topCheckInVenues
+                .Join(topCheckInVenueDetails, tc => tc.VenueId, v => v.Id, (tc, v) => new
+                {
+                    VenueId = v.Id,
+                    VenueName = v.Name,
+                    Category = v.Category,
+                    CheckInCount = tc.CheckInCount,
+                    AverageRating = v.AverageRating,
+                    Status = v.Status
+                })
+                .Take(5)
+                .ToList();
+
+            var totalCheckIns = await checkInQuery.CountAsync();
+
             var result = new
             {
                 Timeframe = timeframe ?? "all",
                 GeneratedAt = now,
                 TopSearches = topSearchInsights,
                 HotMoods = hotMoodInsights,
-                PopularPreferences = popularPreferenceInsights,
-                MoodTrendsByMonth = moodTrendsByMonth
+                MoodTrendsByMonth = moodTrendsByMonth,
+                FavoritesAndInteractions = new
+                {
+                    TopVenueCategories = topVenueCategories,
+                    AdPerformanceByCategory = adPerformanceByCategory,
+                    TopCheckInVenues = topCheckInVenuesWithDetails,
+                    TotalCheckIns = totalCheckIns
+                }
             };
 
             return OkResponse(result, "Insights retrieved successfully");
