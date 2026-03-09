@@ -76,6 +76,12 @@ namespace capstone_backend.Business.Services
             if (challenge == null || (challenge.IsDeleted.HasValue && challenge.IsDeleted != false))
                 throw new Exception("Thử thách không tồn tại");
 
+            if (challenge.Status == ChallengeStatus.ACTIVE.ToString())
+                throw new Exception("Không thể xóa thử thách đang diễn ra (ACTIVE). Vui lòng hủy kích hoạt thử thách trước khi xóa.");
+
+            if (challengeId == 14)
+                throw new Exception("Thử thách đặc biệt này không thể bị xóa");
+
             challenge.IsDeleted = true;
             _unitOfWork.Challenges.Update(challenge);
             return await _unitOfWork.SaveChangesAsync();
@@ -932,6 +938,9 @@ namespace capstone_backend.Business.Services
             var coupleChallenge = await _unitOfWork.CoupleProfileChallenges.GetByIdAsync(coupleChallengeId);
             if (coupleChallenge == null || coupleChallenge.CoupleId != couple.id || coupleChallenge.IsDeleted == true)
                 throw new Exception("Thử thách của cặp đôi không tồn tại");
+
+            if (coupleChallenge.ChallengeId == 14)
+                throw new Exception("Thử thách 'Check-in mood mỗi ngày' là thử thách đặc biệt, không thể rời khỏi");
 
             var progressData = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(coupleChallenge.ProgressData);
             if (progressData?.MemberState == null)
