@@ -17,7 +17,7 @@ public interface IAdvertisementService
     Task<SubmitAdvertisementWithPaymentResponse> SubmitAdvertisementWithPaymentAsync(int advertisementId, int userId, SubmitAdvertisementWithPaymentRequest request);
     
     // Advertisement packages
-    Task<List<AdvertisementPackageResponse>> GetAdvertisementPackagesAsync();
+    Task<GroupedAdvertisementPackagesResponse> GetAdvertisementPackagesAsync();
     
     // Admin advertisement management
     Task<AdvertisementApprovalResult> ApproveAdvertisementAsync(ApproveAdvertisementRequest request);

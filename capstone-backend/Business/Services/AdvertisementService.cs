@@ -576,7 +576,7 @@ public class AdvertisementService : IAdvertisementService
         }
     }
 
-    public async Task<List<AdvertisementPackageResponse>> GetAdvertisementPackagesAsync()
+    public async Task<GroupedAdvertisementPackagesResponse> GetAdvertisementPackagesAsync()
     {
         _logger.LogInformation("Getting all active advertisement packages");
 
@@ -598,9 +598,24 @@ public class AdvertisementService : IAdvertisementService
             CreatedAt = p.CreatedAt ?? DateTime.UtcNow
         }).ToList();
 
-        _logger.LogInformation("Found {Count} active advertisement packages", responses.Count);
+        // Group by Placement
+        var grouped = responses
+            .GroupBy(p => p.Placement ?? "OTHER")
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderBy(p => p.PriorityScore).ToList()
+            );
 
-        return responses;
+        var totalCount = responses.Count;
+        var placementGroups = grouped.Count;
+        
+        _logger.LogInformation("Found {Count} active advertisement packages grouped into {Groups} placement(s)", 
+            totalCount, placementGroups);
+
+        return new GroupedAdvertisementPackagesResponse
+        {
+            Data = grouped
+        };
     }
 
     #region Helper Methods

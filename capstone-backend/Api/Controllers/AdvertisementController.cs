@@ -51,13 +51,10 @@ public class AdvertisementController : BaseController
     }
 
     /// <summary>
-    /// Get all active advertisement packages.
-    /// Public endpoint - returns all available packages for venue owners to choose from.
-    /// Packages include pricing, duration, priority score, and placement information.
+    /// Grouped by placement type (HOME_BANNER, POPUP, etc.)
     /// </summary>
-    /// <returns>List of active advertisement packages</returns>
     [HttpGet("packages")]
-    [ProducesResponseType(typeof(ApiResponse<List<AdvertisementPackageResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<GroupedAdvertisementPackagesResponse>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     public async Task<IActionResult> GetAdvertisementPackages()
     {
@@ -65,8 +62,12 @@ public class AdvertisementController : BaseController
 
         try
         {
-            var packages = await _advertisementService.GetAdvertisementPackagesAsync();
-            return OkResponse(packages, $"Retrieved {packages.Count} active package(s)");
+            var result = await _advertisementService.GetAdvertisementPackagesAsync();
+            var totalCount = result.Data.Values.Sum(list => list.Count);
+            var placementCount = result.Data.Count;
+            
+            return OkResponse(result, 
+                $"Retrieved {placementCount} placement group(s) with {totalCount} active package(s)");
         }
         catch (Exception ex)
         {
@@ -185,12 +186,6 @@ public class AdvertisementController : BaseController
         }
     }
 
-    /// <summary>
-    /// Submit advertisement with payment - validates advertisement, generates QR code for payment.
-    /// After payment is confirmed (via webhook), advertisement status will change to PENDING for admin approval,
-    /// and VenueLocationAdvertisement record will be created.
-    /// Requires VENUEOWNER role. User must own the advertisement.
-    /// </summary>
     /// <param name="id">Advertisement ID</param>
     /// <param name="request">Payment request with packageId</param>
     /// <returns>Payment QR code and transaction info</returns>
@@ -293,9 +288,7 @@ public class AdvertisementController : BaseController
 
     #region Public Detail Endpoints
 
-    /// <summary>
-    /// Get advertisement or special event detail (public endpoint)
-    /// </summary>
+
     /// <param name="id">Advertisement ID or Special Event ID</param>
     /// <param name="type">Type: ADVERTISEMENT or SPECIAL_EVENT</param>
     [HttpGet("detail/{id}")]
