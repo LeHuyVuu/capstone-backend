@@ -13,12 +13,14 @@ public class MoodTypeService : IMoodTypeService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<MoodTypeService> _logger;
     private readonly IMoodMappingService _moodMappingService;
+    private readonly IChallengeService _challengeService;
 
-    public MoodTypeService(IUnitOfWork unitOfWork, ILogger<MoodTypeService> logger, IMoodMappingService moodMappingService)
+    public MoodTypeService(IUnitOfWork unitOfWork, ILogger<MoodTypeService> logger, IMoodMappingService moodMappingService, IChallengeService challengeService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _moodMappingService = moodMappingService;
+        _challengeService = challengeService;
     }
 
     public async Task<List<MoodTypeResponse>> GetAllMoodTypesAsync(string? gender, CancellationToken cancellationToken = default)
@@ -106,9 +108,13 @@ public class MoodTypeService : IMoodTypeService
                 IsDeleted = false
             });
             _logger.LogInformation($"➕ Created new mood log for today VN (MoodType: {moodType.Name})");
+
+            await _challengeService.HandleCheckinChallengeProgressAsync(userId);
         }
 
-        await _unitOfWork.SaveChangesAsync(); 
+        await _unitOfWork.SaveChangesAsync();
+
+        // TODO: handle challenge progress update
 
         _logger.LogInformation($"✅ User {userId} đã cập nhật mood type thành {moodType.Name} (ID: {moodType.Id})");
 

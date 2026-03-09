@@ -67,7 +67,7 @@
 
     public class ProgressStreak
     {
-        public string Mode { get; set; } = ""; // DAILY | WEEKLY | MONTHLY
+        public string Mode { get; set; } = "DAILY"; // DAILY | WEEKLY | MONTHLY
         public int Current { get; set; } = 0;
         public int Best { get; set; } = 0;
         public DateTime? LastActionAt { get; set; } = null;

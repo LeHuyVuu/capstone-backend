@@ -6,6 +6,7 @@ namespace capstone_backend.Business.Interfaces
     public interface IChallengeService
     {
         Task<int> ChangeChallengeStatusAsync(int challengeId, string newStatus);
+        Task<TodayMoodCheckinStatusResponse> CheckTodayCheckinStatusAsync(int userId);
         Task<ChallengeResponse> CreateChallengeAsyncV2(int userId, CreateChallengeRequest request);
         Task<int> DeleteChallengeAsync(int challengeId);
         Task<PagedResult<ChallengeResponse>> GetAllChallengesAsync(int pageNumber, int pageSize);
@@ -17,5 +18,8 @@ namespace capstone_backend.Business.Interfaces
         Task<CoupleChallengeListItemResponse> JoinChallengeAsync(int userId, int challengeId);
         Task<int> LeaveCoupleChallengeAsync(int userId, int coupleChallengeId);
         Task<ChallengeResponse> UpdateChallengeAsync(int challengeId, UpdateChallengeRequest request);
+
+        // Handle challenge progress
+        Task HandleCheckinChallengeProgressAsync(int userId);
     }
 }
