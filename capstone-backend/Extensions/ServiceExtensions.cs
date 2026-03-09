@@ -3,6 +3,7 @@ using Amazon.Runtime;
 using capstone_backend.Api.Filters;
 using capstone_backend.Api.VenueRecommendation.Service;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Challenge;
 using capstone_backend.Business.Jobs.Comment;
 using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Business.Jobs.Like;
@@ -188,6 +189,7 @@ public static class ServiceExtensions
         services.AddScoped<IModerationWorker, ModerationWorker>();
         services.AddScoped<ICommentWorker, CommentWorker>();
         services.AddScoped<ILikeWorker, LikeWorker>();
+        services.AddScoped<IChallengeWorker, ChallengeWorker>();
 
         // Register Messaging Service
         services.AddScoped<IMessagingService, MessagingService>();     

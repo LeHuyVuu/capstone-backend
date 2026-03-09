@@ -82,10 +82,12 @@ namespace capstone_backend.Business.Common.Helpers
             var memberCurrentStreak = 0;
             var memberLongestStreak = 0;
 
-            if (progress.Members != null && progress.Members.TryGetValue(memberKey, out var memberProgress))
+            if (progress.Streak?.ByMember != null &&
+                progress.Streak.ByMember.TryGetValue(memberKey, out var memberStreakData) &&
+                memberStreakData != null)
             {
-                memberCurrentStreak = memberProgress.Current;
-                memberLongestStreak = memberProgress.Streak;
+                memberCurrentStreak = memberStreakData.Current;
+                memberLongestStreak = memberStreakData.Best;
             }
 
             return new CheckinChallengeProgressExtraResponse
@@ -97,8 +99,8 @@ namespace capstone_backend.Business.Common.Helpers
                 TotalMembers = totalMembers,
                 MemberCurrentStreak = memberCurrentStreak,
                 MemberLongestStreak = memberLongestStreak,
-                CoupleCurrentStreak = progress.Streak.Current,
-                CoupleLongestStreak = progress.Streak.Best
+                CoupleCurrentStreak = progress.Streak?.Current ?? 0,
+                CoupleLongestStreak = progress.Streak?.Best ?? 0
             };
         }
 

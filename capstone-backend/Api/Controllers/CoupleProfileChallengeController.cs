@@ -138,7 +138,7 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Get defail couple challenge progress for member
+        /// Get detail couple challenge progress for member
         /// </summary>
         [HttpGet("{coupleChallengeId:int}")]
         public async Task<IActionResult> GetCoupleChallengeProgress([FromRoute] int coupleChallengeId)
