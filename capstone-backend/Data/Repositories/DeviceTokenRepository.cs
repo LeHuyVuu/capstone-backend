@@ -58,12 +58,22 @@ namespace capstone_backend.Data.Repositories
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<string> GetTokenByUserId(int userId)
+        public async Task<List<string>> GetTokensByUserId(int userId)
         {
             return await _dbSet
                 .Where(dt => dt.UserId == userId && dt.IsDeleted == false)
                 .Select(dt => dt.Token)
-                .FirstOrDefaultAsync() ?? string.Empty;
+                .ToListAsync();
+        }
+
+        public async Task RemoveRangeByTokensAsync(List<string> tokens)
+        {
+            await _dbSet
+                .Where(dt => tokens.Contains(dt.Token) && dt.IsDeleted == false)
+                .ExecuteUpdateAsync(s => s
+                .SetProperty(p => p.IsDeleted, true)
+                .SetProperty(p => p.UpdatedAt, DateTime.UtcNow)
+            );
         }
     }
 }

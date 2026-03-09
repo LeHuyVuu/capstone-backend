@@ -77,15 +77,15 @@ namespace capstone_backend.Business.Jobs.Review
             // Send Push Notification
             if (_fcmService != null)
             {
-                var token = await _unitOfWork.DeviceTokens.GetTokenByUserId(member.UserId);
-                if (token == null || !token.Any())
+                var tokens = await _unitOfWork.DeviceTokens.GetTokensByUserId(member.UserId);
+                if (tokens == null || !tokens.Any())
                 {
                     _logger.LogInformation("No device tokens found for user ID {UserId}.", member.UserId);
                     return;
                 }
 
-                await _fcmService.SendNotificationAsync(
-                    token,
+                await _fcmService.SendMultiNotificationAsync(
+                    tokens,
                     new SendNotificationRequest
                     {
                         Title = NotificationTemplate.Review.TitleReviewRequest,

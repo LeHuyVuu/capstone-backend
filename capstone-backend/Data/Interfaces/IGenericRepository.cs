@@ -1,3 +1,4 @@
+using StackExchange.Redis;
 using System.Linq.Expressions;
 
 namespace capstone_backend.Business.Interfaces
@@ -7,6 +8,7 @@ namespace capstone_backend.Business.Interfaces
     {
         Task<T?> GetByIdAsync(int id);
         Task<IEnumerable<T>> GetAllAsync();
+        Task<IEnumerable<T>> GetAsync(Expression<Func<T, bool>> predicate, Func<IQueryable<T>, IQueryable<T>>? include = null);
         Task<(IEnumerable<T> Items, int TotalCount)> GetPagedAsync(int pageNumber, int pageSize, Expression<Func<T, bool>>? filter = null, Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null, Func<IQueryable<T>, IQueryable<T>>? include = null);
 
         Task AddAsync(T entity);

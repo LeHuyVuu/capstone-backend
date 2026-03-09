@@ -16,14 +16,14 @@ public class OpenAIRecommendationService : IRecommendationService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMoodMappingService _moodMapping;
-    private readonly IPersonalityMappingService _personalityMapping;
+    private readonly PersonalityMappingService _personalityMapping;
     private readonly ChatClient _chatClient;
     private readonly ILogger<OpenAIRecommendationService> _logger;
 
     public OpenAIRecommendationService(
         IUnitOfWork unitOfWork,
         IMoodMappingService moodMapping,
-        IPersonalityMappingService personalityMapping,
+        PersonalityMappingService personalityMapping,
         IConfiguration configuration,
         ILogger<OpenAIRecommendationService> logger)
     {
@@ -80,7 +80,7 @@ public class OpenAIRecommendationService : IRecommendationService
             var personalityTags = new List<string>();
             if (!string.IsNullOrEmpty(request.MbtiType))
             {
-                personalityTags = _personalityMapping.GetPersonalityTags(
+                personalityTags = PersonalityMappingService.GetPersonalityTags(
                     request.MbtiType,
                     request.PartnerMbtiType ?? request.MbtiType
                 );

@@ -30,6 +30,7 @@ public class UserRepository : GenericRepository<UserAccount>, IUserRepository
     {
         var query = _dbSet
             .Include(u => u.MemberProfiles)
+            .Include(u => u.VenueOwnerProfiles)
             .AsQueryable();
 
         if (!includeSoftDeleted)

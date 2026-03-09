@@ -14,6 +14,8 @@
 
         public string Status { get; set; } = null!;
 
+        public DateTime CreatedAt { get; set; }
+
         public Dictionary<string, object> RuleData { get; set; } = new();
         public List<string> Instructions { get; set; } = new();
     }

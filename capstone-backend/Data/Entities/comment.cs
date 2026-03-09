@@ -15,9 +15,15 @@ public partial class Comment
 
     public int PostId { get; set; }
 
+    public int? TargetMemberId { get; set; }
+
     public string Content { get; set; } = null!;
 
     public int? ParentId { get; set; }
+
+    public int? RootId { get; set; }
+
+    public int? Level { get; set; }
 
     public int? LikeCount { get; set; } = 0;
 
@@ -40,7 +46,7 @@ public partial class Comment
 
     [ForeignKey("AuthorId")]
     [InverseProperty("Comments")]
-    public virtual MemberProfile Member { get; set; } = null!;
+    public virtual MemberProfile Author { get; set; } = null!;
 
     [ForeignKey("ParentId")]
     [InverseProperty("Replies")]
@@ -48,4 +54,15 @@ public partial class Comment
 
     [InverseProperty("Parent")]
     public virtual ICollection<Comment> Replies { get; set; } = new List<Comment>();
+
+    [ForeignKey("RootId")]
+    [InverseProperty("ThreadComments")]
+    public virtual Comment? Root { get; set; }
+
+    [InverseProperty("Root")]
+    public virtual ICollection<Comment> ThreadComments { get; set; } = new List<Comment>();
+
+    [ForeignKey("TargetMemberId")]
+    [InverseProperty("TargetedComments")]
+    public virtual MemberProfile? TargetMember { get; set; }
 }

@@ -50,10 +50,25 @@ public class MessageResponse
     public string? FileName { get; set; }
     public long? FileSize { get; set; }
     
-    public string? Metadata { get; set; }
+    // Date plan info (when referenceType is DATE_PLAN)
+    public DatePlanInfoDto? DatePlanInfo { get; set; }
+    
+    public object? Metadata { get; set; }
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public bool IsMine { get; set; }
+}
+
+public class DatePlanInfoDto
+{
+    public int DatePlanId { get; set; }
+    public string? Title { get; set; }
+    public string? Status { get; set; }
+    public DateTime? PlannedStartAt { get; set; }
+    public DateTime? PlannedEndAt { get; set; }
+    public decimal? EstimatedBudget { get; set; }
+    public int TotalCount { get; set; }
+    public string? ImageDatePlanUrl { get; set; }
 }
 
 /// <summary>

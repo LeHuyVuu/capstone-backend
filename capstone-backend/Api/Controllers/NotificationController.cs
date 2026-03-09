@@ -108,20 +108,40 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Test Push Notification
         /// </summary>
-        [HttpPost("push")]
+        [HttpPost("push-test")]
         public async Task<IActionResult> SendNotificationV2([FromQuery] string token)
         {
             try
             {
-
                 await _fcmService.SendNotificationAsync(token, new SendNotificationRequest
                 {
                     Title = "Test Push Notification",
                     Body = "This is a test push notification message.",
-                    ImageUrl = "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/system/logo.png"
-
+                    ImageUrl = "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/system/logo.png",
+                    Data = new Dictionary<string, string>
+                    {
+                        { "key1", "value1" },
+                        { "key2", "value2" }
+                    }
                 });
+                return OkResponse();
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
 
+        /// <summary>
+        /// Test Push Notification for account
+        /// </summary>
+        [HttpPost("push-multi-test")]
+        public async Task<IActionResult> SendNotificationV2()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                await _notificationService.SendTestPushNotification(userId.Value);
                 return OkResponse();
             }
             catch (Exception ex)

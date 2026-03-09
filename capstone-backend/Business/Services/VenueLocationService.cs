@@ -83,20 +83,66 @@ public class VenueLocationService : IVenueLocationService
 
     /// <summary>
     /// Deserialize JSON string to list of image URLs
+    /// Handles multiple formats: JSON array, single string, or malformed strings
     /// </summary>
     private static List<string>? DeserializeImages(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
             return null;
+
+        // Clean up the string - remove surrounding quotes (single or double)
+        var cleaned = json.Trim();
+        
+        // Remove leading/trailing single quotes if present
+        if (cleaned.StartsWith("'") && cleaned.EndsWith("'"))
+        {
+            cleaned = cleaned.Substring(1, cleaned.Length - 2).Trim();
+        }
+        
+        // Remove leading/trailing double quotes if it's a quoted JSON string
+        if (cleaned.StartsWith("\"") && cleaned.EndsWith("\"") && cleaned.Length > 2)
+        {
+            // Only remove if it looks like a quoted JSON array
+            if (cleaned.Contains("["))
+            {
+                cleaned = cleaned.Substring(1, cleaned.Length - 2).Trim();
+            }
+        }
+
         try
         {
-            if (json.TrimStart().StartsWith("["))
-                return JsonSerializer.Deserialize<List<string>>(json);
-            return new List<string> { json };
+            // Try to deserialize as JSON array
+            if (cleaned.TrimStart().StartsWith("["))
+            {
+                var result = JsonSerializer.Deserialize<List<string>>(cleaned);
+                // Filter out empty strings and return
+                return result?.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+            }
+            
+            // If it's a single URL, return as array with one element
+            return new List<string> { cleaned };
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            return new List<string> { json };
+            // Log the error for debugging
+            Console.WriteLine($"[WARNING] Failed to deserialize image JSON: {ex.Message}. Raw value: {json}");
+            
+            // Try to extract URLs from malformed string
+            if (cleaned.Contains("http"))
+            {
+                // Extract all URLs using basic pattern matching
+                var urls = System.Text.RegularExpressions.Regex.Matches(cleaned, @"https?://[^\s,\""'\]]+")
+                    .Cast<System.Text.RegularExpressions.Match>()
+                    .Select(m => m.Value)
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .ToList();
+                
+                if (urls.Any())
+                    return urls;
+            }
+            
+            // Last resort: return the original string as a single element
+            return new List<string> { cleaned };
         }
     }
     
@@ -955,47 +1001,49 @@ public class VenueLocationService : IVenueLocationService
     /// </summary>
     public async Task UpdateAllVenuesIsClosedStatusAsync()
     {
-        _logger.LogInformation("Starting automatic IsClosed status update for all venues");
+        // DISABLED: Automatic venue opening hours update
+        _logger.LogInformation("Automatic IsClosed status update is DISABLED");
+        await Task.CompletedTask;
+        
+        // var currentTimeVN = DateTime.UtcNow.AddHours(7); // Vietnam time (UTC+7)
+        // var currentTime = currentTimeVN.TimeOfDay;
+        // var todayDbFormat = ConvertDayOfWeekToDbFormat(currentTimeVN.DayOfWeek);
 
-        var currentTimeVN = DateTime.UtcNow.AddHours(7); // Vietnam time (UTC+7)
-        var currentTime = currentTimeVN.TimeOfDay;
-        var todayDbFormat = ConvertDayOfWeekToDbFormat(currentTimeVN.DayOfWeek);
+        // // ✨ Chỉ lấy opening_hours của HÔM NAY
+        // var todayOpeningHours = await _unitOfWork.Context.Set<VenueOpeningHour>()
+        //     .Where(oh => oh.Day == todayDbFormat)  // Chỉ ngày hôm nay
+        //     .ToListAsync();
 
-        // ✨ Chỉ lấy opening_hours của HÔM NAY
-        var todayOpeningHours = await _unitOfWork.Context.Set<VenueOpeningHour>()
-            .Where(oh => oh.Day == todayDbFormat)  // Chỉ ngày hôm nay
-            .ToListAsync();
+        // _logger.LogInformation($"Today's date: {currentTimeVN:yyyy-MM-dd HH:mm:ss}, Day of week (DB format): {todayDbFormat}, Current time (VN): {currentTime}");
+        // _logger.LogInformation($"Found {todayOpeningHours.Count} opening hour records for today");
 
-        _logger.LogInformation($"Today's date: {currentTimeVN:yyyy-MM-dd HH:mm:ss}, Day of week (DB format): {todayDbFormat}, Current time (VN): {currentTime}");
-        _logger.LogInformation($"Found {todayOpeningHours.Count} opening hour records for today");
-
-        var updatedCount = 0;
-        foreach (var openingHour in todayOpeningHours)
-        {
-            // Use helper method to check if venue is currently open
-            bool isCurrentlyOpen = IsVenueCurrentlyOpen(
-                openingHour.OpenTime, 
-                openingHour.CloseTime, 
-                currentTime
-            );
+        // var updatedCount = 0;
+        // foreach (var openingHour in todayOpeningHours)
+        // {
+        //     // Use helper method to check if venue is currently open
+        //     bool isCurrentlyOpen = IsVenueCurrentlyOpen(
+        //         openingHour.OpenTime, 
+        //         openingHour.CloseTime, 
+        //         currentTime
+        //     );
             
-            // IsClosed phải ngược lại với isCurrentlyOpen
-            bool shouldBeClosed = !isCurrentlyOpen;
+        //     // IsClosed phải ngược lại với isCurrentlyOpen
+        //     bool shouldBeClosed = !isCurrentlyOpen;
             
-            // Always update to match current time (override manual settings)
-            if (openingHour.IsClosed != shouldBeClosed)
-            {
-                openingHour.IsClosed = shouldBeClosed;
-                bool isOpenOvernight = openingHour.CloseTime < openingHour.OpenTime;
-                _logger.LogInformation($"Updated Venue {openingHour.VenueLocationId}: OpenTime={openingHour.OpenTime}, CloseTime={openingHour.CloseTime}, CurrentTime={currentTime}, IsOpenOvernight={isOpenOvernight}, IsClosed={openingHour.IsClosed}, IsOpen={isCurrentlyOpen}");
-                updatedCount++;
-            }
-        }
+        //     // Always update to match current time (override manual settings)
+        //     if (openingHour.IsClosed != shouldBeClosed)
+        //     {
+        //         openingHour.IsClosed = shouldBeClosed;
+        //         bool isOpenOvernight = openingHour.CloseTime < openingHour.OpenTime;
+        //         _logger.LogInformation($"Updated Venue {openingHour.VenueLocationId}: OpenTime={openingHour.OpenTime}, CloseTime={openingHour.CloseTime}, CurrentTime={currentTime}, IsOpenOvernight={isOpenOvernight}, IsClosed={openingHour.IsClosed}, IsOpen={isCurrentlyOpen}");
+        //         updatedCount++;
+        //     }
+        // }
 
-        _unitOfWork.Context.Set<VenueOpeningHour>().UpdateRange(todayOpeningHours);
-        await _unitOfWork.SaveChangesAsync();
+        // _unitOfWork.Context.Set<VenueOpeningHour>().UpdateRange(todayOpeningHours);
+        // await _unitOfWork.SaveChangesAsync();
 
-        _logger.LogInformation($"Completed automatic IsClosed status update. Updated {updatedCount} out of {todayOpeningHours.Count} opening hour records");
+        // _logger.LogInformation($"Completed automatic IsClosed status update. Updated {updatedCount} out of {todayOpeningHours.Count} opening hour records");
     }
 
     private int ConvertDayOfWeekToDbFormat(DayOfWeek dayOfWeek)
@@ -1632,5 +1680,31 @@ public class VenueLocationService : IVenueLocationService
         _logger.LogInformation("Soft deleted tag {TagId} from venue {VenueId}", locationTagId, venueId);
 
         return true;
+    }
+
+    /// <summary>
+    /// Get venue statistics for debugging search functionality
+    /// </summary>
+    public async Task<(int Total, int Active, int Pending, int Drafted, int Deleted, Dictionary<string, int> StatusBreakdown)> GetAllVenuesForStatsAsync()
+    {
+        _logger.LogInformation("Getting venue statistics for search debugging");
+
+        var allVenues = await _unitOfWork.VenueLocations.GetAllAsync();
+        
+        var total = allVenues.Count();
+        var active = allVenues.Count(v => v.Status == "ACTIVE" && v.IsDeleted != true);
+        var pending = allVenues.Count(v => v.Status == "PENDING" && v.IsDeleted != true);
+        var drafted = allVenues.Count(v => v.Status == "DRAFTED" && v.IsDeleted != true);
+        var deleted = allVenues.Count(v => v.IsDeleted == true);
+
+        var statusBreakdown = allVenues
+            .Where(v => v.IsDeleted != true)
+            .GroupBy(v => v.Status ?? "NULL")
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        _logger.LogInformation("Stats: Total={Total}, Active={Active}, Pending={Pending}, Drafted={Drafted}, Deleted={Deleted}", 
+            total, active, pending, drafted, deleted);
+
+        return (total, active, pending, drafted, deleted, statusBreakdown);
     }
 }

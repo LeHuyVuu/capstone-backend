@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 namespace capstone_backend.Data.Entities;
 
 [Index("VenueId", Name = "idx_review_venue")]
-[Index("MemberId", "VenueId", "CoupleProfileId", Name = "idx_review_couple_profile", IsUnique = true)]
 public partial class Review
 {
     [Key]

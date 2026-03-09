@@ -2,20 +2,13 @@ using capstone_backend.Business.Interfaces;
 
 namespace capstone_backend.Business.Services;
 
-/// <summary>
-/// Service for mapping MBTI personality types to couple personality tags
-/// Uses Keirsey Temperament Sorter (NF, SP, SJ, NT) logic
-/// </summary>
-public class PersonalityMappingService : IPersonalityMappingService
+
+public class PersonalityMappingService
 {
-    // Cache for personality tags to avoid recalculation
     private static readonly Dictionary<string, List<string>> _personalityCache = new();
     private static readonly object _cacheLock = new();
 
-    /// <summary>
-    /// Maps MBTI types to a single personality tag based on Keirsey Rules
-    /// </summary>
-    public List<string> GetPersonalityTags(string mbti1, string mbti2)
+    public static List<string> GetPersonalityTags(string mbti1, string mbti2)
     {
         // Create cache key
         var cacheKey = $"{mbti1?.ToUpper() ?? ""}-{mbti2?.ToUpper() ?? ""}";
@@ -42,10 +35,8 @@ public class PersonalityMappingService : IPersonalityMappingService
         return result;
     }
 
-    /// <summary>
-    /// Core logic to determine the tag based on Single or Couple rules
-    /// </summary>
-    private string DetermineTag(string mbti1, string mbti2)
+
+    private static string DetermineTag(string mbti1, string mbti2)
     {
         // 1. CASE SINGLE: Only mbti1 is provided
         if (!string.IsNullOrEmpty(mbti1) && string.IsNullOrEmpty(mbti2))
@@ -64,7 +55,7 @@ public class PersonalityMappingService : IPersonalityMappingService
 
             // RULE 1 (Priority): High Energy Couple (Both are Extroverts) -> VUI VẺ
             if (mbti1[0] == 'E' && mbti2[0] == 'E') 
-                return "VUI VẺ";
+                return "Vui nhộn";
 
             // RULE 2: Check Keirsey Temperament Groups
             string group1 = GetKeirseyGroup(mbti1);
@@ -84,10 +75,7 @@ public class PersonalityMappingService : IPersonalityMappingService
         return "HÒA GIẢI"; // Default safe fallback
     }
 
-    /// <summary>
-    /// Classifies MBTI into 4 Keirsey Temperaments: NF, NT, SP, SJ
-    /// </summary>
-    private string GetKeirseyGroup(string mbti)
+    private static string GetKeirseyGroup(string mbti)
     {
         // Safety check
         if (string.IsNullOrEmpty(mbti) || mbti.Length < 4) return "UNKNOWN";
@@ -110,18 +98,15 @@ public class PersonalityMappingService : IPersonalityMappingService
         return "UNKNOWN";
     }
 
-    /// <summary>
-    /// Maps Keirsey Group directly to database Tags
-    /// </summary>
-    private string MapGroupToTag(string group)
+    private static string MapGroupToTag(string group)
     {
         return group switch
         {
-            "NF" => "LÃNG MẠN", // Idealists -> Romantic
-            "SP" => "PHIÊU LƯU", // Artisans -> Adventurous
-            "SJ" => "THƯ THÁI", // Guardians -> Relaxed/Stable
-            "NT" => "HÒA GIẢI", // Rationals -> Harmony/Logic resolution
-            _ => "HÒA GIẢI"
+            "NF" => "Lãng mạn",   // Idealists -> Romantic
+            "SP" => "Phiêu lưu",  // Artisans -> Adventurous
+            "SJ" => "Thư thái",   // Guardians -> Relaxed/Stable
+            "NT" => "Hòa giải",   // Rationals -> Harmony/Logic resolution
+            _ => "Hòa giải"
         };
     }
 }

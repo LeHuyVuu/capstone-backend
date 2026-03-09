@@ -1,9 +1,13 @@
 using Amazon.Rekognition;
 using Amazon.Runtime;
 using capstone_backend.Api.Filters;
+using capstone_backend.Api.VenueRecommendation.Service;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Comment;
 using capstone_backend.Business.Jobs.DatePlan;
+using capstone_backend.Business.Jobs.Like;
 using capstone_backend.Business.Jobs.Media;
+using capstone_backend.Business.Jobs.Moderation;
 using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Business.Services;
 using capstone_backend.Data.Context;
@@ -19,6 +23,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
+using OpenAI.Moderations;
 using StackExchange.Redis;
 using System.Text;
 using System.Text.Json;
@@ -66,8 +72,16 @@ public static class ServiceExtensions
         Console.WriteLine($"[INFO] DB User: {dbUser}");
         Console.WriteLine($"[INFO] DB Port: {dbPort}");
 
+        //services.AddDbContext<MyDbContext>(options =>
+        //    options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
+
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        dataSourceBuilder.EnableDynamicJson();
+
+        var dataSource = dataSourceBuilder.Build();
+
         services.AddDbContext<MyDbContext>(options =>
-            options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
+            options.UseNpgsql(dataSource).UseSnakeCaseNamingConvention());
 
         return services;
     }
@@ -105,6 +119,11 @@ public static class ServiceExtensions
         services.AddScoped<IChallengeRepository, ChallengeRepository>();
         services.AddScoped<IAdvertisementRepository, AdvertisementRepository>();
         services.AddScoped<ISpecialEventRepository, SpecialEventRepository>();
+        services.AddScoped<IPostRepository, PostRepository>();
+        services.AddScoped<IPostLikeRepository, PostLikeRepository>();
+        services.AddScoped<ICommentRepository, CommentRepository>();
+        services.AddScoped<ICommentLikeRepository, CommentLikeRepository>();
+        services.AddScoped<ICoupleProfileChallengeRepository, CoupleProfileChallengeRepository>();
 
         // Messaging repositories
         services.AddScoped<IConversationRepository, ConversationRepository>();
@@ -128,7 +147,7 @@ public static class ServiceExtensions
 
         // Register AI Recommendation Services
         services.AddScoped<IMoodMappingService, MoodMappingService>();
-        services.AddScoped<IPersonalityMappingService, PersonalityMappingService>();
+        services.AddScoped<PersonalityMappingService>();
         services.AddScoped<IRecommendationService, OpenAIRecommendationService>();
 
         // Đăng ký AWS Rekognition Service để phân tích cảm xúc khuôn mặt
@@ -154,9 +173,8 @@ public static class ServiceExtensions
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IChallengeService, ChallengeService>();
         services.AddScoped<IMediaService, MediaService>();
-
-        // Register Location Tracking Service (đơn giản, chỉ quản lý watchlist)
-        services.AddScoped<ILocationFollowerService, LocationFollowerService>();
+        services.AddScoped<IPostService, PostService>();
+        services.AddScoped<ICommentService, CommentService>();
 
         // Register Subscription Package Service
         services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
@@ -167,18 +185,24 @@ public static class ServiceExtensions
         services.AddScoped<IDatePlanWorker, DatePlanWorker>();
         services.AddScoped<IReviewWorker, ReviewWorker>();
         services.AddScoped<IMediaWorker, MediaWorker>();
+        services.AddScoped<IModerationWorker, ModerationWorker>();
+        services.AddScoped<ICommentWorker, CommentWorker>();
+        services.AddScoped<ILikeWorker, LikeWorker>();
 
         // Register Messaging Service
-        services.AddScoped<IMessagingService, MessagingService>();
-
-        // Register Moderation Service
-        services.AddSingleton<IModerationService, ModerationService>();
+        services.AddScoped<IMessagingService, MessagingService>();     
 
         // Register Sepay Service for payment (generates VietQR codes + receives webhooks)
         services.AddScoped<SepayService>();
 
         // Register Advertisement Service
         services.AddScoped<IAdvertisementService, AdvertisementService>();
+
+        // Register Moderation Service
+        services.AddOpenAIModerationService();
+
+        // Register Meilisearch Service
+        services.AddScoped<IMeilisearchService, MeilisearchService>();
 
         return services;
     }
@@ -644,13 +668,41 @@ public static class ServiceExtensions
                 Console.WriteLine("[INFO] Firebase already initialized");
             }
 
-            services.AddSingleton<IFcmService, FcmService>();
+            services.AddScoped<IFcmService, FcmService>();
 
             return services;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Firebase initialization failed: {ex.Message}");
+        }
+
+        return services;
+    }
+
+    /// <summary>
+    /// Register OpenAI Service
+    /// </summary>
+    public static IServiceCollection AddOpenAIModerationService(this IServiceCollection services)
+    {
+        var openAiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+        if (string.IsNullOrWhiteSpace(openAiKey))
+        {
+            Console.WriteLine("[WARNING] OpenAI API Key not found. Moderation AI will be disabled.");
+            return services;
+        }
+
+        try
+        {
+            services.AddSingleton(new ModerationClient("omni-moderation-latest", openAiKey));
+            // Register Moderation Service
+            services.AddSingleton<IModerationService, ModerationService>();
+
+            Console.WriteLine("[INFO] OpenAI Moderation AI: Initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] OpenAI initialization failed: {ex.Message}");
         }
 
         return services;

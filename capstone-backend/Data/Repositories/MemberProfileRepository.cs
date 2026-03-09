@@ -35,7 +35,7 @@ public class MemberProfileRepository : GenericRepository<MemberProfile>, IMember
         var query = _dbSet.AsQueryable();
 
         if (!includeSoftDeleted)
-            query = query.Where(m => m.IsDeleted != true);
+            query = query.Include(a => a.User).Where(m => m.IsDeleted != true);
 
         return await query.FirstOrDefaultAsync(m => m.UserId == userId, cancellationToken);
     }

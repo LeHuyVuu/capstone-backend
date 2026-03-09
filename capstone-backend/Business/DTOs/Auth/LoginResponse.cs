@@ -1,3 +1,5 @@
+using capstone_backend.Business.DTOs.User;
+
 namespace capstone_backend.Business.DTOs.Auth;
 
 /// <summary>
@@ -23,7 +25,9 @@ public class LoginResponse
     public DateTime ExpiresAt { get; set; }
 
     public string Gender { get; set; } = string.Empty;
+    public string? AvatarUrl { get; set; }
 
-        public string? AvartarUrl { get; set; }
-
+    public string? FullName { get; set; }
+    public DateOnly? DateOfBirth { get; set; }
+    public string? InviteCode { get; set; }
 }

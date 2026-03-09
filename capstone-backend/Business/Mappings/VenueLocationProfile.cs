@@ -2,6 +2,7 @@ using AutoMapper;
 using capstone_backend.Business.DTOs.User;
 using capstone_backend.Business.DTOs.VenueLocation;
 using capstone_backend.Data.Entities;
+using System.Text.Json;
 
 namespace capstone_backend.Business.Mappings;
 
@@ -13,15 +14,15 @@ public class VenueLocationProfile : Profile
     public VenueLocationProfile()
     {
         // VenueLocation entity to VenueLocationDetailResponse
-        // Ignore image and category fields - handled manually with JSON deserialize
+        // Parse image fields from JSON strings
         CreateMap<VenueLocation, VenueLocationDetailResponse>()
             .ForMember(dest => dest.Category, opt => opt.Ignore())
             .ForMember(dest => dest.CoverImage,
-                opt => opt.MapFrom(s => string.IsNullOrWhiteSpace(s.CoverImage) ? null : new List<string> { s.CoverImage }))
+                opt => opt.MapFrom(s => ParseImageField(s.CoverImage)))
             .ForMember(dest => dest.InteriorImage,
-                opt => opt.MapFrom(s => string.IsNullOrWhiteSpace(s.InteriorImage) ? null : new List<string> { s.InteriorImage }))
+                opt => opt.MapFrom(s => ParseImageField(s.InteriorImage)))
             .ForMember(dest => dest.FullPageMenuImage,
-                opt => opt.MapFrom(s => string.IsNullOrWhiteSpace(s.FullPageMenuImage) ? null : new List<string> { s.FullPageMenuImage }))
+                opt => opt.MapFrom(s => ParseImageField(s.FullPageMenuImage)))
             .AfterMap((src, dest) =>
             {
                 // Map và gom nhóm LocationTags thành CoupleMoodTypes và CouplePersonalityTypes riêng biệt
@@ -119,5 +120,47 @@ public class VenueLocationProfile : Profile
             return moodTypeName;
 
         return $"{moodTypeName} - {personalityTypeName}";
+    }
+
+    /// <summary>
+    /// Parse image field from DB format: '["url1", "url2"]' or single URL
+    /// </summary>
+    private static List<string>? ParseImageField(string? imageString)
+    {
+        if (string.IsNullOrWhiteSpace(imageString))
+            return null;
+
+        var trimmed = imageString.Trim();
+
+        // Remove outer quotes if present (handles both ' and ")
+        while ((trimmed.StartsWith("'") && trimmed.EndsWith("'")) ||
+               (trimmed.StartsWith("\"") && trimmed.EndsWith("\"")))
+        {
+            trimmed = trimmed.Substring(1, trimmed.Length - 2).Trim();
+        }
+
+        // Check if it's a JSON array
+        if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+        {
+            try
+            {
+                // Unescape any escaped quotes before deserializing
+                var unescaped = trimmed.Replace("\\\"", "\"");
+                
+                var parsed = JsonSerializer.Deserialize<List<string>>(unescaped);
+                if (parsed != null && parsed.Any())
+                {
+                    return parsed.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                }
+                return null;
+            }
+            catch
+            {
+                // If parsing fails, treat as single URL
+            }
+        }
+
+        // Single URL string
+        return new List<string> { trimmed };
     }
 }

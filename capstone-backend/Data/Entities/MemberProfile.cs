@@ -61,7 +61,7 @@ public partial class MemberProfile
     [InverseProperty("Member")]
     public virtual ICollection<PostLike> PostLikes { get; set; } = new List<PostLike>();
 
-    [InverseProperty("Member")]
+    [InverseProperty("Author")]
     public virtual ICollection<Post> Posts { get; set; } = new List<Post>();
 
     [InverseProperty("Member")]
@@ -73,7 +73,7 @@ public partial class MemberProfile
     [InverseProperty("Member")]
     public virtual ICollection<CommentLike> CommentLikes { get; set; } = new List<CommentLike>();
 
-    [InverseProperty("Member")]
+    [InverseProperty("Author")]
     public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
     [InverseProperty("MemberId1Navigation")]
@@ -128,4 +128,7 @@ public partial class MemberProfile
 
     [InverseProperty("ReceiverMember")]
     public virtual ICollection<CoupleInvitation> CoupleInvitationsReceived { get; set; } = new List<CoupleInvitation>();
+
+    [InverseProperty("TargetMember")]
+    public virtual ICollection<Comment> TargetedComments { get; set; } = new List<Comment>();
 }
