@@ -1,3 +1,5 @@
+using Meilisearch;
+
 namespace capstone_backend.Api.VenueRecommendation.Service;
 
 /// <summary>
@@ -12,14 +14,11 @@ public partial class MeilisearchService
         {
             var index = _meilisearchClient.Index(_indexName);
 
-            _logger.LogInformation("Configuring Meilisearch index settings...");
-
             await index.UpdateSearchableAttributesAsync(new[]
             {
                 "name", "description", "address", "category", "area",
                 "coupleMoodTypeNames", "couplePersonalityTypeNames", "venueOwnerName"
             });
-            _logger.LogInformation("Updated searchable attributes");
 
             await index.UpdateFilterableAttributesAsync(new[]
             {
@@ -30,7 +29,6 @@ public partial class MeilisearchService
                 "venueOwnerId", "status", "createdAt", "updatedAt",
                 "_geo" // Enable geo filtering
             });
-            _logger.LogInformation("Updated filterable attributes (including _geo)");
 
             await index.UpdateSortableAttributesAsync(new[]
             {
@@ -38,34 +36,28 @@ public partial class MeilisearchService
                 "createdAt", "updatedAt", "priceMin", "avarageCost",
                 "_geo" // Enable geo sorting
             });
-            _logger.LogInformation("Updated sortable attributes (including _geo)");
 
             await index.UpdateDisplayedAttributesAsync(new[] { "*" });
-            _logger.LogInformation("Updated displayed attributes");
 
-            // VERIFY settings were applied
-            await Task.Delay(2000); // Wait for Meilisearch to process
+            await index.UpdateTypoToleranceAsync(new Meilisearch.TypoTolerance { Enabled = true });
+
+            await Task.Delay(2000);
             var filterableAttrs = await index.GetFilterableAttributesAsync();
             var sortableAttrs = await index.GetSortableAttributesAsync();
             
             var hasGeoFilterable = filterableAttrs?.Contains("_geo") ?? false;
             var hasGeoSortable = sortableAttrs?.Contains("_geo") ?? false;
             
-            _logger.LogWarning("VERIFY: _geo in filterableAttributes = {HasGeoFilterable}", hasGeoFilterable);
-            _logger.LogWarning("VERIFY: _geo in sortableAttributes = {HasGeoSortable}", hasGeoSortable);
 
             if (!hasGeoFilterable || !hasGeoSortable)
             {
-                _logger.LogError("CRITICAL: _geo missing from settings!");
                 return false;
             }
 
-            _logger.LogInformation("Meilisearch index settings configured successfully");
             return true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _logger.LogError(ex, "Error configuring Meilisearch index settings");
             return false;
         }
     }

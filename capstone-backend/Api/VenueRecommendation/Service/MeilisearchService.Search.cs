@@ -17,26 +17,21 @@ public partial class MeilisearchService
         {
             var index = _meilisearchClient.Index(_indexName);
             
-            // Validate and normalize filter parameters
             var (validatedMood, validatedPersonality, _, _) = ValidateFilterParameters(
                 coupleMoodTypeName, memberMoodTypeName, couplePersonalityTypeName, memberMbtiType);
             
-            // Build filters with validated parameters
             var filters = BuildFilterString(request, validatedMood, null, validatedPersonality, null);
             var sort = BuildSortString(request);
             var offset = (request.Page - 1) * request.PageSize;
             var filterString = filters.Any() ? string.Join(" AND ", filters) : null;
 
-            _logger.LogInformation("[REQUEST] Lat={Lat}, Lng={Lng}", request.Latitude, request.Longitude);
-            _logger.LogInformation("[FILTER] Final filter string: '{FilterString}'", filterString ?? "none");
-            _logger.LogInformation("[SORT] Sort string: '{Sort}'", sort.Any() ? string.Join(", ", sort) : "none");
+
 
             // Build attributes to retrieve - include _geoDistance when sorting by geo
             var attributesToRetrieve = new List<string> { "*" };
             if (request.Latitude.HasValue && request.Longitude.HasValue)
             {
                 attributesToRetrieve.Add("_geoDistance");
-                _logger.LogInformation("[ATTRIBUTES] Requesting _geoDistance in response");
             }
       
             var searchQuery = new SearchQuery
@@ -45,7 +40,11 @@ public partial class MeilisearchService
                 Limit = request.PageSize,
                 Filter = filterString,
                 Sort = sort.Any() ? sort.ToArray() : null,
-                AttributesToRetrieve = attributesToRetrieve.ToArray()
+                AttributesToRetrieve = attributesToRetrieve.ToArray(),
+                Hybrid = new HybridSearch
+                {
+                    Embedder = "venue-ai"
+                }
             };
 
             var searchResult = await index.SearchAsync<VenueLocationQueryResult>(
@@ -54,13 +53,10 @@ public partial class MeilisearchService
 
             var hits = searchResult.Hits?.ToList() ?? new List<VenueLocationQueryResult>();
             
-            _logger.LogInformation("[SEARCH RESULT] Found {Count} venues", hits.Count);
             
-            // Try to get total hits from Meilisearch if available
             int totalHits;
             try
             {
-                // Meilisearch may have TotalHits or EstimatedTotalHits property
                 var totalHitsProperty = searchResult.GetType().GetProperty("TotalHits") 
                                       ?? searchResult.GetType().GetProperty("EstimatedTotalHits");
                 if (totalHitsProperty != null)
@@ -70,7 +66,6 @@ public partial class MeilisearchService
                 }
                 else
                 {
-                    // Fallback: estimate based on hits
                     totalHits = hits.Count;
                 }
             }
@@ -79,12 +74,9 @@ public partial class MeilisearchService
                 totalHits = hits.Count;
             }
             
-            // Debug: Check if GeoDistance is in response
             if (hits.Any())
             {
                 var firstHit = hits[0];
-                _logger.LogInformation("[DEBUG] First venue: Name={Name}, GeoDistance={GeoDistance}, Lat={Lat}, Lng={Lng}", 
-                    firstHit.Name, firstHit.GeoDistance, firstHit.Latitude, firstHit.Longitude);
             }
             
             // Use distance from Meilisearch _geoDistance (in meters) if available, otherwise calculate manually
