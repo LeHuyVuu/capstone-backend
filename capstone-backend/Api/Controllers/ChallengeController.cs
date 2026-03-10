@@ -145,7 +145,7 @@ namespace capstone_backend.Api.Controllers
         /// **2. REVIEW:**
         /// ```json
         /// "ruleData": {
-        ///     "venue_id": 123,       // (tuỳ chọn) ID quán cụ thể, bỏ trống = quán nào cũng được
+        ///     "venue_id": [123, 124],       // (tuỳ chọn) ID quán cụ thể, bỏ trống = quán nào cũng được
         ///     "has_image": true      // (tuỳ chọn) Yêu cầu có hình ảnh
         /// }
         /// ```
@@ -153,7 +153,7 @@ namespace capstone_backend.Api.Controllers
         /// **3. POST:**
         /// ```json
         /// "ruleData": {
-        ///     "hash_tag": "#DateNight",  // (tuỳ chọn) Hashtag bắt buộc trong bài viết
+        ///     "hash_tag": ["#thuthach1", "#thuthach2"],  // (tuỳ chọn) Hashtag bắt buộc trong bài viết
         ///     "has_image": true          // (tuỳ chọn) Yêu cầu có hình ảnh
         /// }
         /// ```

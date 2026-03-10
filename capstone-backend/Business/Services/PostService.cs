@@ -65,6 +65,8 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Bạn chỉ có thể đính kèm tối đa 4 media cho mỗi bài viết");
             }
 
+            var hasImage = request.MediaPayload != null && request.MediaPayload.Any();
+
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Hồ sơ thành viên không tồn tại");
@@ -83,7 +85,7 @@ namespace capstone_backend.Business.Services
             await _unitOfWork.Posts.AddAsync(post);
             await _unitOfWork.SaveChangesAsync();
 
-            BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessPostModerationAsync(post.Id, moderationResults));
+            BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessPostModerationAndChallengeAsync(post.Id, moderationResults, userId, hasImage, request.HashTags, null));
 
             var response = _mapper.Map<PostResponse>(post);
             response.IsOwner = true;

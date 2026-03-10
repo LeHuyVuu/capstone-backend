@@ -22,5 +22,6 @@ namespace capstone_backend.Business.Interfaces
         // Handle challenge progress
         Task HandleCheckinChallengeProgressAsync(int userId);
         Task HandleReviewChallengeProgressAsync(int userId, int reviewId, int? venueId = null, bool hasImage = false);
+        Task HandlePostChallengeProgressAsync(int userId, int postId, int? venueId = null, bool hasImage = false, IEnumerable<string>? hashTags = null);
     }
 }
