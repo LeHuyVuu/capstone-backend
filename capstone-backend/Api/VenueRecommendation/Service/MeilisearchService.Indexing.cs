@@ -40,7 +40,7 @@ public partial class MeilisearchService
         try
         {
             var allVenues = await _venueLocationRepository.GetAllAsync();
-            var venues = allVenues.Where(v => v.IsDeleted != true).ToList();
+            var venues = allVenues.Where(v => v.IsDeleted != true && v.Status == "ACTIVE").ToList();
 
             var documents = new List<VenueLocationQueryResult>();
 

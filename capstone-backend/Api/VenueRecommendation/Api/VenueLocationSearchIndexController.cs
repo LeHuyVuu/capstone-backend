@@ -46,4 +46,13 @@ public class VenueLocationSearchIndexController : BaseController
 
         return OkResponse(result, "Venue indexed successfully");
     }
+
+    [HttpDelete("search/index/clear")]
+    [Tags("Meilisearch")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+    public async Task<IActionResult> ClearSearchIndex()
+    {
+        var result = await _meilisearchService.ClearIndexAsync();
+        return OkResponse(result, "Search index cleared successfully");
+    }
 }
