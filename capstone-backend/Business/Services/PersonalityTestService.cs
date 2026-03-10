@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.OpenApi.Models;
 using System.Globalization;
 using System.Runtime.InteropServices.JavaScript;
+using System.Runtime.Intrinsics.X86;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
@@ -209,6 +210,8 @@ namespace capstone_backend.Business.Services
                         record.ResultCode = await HandleSubmitAsync(json, testTypeId, testType.TotalQuestions.Value);
                         record.Status = PersonalityTestStatus.COMPLETED.ToString();
                         record.TakenAt = DateTime.UtcNow;
+                        // Update couple personality
+                        await SyncCouplePersonalityAsync(member.Id, record.ResultCode);
                         break;
 
                     default:
@@ -244,6 +247,49 @@ namespace capstone_backend.Business.Services
             {
 
                 throw;
+            }
+        }
+
+        private async Task SyncCouplePersonalityAsync(int memberId, string resultCode)
+        {
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(memberId);
+            if (couple == null)
+                return;
+
+            var currentMemberMbti = resultCode;
+
+            var partnerMemberId = couple.MemberId1 == memberId ? couple.MemberId2 : couple.MemberId1;
+            var partner = await _unitOfWork.MembersProfile.GetByIdAsync(partnerMemberId);
+            if (partner == null)
+                return;
+
+            var partnerTest = await _unitOfWork.PersonalityTests.GetCurrentPersonalityAsync(partner.Id);
+            var partnerMbti = partnerTest?.ResultCode;
+
+            if (string.IsNullOrWhiteSpace(currentMemberMbti) || string.IsNullOrWhiteSpace(partnerMbti))
+                return;
+
+            var personalityTags = PersonalityMappingService.GetPersonalityTags(currentMemberMbti, partnerMbti);
+            var mappedPersonalityName = personalityTags.FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(mappedPersonalityName))
+                return;
+
+            var couplePersonalityType = await _unitOfWork.CouplePersonalityTypes.GetFirstAsync(
+                 x => x.IsDeleted == false &&
+                 x.Name != null &&
+                 x.Name.ToLower() == mappedPersonalityName.ToLower()
+            );
+
+            if (couplePersonalityType == null)
+                return;
+
+            if (couple.CouplePersonalityTypeId != couplePersonalityType.Id)
+            {
+                couple.CouplePersonalityTypeId = couplePersonalityType.Id;
+                couple.UpdatedAt = DateTime.UtcNow;
+
+                _unitOfWork.CoupleProfiles.Update(couple);
             }
         }
 

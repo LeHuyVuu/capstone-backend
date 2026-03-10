@@ -1,5 +1,6 @@
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,7 +24,7 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
             .Include(r => r.Member)
                 .ThenInclude(m => m!.User)
             .Include(r => r.ReviewReply)
-            .Where(r => r.VenueId == venueId && r.IsDeleted != true);
+            .Where(r => r.VenueId == venueId && r.IsDeleted != true && r.Status == ReviewStatus.PUBLISHED.ToString());
 
         if (currentCoupleId.HasValue && partnerMemberId.HasValue && currentMemberId.HasValue)
         {
@@ -49,7 +50,7 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
     public async Task<List<int>> GetAllRatingsByVenueIdAsync(int venueId)
     {
         return await _context.Set<Review>()
-            .Where(r => r.VenueId == venueId && r.IsDeleted != true && r.Rating.HasValue)
+            .Where(r => r.VenueId == venueId && r.IsDeleted != true && r.Status == ReviewStatus.PUBLISHED.ToString() && r.Rating.HasValue)
             .Select(r => r.Rating!.Value)
             .ToListAsync();
     }
@@ -60,7 +61,7 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
     public async Task<(int TotalCount, int MatchedCount)> GetMoodMatchStatisticsAsync(int venueId)
     {
         var query = _context.Set<Review>()
-            .Where(r => r.VenueId == venueId && r.IsDeleted != true);
+            .Where(r => r.VenueId == venueId && r.IsDeleted != true && r.Status == ReviewStatus.PUBLISHED.ToString());
 
         var totalCount = await query.CountAsync();
         var matchedCount = await query.CountAsync(r => r.IsMatched == true);
@@ -84,7 +85,7 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
                 .ThenInclude(rl => rl.Member)
                     .ThenInclude(m => m!.User)
             .Include(r => r.ReviewReply)
-            .Where(r => r.VenueId == venueId && r.IsDeleted != true);
+            .Where(r => r.VenueId == venueId && r.IsDeleted != true && r.Status == ReviewStatus.PUBLISHED.ToString());
 
         // Sắp xếp theo thời gian
         query = sortDescending 
@@ -120,7 +121,7 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
                 .ThenInclude(rl => rl.Member)
                     .ThenInclude(m => m!.User)
             .Include(r => r.ReviewReply)
-            .Where(r => r.VenueId == venueId && r.IsDeleted != true);
+            .Where(r => r.VenueId == venueId && r.IsDeleted != true && r.Status == ReviewStatus.PUBLISHED.ToString());
 
         // Filter theo date (ưu tiên cao nhất)
         if (date.HasValue)
@@ -159,7 +160,7 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
     public async Task<bool> HasMemberReviewedVenueAsync(int memberId, int venueId, int? coupleProfileId)
     {
         return await _dbSet
-            .AnyAsync(r => r.MemberId == memberId && r.VenueId == venueId && r.CoupleProfileId == coupleProfileId && r.IsDeleted != true);
+            .AnyAsync(r => r.MemberId == memberId && r.VenueId == venueId && r.CoupleProfileId == coupleProfileId && r.IsDeleted != true && r.Status == ReviewStatus.PUBLISHED.ToString());
     }
 
     public async Task<Review?> GetByIdAndMemberIdAsync(int reviewId, int memberId)

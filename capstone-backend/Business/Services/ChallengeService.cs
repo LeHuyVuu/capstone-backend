@@ -67,7 +67,7 @@ namespace capstone_backend.Business.Services
 
             // 7. Enrich Response
             var response = await EnrichChallengeResponseAsync(new List<Challenge> { challenge });
-            return response.First();    
+            return response.First();
         }
 
         public async Task<int> DeleteChallengeAsync(int challengeId)
@@ -176,10 +176,10 @@ namespace capstone_backend.Business.Services
                     throw new Exception($"Mục tiêu '{ChallengeConstants.GoalMetrics.UNIQUE_LIST}' bắt buộc phải đi kèm điều kiện chọn quán (venue_id). Loại sự kiện này không hỗ trợ hoặc bạn chưa chọn quán nào!");
                 }
 
-                var emptyJson = JsonSerializer.Serialize(new 
-                { 
-                    logic = "AND", 
-                    rules = new List<object>() 
+                var emptyJson = JsonSerializer.Serialize(new
+                {
+                    logic = "AND",
+                    rules = new List<object>()
                 });
                 return (emptyJson, 0);
             }
@@ -196,7 +196,7 @@ namespace capstone_backend.Business.Services
 
             foreach (var item in ruleData)
             {
-                if (item.Value == null) 
+                if (item.Value == null)
                     continue;
                 if (!whiteList.Contains(item.Key))
                     throw new Exception($"Key '{item.Key}' không được cho phép trong event '{triggerEvent}'.");
@@ -204,7 +204,7 @@ namespace capstone_backend.Business.Services
                 string key = item.Key;
                 object rawValue = item.Value;
                 string op = ChallengeConstants.RuleOps.Eq;
-                    
+
                 if (rawValue is JsonElement element)
                 {
                     switch (element.ValueKind)
@@ -237,30 +237,30 @@ namespace capstone_backend.Business.Services
                                 rawValue = JsonSerializer.Deserialize<List<object>>(element.GetRawText());
                             }
                             break;
-                        case JsonValueKind.Number: 
-                            rawValue = element.GetDecimal(); 
+                        case JsonValueKind.Number:
+                            rawValue = element.GetDecimal();
                             break;
-                        case JsonValueKind.True: 
-                        case JsonValueKind.False: 
-                            rawValue = element.GetBoolean(); 
+                        case JsonValueKind.True:
+                        case JsonValueKind.False:
+                            rawValue = element.GetBoolean();
                             break;
-                        default: 
-                            rawValue = element.ToString(); 
+                        default:
+                            rawValue = element.ToString();
                             break;
                     }
                 }
-                ruleList.Add(new 
-                { 
-                    key = key, 
-                    op = op, 
-                    value = rawValue 
+                ruleList.Add(new
+                {
+                    key = key,
+                    op = op,
+                    value = rawValue
                 });
             }
 
-            var finalJson = JsonSerializer.Serialize(new 
-            { 
-                logic = "AND", 
-                rules = ruleList 
+            var finalJson = JsonSerializer.Serialize(new
+            {
+                logic = "AND",
+                rules = ruleList
             });
 
             if (goalMetric == ChallengeConstants.GoalMetrics.UNIQUE_LIST && updatedTargetGoal <= 0)
@@ -348,7 +348,7 @@ namespace capstone_backend.Business.Services
                                     targetDto.Instructions.Add($"📍 Thử thách yêu cầu check-in tại địa điểm: {venueNameStr}");
                                 }
                             }
-                            else if (r.Key == ChallengeConstants.RuleKeys.HAS_IMAGE)
+                            else if (r.Key == ChallengeConstants.RuleKeys.HAS_IMAGE && r.Value is JsonElement val && val.ValueKind == JsonValueKind.True)
                             {
                                 targetDto.Instructions.Add("📸 Bắt buộc đính kèm hình ảnh.");
                             }
@@ -383,9 +383,9 @@ namespace capstone_backend.Business.Services
 
             _mapper.Map(request, challenge);
 
-            if (request.StartDate.HasValue) 
+            if (request.StartDate.HasValue)
                 challenge.StartDate = DateTimeNormalizeUtil.NormalizeToUtc(request.StartDate.Value);
-            if (request.EndDate.HasValue) 
+            if (request.EndDate.HasValue)
                 challenge.EndDate = DateTimeNormalizeUtil.NormalizeToUtc(request.EndDate.Value);
 
             if (request.RuleData != null)
@@ -471,7 +471,7 @@ namespace capstone_backend.Business.Services
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Hồ sơ thành viên không tồn tại");
-            
+
             // Find couple profile
             var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
             if (couple == null)
@@ -673,7 +673,7 @@ namespace capstone_backend.Business.Services
                     CoupleChallenge = cc,
                     Progress = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(cc.ProgressData)
                 })
-                .Where(x => 
+                .Where(x =>
                     x.Progress?.MemberState != null &&
                     x.Progress.MemberState.TryGetValue(memberKey, out var st) &&
                     st != null &&
@@ -739,7 +739,7 @@ namespace capstone_backend.Business.Services
                 TotalCount = totalCount,
                 PageNumber = pageNumber,
                 PageSize = pageSize
-             };
+            };
         }
 
         private DateTime? GetJoinedAt(CoupleProfileChallenge cc, int memberId)
@@ -1040,7 +1040,7 @@ namespace capstone_backend.Business.Services
         {
             var result = new List<CoupleChallengeMemberProgressResponse>();
 
-            foreach ( var member in coupleMembers )
+            foreach (var member in coupleMembers)
             {
                 var memberKey = member.Id.ToString();
                 progressData.MemberState.TryGetValue(memberKey, out var state);
@@ -1340,6 +1340,301 @@ namespace capstone_backend.Business.Services
             }
 
             return progress;
+        }
+
+        public async Task HandleReviewChallengeProgressAsync(int userId, int reviewId, int? venueId = null, bool hasImage = false)
+        {
+            // 1. Resolve current member and couple
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                //throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+                return;
+
+            var now = DateTime.UtcNow;
+
+            // 2. Load all in-progress REVIEW challenges of this couple
+            var coupleChallenges = await _unitOfWork.CoupleProfileChallenges.GetAsync(cc =>
+                cc.IsDeleted == false &&
+                cc.CoupleId == couple.id &&
+                cc.Status == CoupleProfileChallengeStatus.IN_PROGRESS.ToString() &&
+                cc.Challenge != null &&
+                cc.Challenge.IsDeleted == false &&
+                cc.Challenge.Status == ChallengeStatus.ACTIVE.ToString() &&
+                cc.Challenge.TriggerEvent == ChallengeTriggerEvent.REVIEW.ToString() &&
+                (cc.Challenge.StartDate == null || cc.Challenge.StartDate <= now) &&
+                (cc.Challenge.EndDate == null || cc.Challenge.EndDate >= now), cc => cc.Include(cc => cc.Challenge)
+            );
+
+            if (coupleChallenges == null || !coupleChallenges.Any())
+                return;
+
+            // 3. Process each challenge
+            foreach (var coupleChallenge in coupleChallenges)
+            {
+                var challenge = coupleChallenge.Challenge;
+                var memberKey = member.Id.ToString();
+                if (challenge == null)
+                    continue;
+
+                // 4. Ensure progress data
+                var progress = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(coupleChallenge.ProgressData) ?? new CoupleChallengeProgressData();
+                progress = EnsureReviewProgressData(progress, challenge, member.Id, now);
+
+                // 5. Skip if member no longer active or join this challenge
+                if (!progress.MemberState.TryGetValue(memberKey, out var state) || state == null || !state.IsJoined || !state.IsActive)
+                    continue;
+
+                // 6. Prevent duplicate processing for same review
+                if (progress.QualifiedItems?.Any(x => x.ReviewId == reviewId) == true)
+                    continue;
+
+                // 7. Check challenge rule for this review action
+                if (!IsReviewQualified(challenge.ConditionRules, venueId, hasImage))
+                    continue;
+
+                // 8. Update progress
+                var updated = ApplyReviewMetricProgress(progress, challenge, member.Id, venueId, reviewId, now);
+                // Enrich venue name if needed
+                if (venueId.HasValue)
+                {
+                    var venue = await _unitOfWork.VenueLocations.GetByIdAsync(venueId.Value);
+                    var venueName = venue?.Name;
+
+                    if (progress.QualifiedItems != null)
+                    {
+                        foreach (var item in progress.QualifiedItems)
+                        {
+                            if (item.VenueId == venueId.Value)
+                            {
+                                item.VenueName = venueName;
+                            }
+                        }
+                    }
+                }
+
+                if (!updated)
+                    continue;
+
+                // 9. Check completion
+                if (progress.Current >= progress.Target)
+                {
+                    progress.Current = progress.Target;
+                    progress.IsCompleted = true;
+                    coupleChallenge.Status = CoupleProfileChallengeStatus.COMPLETED.ToString();
+                    coupleChallenge.CompletedAt = now;
+                }
+
+                // 10. Save progress
+                coupleChallenge.CurrentProgress = progress.Current;
+                coupleChallenge.ProgressData = JsonConverterUtil.Serialize(progress);
+                coupleChallenge.UpdatedAt = now;
+
+                _unitOfWork.CoupleProfileChallenges.Update(coupleChallenge);
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        private CoupleChallengeProgressData EnsureReviewProgressData(CoupleChallengeProgressData progress, Challenge challenge, int memberId, DateTime now)
+        {
+            var memberKey = memberId.ToString();
+            progress.Trigger ??= ChallengeTriggerEvent.REVIEW.ToString();
+            progress.Metric ??= challenge.GoalMetric;
+            progress.Target = progress.Target <= 0 ? (challenge.TargetGoal ?? 0) : progress.Target;
+            progress.Members ??= new Dictionary<string, ProgressMember>();
+            progress.MemberState ??= new Dictionary<string, MemberState>();
+            progress.Unique ??= new ProgressUnique();
+            progress.Unique.Items ??= new List<string>();
+            progress.Unique.ByMember ??= new Dictionary<string, List<string>>();
+            progress.QualifiedItems ??= new List<QualifiedProgressItem>();
+
+            // ensure member and memberState and member in unique
+            if (!progress.Members.ContainsKey(memberKey))
+                progress.Members[memberKey] = new ProgressMember
+                {
+                    Current = 0,
+                    Streak = 0,
+                    LastActionAt = null
+                };
+
+            if (!progress.MemberState.ContainsKey(memberKey))
+                progress.MemberState[memberKey] = new MemberState
+                {
+                    IsJoined = true,
+                    JoinedAt = now,
+                    IsActive = true,
+                    LeftAt = null
+                };
+
+            if (!progress.Unique.ByMember.ContainsKey(memberKey))
+            {
+                progress.Unique.ByMember[memberKey] = new List<string>();
+            }
+
+            return progress;
+        }
+
+        private bool IsReviewQualified(string? conditionRules, int? venueId, bool hasImage)
+        {
+            // no rule? => every review is valid
+            if (string.IsNullOrWhiteSpace(conditionRules))
+                return true;
+
+            var ruleWrapper = JsonConverterUtil.DeserializeOrDefault<ChallengeRuleWrapper>(conditionRules);
+
+            if (ruleWrapper?.Rules == null || !ruleWrapper.Rules.Any())
+                return true;
+
+            foreach (var rule in ruleWrapper.Rules)
+            {
+                switch (rule.Key)
+                {
+                    case "venue_id":
+                        if (!MatchVenueRule(rule.Value, venueId))
+                            return false;
+                        break;
+                    case "has_image":
+                        if (!MatchBoolRule(rule.Value, hasImage))
+                            return false;
+                        break;
+                }
+            }
+
+            return true;
+        }
+
+        private bool MatchVenueRule(object? ruleValue, int? venueId)
+        {
+            if (ruleValue == null)
+                return true;
+
+            if (!venueId.HasValue)
+                return false;
+
+            var actualVenueId = venueId.Value.ToString();
+
+            if (ruleValue is JsonElement element)
+            {
+                if (element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
+                    return true;
+
+                if (element.ValueKind == JsonValueKind.String)
+                {
+                    var raw = element.GetString();
+                    if (string.IsNullOrWhiteSpace(raw))
+                        return true;
+
+                    return string.Equals(raw.Trim(), actualVenueId, StringComparison.OrdinalIgnoreCase);
+                }
+
+                // case: ["15","18"]
+                if (element.ValueKind == JsonValueKind.Array)
+                {
+                    var venueIds = JsonSerializer.Deserialize<List<string>>(element.GetRawText()) ?? new List<string>();
+
+                    return venueIds.Any(x =>
+                        !string.IsNullOrWhiteSpace(x) &&
+                        string.Equals(x.Trim(), actualVenueId, StringComparison.OrdinalIgnoreCase));
+                }
+
+                // fallback nếu lỡ có number
+                if (element.ValueKind == JsonValueKind.Number)
+                {
+                    return element.GetInt32().ToString() == actualVenueId;
+                }
+            }
+
+            var text = ruleValue.ToString();
+            if (string.IsNullOrWhiteSpace(text))
+                return true;
+
+            return string.Equals(text.Trim(), actualVenueId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool MatchBoolRule(object? ruleValue, bool actualValue)
+        {
+            if (ruleValue == null)
+                return true;
+
+            if (ruleValue is JsonElement element)
+            {
+                if (element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
+                    return true;
+
+                if (element.ValueKind == JsonValueKind.True || element.ValueKind == JsonValueKind.False)
+                    return element.GetBoolean() == actualValue;
+
+                if (element.ValueKind == JsonValueKind.String)
+                {
+                    var raw = element.GetString();
+                    if (string.IsNullOrWhiteSpace(raw))
+                        return true;
+
+                    if (bool.TryParse(raw, out var parsed))
+                        return parsed == actualValue;
+                }
+            }
+
+            if (ruleValue is bool boolValue)
+                return boolValue == actualValue;
+
+            var text = ruleValue.ToString();
+            if (string.IsNullOrWhiteSpace(text))
+                return true;
+
+            return bool.TryParse(text, out var value) && value == actualValue;
+        }
+
+        private bool ApplyReviewMetricProgress(
+            CoupleChallengeProgressData progress,
+            Challenge challenge,
+            int memberId,
+            int? venueId,
+            int reviewId,
+            DateTime now)
+        {
+            var memberKey = memberId.ToString();
+            if (challenge.GoalMetric == ChallengeConstants.GoalMetrics.COUNT)
+            {
+                // handle count review
+                progress.Current += 1;
+                progress.Members[memberKey].Current += 1;
+                progress.Members[memberKey].LastActionAt = now;
+            }
+            if (challenge.GoalMetric == ChallengeConstants.GoalMetrics.UNIQUE_LIST)
+            {
+                // handle unique venue Id review
+                if (!venueId.HasValue)
+                    return false;
+
+                var uniqueKey = $"venueId:{venueId.Value}";
+
+                if (progress.Unique.Items.Contains(uniqueKey))
+                    return false;
+
+                progress.Unique.Items.Add(uniqueKey);
+                progress.Unique.ByMember[memberKey].Add(uniqueKey);
+
+                progress.Current = progress.Unique.Items.Count;
+                progress.Members[memberKey].Current = progress.Unique.ByMember[memberKey].Count;
+                progress.Members[memberKey].LastActionAt = now;
+            }
+
+            progress.QualifiedItems.Add(new QualifiedProgressItem
+            {
+                ReviewId = reviewId,
+                VenueId = venueId,
+                VenueName = null,
+                ActionAt = now,
+                MemberId = memberId,
+                Type = progress.Trigger
+            });
+
+            return true;
         }
     }
 }

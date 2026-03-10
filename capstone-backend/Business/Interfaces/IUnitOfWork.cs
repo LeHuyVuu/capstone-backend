@@ -79,6 +79,8 @@ public interface IUnitOfWork : IDisposable
 
     ICoupleProfileChallengeRepository CoupleProfileChallenges { get; }
 
+    ICouplePersonalityTypeRepository CouplePersonalityTypes { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>

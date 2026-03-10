@@ -125,6 +125,7 @@ public static class ServiceExtensions
         services.AddScoped<ICommentRepository, CommentRepository>();
         services.AddScoped<ICommentLikeRepository, CommentLikeRepository>();
         services.AddScoped<ICoupleProfileChallengeRepository, CoupleProfileChallengeRepository>();
+        services.AddScoped<ICouplePersonalityTypeRepository, CouplePersonalityTypeRepository>();
 
         // Messaging repositories
         services.AddScoped<IConversationRepository, ConversationRepository>();

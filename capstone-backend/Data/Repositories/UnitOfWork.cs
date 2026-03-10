@@ -45,7 +45,8 @@ public class UnitOfWork : IUnitOfWork
         IPostLikeRepository postLikeRepository,
         ICommentRepository commentRepository,
         ICommentLikeRepository commentLikeRepository,
-        ICoupleProfileChallengeRepository coupleProfileChallengeRepository)
+        ICoupleProfileChallengeRepository coupleProfileChallengeRepository,
+        ICouplePersonalityTypeRepository couplePersonalityTypeRepository)
     {
         _context = context;
         Users = userRepository;
@@ -79,6 +80,7 @@ public class UnitOfWork : IUnitOfWork
         Comments = commentRepository;
         CommentLikes = commentLikeRepository;
         CoupleProfileChallenges = coupleProfileChallengeRepository;
+        CouplePersonalityTypes = couplePersonalityTypeRepository;
     }
 
     public MyDbContext Context => _context;
@@ -144,6 +146,8 @@ public class UnitOfWork : IUnitOfWork
     public ICommentLikeRepository CommentLikes { get; set; }
 
     public ICoupleProfileChallengeRepository CoupleProfileChallenges { get; set; }
+
+    public ICouplePersonalityTypeRepository CouplePersonalityTypes { get; set; }
 
     public async Task<int> SaveChangesAsync()
     {
