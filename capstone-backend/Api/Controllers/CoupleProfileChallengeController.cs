@@ -182,5 +182,29 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Claim reward for challenge
+        /// </summary>
+        [HttpPost("{coupleChallengeId:int}/claim-reward")]
+        public async Task<IActionResult> ClaimChallengeReward([FromRoute] int coupleChallengeId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("User không xác thực");
+                }
+                var result = await _challengeService.ClaimCoupleChallengeRewardAsync(userId.Value, coupleChallengeId);
+                if (result <= 0)
+                    return NotFoundResponse("Thử thách không tồn tại hoặc chưa hoàn thành");
+                return OkResponse("Nhận thưởng thử thách thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

@@ -2002,5 +2002,57 @@ namespace capstone_backend.Business.Services
 
             return true;
         }
+
+        public async Task<int> ClaimCoupleChallengeRewardAsync(int userId, int coupleChallengeId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            var coupleChallenge = await _unitOfWork.CoupleProfileChallenges.GetFirstAsync(cc =>
+                cc.Id == coupleChallengeId &&
+                cc.CoupleId == couple.id &&
+                cc.IsDeleted == false &&
+                cc.Status == CoupleProfileChallengeStatus.COMPLETED.ToString() &&
+                cc.Challenge != null &&
+                cc.Challenge.IsDeleted == false &&
+                cc.Challenge.Status == ChallengeStatus.ACTIVE.ToString(),
+                cc => cc.Include(x => x.Challenge)
+            );
+
+            if (coupleChallenge.Challenge?.Id == 14)
+                throw new Exception("Thử thách này tự động cộng điểm cho bạn");
+
+            if (coupleChallenge == null)
+                throw new Exception("Thử thách không tồn tại hoặc chưa hoàn thành");
+
+            // Check if member is part of this couple challenge
+            var memberKey = member.Id.ToString();
+            var progress = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(coupleChallenge.ProgressData);
+            if (progress == null || !progress.MemberState.TryGetValue(memberKey, out var state) || state == null || !state.IsJoined)
+                throw new Exception("Bạn không có quyền nhận thưởng cho thử thách này");
+
+            // Prevent double claiming
+            if (coupleChallenge.IsRewardClaimed == true)
+                throw new Exception("Thử thách này đã nhận thưởng rồi");          
+
+            couple.TotalPoints += coupleChallenge.Challenge?.RewardPoints ?? 0;
+
+            // Mark reward as claimed
+            coupleChallenge.IsRewardClaimed = true;
+            coupleChallenge.RewardClaimedAt = DateTime.UtcNow;
+            coupleChallenge.RewardClaimedByMemberId = member.Id;
+
+            _unitOfWork.CoupleProfiles.Update(couple);
+            _unitOfWork.CoupleProfileChallenges.Update(coupleChallenge);
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return coupleChallenge.Challenge?.RewardPoints ?? 0;
+        }
     }
 }
