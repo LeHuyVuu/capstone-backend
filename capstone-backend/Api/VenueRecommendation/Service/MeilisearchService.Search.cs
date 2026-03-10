@@ -56,6 +56,29 @@ public partial class MeilisearchService
             
             _logger.LogInformation("[SEARCH RESULT] Found {Count} venues", hits.Count);
             
+            // Try to get total hits from Meilisearch if available
+            int totalHits;
+            try
+            {
+                // Meilisearch may have TotalHits or EstimatedTotalHits property
+                var totalHitsProperty = searchResult.GetType().GetProperty("TotalHits") 
+                                      ?? searchResult.GetType().GetProperty("EstimatedTotalHits");
+                if (totalHitsProperty != null)
+                {
+                    var value = totalHitsProperty.GetValue(searchResult);
+                    totalHits = value != null ? Convert.ToInt32(value) : 0;
+                }
+                else
+                {
+                    // Fallback: estimate based on hits
+                    totalHits = hits.Count;
+                }
+            }
+            catch
+            {
+                totalHits = hits.Count;
+            }
+            
             // Debug: Check if GeoDistance is in response
             if (hits.Any())
             {
@@ -98,8 +121,6 @@ public partial class MeilisearchService
                     hit.DistanceText = FormatDistance(distanceKm);
                 }
             }
-            
-            var totalHits = hits.Count;
             
             
             // If no results with filter, try without filter to debug
