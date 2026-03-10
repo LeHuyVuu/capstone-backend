@@ -40,16 +40,23 @@ public partial class MeilisearchService
                 Limit = request.PageSize,
                 Filter = filterString,
                 Sort = sort.Any() ? sort.ToArray() : null,
-                AttributesToRetrieve = attributesToRetrieve.ToArray(),
-                Hybrid = new HybridSearch
-                {
-                    Embedder = "venue-ai"
-                }
+                AttributesToRetrieve = attributesToRetrieve.ToArray()
             };
 
-            var searchResult = await index.SearchAsync<VenueLocationQueryResult>(
-                request.Query ?? string.Empty,
-                searchQuery);
+            ISearchable<VenueLocationQueryResult> searchResult;
+            
+            if (!string.IsNullOrWhiteSpace(request.Query))
+            {
+                searchResult = await PerformHybridSearchAsync(
+                    request.Query,
+                    searchQuery);
+            }
+            else
+            {
+                searchResult = await index.SearchAsync<VenueLocationQueryResult>(
+                    string.Empty,
+                    searchQuery);
+            }
 
             var hits = searchResult.Hits?.ToList() ?? new List<VenueLocationQueryResult>();
             
@@ -371,6 +378,57 @@ public partial class MeilisearchService
         {
             return $"{distanceKm:F1} km";
         }
+    }
+
+    private async Task<ISearchable<VenueLocationQueryResult>> PerformHybridSearchAsync(
+        string query,
+        SearchQuery searchQuery)
+    {
+        var host = Environment.GetEnvironmentVariable("MEILISEARCH_HOST") 
+                   ?? "http://167.99.68.193:7700";
+        var apiKey = Environment.GetEnvironmentVariable("MEILISEARCH_API_KEY") 
+                     ?? "masterKey123";
+
+        using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+
+        var requestBody = new
+        {
+            q = query,
+            offset = searchQuery.Offset,
+            limit = searchQuery.Limit,
+            filter = searchQuery.Filter,
+            sort = searchQuery.Sort,
+            attributesToRetrieve = searchQuery.AttributesToRetrieve,
+            hybrid = new
+            {
+                embedder = "venue-ai",
+                semanticRatio = 0.2
+            }
+        };
+
+        var jsonContent = System.Text.Json.JsonSerializer.Serialize(requestBody);
+        _logger.LogInformation("[AI SEARCH] Query: '{Query}', SemanticRatio: 0.2, Embedder: venue-ai", query);
+        var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+
+        var response = await httpClient.PostAsync($"{host}/indexes/{_indexName}/search", content);
+        response.EnsureSuccessStatusCode();
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        
+        var searchResult = System.Text.Json.JsonSerializer.Deserialize<Meilisearch.SearchResult<VenueLocationQueryResult>>(
+            responseBody,
+            new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+        if (searchResult == null)
+        {
+            throw new InvalidOperationException("Failed to deserialize Meilisearch hybrid search response");
+        }
+
+        return searchResult;
     }
 
     #endregion
