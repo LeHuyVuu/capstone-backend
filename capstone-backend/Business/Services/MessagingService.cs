@@ -590,16 +590,15 @@ public class MessagingService : IMessagingService
         if (message == null || message.IsDeleted == true)
             throw new Exception("Message not found");
 
-        // Only sender can delete
-        if (message.SenderId != currentUserId)
-            throw new Exception("You can only delete your own messages");
+        // // Only sender can delete
+        // if (message.SenderId != currentUserId)
+        //     throw new Exception("You can only delete your own messages");
 
         message.IsDeleted = true;
         message.UpdatedAt = DateTime.UtcNow;
         _messageRepository.Update(message);
         await _unitOfWork.SaveChangesAsync();
 
-        // Notify conversation members via SignalR (including sender for multi-device sync)
         if (message.ConversationId != null)
         {
             var members = await _memberRepository.GetActiveConversationMembersAsync(message.ConversationId.Value, cancellationToken);
