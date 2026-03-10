@@ -11,11 +11,13 @@ namespace capstone_backend.Business.Jobs.Moderation
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ModerationWorker> _logger;
+        private readonly IChallengeService _challengeService;
 
-        public ModerationWorker(IUnitOfWork unitOfWork, ILogger<ModerationWorker> logger)
+        public ModerationWorker(IUnitOfWork unitOfWork, ILogger<ModerationWorker> logger, IChallengeService challengeService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _challengeService = challengeService;
         }
 
         public async Task ProcessCommentModerationAsync(int commentId, List<ModerationResultDto> results)
@@ -60,6 +62,27 @@ namespace capstone_backend.Business.Jobs.Moderation
             _logger.LogInformation($"[MODERATION WORKER] Post ID {postId} moderated with status: {post.Status}");
 
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task ProcessReviewModerationAndChallengeAsync(int reviewId, List<ModerationResultDto> results, int userId, int? venueId, bool hasImage)
+        {
+            var review = await _unitOfWork.Reviews.GetByIdAsync(reviewId);
+            if (review == null || review.IsDeleted == true)
+                return;
+
+            if (results.Any(r => r.Action == ModerationAction.PENDING))
+                review.Status = ReviewStatus.FLAGGED.ToString();
+            else
+                review.Status = ReviewStatus.PUBLISHED.ToString();
+
+            _logger.LogInformation($"[MODERATION WORKER] Review ID {reviewId} moderated with status: {review.Status}");
+            await _unitOfWork.SaveChangesAsync();
+
+            if (review.Status == ReviewStatus.PUBLISHED.ToString())
+            {
+                // Only process challenge progress if the review is approved
+                await _challengeService.HandleReviewChallengeProgressAsync(userId, reviewId, venueId, hasImage);
+            }
         }
     }
 }

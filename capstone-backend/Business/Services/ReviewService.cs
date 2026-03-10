@@ -1,8 +1,10 @@
 ﻿using Amazon.S3.Model.Internal.MarshallTransformations;
 using AutoMapper;
 using capstone_backend.Business.Common;
+using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Review;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Moderation;
 using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
@@ -17,12 +19,14 @@ namespace capstone_backend.Business.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly S3StorageService _s3Service;
+        private readonly IModerationService _moderationService;
 
-        public ReviewService(IUnitOfWork unitOfWork, IMapper mapper, S3StorageService s3Service)
+        public ReviewService(IUnitOfWork unitOfWork, IMapper mapper, S3StorageService s3Service, IModerationService moderationService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _s3Service = s3Service;
+            _moderationService = moderationService;
         }
 
         public async Task<int> CheckinAsync(int userId, CheckinRequest request)
@@ -184,7 +188,16 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Không tìm thấy lịch sử check-in hợp lệ");
 
             if (checkIn.IsValid != true)
-                throw new Exception("Lịch sử check-in chưa được xác thực, không thể đánh giá địa điểm");          
+                throw new Exception("Lịch sử check-in chưa được xác thực, không thể đánh giá địa điểm");
+
+            // Moderation
+            var toCheck = new List<string> { request.Content };
+            if (request.Images != null && request.Images.Any())
+                toCheck.AddRange(request.Images);
+            var moderationResults = await _moderationService.CheckContentByAIService(toCheck);
+
+            if (moderationResults.Any(r => r.Action == ModerationAction.BLOCK))
+                throw new Exception("Nội dung của bạn đã bị hệ thống chặn vì vi phạm tiêu chuẩn cộng đồng");
 
             var review = _mapper.Map<Review>(request);
             review.MemberId = member.Id;
@@ -199,6 +212,7 @@ namespace capstone_backend.Business.Services
             await _unitOfWork.Reviews.AddAsync(review);
             await _unitOfWork.SaveChangesAsync();
 
+            var hasImage = false;
             // Handle images
             if (request.Images != null && request.Images.Any())
             {
@@ -212,9 +226,13 @@ namespace capstone_backend.Business.Services
                     media.TargetType = ReferenceType.REVIEW.ToString();
                     _unitOfWork.Media.Update(media);
                 }
-            }
 
+                hasImage = true;
+            }
             await _unitOfWork.SaveChangesAsync();
+
+            BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessReviewModerationAndChallengeAsync(review.Id, moderationResults, userId, review.VenueId, hasImage));
+         
             return review.Id;
         }
 

@@ -348,7 +348,7 @@ namespace capstone_backend.Business.Services
                                     targetDto.Instructions.Add($"📍 Thử thách yêu cầu check-in tại địa điểm: {venueNameStr}");
                                 }
                             }
-                            else if (r.Key == ChallengeConstants.RuleKeys.HAS_IMAGE)
+                            else if (r.Key == ChallengeConstants.RuleKeys.HAS_IMAGE && r.Value is JsonElement val && val.ValueKind == JsonValueKind.True)
                             {
                                 targetDto.Instructions.Add("📸 Bắt buộc đính kèm hình ảnh.");
                             }
@@ -1398,6 +1398,23 @@ namespace capstone_backend.Business.Services
 
                 // 8. Update progress
                 var updated = ApplyReviewMetricProgress(progress, challenge, member.Id, venueId, reviewId, now);
+                // Enrich venue name if needed
+                if (venueId.HasValue)
+                {
+                    var venue = await _unitOfWork.VenueLocations.GetByIdAsync(venueId.Value);
+                    var venueName = venue?.Name;
+
+                    if (progress.QualifiedItems != null)
+                    {
+                        foreach (var item in progress.QualifiedItems)
+                        {
+                            if (item.VenueId == venueId.Value)
+                            {
+                                item.VenueName = venueName;
+                            }
+                        }
+                    }
+                }
 
                 if (!updated)
                     continue;
@@ -1418,6 +1435,8 @@ namespace capstone_backend.Business.Services
 
                 _unitOfWork.CoupleProfileChallenges.Update(coupleChallenge);
             }
+
+            await _unitOfWork.SaveChangesAsync();
         }
 
         private CoupleChallengeProgressData EnsureReviewProgressData(CoupleChallengeProgressData progress, Challenge challenge, int memberId, DateTime now)
