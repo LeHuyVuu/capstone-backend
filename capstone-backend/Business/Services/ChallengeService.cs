@@ -571,10 +571,22 @@ namespace capstone_backend.Business.Services
                 {
                     if (map.TryGetValue(item.Id, out var cc))
                     {
-                        item.IsJoined = true;
                         item.CoupleChallengeId = cc.Id;
                         item.CoupleChallengeStatus = cc.Status;
                         item.CurrentProgress = cc.CurrentProgress ?? 0;
+
+                        var progress = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(cc.ProgressData);
+                        var memberKey = member.Id.ToString();
+
+                        if (progress?.MemberState != null &&
+                            progress.MemberState.TryGetValue(memberKey, out var memberState))
+                        {
+                            item.IsJoined = memberState.IsJoined;
+                        }
+                        else
+                        {
+                            item.IsJoined = false;
+                        }
                     }
                 }
             }
@@ -981,6 +993,9 @@ namespace capstone_backend.Business.Services
             var coupleChallenge = await _unitOfWork.CoupleProfileChallenges.GetByIdAsync(coupleChallengeId);
             if (coupleChallenge == null || coupleChallenge.CoupleId != couple.id || coupleChallenge.IsDeleted == true)
                 throw new Exception("Thử thách của cặp đôi không tồn tại");
+
+            if (coupleChallenge.Status != CoupleProfileChallengeStatus.IN_PROGRESS.ToString())
+                throw new Exception("Chỉ có thể rời khỏi thử thách đang tiến hành (IN_PROGRESS)");
 
             if (coupleChallenge.ChallengeId == 14)
                 throw new Exception("Thử thách 'Check-in mood mỗi ngày' là thử thách đặc biệt, không thể rời khỏi");
