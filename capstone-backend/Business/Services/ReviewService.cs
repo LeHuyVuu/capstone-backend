@@ -171,7 +171,7 @@ namespace capstone_backend.Business.Services
             if (member == null)
                 throw new Exception("Không tìm thấy hồ sơ thành viên");
 
-            var venue = await _unitOfWork.VenueLocations.GetByIdAsync(request.VenueLocationId);
+            var venue = await _unitOfWork.VenueLocations.GetByIdWithDetailsAsync(request.VenueLocationId);
             if (venue == null)
                 throw new Exception("Không tìm thấy địa điểm");
 
@@ -205,6 +205,7 @@ namespace capstone_backend.Business.Services
             review.VenueId = request.VenueLocationId;
             review.Status = ReviewStatus.PENDING.ToString();
             review.IsAnonymous = request.IsAnonymous;
+            review.IsMatched = CalculateIsMatched(couple, venue);
 
             checkIn.IsValid = false;
 
@@ -234,6 +235,25 @@ namespace capstone_backend.Business.Services
             BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessReviewModerationAndChallengeAsync(review.Id, moderationResults, userId, review.VenueId, hasImage));
          
             return review.Id;
+        }
+
+        private bool CalculateIsMatched(CoupleProfile? couple, VenueLocation venue)
+        {
+            if (couple == null || venue.VenueLocationTags == null || !venue.VenueLocationTags.Any())
+                return false;
+
+            var coupleMoodTypeId = couple.CoupleMoodTypeId;
+            var couplePersonalityTypeId = couple.CouplePersonalityTypeId;
+
+            // check if venue have any tag match with couple
+            var isMatched = venue.VenueLocationTags
+                .Where(vlt => vlt.IsDeleted == false && vlt.LocationTag != null)
+                .Any(vlt =>
+                    (coupleMoodTypeId.HasValue && vlt.LocationTag!.CoupleMoodTypeId == coupleMoodTypeId) ||
+                    (couplePersonalityTypeId.HasValue && vlt.LocationTag!.CouplePersonalityTypeId == couplePersonalityTypeId)
+                );
+
+            return isMatched;
         }
 
         public async Task<ReviewLikeResponse> ToggleLikeReviewAsync(int userId, int reviewId)

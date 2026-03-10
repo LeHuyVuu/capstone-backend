@@ -1,5 +1,6 @@
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,7 +24,7 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
             .Include(r => r.Member)
                 .ThenInclude(m => m!.User)
             .Include(r => r.ReviewReply)
-            .Where(r => r.VenueId == venueId && r.IsDeleted != true);
+            .Where(r => r.VenueId == venueId && r.IsDeleted != true && r.Status == ReviewStatus.PUBLISHED.ToString());
 
         if (currentCoupleId.HasValue && partnerMemberId.HasValue && currentMemberId.HasValue)
         {
