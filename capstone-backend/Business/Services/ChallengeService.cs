@@ -232,6 +232,15 @@ namespace capstone_backend.Business.Services
                                     rawValue = new List<string>();
                                 }
                             }
+                            else if (key == ChallengeConstants.RuleKeys.HASH_TAG)
+                            {
+                                var tagList = JsonSerializer.Deserialize<List<string>>(element.GetRawText());
+                                rawValue = (tagList ?? new List<string>())
+                                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                                    .Select(x => x.Trim())
+                                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                                    .ToList();
+                            }
                             else
                             {
                                 rawValue = JsonSerializer.Deserialize<List<object>>(element.GetRawText());
@@ -245,7 +254,17 @@ namespace capstone_backend.Business.Services
                             rawValue = element.GetBoolean();
                             break;
                         default:
-                            rawValue = element.ToString();
+                            if (key == ChallengeConstants.RuleKeys.HASH_TAG)
+                            {
+                                var rawText = element.ToString();
+                                rawValue = string.IsNullOrWhiteSpace(rawText)
+                                    ? string.Empty
+                                    : rawText.Trim();
+                            }
+                            else
+                            {
+                                rawValue = element.ToString();
+                            }
                             break;
                     }
                 }
@@ -354,7 +373,31 @@ namespace capstone_backend.Business.Services
                             }
                             else if (r.Key == ChallengeConstants.RuleKeys.HASH_TAG)
                             {
-                                targetDto.Instructions.Add($"🏷️ Phải có hashtag: {r.Value}");
+                                var tags = new List<string>();
+
+                                if (r.Value is JsonElement element)
+                                {
+                                    if (element.ValueKind == JsonValueKind.Array)
+                                    {
+                                        tags = JsonSerializer.Deserialize<List<string>>(element.GetRawText()) ?? new List<string>();
+                                    }
+                                    else if (element.ValueKind == JsonValueKind.String)
+                                    {
+                                        var singleTag = element.GetString();
+                                        if (!string.IsNullOrWhiteSpace(singleTag))
+                                            tags.Add(singleTag);
+                                    }
+                                }
+                                else if (r.Value is IEnumerable<string> tagList)
+                                {
+                                    tags = tagList.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+                                }
+                                else if (r.Value != null && !string.IsNullOrWhiteSpace(r.Value.ToString()))
+                                {
+                                    tags.Add(r.Value.ToString()!);
+                                }
+
+                                targetDto.Instructions.Add($"🏷️ Phải có hashtag: {string.Join(", ", tags)}");
                             }
                         }
                     }
@@ -1635,6 +1678,381 @@ namespace capstone_backend.Business.Services
             });
 
             return true;
+        }
+
+        public async Task HandlePostChallengeProgressAsync(int userId, int postId, int? venueId = null, bool hasImage = false, IEnumerable<string>? hashTags = null)
+        {
+            // 1. Resolve current member and couple
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                return;
+
+            var now = DateTime.UtcNow;
+            var normalizedTags = NormalizeHashTags(hashTags);
+
+            // 2. Load all in-progress POST challenges of this couple
+            var coupleChallenges = await _unitOfWork.CoupleProfileChallenges.GetAsync(cc =>
+                cc.IsDeleted == false &&
+                cc.CoupleId == couple.id &&
+                cc.Status == CoupleProfileChallengeStatus.IN_PROGRESS.ToString() &&
+                cc.Challenge != null &&
+                cc.Challenge.IsDeleted == false &&
+                cc.Challenge.Status == ChallengeStatus.ACTIVE.ToString() &&
+                cc.Challenge.TriggerEvent == ChallengeTriggerEvent.POST.ToString() &&
+                (cc.Challenge.StartDate == null || cc.Challenge.StartDate <= now) &&
+                (cc.Challenge.EndDate == null || cc.Challenge.EndDate >= now),
+                cc => cc.Include(x => x.Challenge)
+            );
+
+            if (coupleChallenges == null || !coupleChallenges.Any())
+                return;
+
+            // 3. Process each challenge
+            foreach (var coupleChallenge in coupleChallenges)
+            {
+                var challenge = coupleChallenge.Challenge;
+                if (challenge == null)
+                    continue;
+
+                var memberKey = member.Id.ToString();
+
+                // 4. Ensure progress data
+                var progress = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(coupleChallenge.ProgressData)
+                               ?? new CoupleChallengeProgressData();
+
+                progress = EnsurePostProgressData(progress, challenge, member.Id, now);
+
+                // 5. Skip if member is not active / not joined
+                if (!progress.MemberState.TryGetValue(memberKey, out var state) ||
+                    state == null ||
+                    !state.IsJoined ||
+                    !state.IsActive)
+                {
+                    continue;
+                }
+
+                // 6. Prevent duplicate processing for same post
+                if (progress.QualifiedItems?.Any(x => x.PostId == postId) == true)
+                    continue;
+
+                // 7. Check challenge rule for this post action
+                if (!IsPostQualified(challenge.ConditionRules, hasImage, normalizedTags))
+                    continue;
+
+                // 8. Update progress
+                var updated = ApplyPostMetricProgress(
+                    progress,
+                    challenge,
+                    member.Id,
+                    postId,
+                    hasImage,
+                    normalizedTags,
+                    now);
+
+                if (!updated)
+                    continue;
+
+                // 9. Check completion
+                if (progress.Current >= progress.Target)
+                {
+                    progress.Current = progress.Target;
+                    progress.IsCompleted = true;
+                    coupleChallenge.Status = CoupleProfileChallengeStatus.COMPLETED.ToString();
+                    coupleChallenge.CompletedAt = now;
+                }
+
+                // 10. Save progress
+                coupleChallenge.CurrentProgress = progress.Current;
+                coupleChallenge.ProgressData = JsonConverterUtil.Serialize(progress);
+                coupleChallenge.UpdatedAt = now;
+
+                _unitOfWork.CoupleProfileChallenges.Update(coupleChallenge);
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        private CoupleChallengeProgressData EnsurePostProgressData(
+            CoupleChallengeProgressData progress,
+            Challenge challenge,
+            int memberId,
+            DateTime now)
+        {
+            var memberKey = memberId.ToString();
+
+            progress.Trigger ??= ChallengeTriggerEvent.POST.ToString();
+            progress.Metric ??= challenge.GoalMetric;
+            progress.Target = progress.Target <= 0 ? (challenge.TargetGoal ?? 0) : progress.Target;
+
+            progress.Members ??= new Dictionary<string, ProgressMember>();
+            progress.MemberState ??= new Dictionary<string, MemberState>();
+            progress.Unique ??= new ProgressUnique();
+            progress.Unique.Items ??= new List<string>();
+            progress.Unique.ByMember ??= new Dictionary<string, List<string>>();
+            progress.QualifiedItems ??= new List<QualifiedProgressItem>();
+            progress.Events ??= new List<ProgressEvent>();
+
+            if (!progress.Members.ContainsKey(memberKey))
+            {
+                progress.Members[memberKey] = new ProgressMember
+                {
+                    Current = 0,
+                    Streak = 0,
+                    LastActionAt = null
+                };
+            }
+
+            if (!progress.MemberState.ContainsKey(memberKey))
+            {
+                progress.MemberState[memberKey] = new MemberState
+                {
+                    IsJoined = true,
+                    JoinedAt = now,
+                    IsActive = true,
+                    LeftAt = null
+                };
+            }
+
+            if (!progress.Unique.ByMember.ContainsKey(memberKey))
+            {
+                progress.Unique.ByMember[memberKey] = new List<string>();
+            }
+
+            return progress;
+        }
+
+        private List<string> NormalizeHashTags(IEnumerable<string>? hashTags)
+        {
+            if (hashTags == null)
+                return new List<string>();
+
+            return hashTags
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(NormalizeHashTag)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        private string NormalizeHashTag(string? tag)
+        {
+            if (string.IsNullOrWhiteSpace(tag))
+                return string.Empty;
+
+            var value = tag.Trim();
+
+            if (!value.StartsWith("#"))
+                value = "#" + value;
+
+            return value.ToLowerInvariant();
+        }
+
+        private bool IsPostQualified(
+            string? conditionRules,
+            bool hasImage,
+            List<string> actualHashTags)
+        {
+            // No rule => valid
+            if (string.IsNullOrWhiteSpace(conditionRules))
+                return true;
+
+            var ruleWrapper = JsonConverterUtil.DeserializeOrDefault<ChallengeRuleWrapper>(conditionRules);
+
+            if (ruleWrapper?.Rules == null || !ruleWrapper.Rules.Any())
+                return true;
+
+            foreach (var rule in ruleWrapper.Rules)
+            {
+                switch (rule.Key)
+                {
+                    case "has_image":
+                        if (!MatchBoolRule(rule.Value, hasImage))
+                            return false;
+                        break;
+
+                    case "hash_tag":
+                        if (!MatchHashTagRule(rule.Value, actualHashTags))
+                            return false;
+                        break;
+                }
+            }
+
+            return true;
+        }
+
+        private bool MatchHashTagRule(object? ruleValue, List<string> actualHashTags)
+        {
+            if (ruleValue == null)
+                return true;
+
+            if (actualHashTags == null || actualHashTags.Count == 0)
+                return false;
+
+            if (ruleValue is JsonElement element)
+            {
+                if (element.ValueKind == JsonValueKind.Null || element.ValueKind == JsonValueKind.Undefined)
+                    return true;
+
+                if (element.ValueKind == JsonValueKind.String)
+                {
+                    var requiredTag = NormalizeHashTag(element.GetString());
+                    if (string.IsNullOrWhiteSpace(requiredTag))
+                        return true;
+
+                    return actualHashTags.Any(x => string.Equals(x, requiredTag, StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (element.ValueKind == JsonValueKind.Array)
+                {
+                    var requiredTags = JsonSerializer.Deserialize<List<string>>(element.GetRawText()) ?? new List<string>();
+                    var normalizedRequiredTags = requiredTags
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .Select(NormalizeHashTag)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+
+                    if (!normalizedRequiredTags.Any())
+                        return true;
+
+                    return normalizedRequiredTags.Any(required =>
+                        actualHashTags.Any(actual => string.Equals(actual, required, StringComparison.OrdinalIgnoreCase)));
+                }
+            }
+
+            var text = ruleValue.ToString();
+            if (string.IsNullOrWhiteSpace(text))
+                return true;
+
+            var normalizedText = NormalizeHashTag(text);
+
+            return actualHashTags.Any(x => string.Equals(x, normalizedText, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private bool ApplyPostMetricProgress(
+            CoupleChallengeProgressData progress,
+            Challenge challenge,
+            int memberId,
+            int postId,
+            bool hasImage,
+            List<string> hashTags,
+            DateTime now)
+        {
+            var memberKey = memberId.ToString();
+
+            if (challenge.GoalMetric == ChallengeConstants.GoalMetrics.COUNT)
+            {
+                progress.Current += 1;
+                progress.Members[memberKey].Current += 1;
+                progress.Members[memberKey].LastActionAt = now;
+            }
+            else if (challenge.GoalMetric == ChallengeConstants.GoalMetrics.UNIQUE_LIST)
+            {
+                if (hashTags == null || !hashTags.Any())
+                    return false;
+
+                bool hasAnyNew = false;
+
+                foreach (var tag in hashTags)
+                {
+                    var uniqueKey = $"hashtag:{NormalizeHashTag(tag)}";
+
+                    if (progress.Unique.Items.Contains(uniqueKey, StringComparer.OrdinalIgnoreCase))
+                        continue;
+
+                    progress.Unique.Items.Add(uniqueKey);
+                    progress.Unique.ByMember[memberKey].Add(uniqueKey);
+                    hasAnyNew = true;
+                }
+
+                if (!hasAnyNew)
+                    return false;
+
+                progress.Current = progress.Unique.Items.Count;
+                progress.Members[memberKey].Current = progress.Unique.ByMember[memberKey].Count;
+                progress.Members[memberKey].LastActionAt = now;
+            }
+            else
+            {
+                return false;
+            }
+
+            progress.QualifiedItems.Add(new QualifiedProgressItem
+            {
+                PostId = postId,
+                ActionAt = now,
+                MemberId = memberId,
+                Type = progress.Trigger,
+                VenueId = null,
+                VenueName = null
+            });
+
+            progress.Events?.Add(new ProgressEvent
+            {
+                RefId = postId.ToString(),
+                Type = progress.Trigger,
+                ActorMemberId = memberId,
+                At = now,
+                HashTags = hashTags,
+                HasImage = hasImage,
+            });
+
+            return true;
+        }
+
+        public async Task<int> ClaimCoupleChallengeRewardAsync(int userId, int coupleChallengeId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            var coupleChallenge = await _unitOfWork.CoupleProfileChallenges.GetFirstAsync(cc =>
+                cc.Id == coupleChallengeId &&
+                cc.CoupleId == couple.id &&
+                cc.IsDeleted == false &&
+                cc.Status == CoupleProfileChallengeStatus.COMPLETED.ToString() &&
+                cc.Challenge != null &&
+                cc.Challenge.IsDeleted == false &&
+                cc.Challenge.Status == ChallengeStatus.ACTIVE.ToString(),
+                cc => cc.Include(x => x.Challenge)
+            );
+
+            if (coupleChallenge.Challenge?.Id == 14)
+                throw new Exception("Thử thách này tự động cộng điểm cho bạn");
+
+            if (coupleChallenge == null)
+                throw new Exception("Thử thách không tồn tại hoặc chưa hoàn thành");
+
+            // Check if member is part of this couple challenge
+            var memberKey = member.Id.ToString();
+            var progress = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(coupleChallenge.ProgressData);
+            if (progress == null || !progress.MemberState.TryGetValue(memberKey, out var state) || state == null || !state.IsJoined)
+                throw new Exception("Bạn không có quyền nhận thưởng cho thử thách này");
+
+            // Prevent double claiming
+            if (coupleChallenge.IsRewardClaimed == true)
+                throw new Exception("Thử thách này đã nhận thưởng rồi");          
+
+            couple.TotalPoints += coupleChallenge.Challenge?.RewardPoints ?? 0;
+
+            // Mark reward as claimed
+            coupleChallenge.IsRewardClaimed = true;
+            coupleChallenge.RewardClaimedAt = DateTime.UtcNow;
+            coupleChallenge.RewardClaimedByMemberId = member.Id;
+
+            _unitOfWork.CoupleProfiles.Update(couple);
+            _unitOfWork.CoupleProfileChallenges.Update(coupleChallenge);
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return coupleChallenge.Challenge?.RewardPoints ?? 0;
         }
     }
 }

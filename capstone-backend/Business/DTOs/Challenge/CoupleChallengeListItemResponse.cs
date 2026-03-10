@@ -15,6 +15,10 @@
         public DateTime? JoinedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
 
+        public bool IsRewardClaimed { get; set; } = false;
+        public DateTime? RewardClaimedAt { get; set; }
+        public int? RewardClaimedByMemberId { get; set; }
+
         // Challenge snapshot
         public ChallengeResponse Challenge { get; set; }
     }

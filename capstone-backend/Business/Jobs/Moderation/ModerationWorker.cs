@@ -64,6 +64,42 @@ namespace capstone_backend.Business.Jobs.Moderation
             await _unitOfWork.SaveChangesAsync();
         }
 
+        public async Task ProcessPostModerationAndChallengeAsync(int postId, List<ModerationResultDto> results, int userId, bool hasImage, IEnumerable<string>? hashTags, int? venueId)
+        {
+            var post = await _unitOfWork.Posts.GetByIdAsync(postId);
+            if (post == null || post.IsDeleted == true)
+                return;
+
+            if (results.Any(r => r.Action == ModerationAction.PENDING))
+                post.Status = PostStatus.FLAGGED.ToString();
+            else
+                post.Status = PostStatus.PUBLISHED.ToString();
+
+            _logger.LogInformation($"[MODERATION WORKER] Post ID {postId} moderated with status: {post.Status}");
+
+            await _unitOfWork.SaveChangesAsync();
+
+            if (post.Status == PostStatus.PUBLISHED.ToString())
+            {
+                await _challengeService.HandlePostChallengeProgressAsync(userId, postId, venueId, hasImage, hashTags);
+            }
+        }
+
+        public async Task ProcessReviewModerationAsync(int reviewId, List<ModerationResultDto> results)
+        {
+            var review = await _unitOfWork.Reviews.GetByIdAsync(reviewId);
+            if (review == null || review.IsDeleted == true)
+                return;
+
+            if (results.Any(r => r.Action == ModerationAction.PENDING))
+                review.Status = ReviewStatus.FLAGGED.ToString();
+            else
+                review.Status = ReviewStatus.PUBLISHED.ToString();
+
+            _logger.LogInformation($"[MODERATION WORKER] Review ID {reviewId} moderated with status: {review.Status}");
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         public async Task ProcessReviewModerationAndChallengeAsync(int reviewId, List<ModerationResultDto> results, int userId, int? venueId, bool hasImage)
         {
             var review = await _unitOfWork.Reviews.GetByIdAsync(reviewId);
