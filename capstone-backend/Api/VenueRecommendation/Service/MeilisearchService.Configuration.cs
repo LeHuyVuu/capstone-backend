@@ -41,6 +41,20 @@ public partial class MeilisearchService
 
             await index.UpdateTypoToleranceAsync(new Meilisearch.TypoTolerance { Enabled = true });
 
+            await index.UpdateSynonymsAsync(new Dictionary<string, IEnumerable<string>>
+            {
+                { "cafe", new[] { "cafe", "cà phê", "ca phe", "quán cà phê", "quan ca phe", "coffee", "coffee shop" } },
+                { "restaurant", new[] { "restaurant", "nhà hàng", "nha hang", "quán ăn", "quan an", "dining" } },
+                { "romantic", new[] { "romantic", "lãng mạn", "lang man", "romanticism" } },
+                { "couple", new[] { "couple", "cặp đôi", "cap doi", "lovers", "partners" } },
+                { "bar", new[] { "bar", "quầy bar", "quay bar", "pub" } },
+                { "seafood", new[] { "seafood", "hải sản", "hai san", "seafoods" } },
+                { "park", new[] { "park", "công viên", "cong vien", "garden", "vườn" } },
+                { "museum", new[] { "museum", "bảo tàng", "bao tang", "gallery" } },
+                { "beach", new[] { "beach", "bãi biển", "bai bien", "seaside", "coast" } },
+                { "mountain", new[] { "mountain", "núi", "đồi", "doi", "hill" } }
+            });
+
             await Task.Delay(2000);
             var filterableAttrs = await index.GetFilterableAttributesAsync();
             var sortableAttrs = await index.GetSortableAttributesAsync();
@@ -72,6 +86,7 @@ public partial class MeilisearchService
             var filterableAttrs = await index.GetFilterableAttributesAsync();
             var sortableAttrs = await index.GetSortableAttributesAsync();
             var searchableAttrs = await index.GetSearchableAttributesAsync();
+            var synonyms = await index.GetSynonymsAsync();
 
             var hasGeoFilterable = filterableAttrs?.Contains("_geo") ?? false;
             var hasGeoSortable = sortableAttrs?.Contains("_geo") ?? false;
@@ -82,6 +97,7 @@ public partial class MeilisearchService
                 FilterableAttributes = filterableAttrs?.ToList() ?? new List<string>(),
                 SortableAttributes = sortableAttrs?.ToList() ?? new List<string>(),
                 SearchableAttributes = searchableAttrs?.ToList() ?? new List<string>(),
+                Synonyms = synonyms ?? new Dictionary<string, IEnumerable<string>>(),
                 GeoSettings = new
                 {
                     IsFilterable = hasGeoFilterable,
