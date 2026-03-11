@@ -8,5 +8,6 @@ namespace capstone_backend.Data.Repositories
     {
         public VoucherItemMemberRepository(MyDbContext context) : base(context)
         {
+        }
     }
 }

@@ -181,6 +181,9 @@ public static class ServiceExtensions
         services.AddScoped<IMediaService, MediaService>();
         services.AddScoped<IPostService, PostService>();
         services.AddScoped<ICommentService, CommentService>();
+        services.AddScoped<IVenueVoucherService, VenueVoucherService>();
+        services.AddScoped<IMemberVoucherService, MemberVoucherService>();
+        services.AddScoped<IAdminVoucherService, AdminVoucherService>();
 
         // Register Subscription Package Service
         services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
