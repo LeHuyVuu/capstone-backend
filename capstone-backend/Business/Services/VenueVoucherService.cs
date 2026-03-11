@@ -22,7 +22,7 @@ namespace capstone_backend.Business.Services
             _mapper = mapper;
         }
 
-        public async Task<PagedResult<VoucherResponse>> GetVenueVouchersAsync(int userId, GetVenueVouchersRequest query)
+        public async Task<PagedResult<VoucherDetailResponse>> GetVenueVouchersAsync(int userId, GetVenueVouchersRequest query)
         {
             var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
             if (venueOwner == null)
@@ -67,9 +67,9 @@ namespace capstone_backend.Business.Services
                 v => v.Include(v => v.VoucherLocations).ThenInclude(vl => vl.VenueLocation)
             );
 
-            var response = _mapper.Map<List<VoucherResponse>>(vouchers);
+            var response = _mapper.Map<List<VoucherDetailResponse>>(vouchers);
 
-            return new PagedResult<VoucherResponse>
+            return new PagedResult<VoucherDetailResponse>
             {
                 Items = response,
                 TotalCount = totalCount,

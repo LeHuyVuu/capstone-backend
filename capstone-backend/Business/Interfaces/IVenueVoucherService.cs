@@ -5,7 +5,7 @@ namespace capstone_backend.Business.Interfaces
 {
     public interface IVenueVoucherService
     {
-        Task<PagedResult<VoucherResponse>> GetVenueVouchersAsync(int userId, GetVenueVouchersRequest query);
+        Task<PagedResult<VoucherDetailResponse>> GetVenueVouchersAsync(int userId, GetVenueVouchersRequest query);
         Task<VoucherResponse> CreateVenueVoucherAsync(int userId, CreateVoucherRequest request);
         Task<bool> DeleteVenueVoucherAsync(int userId, int voucherId);        
         Task<VoucherResponse> RevokeSubmittedVoucherAsync(int userId, int voucherId);

@@ -18,7 +18,15 @@ namespace capstone_backend.Business.Mappings
                 {
                     VenueLocationId = vl.VenueLocationId,
                     VenueLocationName = vl.VenueLocation.Name
-                }).ToList() ?? new List<VoucherLocationItemResponse>()));
+                }).ToList()));
+
+            CreateMap<Voucher, AdminVoucherDetailResponse>()
+                .ForMember(dest => dest.VenueOwnerName, opt => opt.MapFrom(src => src.VenueOwner != null ? src.VenueOwner.BusinessName : null))
+                .ForMember(dest => dest.Locations, opt => opt.MapFrom(src => src.VoucherLocations.Select(vl => new VoucherLocationItemResponse
+                {
+                    VenueLocationId = vl.VenueLocationId,
+                    VenueLocationName = vl.VenueLocation.Name
+                }).ToList()));
 
             CreateMap<Voucher, VoucherSummaryResponse>();
         }

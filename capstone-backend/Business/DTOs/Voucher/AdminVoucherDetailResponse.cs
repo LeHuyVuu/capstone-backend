@@ -1,9 +1,10 @@
 ﻿namespace capstone_backend.Business.DTOs.Voucher
 {
-    public class VoucherDetailResponse
+    public class AdminVoucherDetailResponse
     {
         public int Id { get; set; }
         public int? VenueOwnerId { get; set; }
+        public string? VenueOwnerName { get; set; }
         public string Code { get; set; } = null!;
         public string Title { get; set; } = null!;
         public string Description { get; set; } = null!;
