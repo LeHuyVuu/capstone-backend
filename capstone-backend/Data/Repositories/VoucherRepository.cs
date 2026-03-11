@@ -16,6 +16,7 @@ namespace capstone_backend.Data.Repositories
         {
             return await _dbSet
                 .Include(v => v.VoucherLocations)
+                    .ThenInclude(vl => vl.VenueLocation)
                 .FirstOrDefaultAsync(v => v.Id == voucherId && v.IsDeleted == false);
         }
 

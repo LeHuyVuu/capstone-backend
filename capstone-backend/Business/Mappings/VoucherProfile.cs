@@ -13,7 +13,7 @@ namespace capstone_backend.Business.Mappings
             CreateMap<UpdateVoucherRequest, Voucher>()
                 .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
-            CreateMap<Voucher, VoucherListItemResponse>()
+            CreateMap<Voucher, VoucherDetailResponse>()
                 .ForMember(dest => dest.Locations, opt => opt.MapFrom(src => src.VoucherLocations.Select(vl => new VoucherLocationItemResponse
                 {
                     VenueLocationId = vl.VenueLocationId,

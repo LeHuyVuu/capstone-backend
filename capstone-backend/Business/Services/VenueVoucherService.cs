@@ -22,7 +22,7 @@ namespace capstone_backend.Business.Services
             _mapper = mapper;
         }
 
-        public async Task<PagedResult<VoucherListItemResponse>> GetVenueVouchersAsync(int userId, GetVenueVouchersRequest query)
+        public async Task<PagedResult<VoucherResponse>> GetVenueVouchersAsync(int userId, GetVenueVouchersRequest query)
         {
             var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
             if (venueOwner == null)
@@ -67,15 +67,32 @@ namespace capstone_backend.Business.Services
                 v => v.Include(v => v.VoucherLocations).ThenInclude(vl => vl.VenueLocation)
             );
 
-            var response = _mapper.Map<List<VoucherListItemResponse>>(vouchers);
+            var response = _mapper.Map<List<VoucherResponse>>(vouchers);
 
-            return new PagedResult<VoucherListItemResponse>
+            return new PagedResult<VoucherResponse>
             {
                 Items = response,
                 TotalCount = totalCount,
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
+        }
+
+        public async Task<VoucherDetailResponse> GetVoucherByIdAsync(int userId, int voucherId)
+        {
+            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
+            if (venueOwner == null)
+                throw new Exception("Không tìm thấy chủ địa điểm");
+
+            var voucher = await _unitOfWork.Vouchers.GetIncludeByIdAsync(voucherId);
+            if (voucher == null || voucher.VenueOwnerId != venueOwner.Id)
+                throw new Exception("Không tìm thấy voucher cho địa điểm này");
+
+            if (voucher.VenueOwnerId != venueOwner.Id)
+                throw new Exception("Bạn không có quyền xem voucher này");
+
+            var response = _mapper.Map<VoucherDetailResponse>(voucher);
+            return response;
         }
 
         public async Task<VoucherResponse> CreateVenueVoucherAsync(int userId, CreateVoucherRequest request)

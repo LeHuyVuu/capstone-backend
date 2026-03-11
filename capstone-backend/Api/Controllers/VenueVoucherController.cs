@@ -31,7 +31,30 @@ namespace capstone_backend.Api.Controllers
                     return UnauthorizedResponse("User không xác thực");
 
                 var result = await _venueVoucherService.GetVenueVouchersAsync(userId.Value, query);
-                return OkResponse(result);
+                return OkResponse(result, "Lấy danh sách voucher thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get voucher details for a venue
+        /// </summary>
+        [HttpGet("{voucherId:int}")]
+        public async Task<IActionResult> GetVenueVoucherDetails(int voucherId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.GetVoucherByIdAsync(userId.Value, voucherId);
+                if (result == null)
+                    return NotFoundResponse("Không tìm thấy voucher cho địa điểm này");
+                return OkResponse(result, "Lấy chi tiết voucher thành công");
             }
             catch (Exception ex)
             {

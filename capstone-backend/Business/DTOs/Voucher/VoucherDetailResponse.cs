@@ -1,6 +1,6 @@
 ﻿namespace capstone_backend.Business.DTOs.Voucher
 {
-    public class VoucherListItemResponse
+    public class VoucherDetailResponse
     {
         public int Id { get; set; }
         public int? VenueOwnerId { get; set; }
@@ -20,11 +20,5 @@
         public DateTime? UpdatedAt { get; set; }
 
         public List<VoucherLocationItemResponse> Locations { get; set; }
-    }
-
-    public class VoucherLocationItemResponse
-    {
-        public int VenueLocationId { get; set; }
-        public string? VenueLocationName { get; set; }
     }
 }
