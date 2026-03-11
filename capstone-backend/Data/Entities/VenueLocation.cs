@@ -98,4 +98,7 @@ public partial class VenueLocation
 
     [InverseProperty("VenueLocation")]
     public virtual ICollection<VenueLocationTag> VenueLocationTags { get; set; } = new List<VenueLocationTag>();
+
+    [InverseProperty("VenueLocation")]
+    public virtual ICollection<VoucherLocation> VoucherLocations { get; set; } = new List<VoucherLocation>();
 }

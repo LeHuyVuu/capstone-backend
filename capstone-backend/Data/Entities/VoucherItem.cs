@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
+[Index("ItemCode", IsUnique = true)]
 public partial class VoucherItem
 {
     [Key]
@@ -14,6 +15,8 @@ public partial class VoucherItem
     public int VoucherId { get; set; }
 
     public int? VoucherItemMemberId { get; set; }
+
+    public string ItemCode { get; set; } = null!;
 
     public string? Status { get; set; }
 

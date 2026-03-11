@@ -51,4 +51,7 @@ public partial class Voucher
 
     [InverseProperty("Voucher")]
     public virtual ICollection<VoucherItem> VoucherItems { get; set; } = new List<VoucherItem>();
+
+    [InverseProperty("Voucher")]
+    public virtual ICollection<VoucherLocation> VoucherLocations { get; set; } = new List<VoucherLocation>();
 }
