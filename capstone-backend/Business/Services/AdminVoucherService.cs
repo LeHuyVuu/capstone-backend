@@ -173,7 +173,13 @@ namespace capstone_backend.Business.Services
                 );
 
                 // Auto expire
-
+                if (voucher.EndDate.HasValue)
+                {
+                    BackgroundJob.Schedule<IVoucherWorker>(
+                        job => job.EndVoucherAsync(voucher.Id),
+                        voucher.EndDate.Value - now
+                    );
+                }
             }
 
             return voucher.Id;

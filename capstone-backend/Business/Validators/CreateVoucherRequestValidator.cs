@@ -52,6 +52,10 @@ namespace capstone_backend.Business.Validators
 
             RuleForEach(x => x.VenueLocationIds)
                 .GreaterThan(0).WithMessage("Mỗi VenueLocationId phải lớn hơn 0.");
+
+            RuleFor(x => x.UsageValidDays)
+                .NotNull().WithMessage("UsageValidDays không được null.")
+                .InclusiveBetween(1, 365).WithMessage("UsageValidDays phải từ 1 đến 365 ngày");
         }
     }
 }

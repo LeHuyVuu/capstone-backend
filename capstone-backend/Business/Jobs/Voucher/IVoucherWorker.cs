@@ -3,6 +3,6 @@
     public interface IVoucherWorker
     {
         Task ActivateVoucherAsync(int voucherId);
-        Task EndExpiredVouchersAsync();
+        Task EndVoucherAsync(int voucherId);
     }
 }

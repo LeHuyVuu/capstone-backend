@@ -29,6 +29,9 @@ namespace capstone_backend.Business.DTOs.Voucher
         /// <example>1</example>
         public int? UsageLimitPerMember { get; set; }
 
+        /// <example>7</example>
+        public int UsageValidDays { get; set; } = 7;
+
         /// <example>[164]</example>
         public List<int> VenueLocationIds { get; set; } = new List<int>();
 

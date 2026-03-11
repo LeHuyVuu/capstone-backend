@@ -33,6 +33,8 @@ public partial class Voucher
 
     public int? UsageLimitPerMember { get; set; }
 
+    public int? UsageValidDays { get; set; }
+
     public string? RejectReason { get; set; }
 
     public DateTime? StartDate { get; set; }

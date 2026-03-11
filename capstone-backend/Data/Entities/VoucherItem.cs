@@ -24,6 +24,8 @@ public partial class VoucherItem
 
     public DateTime? UsedAt { get; set; }
 
+    public DateTime? ExpiredAt { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

@@ -23,6 +23,9 @@
         /// <example>2</example>
         public int? UsageLimitPerMember { get; set; }
 
+        /// <example>7</example>
+        public int? UsageValidDays { get; set; }
+
         /// <example>[164, 172]</example>
         public List<int>? VenueLocationIds { get; set; }
 

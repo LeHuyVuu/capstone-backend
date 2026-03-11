@@ -6,5 +6,6 @@ namespace capstone_backend.Data.Interfaces
     public interface IVoucherItemRepository : IGenericRepository<VoucherItem>
     {
         Task<bool> IsExistedCodeAsync(string code);
+        Task ExecuteUpdateUnassignedVoucherItemsAsync(int voucherId);
     }
 }

@@ -39,9 +39,25 @@ namespace capstone_backend.Business.Jobs.Voucher
             await _unitOfWork.SaveChangesAsync();
         }
 
-        public Task EndExpiredVouchersAsync()
+        public async Task EndVoucherAsync(int voucherId)
         {
-            throw new NotImplementedException();
+            var now = DateTime.UtcNow;
+
+            var voucher = await _unitOfWork.Vouchers.GetByIdAsync(voucherId);
+            if (voucher == null || voucher.IsDeleted == true)
+                return;
+
+            if (voucher.Status != VoucherStatus.ACTIVE.ToString())
+                return;
+
+            voucher.Status = VoucherStatus.ENDED.ToString();
+            voucher.UpdatedAt = now;
+
+            // update all remaining voucher items to end
+            await _unitOfWork.VoucherItems.ExecuteUpdateUnassignedVoucherItemsAsync(voucherId);
+
+            _unitOfWork.Vouchers.Update(voucher);
+            await _unitOfWork.SaveChangesAsync();
         }
     }
 }
