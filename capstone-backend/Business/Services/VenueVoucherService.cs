@@ -72,6 +72,31 @@ namespace capstone_backend.Business.Services
             return response;
         }
 
+        public async Task<bool> DeleteVenueVoucherAsync(int userId, int voucherId)
+        {
+            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
+            if (venueOwner == null)
+                throw new Exception("Không tìm thấy chủ địa điểm");
+
+            var voucher = await _unitOfWork.Vouchers.GetIncludeByIdAsync(voucherId);
+            if (voucher == null)
+                throw new Exception("Không tìm thấy voucher");
+
+            if (voucher.VenueOwnerId != venueOwner.Id)
+                throw new Exception("Bạn không có quyền xóa voucher này");
+
+            if ((voucher.Status != VoucherStatus.DRAFTED.ToString()) &&
+                (voucher.Status != VoucherStatus.REJECTED.ToString()))
+                throw new Exception("Chỉ có thể xóa voucher ở trạng thái DRAFTED hoặc REJECTED");
+
+            voucher.IsDeleted = true;
+            voucher.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.Vouchers.Update(voucher);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<VoucherResponse> UpdateVenueVoucherAsync(int userId, int voucherId, UpdateVoucherRequest request)
         {
             var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
@@ -84,6 +109,10 @@ namespace capstone_backend.Business.Services
             var voucher = await _unitOfWork.Vouchers.GetIncludeByIdAsync(voucherId);
             if (voucher == null)
                 throw new Exception("Không tìm thấy voucher");
+
+            if ((voucher.Status != VoucherStatus.DRAFTED.ToString()) &&
+                (voucher.Status != VoucherStatus.REJECTED.ToString()))
+                throw new Exception("Chỉ có thể cập nhật voucher ở trạng thái DRAFTED hoặc REJECTED");
 
             if (voucher.VenueOwnerId != venueOwner.Id)
                 throw new Exception("Bạn không có quyền cập nhật voucher này");

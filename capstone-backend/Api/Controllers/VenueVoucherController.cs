@@ -64,5 +64,28 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Delete voucher for a venue
+        /// </summary>
+        [HttpDelete("{voucherId:int}")]
+        public async Task<IActionResult> DeleteVenueVoucher(int voucherId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+                var success = await _venueVoucherService.DeleteVenueVoucherAsync(userId.Value, voucherId);
+
+                if (!success)
+                    return BadRequestResponse("Không thể xóa voucher cho địa điểm này");
+                return OkResponse("Xóa voucher thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
