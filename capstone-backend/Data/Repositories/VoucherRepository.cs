@@ -12,6 +12,13 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<Voucher?> GetIncludeByIdAsync(int voucherId)
+        {
+            return await _dbSet
+                .Include(v => v.VoucherLocations)
+                .FirstOrDefaultAsync(v => v.Id == voucherId && v.IsDeleted == false);
+        }
+
         public async Task<bool> IsDuplicateCodeAsync(string code)
         {
             return await _dbSet

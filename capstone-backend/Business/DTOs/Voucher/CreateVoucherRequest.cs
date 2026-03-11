@@ -23,7 +23,7 @@ namespace capstone_backend.Business.DTOs.Voucher
         /// <example>null</example>
         public decimal? DiscountPercent { get; set; }
 
-        /// <example>100</example>
+        /// <example>10</example>
         public int Quantity { get; set; } = 1;
 
         /// <example>1</example>

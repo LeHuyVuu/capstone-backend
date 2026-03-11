@@ -41,5 +41,28 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Update voucher for a venue
+        /// </summary>
+        [HttpPut("{voucherId:int}")]
+        public async Task<IActionResult> UpdateVenueVoucher(int voucherId, [FromBody] UpdateVoucherRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.UpdateVenueVoucherAsync(userId.Value, voucherId, request);
+                if (result == null)
+                    return BadRequestResponse("Không thể cập nhật voucher cho địa điểm này");
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

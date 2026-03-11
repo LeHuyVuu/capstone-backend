@@ -10,6 +10,8 @@ namespace capstone_backend.Business.Mappings
         {
             CreateMap<CreateVoucherRequest, Voucher>();
             CreateMap<Voucher, VoucherResponse>();
+            CreateMap<UpdateVoucherRequest, Voucher>()
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
         }
     }
 }
