@@ -97,6 +97,32 @@ namespace capstone_backend.Business.Services
             return true;
         }
 
+        public async Task<VoucherResponse> RevokeSubmittedVoucherAsync(int userId, int voucherId)
+        {
+            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
+            if (venueOwner == null)
+                throw new Exception("Không tìm thấy chủ địa điểm");
+
+            var voucher = await _unitOfWork.Vouchers.GetIncludeByIdAsync(voucherId);
+            if (voucher == null)
+                throw new Exception("Không tìm thấy voucher");
+
+            if (voucher.VenueOwnerId != venueOwner.Id)
+                throw new Exception("Bạn không có quyền thu hồi yêu cầu duyệt voucher này");
+
+            if (voucher.Status != VoucherStatus.PENDING.ToString())
+                throw new Exception("Chỉ có thể thu hồi yêu cầu duyệt voucher ở trạng thái PENDING");
+
+            voucher.Status = VoucherStatus.DRAFTED.ToString();
+            voucher.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.Vouchers.Update(voucher);
+            await _unitOfWork.SaveChangesAsync();
+
+            var response = _mapper.Map<VoucherResponse>(voucher);
+            return response;
+        }
+
         public async Task<VoucherResponse> SubmitVoucherAsync(int userId, int voucherId)
         {
             var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
@@ -108,10 +134,10 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Không tìm thấy voucher");
 
             if (voucher.VenueOwnerId != venueOwner.Id)
-                throw new Exception("Bạn không có quyền nộp voucher này");
+                throw new Exception("Bạn không có quyền gửi voucher này để xét duyệt");
 
             if (voucher.Status != VoucherStatus.DRAFTED.ToString())
-                throw new Exception("Chỉ có thể nộp voucher ở trạng thái DRAFTED");
+                throw new Exception("Chỉ có thể voucher để xét duyệt ở trạng thái DRAFTED");
 
             // Check if have 1 location
             if (voucher.VoucherLocations == null || !voucher.VoucherLocations.Any())

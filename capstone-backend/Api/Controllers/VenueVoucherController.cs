@@ -99,10 +99,33 @@ namespace capstone_backend.Api.Controllers
                 var userId = GetCurrentUserId();
                 if (userId == null)
                     return UnauthorizedResponse("User không xác thực");
-                    
+
                 var result = await _venueVoucherService.SubmitVoucherAsync(userId.Value, voucherId);
                 if (result == null)
-                    return BadRequestResponse("Không thể nộp voucher cho địa điểm này");
+                    return BadRequestResponse("Không thể gửi voucher để xét duyệt");
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Revoke submitted voucher
+        /// </summary>
+        [HttpPost("{voucherId:int}/revoke")]
+        public async Task<IActionResult> RevokeVenueVoucher(int voucherId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.RevokeSubmittedVoucherAsync(userId.Value, voucherId);
+                if (result == null)
+                    return BadRequestResponse("Không thể thu hồi yêu cầu duyệt voucher");
                 return OkResponse(result);
             }
             catch (Exception ex)
