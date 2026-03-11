@@ -35,7 +35,6 @@ namespace capstone_backend.Business.DTOs.Voucher
         /// <example>[164]</example>
         public List<int> VenueLocationIds { get; set; } = new List<int>();
 
-        /// <example>2026-03-11T20:00:00</example>
         public DateTime? StartDate { get; set; }
 
         /// <example>2026-06-11T23:59:59</example>

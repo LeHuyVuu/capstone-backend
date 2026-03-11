@@ -20,6 +20,10 @@ namespace capstone_backend.Business.Validators
                 .Must(x => x == VoucherDiscountType.FIXED_AMOUNT.ToString() || x == VoucherDiscountType.PERCENTAGE.ToString())
                 .WithMessage("DiscountType phải là FIXED_AMOUNT hoặc PERCENTAGE");
 
+            RuleFor(x => x)
+                .Must(x => !(x.DiscountAmount.HasValue && x.DiscountPercent.HasValue))
+                .WithMessage("Chỉ được truyền một trong hai: DiscountAmount hoặc DiscountPercent");
+
             // If FIXED_AMOUNT: amount should be > 0, percent should be null
             RuleFor(x => x.DiscountAmount)
                 .NotEmpty().GreaterThan(0).WithMessage("Số tiền giảm phải lớn hơn 0")

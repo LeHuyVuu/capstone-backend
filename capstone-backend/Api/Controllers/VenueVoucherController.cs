@@ -88,6 +88,35 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Create voucher for a venue
         /// </summary>
+        /// <remarks>
+        /// DiscountType values:
+        /// - Nếu DiscountType = FIXED_AMOUNT thì truyền DiscountAmount
+        /// - Nếu DiscountType = PERCENTAGE thì truyền DiscountPercent
+        /// - Không truyền đồng thời cả DiscountAmount và DiscountPercent
+        /// 
+        /// DiscountAmount:
+        /// - Số tiền giảm cố định.
+        /// - Chỉ dùng khi DiscountType = FIXED_AMOUNT
+        /// 
+        /// DiscountPercent:
+        /// - Phần trăm giảm giá.
+        /// - Chỉ dùng khi DiscountType = PERCENTAGE
+        /// 
+        /// Quantity:
+        /// - Tổng số lượng voucher được phát hành
+        /// 
+        /// UsageLimitPerMember:
+        /// - Số lần tối đa một member được sử dụng voucher này
+        /// - Để null nếu không giới hạn
+        /// 
+        /// UsageValidDays:
+        /// - Số ngày hiệu lực của mỗi voucher item kể từ lúc member nhận voucher
+        /// - FE để default là 7, 14, 20, 30. Còn không thì cho venue owner tự nhập, trong 1-365 ngày
+        /// 
+        /// VenueLocationIds:
+        /// - Danh sách ID địa điểm áp dụng voucher
+        /// - Có thể áp dụng cho một hoặc nhiều venue location
+        /// </remarks>
         [HttpPost]
         public async Task<IActionResult> CreateVenueVoucher([FromBody] CreateVoucherRequest request)
         {
@@ -112,6 +141,34 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Update voucher for a venue
         /// </summary>
+        /// <remarks>
+        /// DiscountType values:
+        /// - Nếu DiscountType = FIXED_AMOUNT thì truyền DiscountAmount
+        /// - Nếu DiscountType = PERCENTAGE thì truyền DiscountPercent
+        /// - Không truyền đồng thời cả DiscountAmount và DiscountPercent
+        /// 
+        /// DiscountAmount:
+        /// - Số tiền giảm cố định.
+        /// - Chỉ dùng khi DiscountType = FIXED_AMOUNT
+        /// 
+        /// DiscountPercent:
+        /// - Phần trăm giảm giá.
+        /// - Chỉ dùng khi DiscountType = PERCENTAGE
+        /// 
+        /// Quantity:
+        /// - Tổng số lượng voucher được phát hành
+        /// 
+        /// UsageLimitPerMember:
+        /// - Số lần tối đa một member được sử dụng voucher này
+        /// - Để null nếu không giới hạn
+        /// 
+        /// UsageValidDays:
+        /// - Số ngày hiệu lực của mỗi voucher item kể từ lúc member nhận voucher
+        /// - FE để default là 7, 14, 20, 30. Còn không thì cho venue owner tự nhập, trong 1-365 ngày
+        /// 
+        /// VenueLocationIds:
+        /// - Danh sách ID địa điểm áp dụng voucher
+        /// - Có thể áp dụng cho một hoặc nhiều venue location
         [HttpPut("{voucherId:int}")]
         public async Task<IActionResult> UpdateVenueVoucher(int voucherId, [FromBody] UpdateVoucherRequest request)
         {
@@ -181,6 +238,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Revoke submitted voucher
         /// </summary>
+        /// <remarks>Thu hồi yêu cầu duyệt voucher lại</remarks>
         [HttpPost("{voucherId:int}/revoke")]
         public async Task<IActionResult> RevokeVenueVoucher(int voucherId)
         {

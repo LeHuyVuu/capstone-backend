@@ -29,7 +29,6 @@
         /// <example>[164, 172]</example>
         public List<int>? VenueLocationIds { get; set; }
 
-        /// <example>2026-03-15T08:00:00</example>
         public DateTime? StartDate { get; set; }
 
         /// <example>2026-07-15T23:59:59</example>
