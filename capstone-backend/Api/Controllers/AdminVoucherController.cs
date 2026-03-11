@@ -91,5 +91,24 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Reject a pending voucher
+        /// </summary>
+        [HttpPost("{voucherId:int}/reject")]
+        public async Task<IActionResult> RejectVoucher(int voucherId, [FromBody] RejectReasonRequest request)
+        {
+            try
+            {
+                var result = await _adminVoucherService.RejectVoucherAsync(voucherId, request);
+                if (result <= 0)
+                    return NotFoundResponse("Từ chối voucher không thành công");
+                return OkResponse(result, "Từ chối voucher thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

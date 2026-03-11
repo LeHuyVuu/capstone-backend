@@ -184,5 +184,30 @@ namespace capstone_backend.Business.Services
 
             return voucher.Id;
         }
+
+        public async Task<int> RejectVoucherAsync(int voucherId, RejectReasonRequest request)
+        {
+            var voucher = await _unitOfWork.Vouchers.GetByIdAsync(voucherId);
+            if (voucher == null)
+                throw new Exception("Không tìm thấy voucher");
+
+            if (voucher.Status != VoucherStatus.PENDING.ToString())
+                throw new Exception("Voucher không ở trạng thái chờ duyệt (PENDING)");
+
+            if (request == null)
+                throw new Exception("Dữ liệu không hợp lệ");
+
+            if (string.IsNullOrWhiteSpace(request.RejectReason))
+                throw new Exception("Vui lòng nhập lý do từ chối");
+
+            voucher.RejectReason = request.RejectReason;
+            voucher.Status = VoucherStatus.REJECTED.ToString();
+            voucher.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.Vouchers.Update(voucher);
+            await _unitOfWork.SaveChangesAsync();
+
+            return voucher.Id;
+        }
     }
 }
