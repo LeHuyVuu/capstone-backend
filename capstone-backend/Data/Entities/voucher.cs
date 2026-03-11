@@ -35,7 +35,7 @@ public partial class Voucher
 
     public DateTime? StartDate { get; set; }
 
-    public DateTime? End_Date { get; set; }
+    public DateTime? EndDate { get; set; }
 
     public string? Status { get; set; }
 

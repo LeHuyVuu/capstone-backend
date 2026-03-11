@@ -19,4 +19,6 @@ public interface IVenueOwnerProfileRepository : IGenericRepository<VenueOwnerPro
         int userId,
         bool includeSoftDeleted = false,
         CancellationToken cancellationToken = default);
+
+    Task<VenueOwnerProfile?> GetIncludeByUserIdAsync(int userId);
 }

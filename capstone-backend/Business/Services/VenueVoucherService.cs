@@ -1,8 +1,98 @@
-﻿using capstone_backend.Business.Interfaces;
+﻿using AutoMapper;
+using capstone_backend.Business.DTOs.Voucher;
+using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
+using System.Transactions;
 
 namespace capstone_backend.Business.Services
 {
     public class VenueVoucherService : IVenueVoucherService
     {
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
+
+        public VenueVoucherService(IUnitOfWork unitOfWork, IMapper mapper)
+        {
+            _unitOfWork = unitOfWork;
+            _mapper = mapper;
+        }
+
+        public async Task<VoucherResponse> CreateVenueVoucherAsync(int userId, CreateVoucherRequest request)
+        {
+            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
+            if (venueOwner == null)
+                throw new Exception("Không tìm thấy chủ địa điểm");
+
+            if (request == null)
+                throw new Exception("Dữ liệu không hợp lệ");
+
+            if (request.VenueLocationIds == null || !request.VenueLocationIds.Any())
+                throw new Exception("Voucher phải áp dụng cho ít nhất 1 địa điểm");
+
+            foreach (var locId in request.VenueLocationIds)
+            {
+                var locationIds = venueOwner.VenueLocations.Select(vl => vl.Id).ToList();
+                if (!locationIds.Contains(locId))
+                    throw new Exception($"Địa điểm ID {locId} không thuộc quyền sở hữu của bạn");
+            }
+
+            var now = DateTime.UtcNow;
+
+            // Check date validity
+            if (request.StartDate.HasValue && request.EndDate.HasValue && request.StartDate > request.EndDate)
+                throw new Exception("Ngày bắt đầu phải trước ngày kết thúc");
+
+            if (request.StartDate.HasValue && request.StartDate.Value < now)
+                throw new Exception("Ngày bắt đầu không được ở quá khứ");
+
+            if (request.EndDate.HasValue && request.EndDate.Value < now)
+                throw new Exception("Ngày kết thúc không được ở quá khứ");
+
+            var voucher = _mapper.Map<Voucher>(request);
+            voucher.VenueOwnerId = venueOwner.Id;
+            voucher.RemainingQuantity = request.Quantity;
+            voucher.Status = VoucherStatus.DRAFTED.ToString();
+
+            // Generate unique voucher code
+            var prefix = "VOU";
+            voucher.Code = await GenerateUniqueVoucherCodeAsync(prefix);
+
+            // Create VoucherLocation entries
+            var distinctLocationIds = request.VenueLocationIds.Distinct().ToList();
+            voucher.VoucherLocations = distinctLocationIds.Select(locId => new VoucherLocation
+            {
+                VenueLocationId = locId
+            }).ToList();
+
+            await _unitOfWork.Vouchers.AddAsync(voucher);
+            await _unitOfWork.CommitTransactionAsync();
+
+            var response = _mapper.Map<VoucherResponse>(voucher);
+            return response;
+        }
+
+        private async Task<string> GenerateUniqueVoucherCodeAsync(string prefix)
+        {
+            const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+            var random = new Random();
+            string code = string.Empty;
+            bool isDuplicate = true;
+
+            while (isDuplicate)
+            {
+                // Gen 6 random chars
+                var randomString = new string(Enumerable.Repeat(chars, 6)
+                    .Select(s => s[random.Next(s.Length)]).ToArray());
+
+                // Format: VOU26-X7KL9M
+                code = $"{prefix}{DateTime.Now:yy}-{randomString}";
+
+                // Check if code already exists in DB
+                isDuplicate = await _unitOfWork.Vouchers.IsDuplicateCodeAsync(code);
+            }
+
+            return code;
+        }
     }
 }

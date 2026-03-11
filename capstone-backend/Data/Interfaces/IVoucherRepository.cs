@@ -5,5 +5,6 @@ namespace capstone_backend.Data.Interfaces
 {
     public interface IVoucherRepository : IGenericRepository<Voucher>
     {
+        Task<bool> IsDuplicateCodeAsync(string code);
     }
 }
