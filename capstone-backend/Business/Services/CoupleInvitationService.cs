@@ -10,10 +10,12 @@ namespace capstone_backend.Business.Services;
 public class CoupleInvitationService : ICoupleInvitationService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IChallengeService _challengeService;
 
-    public CoupleInvitationService(IUnitOfWork unitOfWork)
+    public CoupleInvitationService(IUnitOfWork unitOfWork, IChallengeService challengeService)
     {
         _unitOfWork = unitOfWork;
+        _challengeService = challengeService;
     }
 
     public async Task<(bool Success, string Message, CoupleInvitationResponse? Data)> SendInvitationDirectAsync(
@@ -237,6 +239,9 @@ public class CoupleInvitationService : ICoupleInvitationService
         // No need to send invitations again
 
         await _unitOfWork.SaveChangesAsync();
+
+        // TODO: Auto join check-in challenge
+        var resultChallenge = await _challengeService.JoinCoupleChallengeAsync(coupleProfile, 14);  
 
         // TODO: Send push notifications to both
 
