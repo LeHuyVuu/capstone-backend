@@ -50,7 +50,7 @@ public class UnitOfWork : IUnitOfWork
         IVoucherRepository voucherRepository,
         IVoucherItemRepository voucherItemRepository,
         IVoucherItemMemberRepository voucherItemMemberRepository,
-        IVoucherLocationRepository voucherLocationRepository),
+        IVoucherLocationRepository voucherLocationRepository,
         ICategoryRepository categoryRepository)
     {
         _context = context;
