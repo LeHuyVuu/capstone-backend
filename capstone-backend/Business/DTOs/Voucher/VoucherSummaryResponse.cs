@@ -13,6 +13,7 @@
         public int AcquiredCount { get; set; }
         public int UsedCount { get; set; }
         public int ExpiredCount { get; set; }
+        public int EndedCount { get; set; }
         public int AvailableCount { get; set; }
 
         public decimal UsageRate { get; set; }

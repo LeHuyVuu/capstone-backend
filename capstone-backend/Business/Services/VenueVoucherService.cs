@@ -110,6 +110,7 @@ namespace capstone_backend.Business.Services
             var acquiredCount = voucherItems.Count(vi => vi.Status == VoucherItemStatus.ACQUIRED.ToString());
             var usedCount = voucherItems.Count(vi => vi.Status == VoucherItemStatus.USED.ToString());
             var expiredCount = voucherItems.Count(vi => vi.Status == VoucherItemStatus.EXPIRED.ToString());
+            var endedCount = voucherItems.Count(vi => vi.Status == VoucherItemStatus.ENDED.ToString());
             var availableCount = voucherItems.Count(vi => vi.Status == VoucherItemStatus.AVAILABLE.ToString());
 
             var totalQuantity = voucher.Quantity ?? 0;
@@ -122,6 +123,7 @@ namespace capstone_backend.Business.Services
             response.AcquiredCount = acquiredCount;
             response.UsedCount = usedCount;
             response.ExpiredCount = expiredCount;
+            response.EndedCount = endedCount;
             response.AvailableCount = availableCount;
             response.UsageRate = usageRate;
 

@@ -170,16 +170,16 @@ namespace capstone_backend.Business.Services
                 BackgroundJob.Schedule<IVoucherWorker>(
                     job => job.ActivateVoucherAsync(voucher.Id),
                     voucher.StartDate.Value - now
-                );
+                );  
+            }
 
-                // Auto expire
-                if (voucher.EndDate.HasValue)
-                {
-                    BackgroundJob.Schedule<IVoucherWorker>(
-                        job => job.EndVoucherAsync(voucher.Id),
-                        voucher.EndDate.Value - now
-                    );
-                }
+            // Auto expire
+            if (voucher.EndDate.HasValue)
+            {
+                BackgroundJob.Schedule<IVoucherWorker>(
+                    job => job.EndVoucherAsync(voucher.Id),
+                    voucher.EndDate.Value - now
+                );
             }
 
             return voucher.Id;
