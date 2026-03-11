@@ -10,6 +10,7 @@ using capstone_backend.Business.Jobs.Like;
 using capstone_backend.Business.Jobs.Media;
 using capstone_backend.Business.Jobs.Moderation;
 using capstone_backend.Business.Jobs.Review;
+using capstone_backend.Business.Jobs.Voucher;
 using capstone_backend.Business.Services;
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Interfaces;
@@ -126,6 +127,10 @@ public static class ServiceExtensions
         services.AddScoped<ICommentLikeRepository, CommentLikeRepository>();
         services.AddScoped<ICoupleProfileChallengeRepository, CoupleProfileChallengeRepository>();
         services.AddScoped<ICouplePersonalityTypeRepository, CouplePersonalityTypeRepository>();
+        services.AddScoped<IVoucherRepository, VoucherRepository>();
+        services.AddScoped<IVoucherItemRepository, VoucherItemRepository>();
+        services.AddScoped<IVoucherItemMemberRepository, VoucherItemMemberRepository>();
+        services.AddScoped<IVoucherLocationRepository, VoucherLocationRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
 
         // Messaging repositories
@@ -178,6 +183,10 @@ public static class ServiceExtensions
         services.AddScoped<IMediaService, MediaService>();
         services.AddScoped<IPostService, PostService>();
         services.AddScoped<ICommentService, CommentService>();
+        services.AddScoped<IVenueVoucherService, VenueVoucherService>();
+        services.AddScoped<IMemberVoucherService, MemberVoucherService>();
+        services.AddScoped<IAdminVoucherService, AdminVoucherService>();
+        services.AddScoped<IVoucherItemService, VoucherItemService>();
         services.AddScoped<ICategoryService, CategoryService>();
 
         // Register Subscription Package Service
@@ -193,6 +202,7 @@ public static class ServiceExtensions
         services.AddScoped<ICommentWorker, CommentWorker>();
         services.AddScoped<ILikeWorker, LikeWorker>();
         services.AddScoped<IChallengeWorker, ChallengeWorker>();
+        services.AddScoped<IVoucherWorker, VoucherWorker>();
 
         // Register Messaging Service
         services.AddScoped<IMessagingService, MessagingService>();     
@@ -211,6 +221,9 @@ public static class ServiceExtensions
 
         // Register Meilisearch Service
         services.AddScoped<IMeilisearchService, MeilisearchService>();
+
+        // Register Voucher Code Generator
+        services.AddScoped<IVoucherCodeGenerator, VoucherCodeGenerator>();
 
         return services;
     }

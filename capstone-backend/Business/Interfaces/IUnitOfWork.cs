@@ -81,6 +81,14 @@ public interface IUnitOfWork : IDisposable
 
     ICouplePersonalityTypeRepository CouplePersonalityTypes { get; }
 
+    IVoucherRepository Vouchers { get; }
+
+    IVoucherItemRepository VoucherItems { get; }
+
+    IVoucherItemMemberRepository VoucherItemMembers { get; }
+
+    IVoucherLocationRepository VoucherLocations { get; }
+
     ICategoryRepository Categories { get; }
 
     /// <summary>

@@ -100,5 +100,8 @@ public partial class VenueLocation
     public virtual ICollection<VenueLocationTag> VenueLocationTags { get; set; } = new List<VenueLocationTag>();
 
     [InverseProperty("VenueLocation")]
+    public virtual ICollection<VoucherLocation> VoucherLocations { get; set; } = new List<VoucherLocation>();
+
+    [InverseProperty("VenueLocation")]
     public virtual ICollection<VenueLocationCategory> VenueLocationCategories { get; set; } = new List<VenueLocationCategory>();
 }

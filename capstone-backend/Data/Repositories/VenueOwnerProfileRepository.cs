@@ -29,4 +29,11 @@ public class VenueOwnerProfileRepository : GenericRepository<VenueOwnerProfile>,
 
         return await query.FirstOrDefaultAsync(vop => vop.UserId == userId, cancellationToken);
     }
+
+    public async Task<VenueOwnerProfile?> GetIncludeByUserIdAsync(int userId)
+    {
+        return await _dbSet
+            .Include(vop => vop.VenueLocations)
+            .FirstOrDefaultAsync(vop => vop.UserId == userId);
+    }
 }

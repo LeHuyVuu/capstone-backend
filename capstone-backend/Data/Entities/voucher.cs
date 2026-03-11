@@ -33,9 +33,13 @@ public partial class Voucher
 
     public int? UsageLimitPerMember { get; set; }
 
+    public int? UsageValidDays { get; set; }
+
+    public string? RejectReason { get; set; }
+
     public DateTime? StartDate { get; set; }
 
-    public DateTime? End_Date { get; set; }
+    public DateTime? EndDate { get; set; }
 
     public string? Status { get; set; }
 
@@ -51,4 +55,7 @@ public partial class Voucher
 
     [InverseProperty("Voucher")]
     public virtual ICollection<VoucherItem> VoucherItems { get; set; } = new List<VoucherItem>();
+
+    [InverseProperty("Voucher")]
+    public virtual ICollection<VoucherLocation> VoucherLocations { get; set; } = new List<VoucherLocation>();
 }

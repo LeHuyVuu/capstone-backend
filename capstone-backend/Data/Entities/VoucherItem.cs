@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
+[Index("ItemCode", IsUnique = true)]
 public partial class VoucherItem
 {
     [Key]
@@ -15,15 +16,21 @@ public partial class VoucherItem
 
     public int? VoucherItemMemberId { get; set; }
 
+    public string ItemCode { get; set; } = null!;
+
     public string? Status { get; set; }
 
     public DateTime? AcquiredAt { get; set; }
 
     public DateTime? UsedAt { get; set; }
 
+    public DateTime? ExpiredAt { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
+
+    public bool IsDeleted { get; set; }
 
     [ForeignKey("VoucherId")]
     [InverseProperty("VoucherItems")]

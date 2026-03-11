@@ -127,6 +127,8 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<VoucherItemMember> VoucherItemMembers { get; set; }
 
+    public virtual DbSet<VoucherLocation> VoucherLocations { get; set; }
+
     public virtual DbSet<Wallet> Wallets { get; set; }
 
     public virtual DbSet<WithdrawRequest> WithdrawRequests { get; set; }
@@ -1030,6 +1032,20 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.Member).WithMany(p => p.VoucherItemMembers).HasConstraintName("voucher_item_members_member_id_fkey");
+        });
+
+        modelBuilder.Entity<VoucherLocation>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("voucher_locations_pkey");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+
+            entity.HasOne(d => d.Voucher).WithMany(p => p.VoucherLocations)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("voucher_locations_voucher_id_fkey");
+            entity.HasOne(d => d.VenueLocation).WithMany(p => p.VoucherLocations)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("voucher_locations_venue_location_id_fkey");
         });
 
         modelBuilder.Entity<Wallet>(entity =>

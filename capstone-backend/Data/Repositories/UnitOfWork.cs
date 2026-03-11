@@ -47,6 +47,10 @@ public class UnitOfWork : IUnitOfWork
         ICommentLikeRepository commentLikeRepository,
         ICoupleProfileChallengeRepository coupleProfileChallengeRepository,
         ICouplePersonalityTypeRepository couplePersonalityTypeRepository,
+        IVoucherRepository voucherRepository,
+        IVoucherItemRepository voucherItemRepository,
+        IVoucherItemMemberRepository voucherItemMemberRepository,
+        IVoucherLocationRepository voucherLocationRepository),
         ICategoryRepository categoryRepository)
     {
         _context = context;
@@ -82,6 +86,10 @@ public class UnitOfWork : IUnitOfWork
         CommentLikes = commentLikeRepository;
         CoupleProfileChallenges = coupleProfileChallengeRepository;
         CouplePersonalityTypes = couplePersonalityTypeRepository;
+        Vouchers = voucherRepository;
+        VoucherItems = voucherItemRepository;
+        VoucherItemMembers = voucherItemMemberRepository;
+        VoucherLocations = voucherLocationRepository;
         Categories = categoryRepository;
     }
 
@@ -150,6 +158,14 @@ public class UnitOfWork : IUnitOfWork
     public ICoupleProfileChallengeRepository CoupleProfileChallenges { get; set; }
 
     public ICouplePersonalityTypeRepository CouplePersonalityTypes { get; set; }
+
+    public IVoucherRepository Vouchers { get; }
+
+    public IVoucherItemRepository VoucherItems { get; }
+
+    public IVoucherItemMemberRepository VoucherItemMembers { get; }
+
+    public IVoucherLocationRepository VoucherLocations { get; }
 
     public ICategoryRepository Categories { get; }
 
