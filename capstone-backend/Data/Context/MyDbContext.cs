@@ -136,6 +136,9 @@ public partial class MyDbContext : DbContext
     public virtual DbSet<ConversationMember> ConversationMembers { get; set; }
     public virtual DbSet<Message> Messages { get; set; }
 
+    public virtual DbSet<Category> Categories { get; set; }
+
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // FIX: Convert tất cả DateTime về UTC để tránh lỗi PostgreSQL

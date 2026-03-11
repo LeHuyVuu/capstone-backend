@@ -126,6 +126,7 @@ public static class ServiceExtensions
         services.AddScoped<ICommentLikeRepository, CommentLikeRepository>();
         services.AddScoped<ICoupleProfileChallengeRepository, CoupleProfileChallengeRepository>();
         services.AddScoped<ICouplePersonalityTypeRepository, CouplePersonalityTypeRepository>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
 
         // Messaging repositories
         services.AddScoped<IConversationRepository, ConversationRepository>();
@@ -177,6 +178,7 @@ public static class ServiceExtensions
         services.AddScoped<IMediaService, MediaService>();
         services.AddScoped<IPostService, PostService>();
         services.AddScoped<ICommentService, CommentService>();
+        services.AddScoped<ICategoryService, CategoryService>();
 
         // Register Subscription Package Service
         services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();

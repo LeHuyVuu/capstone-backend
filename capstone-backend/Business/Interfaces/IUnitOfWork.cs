@@ -81,6 +81,8 @@ public interface IUnitOfWork : IDisposable
 
     ICouplePersonalityTypeRepository CouplePersonalityTypes { get; }
 
+    ICategoryRepository Categories { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>
