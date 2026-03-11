@@ -45,18 +45,14 @@ public partial class MeilisearchService
 
             ISearchable<VenueLocationQueryResult> searchResult;
             
-            if (!string.IsNullOrWhiteSpace(request.Query))
+            string query = request.Query;
+
+            if (string.IsNullOrWhiteSpace(query))
             {
-                searchResult = await PerformHybridSearchAsync(
-                    request.Query,
-                    searchQuery);
+                query = $"{validatedMood} {validatedPersonality}";
             }
-            else
-            {
-                searchResult = await index.SearchAsync<VenueLocationQueryResult>(
-                    string.Empty,
-                    searchQuery);
-            }
+
+            searchResult = await PerformHybridSearchAsync(query, searchQuery);
 
             var hits = searchResult.Hits?.ToList() ?? new List<VenueLocationQueryResult>();
             
