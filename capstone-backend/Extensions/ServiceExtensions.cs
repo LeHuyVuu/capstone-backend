@@ -10,6 +10,7 @@ using capstone_backend.Business.Jobs.Like;
 using capstone_backend.Business.Jobs.Media;
 using capstone_backend.Business.Jobs.Moderation;
 using capstone_backend.Business.Jobs.Review;
+using capstone_backend.Business.Jobs.Voucher;
 using capstone_backend.Business.Services;
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Interfaces;
@@ -184,6 +185,7 @@ public static class ServiceExtensions
         services.AddScoped<IVenueVoucherService, VenueVoucherService>();
         services.AddScoped<IMemberVoucherService, MemberVoucherService>();
         services.AddScoped<IAdminVoucherService, AdminVoucherService>();
+        services.AddScoped<IVoucherItemService, VoucherItemService>();
 
         // Register Subscription Package Service
         services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
@@ -198,6 +200,7 @@ public static class ServiceExtensions
         services.AddScoped<ICommentWorker, CommentWorker>();
         services.AddScoped<ILikeWorker, LikeWorker>();
         services.AddScoped<IChallengeWorker, ChallengeWorker>();
+        services.AddScoped<IVoucherWorker, VoucherWorker>();
 
         // Register Messaging Service
         services.AddScoped<IMessagingService, MessagingService>();     
@@ -216,6 +219,9 @@ public static class ServiceExtensions
 
         // Register Meilisearch Service
         services.AddScoped<IMeilisearchService, MeilisearchService>();
+
+        // Register Voucher Code Generator
+        services.AddScoped<IVoucherCodeGenerator, VoucherCodeGenerator>();
 
         return services;
     }

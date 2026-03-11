@@ -70,5 +70,26 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Approve a pending voucher
+        /// </summary>
+        [HttpPost("{voucherId:int}/approve")]
+        public async Task<IActionResult> ApproveVoucher(int voucherId)
+        {
+            try
+            {
+                var result = await _adminVoucherService.ApproveVoucherAsync(voucherId);
+
+                if (result <= 0)
+                    return NotFoundResponse("Duyệt voucher không thành công");
+
+                return OkResponse(result, "Duyệt voucher thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

@@ -2,8 +2,10 @@
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Voucher;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Voucher;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Services
@@ -12,11 +14,13 @@ namespace capstone_backend.Business.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IVoucherItemService _voucherItemService;
 
-        public AdminVoucherService(IUnitOfWork unitOfWork, IMapper mapper)
+        public AdminVoucherService(IUnitOfWork unitOfWork, IMapper mapper, IVoucherItemService voucherItemService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _voucherItemService = voucherItemService;
         }
 
         public async Task<PagedResult<AdminVoucherDetailResponse>> GetAdminVouchersAsync(GetAdminVouchersRequest query)
@@ -130,6 +134,49 @@ namespace capstone_backend.Business.Services
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
+        }
+
+        public async Task<int> ApproveVoucherAsync(int voucherId)
+        {
+            var voucher = await _unitOfWork.Vouchers.GetByIdAsync(voucherId);
+            if (voucher == null)
+                throw new Exception("Không tìm thấy voucher");
+
+            if (voucher.Status != VoucherStatus.PENDING.ToString())
+                throw new Exception("Voucher không ở trạng thái chờ duyệt (PENDING)");
+
+            var now = DateTime.UtcNow;
+
+            if (voucher.StartDate.HasValue && voucher.StartDate.Value > now)
+            {
+                voucher.Status = VoucherStatus.APPROVED.ToString();
+            }
+            else
+            {
+                voucher.Status = VoucherStatus.ACTIVE.ToString();
+
+                // call to generate voucher item code
+                await _voucherItemService.GenerateVoucherItemsAsync(voucher.Id, voucher.Quantity.Value);
+            }
+
+            voucher.UpdatedAt = now;
+            _unitOfWork.Vouchers.Update(voucher);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Add job for auto publish voucher at StartDate
+            if (voucher.StartDate.HasValue && voucher.StartDate.Value > now)
+            {
+                // Auto start
+                BackgroundJob.Schedule<IVoucherWorker>(
+                    job => job.ActivateVoucherAsync(voucher.Id),
+                    voucher.StartDate.Value - now
+                );
+
+                // Auto expire
+
+            }
+
+            return voucher.Id;
         }
     }
 }
