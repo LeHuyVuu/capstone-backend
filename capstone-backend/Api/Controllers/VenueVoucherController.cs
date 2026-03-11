@@ -169,6 +169,7 @@ namespace capstone_backend.Api.Controllers
         /// VenueLocationIds:
         /// - Danh sách ID địa điểm áp dụng voucher
         /// - Có thể áp dụng cho một hoặc nhiều venue location
+        /// </remarks>
         [HttpPut("{voucherId:int}")]
         public async Task<IActionResult> UpdateVenueVoucher(int voucherId, [FromBody] UpdateVoucherRequest request)
         {
