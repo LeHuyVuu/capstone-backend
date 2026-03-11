@@ -21,11 +21,6 @@ public partial class VenueLocationCategory
     [Column("category_id")]
     public int CategoryId { get; set; }
 
-
-    [Column("is_primary")]
-    public bool IsPrimary { get; set; } = false;
-
-
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

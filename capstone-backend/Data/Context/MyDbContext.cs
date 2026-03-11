@@ -137,6 +137,7 @@ public partial class MyDbContext : DbContext
     public virtual DbSet<Message> Messages { get; set; }
 
     public virtual DbSet<Category> Categories { get; set; }
+    public virtual DbSet<VenueLocationCategory> VenueLocationCategories { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
