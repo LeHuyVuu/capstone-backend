@@ -53,5 +53,22 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get pending vouchers for admin
+        /// </summary>
+        [HttpGet("pending")]
+        public async Task<IActionResult> GetPendingVouchers([FromQuery] GetPendingVouchersRequest query)
+        {
+            try
+            {
+                var result = await _adminVoucherService.GetPendingVouchersAsync(query);
+                return OkResponse(result, "Lấy danh sách voucher đang chờ duyệt thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
