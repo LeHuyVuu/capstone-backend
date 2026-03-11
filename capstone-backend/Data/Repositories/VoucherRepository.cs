@@ -15,6 +15,7 @@ namespace capstone_backend.Data.Repositories
         public async Task<Voucher?> GetIncludeByIdAsync(int voucherId)
         {
             return await _dbSet
+                .Include(v => v.VenueOwner)
                 .Include(v => v.VoucherLocations)
                     .ThenInclude(vl => vl.VenueLocation)
                 .FirstOrDefaultAsync(v => v.Id == voucherId && v.IsDeleted == false);

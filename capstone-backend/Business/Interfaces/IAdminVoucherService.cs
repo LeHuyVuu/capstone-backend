@@ -6,6 +6,7 @@ namespace capstone_backend.Business.Interfaces
 {
     public interface IAdminVoucherService
     {
+        Task<AdminVoucherDetailResponse> GetAdminVoucherByIdAsync(int voucherId);
         Task<PagedResult<AdminVoucherDetailResponse>> GetAdminVouchersAsync(GetAdminVouchersRequest query);
     }
 }

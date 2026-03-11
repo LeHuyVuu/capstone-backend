@@ -69,5 +69,14 @@ namespace capstone_backend.Business.Services
                 PageSize = pageSize
             };
         }
+
+        public async Task<AdminVoucherDetailResponse> GetAdminVoucherByIdAsync(int voucherId)
+        {
+            var voucher = await _unitOfWork.Vouchers.GetIncludeByIdAsync(voucherId);
+            if (voucher == null)
+                throw new Exception("Không tìm thấy voucher");
+
+            return _mapper.Map<AdminVoucherDetailResponse>(voucher);
+        }
     }
 }

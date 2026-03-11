@@ -34,5 +34,24 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get voucher details for admin
+        /// </summary>
+        [HttpGet("{voucherId:int}")]
+        public async Task<IActionResult> GetAdminVoucherDetails(int voucherId)
+        {
+            try
+            {
+                var result = await _adminVoucherService.GetAdminVoucherByIdAsync(voucherId);
+                if (result == null)
+                    return NotFoundResponse("Không tìm thấy voucher");
+                return OkResponse(result, "Lấy chi tiết voucher thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
