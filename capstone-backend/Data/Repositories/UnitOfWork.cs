@@ -46,7 +46,11 @@ public class UnitOfWork : IUnitOfWork
         ICommentRepository commentRepository,
         ICommentLikeRepository commentLikeRepository,
         ICoupleProfileChallengeRepository coupleProfileChallengeRepository,
-        ICouplePersonalityTypeRepository couplePersonalityTypeRepository)
+        ICouplePersonalityTypeRepository couplePersonalityTypeRepository,
+        IVoucherRepository voucherRepository,
+        IVoucherItemRepository voucherItemRepository,
+        IVoucherItemMemberRepository voucherItemMemberRepository,
+        IVoucherLocationRepository voucherLocationRepository)
     {
         _context = context;
         Users = userRepository;
@@ -81,6 +85,10 @@ public class UnitOfWork : IUnitOfWork
         CommentLikes = commentLikeRepository;
         CoupleProfileChallenges = coupleProfileChallengeRepository;
         CouplePersonalityTypes = couplePersonalityTypeRepository;
+        Vouchers = voucherRepository;
+        VoucherItems = voucherItemRepository;
+        VoucherItemMembers = voucherItemMemberRepository;
+        VoucherLocations = voucherLocationRepository;
     }
 
     public MyDbContext Context => _context;
@@ -148,6 +156,14 @@ public class UnitOfWork : IUnitOfWork
     public ICoupleProfileChallengeRepository CoupleProfileChallenges { get; set; }
 
     public ICouplePersonalityTypeRepository CouplePersonalityTypes { get; set; }
+
+    public IVoucherRepository Vouchers { get; }
+
+    public IVoucherItemRepository VoucherItems { get; }
+
+    public IVoucherItemMemberRepository VoucherItemMembers { get; }
+
+    public IVoucherLocationRepository VoucherLocations { get; }
 
     public async Task<int> SaveChangesAsync()
     {
