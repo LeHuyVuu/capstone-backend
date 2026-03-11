@@ -28,12 +28,12 @@ public partial class MeilisearchService
             // Searchable Attributes: Order = Weight (đầu = quan trọng nhất)
             await index.UpdateSearchableAttributesAsync(new[]
             {
-                "coupleMoodTypeNames",       // Ưu tiên cao nhất
-                "couplePersonalityTypeNames", // Ưu tiên cao thứ 2
-                "detailTags",                 // Tags chi tiết
-                "name",                       // Tên venue
-                "category",                   // Loại hình
+                "name",                       // Tên venue - ưu tiên cao nhất cho text search
+                "category",                   // Loại hình - ưu tiên cao thứ 2
                 "description",                // Mô tả
+                "coupleMoodTypeNames",        // Mood context
+                "couplePersonalityTypeNames", // Personality context
+                "detailTags",                 // Tags chi tiết
                 "address",                    // Địa chỉ
                 "area",                       // Khu vực
                 "venueOwnerName"              // Chủ venue
