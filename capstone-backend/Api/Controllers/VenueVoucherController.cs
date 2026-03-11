@@ -19,6 +19,27 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Get list of vouchers for a venue
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetVenueVouchers([FromQuery] GetVenueVouchersRequest query)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.GetVenueVouchersAsync(userId.Value, query);
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Create voucher for a venue
         /// </summary>
         [HttpPost]

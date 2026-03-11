@@ -1,9 +1,13 @@
 ﻿using AutoMapper;
+using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Voucher;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
+using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 using System.Transactions;
+using static Microsoft.Extensions.Logging.EventSource.LoggingEventSource;
 
 namespace capstone_backend.Business.Services
 {
@@ -16,6 +20,62 @@ namespace capstone_backend.Business.Services
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+        }
+
+        public async Task<PagedResult<VoucherListItemResponse>> GetVenueVouchersAsync(int userId, GetVenueVouchersRequest query)
+        {
+            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
+            if (venueOwner == null)
+                throw new Exception("Không tìm thấy chủ địa điểm");
+
+            int pageNumber = query.PageNumber < 1 ? 1 : query.PageNumber;
+            int pageSize = query.PageSize < 1 ? 10 : query.PageSize;
+
+            var keyword = query.Keyword?.Trim().ToLower();
+
+            // Create order ef
+            Func<IQueryable<Voucher>, IOrderedQueryable<Voucher>> orderBy = q =>
+                q.OrderByDescending(x => x.CreatedAt);
+
+            if (!string.IsNullOrWhiteSpace(query.SortBy))
+            {
+                var sortBy = query.SortBy.Trim().ToLower();
+                var order = query.OrderBy?.Trim().ToLower() ?? "desc";
+
+                orderBy = (sortBy, order) switch
+                {
+                    ("createdat", "asc") => q => q.OrderBy(x => x.CreatedAt),
+                    ("createdat", "desc") => q => q.OrderByDescending(x => x.CreatedAt),
+                    ("updatedat", "asc") => q => q.OrderBy(x => x.UpdatedAt),
+                    ("updatedat", "desc") => q => q.OrderByDescending(x => x.UpdatedAt),
+                    _ => q => q.OrderByDescending(x => x.CreatedAt)
+                };
+            }
+
+            var (vouchers, totalCount) = await _unitOfWork.Vouchers.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                v => v.VenueOwnerId == venueOwner.Id
+                    && v.IsDeleted == false
+                    && (query.Status == null || v.Status == query.Status.ToString())
+                    && (string.IsNullOrEmpty(keyword) || (
+                        v.Code != null && v.Code.ToLower().Contains(keyword) ||
+                        v.Title != null && v.Title.ToLower().Contains(keyword) ||
+                        v.Description != null && v.Description.ToLower().Contains(keyword)
+                    )),
+                orderBy,
+                v => v.Include(v => v.VoucherLocations).ThenInclude(vl => vl.VenueLocation)
+            );
+
+            var response = _mapper.Map<List<VoucherListItemResponse>>(vouchers);
+
+            return new PagedResult<VoucherListItemResponse>
+            {
+                Items = response,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
         }
 
         public async Task<VoucherResponse> CreateVenueVoucherAsync(int userId, CreateVoucherRequest request)
