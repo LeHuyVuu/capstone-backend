@@ -580,7 +580,7 @@ public class VenueLocationService : IVenueLocationService
             PriceMax = request.PriceMax,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
-            Category = SerializeCategories(request.Categories),
+            Category = null, // Will be set after saving categories
             CoverImage = SerializeImages(request.CoverImage),
             InteriorImage = SerializeImages(request.InteriorImage),
             FullPageMenuImage = SerializeImages(request.FullPageMenuImage),
@@ -637,6 +637,32 @@ public class VenueLocationService : IVenueLocationService
         await _unitOfWork.SaveChangesAsync();
 
         _logger.LogInformation("Venue location created successfully with ID {VenueId}", venueLocation.Id);
+
+        // Save categories to VenueLocationCategory table and build category string
+        if (request.CategoryIds != null && request.CategoryIds.Any())
+        {
+            var categoryNames = new List<string>();
+            foreach (var categoryId in request.CategoryIds)
+            {
+                var category = await _unitOfWork.Categories.GetByIdAsync(categoryId);
+                if (category != null && !category.IsDeleted)
+                {
+                    categoryNames.Add(category.Name);
+                    await _unitOfWork.Context.Set<VenueLocationCategory>().AddAsync(new VenueLocationCategory
+                    {
+                        VenueLocationId = venueLocation.Id,
+                        CategoryId = category.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    });
+                }
+            }
+            if (categoryNames.Any())
+            {
+                venueLocation.Category = string.Join(" / ", categoryNames);
+            }
+            await _unitOfWork.SaveChangesAsync();
+        }
 
         // Map and return created venue location
         return _mapper.Map<VenueLocationCreateResponse>(venueLocation);
@@ -706,9 +732,35 @@ public class VenueLocationService : IVenueLocationService
             venue.BusinessLicenseUrl = request.BusinessLicenseUrl;
         
         // Update categories only if explicitly provided (not null)
-        // If Categories is null, keep the existing categories unchanged
-        if (request.Categories != null)
-            venue.Category = SerializeCategories(request.Categories);
+        // If CategoryIds is null, keep the existing categories unchanged
+        if (request.CategoryIds != null)
+        {
+            var categoryNames = new List<string>();
+            
+            // Hard delete all old categories
+            var oldCategories = await _unitOfWork.Context.Set<VenueLocationCategory>()
+                .Where(vlc => vlc.VenueLocationId == id).ToListAsync();
+            _unitOfWork.Context.Set<VenueLocationCategory>().RemoveRange(oldCategories);
+            
+            // Insert new categories
+            foreach (var categoryId in request.CategoryIds)
+            {
+                var category = await _unitOfWork.Categories.GetByIdAsync(categoryId);
+                if (category != null && !category.IsDeleted)
+                {
+                    categoryNames.Add(category.Name);
+                    await _unitOfWork.Context.Set<VenueLocationCategory>().AddAsync(new VenueLocationCategory
+                    {
+                        VenueLocationId = id,
+                        CategoryId = category.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    });
+                }
+            }
+            
+            venue.Category = categoryNames.Any() ? string.Join(" / ", categoryNames) : null;
+        }
 
         // Update venue tags if provided (soft delete old, restore or add new)
         if (request.VenueTags != null)
@@ -722,7 +774,6 @@ public class VenueLocationService : IVenueLocationService
             {
                 tag.IsDeleted = true;
             }
-            _logger.LogInformation("Soft deleted {Count} existing tags for venue {VenueId}", existingTags.Count, id);
 
             // Add or restore tags
             if (request.VenueTags.Any())

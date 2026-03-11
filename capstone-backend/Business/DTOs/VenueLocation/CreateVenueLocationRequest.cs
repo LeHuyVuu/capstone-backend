@@ -52,11 +52,11 @@ public class CreateVenueLocationRequest
     public string? BusinessLicenseUrl { get; set; }
 
     /// <summary>
-    /// List of category names for the venue
-    /// Will be stored as "CATEGORY1 / CATEGORY2 / CATEGORY3" format
-    /// Example: ["TRẢI NGHIỆM", "WORKSHOP"]
+    /// List of category IDs for the venue
+    /// Example: [1, 2, 3]
+    /// Categories will be fetched and stored as "CATEGORY1 / CATEGORY2 / CATEGORY3" format
     /// </summary>
-    public List<string>? Categories { get; set; }
+    public List<int>? CategoryIds { get; set; }
 
     /// <summary>
     /// List of tag combinations (mood + personality pairs)

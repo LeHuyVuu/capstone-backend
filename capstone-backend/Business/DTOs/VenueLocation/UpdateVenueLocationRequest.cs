@@ -51,13 +51,13 @@ public class UpdateVenueLocationRequest
     public string? BusinessLicenseUrl { get; set; }
 
     /// <summary>
-    /// List of category names for the venue
-    /// Will be stored as "CATEGORY1 / CATEGORY2 / CATEGORY3" format
-    /// Example: ["TRẢI NGHIỆM", "WORKSHOP"]
+    /// List of category IDs for the venue
+    /// Example: [1, 2, 3]
+    /// Categories will be fetched and stored as "CATEGORY1 / CATEGORY2 / CATEGORY3" format
     /// If null, existing categories will remain unchanged
     /// If empty array [], categories will be cleared (set to null in database)
     /// </summary>
-    public List<string>? Categories { get; set; }
+    public List<int>? CategoryIds { get; set; }
 
     /// <summary>
     /// List of tag combinations (mood + personality pairs) to update

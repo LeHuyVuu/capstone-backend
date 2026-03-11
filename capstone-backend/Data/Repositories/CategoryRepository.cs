@@ -22,6 +22,6 @@ public class CategoryRepository : GenericRepository<Category>, ICategoryReposito
     public async Task<Category?> GetByNameAsync(string name)
     {
         return await _context.Set<Category>()
-            .FirstOrDefaultAsync(c => c.Name == name && !c.IsDeleted);
+            .FirstOrDefaultAsync(c => c.Name.ToLower() == name.ToLower() && !c.IsDeleted);
     }
 }
