@@ -12,5 +12,6 @@ namespace capstone_backend.Business.Interfaces
         Task<VoucherResponse> SubmitVoucherAsync(int userId, int voucherId);
         Task<VoucherResponse> UpdateVenueVoucherAsync(int userId, int voucherId, UpdateVoucherRequest request);
         Task<VoucherDetailResponse> GetVoucherByIdAsync(int userId, int voucherId);
+        Task<VoucherSummaryResponse> GetVoucherSummaryByIdAsync(int userId, int voucherId);
     }
 }

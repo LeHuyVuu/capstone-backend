@@ -88,10 +88,43 @@ namespace capstone_backend.Business.Services
             if (voucher == null || voucher.VenueOwnerId != venueOwner.Id)
                 throw new Exception("Không tìm thấy voucher cho địa điểm này");
 
-            if (voucher.VenueOwnerId != venueOwner.Id)
-                throw new Exception("Bạn không có quyền xem voucher này");
-
             var response = _mapper.Map<VoucherDetailResponse>(voucher);
+            return response;
+        }
+
+        public async Task<VoucherSummaryResponse> GetVoucherSummaryByIdAsync(int userId, int voucherId)
+        {
+            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
+            if (venueOwner == null)
+                throw new Exception("Không tìm thấy chủ địa điểm");
+
+            var voucher = await _unitOfWork.Vouchers.GetIncludeByIdAsync(voucherId);
+            if (voucher == null || voucher.VenueOwnerId != venueOwner.Id)
+                throw new Exception("Không tìm thấy voucher cho địa điểm này");
+
+            var voucherItems = await _unitOfWork.VoucherItems.GetAsync(vi => vi.VoucherId == voucherId && vi.IsDeleted == false);
+
+            var response = _mapper.Map<VoucherSummaryResponse>(voucher);
+
+            // enrich
+            var acquiredCount = voucherItems.Count(vi => vi.Status == VoucherItemStatus.ACQUIRED.ToString());
+            var usedCount = voucherItems.Count(vi => vi.Status == VoucherItemStatus.USED.ToString());
+            var expiredCount = voucherItems.Count(vi => vi.Status == VoucherItemStatus.EXPIRED.ToString());
+            var availableCount = voucherItems.Count(vi => vi.Status == VoucherItemStatus.AVAILABLE.ToString());
+
+            var totalQuantity = voucher.Quantity ?? 0;
+            var remainingQuantity = voucher.RemainingQuantity ?? 0;
+
+            var usageRate = totalQuantity == 0
+                ? 0
+                : Math.Round((decimal)usedCount * 100 / totalQuantity, 2);
+
+            response.AcquiredCount = acquiredCount;
+            response.UsedCount = usedCount;
+            response.ExpiredCount = expiredCount;
+            response.AvailableCount = availableCount;
+            response.UsageRate = usageRate;
+
             return response;
         }
 
@@ -325,6 +358,10 @@ namespace capstone_backend.Business.Services
             // Change status back to DRAFTED if it was REJECTED
             if (voucher.Status == VoucherStatus.REJECTED.ToString())
                 voucher.Status = VoucherStatus.DRAFTED.ToString();
+
+            // Update remaining quantity if quantity changed
+            if (voucher.Quantity != voucher.RemainingQuantity)
+                voucher.RemainingQuantity = voucher.Quantity;
 
             _unitOfWork.Vouchers.Update(voucher);
             await _unitOfWork.SaveChangesAsync();

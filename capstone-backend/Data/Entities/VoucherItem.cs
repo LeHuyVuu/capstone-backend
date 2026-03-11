@@ -28,6 +28,8 @@ public partial class VoucherItem
 
     public DateTime? UpdatedAt { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     [ForeignKey("VoucherId")]
     [InverseProperty("VoucherItems")]
     public virtual Voucher Voucher { get; set; } = null!;
