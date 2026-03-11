@@ -14,10 +14,29 @@ public partial class MeilisearchService
         {
             var index = _meilisearchClient.Index(_indexName);
 
+            // Ranking Rules: Ưu tiên exact match và relevance
+            await index.UpdateRankingRulesAsync(new[]
+            {
+                "words",        // Số từ match
+                "typo",         // Ít typo hơn
+                "proximity",    // Từ gần nhau
+                "attribute",    // Match ở attribute quan trọng (theo order searchable)
+                "sort",         // Custom sort
+                "exactness"     // Exact match được ưu tiên nhất
+            });
+
+            // Searchable Attributes: Order = Weight (đầu = quan trọng nhất)
             await index.UpdateSearchableAttributesAsync(new[]
             {
-                "name", "description", "address", "category", "area",
-                "coupleMoodTypeNames", "couplePersonalityTypeNames", "venueOwnerName"
+                "name",                       // Tên venue - ưu tiên cao nhất cho text search
+                "category",                   // Loại hình - ưu tiên cao thứ 2
+                "description",                // Mô tả
+                "coupleMoodTypeNames",        // Mood context
+                "couplePersonalityTypeNames", // Personality context
+                "detailTags",                 // Tags chi tiết
+                "address",                    // Địa chỉ
+                "area",                       // Khu vực
+                "venueOwnerName"              // Chủ venue
             });
 
             await index.UpdateFilterableAttributesAsync(new[]
@@ -25,7 +44,8 @@ public partial class MeilisearchService
                 "id", "category", "area", "averageRating", "priceMin", "priceMax",
                 "isOwnerVerified", "isOpenNow", 
                 "coupleMoodTypeIds", "couplePersonalityTypeIds",
-                "coupleMoodTypeNames", "couplePersonalityTypeNames", 
+                "coupleMoodTypeNames", "couplePersonalityTypeNames",
+                "detailTags",  // Filterable tags
                 "venueOwnerId", "status", "createdAt", "updatedAt",
                 "_geo" // Enable geo filtering
             });
@@ -43,16 +63,26 @@ public partial class MeilisearchService
 
             await index.UpdateSynonymsAsync(new Dictionary<string, IEnumerable<string>>
             {
+                // Venue types
                 { "cafe", new[] { "cafe", "cà phê", "ca phe", "quán cà phê", "quan ca phe", "coffee", "coffee shop" } },
                 { "restaurant", new[] { "restaurant", "nhà hàng", "nha hang", "quán ăn", "quan an", "dining" } },
-                { "romantic", new[] { "romantic", "lãng mạn", "lang man", "romanticism" } },
-                { "couple", new[] { "couple", "cặp đôi", "cap doi", "lovers", "partners" } },
                 { "bar", new[] { "bar", "quầy bar", "quay bar", "pub" } },
                 { "seafood", new[] { "seafood", "hải sản", "hai san", "seafoods" } },
                 { "park", new[] { "park", "công viên", "cong vien", "garden", "vườn" } },
                 { "museum", new[] { "museum", "bảo tàng", "bao tang", "gallery" } },
                 { "beach", new[] { "beach", "bãi biển", "bai bien", "seaside", "coast" } },
-                { "mountain", new[] { "mountain", "núi", "đồi", "doi", "hill" } }
+                { "mountain", new[] { "mountain", "núi", "đồi", "doi", "hill" } },
+                
+                // Moods & Emotions
+                { "romantic", new[] { "romantic", "lãng mạn", "lang man", "romanticism" } },
+                { "couple", new[] { "couple", "cặp đôi", "cap doi", "lovers", "partners" } },
+                { "vui vẻ", new[] { "vui vẻ", "vui ve", "happy", "cheerful", "joyful" } },
+                { "cân bằng", new[] { "cân bằng", "can bang", "balanced", "calm", "peaceful", "yên tĩnh", "yen tinh" } },
+                { "hòa giải", new[] { "hòa giải", "hoa giai", "reconcile", "harmony" } },
+                { "lãng mạn", new[] { "lãng mạn", "lang man", "romantic", "romance" } },
+                { "vui nhộn", new[] { "vui nhộn", "vui nhon", "playful", "fun", "funny" } },
+                { "phiêu lưu", new[] { "phiêu lưu", "phieu luu", "adventure", "adventurous" } },
+                { "yên tĩnh", new[] { "yên tĩnh", "yen tinh", "quiet", "calm", "peaceful", "cân bằng", "can bang" } }
             });
 
             await Task.Delay(2000);

@@ -45,18 +45,15 @@ public partial class MeilisearchService
 
             ISearchable<VenueLocationQueryResult> searchResult;
             
-            if (!string.IsNullOrWhiteSpace(request.Query))
+            string query = request.Query;
+
+            if (string.IsNullOrWhiteSpace(query))
             {
-                searchResult = await PerformHybridSearchAsync(
-                    request.Query,
-                    searchQuery);
+                
+                query = $"{validatedMood} {validatedPersonality}";
             }
-            else
-            {
-                searchResult = await index.SearchAsync<VenueLocationQueryResult>(
-                    string.Empty,
-                    searchQuery);
-            }
+
+            searchResult = await PerformHybridSearchAsync(query, searchQuery);
 
             var hits = searchResult.Hits?.ToList() ?? new List<VenueLocationQueryResult>();
             
@@ -89,27 +86,54 @@ public partial class MeilisearchService
             // Use distance from Meilisearch _geoDistance (in meters) if available, otherwise calculate manually
             if (request.Latitude.HasValue && request.Longitude.HasValue)
             {
+                // Validate request coordinates (Vietnam: lat 8-23, lng 102-110)
+                var reqLat = (double)request.Latitude.Value;
+                var reqLng = (double)request.Longitude.Value;
+                
+                if (reqLat < -90 || reqLat > 90 || reqLng < -180 || reqLng > 180)
+                {
+                    _logger.LogWarning("[GEO WARNING] Invalid coordinates: lat={Lat}, lng={Lng}", reqLat, reqLng);
+                }
+                
+                _logger.LogInformation("[GEO] Request coordinates: lat={Lat}, lng={Lng}", reqLat, reqLng);
+                
                 foreach (var hit in hits)
                 {
                     double distanceKm;
+                    
+                    // Validate venue coordinates
+                    if (hit.Latitude.HasValue && hit.Longitude.HasValue)
+                    {
+                        var venueLat = (double)hit.Latitude.Value;
+                        var venueLng = (double)hit.Longitude.Value;
+                        
+                        if (venueLat < -90 || venueLat > 90 || venueLng < -180 || venueLng > 180)
+                        {
+                            _logger.LogWarning("[GEO WARNING] Venue '{Name}' has invalid coordinates: lat={Lat}, lng={Lng}", 
+                                hit.Name, venueLat, venueLng);
+                        }
+                        
+                        // Check if coordinates might be swapped (Vietnam specific)
+                        if (venueLat > 50 && venueLng < 50)
+                        {
+                            _logger.LogWarning("[GEO WARNING] Venue '{Name}' may have SWAPPED coordinates: lat={Lat}, lng={Lng} (should be lat=8-23, lng=102-110 for Vietnam)", 
+                                hit.Name, venueLat, venueLng);
+                        }
+                    }
                     
                     if (hit.GeoDistance.HasValue)
                     {
                         // Use distance from Meilisearch
                         distanceKm = hit.GeoDistance.Value / 1000.0;
-                        _logger.LogInformation("[GEO] Venue '{Name}' distance from Meilisearch: {Meters}m = {Km}km", 
-                            hit.Name, hit.GeoDistance.Value, distanceKm);
+                        _logger.LogInformation("[GEO] Venue '{Name}' (lat={VLat}, lng={VLng}) distance from Meilisearch: {Meters}m = {Km}km", 
+                            hit.Name, hit.Latitude, hit.Longitude, hit.GeoDistance.Value, distanceKm);
                     }
                     else if (hit.Latitude.HasValue && hit.Longitude.HasValue)
                     {
                         // Calculate manually using Haversine formula
-                        distanceKm = CalculateDistance(
-                            (double)request.Latitude.Value, 
-                            (double)request.Longitude.Value,
-                            (double)hit.Latitude.Value, 
-                            (double)hit.Longitude.Value);
-                        _logger.LogInformation("[GEO MANUAL] Venue '{Name}' calculated distance: {Km}km", 
-                            hit.Name, distanceKm);
+                        distanceKm = CalculateDistance(reqLat, reqLng, (double)hit.Latitude.Value, (double)hit.Longitude.Value);
+                        _logger.LogInformation("[GEO MANUAL] Venue '{Name}' (lat={VLat}, lng={VLng}) calculated distance: {Km}km", 
+                            hit.Name, hit.Latitude, hit.Longitude, distanceKm);
                     }
                     else
                     {
@@ -119,6 +143,12 @@ public partial class MeilisearchService
                     hit.Distance = (decimal)distanceKm;
                     hit.DistanceText = FormatDistance(distanceKm);
                 }
+                
+                // Sort results by distance (nearest first)
+                hits = hits.Where(h => h.Distance.HasValue)
+                           .OrderBy(h => h.Distance.Value)
+                           .Concat(hits.Where(h => !h.Distance.HasValue))
+                           .ToList();
             }
             
             
@@ -392,6 +422,10 @@ public partial class MeilisearchService
         using var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
+        // Lower semantic ratio when sorting by distance to prioritize geo sort
+        var hasGeoSort = searchQuery.Sort?.Any(s => s.Contains("_geoPoint")) ?? false;
+        var semanticRatio = hasGeoSort ? 0.05 : 0.2;
+
         var requestBody = new
         {
             q = query,
@@ -403,12 +437,12 @@ public partial class MeilisearchService
             hybrid = new
             {
                 embedder = "venue-ai",
-                semanticRatio = 0.2
+                semanticRatio
             }
         };
 
         var jsonContent = System.Text.Json.JsonSerializer.Serialize(requestBody);
-        _logger.LogInformation("[AI SEARCH] Query: '{Query}', SemanticRatio: 0.2, Embedder: venue-ai", query);
+        _logger.LogInformation("[AI SEARCH] Query: '{Query}', SemanticRatio: {SemanticRatio}, Embedder: venue-ai", query, semanticRatio);
         var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
 
         var response = await httpClient.PostAsync($"{host}/indexes/{_indexName}/search", content);
