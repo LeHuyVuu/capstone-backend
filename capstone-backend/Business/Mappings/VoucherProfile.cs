@@ -18,7 +18,7 @@ namespace capstone_backend.Business.Mappings
                 {
                     VenueLocationId = vl.VenueLocationId,
                     VenueLocationName = vl.VenueLocation.Name
-                }).ToList()));
+                }).ToList() ?? new List<VoucherLocationItemResponse>()));
         }
     }
 }
