@@ -76,11 +76,34 @@ namespace capstone_backend.Api.Controllers
                 var userId = GetCurrentUserId();
                 if (userId == null)
                     return UnauthorizedResponse("User không xác thực");
-                var success = await _venueVoucherService.DeleteVenueVoucherAsync(userId.Value, voucherId);
 
+                var success = await _venueVoucherService.DeleteVenueVoucherAsync(userId.Value, voucherId);
                 if (!success)
                     return BadRequestResponse("Không thể xóa voucher cho địa điểm này");
                 return OkResponse("Xóa voucher thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Submit voucher for approval
+        /// </summary>
+        [HttpPost("{voucherId:int}/submit")]
+        public async Task<IActionResult> SubmitVenueVoucher(int voucherId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+                    
+                var result = await _venueVoucherService.SubmitVoucherAsync(userId.Value, voucherId);
+                if (result == null)
+                    return BadRequestResponse("Không thể nộp voucher cho địa điểm này");
+                return OkResponse(result);
             }
             catch (Exception ex)
             {
