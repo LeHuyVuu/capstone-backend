@@ -35,7 +35,7 @@ namespace capstone_backend.Business.Jobs.DatePlan
             {
                 _logger.LogInformation($"[SOFT END] Ending DatePlan #{datePlanId}");
 
-                //plan.Status = DatePlanStatus.COMPLETED.ToString();
+                plan.Status = DatePlanStatus.COMPLETED.ToString();
 
                 // todo: notify users
                 var (userId1, userId2) = await _unitOfWork.CoupleProfiles.GetCoupleUserIdsAsync(plan.CoupleId);
@@ -48,7 +48,7 @@ namespace capstone_backend.Business.Jobs.DatePlan
 
                 await CleanupJobAsync(datePlanId, DatePlanJobType.END.ToString());
 
-                //await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.SaveChangesAsync();
             }
         }
 
