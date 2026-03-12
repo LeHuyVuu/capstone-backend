@@ -431,5 +431,19 @@ namespace capstone_backend.Business.Services
                 PageSize = pageSize
             };
         }
+
+        public async Task<MemberVoucherTransactionDetailResponse> GetMemberVoucherTransactionDetailsAsync(int userId, int voucherItemMemberId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Không tìm thấy thông tin thành viên");
+
+            var transaction = await _unitOfWork.VoucherItemMembers.GetIncludeByIdAsync(member.Id, voucherItemMemberId);
+            if (transaction == null)
+                throw new Exception("Không tìm thấy giao dịch voucher");
+
+            var response = _mapper.Map<MemberVoucherTransactionDetailResponse>(transaction);
+            return response;
+        }
     }
 }

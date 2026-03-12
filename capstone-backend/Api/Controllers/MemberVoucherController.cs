@@ -140,5 +140,28 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get transaction details for member
+        /// </summary>
+        [HttpGet("transactions/{voucherItemMemberId:int}")]
+        public async Task<IActionResult> GetMyVoucherTransactionDetails(int voucherItemMemberId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("Không xác thực được người dùng");
+
+                var result = await _memberVoucherService.GetMemberVoucherTransactionDetailsAsync(userId.Value, voucherItemMemberId);
+                if (result == null)
+                    return NotFoundResponse("Không tìm thấy giao dịch voucher của bạn");
+                return OkResponse(result, "Lấy chi tiết giao dịch voucher của bạn thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

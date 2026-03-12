@@ -2,7 +2,7 @@
 {
     public class MemberVoucherTransactionListItemResponse
     {
-        public int Id { get; set; }
+        public int VoucherItemMemberId { get; set; }
         public int Quantity { get; set; }
         public int TotalPointsUsed { get; set; }
         public string? Note { get; set; }
