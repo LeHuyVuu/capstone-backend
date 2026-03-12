@@ -171,6 +171,23 @@ namespace capstone_backend.Business.Services
             };
         }
 
+        public async Task<VoucherItemDetailResponse> GetVoucherItemByIdAsync(int userId, int voucherItemId)
+        {
+            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
+            if (venueOwner == null)
+                throw new Exception("Không tìm thấy chủ địa điểm");
+
+            var voucherItem = await _unitOfWork.VoucherItems.GetIncludeByIdAsync(voucherItemId);
+            if (voucherItem == null)
+                throw new Exception("Không tìm thấy voucher item");
+
+            if (voucherItem.Voucher == null || voucherItem.Voucher.VenueOwnerId != venueOwner.Id)
+                throw new Exception("Không tìm thấy voucher item cho địa điểm này");
+
+            var response = _mapper.Map<VoucherItemDetailResponse>(voucherItem);
+            return response;
+        }
+
         public async Task<VoucherResponse> CreateVenueVoucherAsync(int userId, CreateVoucherRequest request)
         {
             var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);

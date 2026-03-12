@@ -32,7 +32,22 @@ namespace capstone_backend.Business.Mappings
 
             // Voucher Items
             CreateMap<VoucherItem, VoucherItemResponse>()
-                .ForMember(dest => dest.IsAssigned, opt => opt.MapFrom(src => src.VoucherItemMemberId != null ? true : false));
+                .ForMember(dest => dest.IsAssigned, opt => opt.MapFrom(src => src.VoucherItemMemberId != null));
+            CreateMap<VoucherItem, VoucherItemDetailResponse>()
+                .ForMember(dest => dest.IsAssigned, opt => opt.MapFrom(src => src.VoucherItemMemberId != null))
+                .ForMember(dest => dest.Member,
+                    opt => opt.MapFrom(src => src.VoucherItemMemberId != null && src.VoucherItemMember != null
+                        ? new VoucherItemMemberBriefResponse
+                        {
+                            MemberId = src.VoucherItemMemberId.Value,
+                            FullName = src.VoucherItemMember.Member != null
+                                ? src.VoucherItemMember.Member.FullName
+                                : null,
+                            AvatarUrl = src.VoucherItemMember.Member != null && src.VoucherItemMember.Member.User != null
+                                ? src.VoucherItemMember.Member.User.AvatarUrl
+                                : null
+                        }
+                        : null));
         }
     }
 }
