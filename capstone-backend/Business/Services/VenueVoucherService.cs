@@ -2,8 +2,10 @@
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Voucher;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Voucher;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 using System.Transactions;
@@ -15,11 +17,13 @@ namespace capstone_backend.Business.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IVoucherItemService _voucherItemService;
 
-        public VenueVoucherService(IUnitOfWork unitOfWork, IMapper mapper)
+        public VenueVoucherService(IUnitOfWork unitOfWork, IMapper mapper, IVoucherItemService voucherItemService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _voucherItemService = voucherItemService;
         }
 
         public async Task<PagedResult<VoucherDetailResponse>> GetVenueVouchersAsync(int userId, GetVenueVouchersRequest query)
@@ -393,6 +397,51 @@ namespace capstone_backend.Business.Services
             }
 
             return code;
+        }
+
+        public async Task<int> ActivateVoucherAsync(int userId, int voucherId)
+        {
+            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
+            if (venueOwner == null)
+                throw new Exception("Không tìm thấy chủ địa điểm");
+
+            var voucher = await _unitOfWork.Vouchers.GetIncludeByIdAsync(voucherId);
+            if (voucher == null)
+                throw new Exception("Không tìm thấy voucher");
+
+            if (voucher.VenueOwnerId != venueOwner.Id)
+                throw new Exception("Bạn không có quyền kích hoạt voucher này");
+
+            if (voucher.Status != VoucherStatus.APPROVED.ToString())
+                throw new Exception("Chỉ có thể kích hoạt voucher ở trạng thái APPROVED");
+
+            var now = DateTime.UtcNow;
+
+            if (voucher.EndDate.HasValue && voucher.EndDate.Value <= now)
+                throw new Exception("Không thể kích hoạt voucher đã hết hạn");
+
+            if (!voucher.Quantity.HasValue || voucher.Quantity.Value <= 0)
+                throw new Exception("Số lượng voucher không hợp lệ");
+
+            // Remove start job if exist
+            var startJob = await _unitOfWork.VoucherJobs.GetByVoucherIdAndTypeAsync(voucher.Id, VoucherJobType.ACTIVATE_VOUCHER.ToString());
+            if (startJob != null)
+            {
+                BackgroundJob.Delete(startJob.JobId);
+                _unitOfWork.VoucherJobs.Delete(startJob);
+            }
+
+            voucher.Status = VoucherStatus.ACTIVE.ToString();
+            voucher.UpdatedAt = now;
+
+            _unitOfWork.Vouchers.Update(voucher);          
+
+            // call to generate voucher item code
+            await _voucherItemService.GenerateVoucherItemsAsync(voucher.Id, voucher.Quantity.Value);
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return voucher.Id;
         }
     }
 }

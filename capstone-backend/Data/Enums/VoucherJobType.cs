@@ -2,7 +2,7 @@
 {
     public enum VoucherJobType
     {
-        ACTIVE_VOUCHER,
-        ENDED_VOUCHER
+        ACTIVATE_VOUCHER,
+        END_VOUCHER
     }
 }

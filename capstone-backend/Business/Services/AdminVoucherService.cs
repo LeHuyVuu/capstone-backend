@@ -147,6 +147,9 @@ namespace capstone_backend.Business.Services
 
             var now = DateTime.UtcNow;
 
+            if (voucher.EndDate.HasValue && voucher.EndDate.Value <= now)
+                throw new Exception("Không thể duyệt voucher đã hết hạn");
+
             if (voucher.StartDate.HasValue && voucher.StartDate.Value > now)
             {
                 voucher.Status = VoucherStatus.APPROVED.ToString();
@@ -160,6 +163,7 @@ namespace capstone_backend.Business.Services
             }
 
             voucher.UpdatedAt = now;
+            voucher.RejectReason = null; // clear reject reason if any
             _unitOfWork.Vouchers.Update(voucher);
             await _unitOfWork.SaveChangesAsync();
 
@@ -177,7 +181,7 @@ namespace capstone_backend.Business.Services
                 {
                     VoucherId = voucher.Id,
                     JobId = activeJob,
-                    JobType = VoucherJobType.ACTIVE_VOUCHER.ToString()
+                    JobType = VoucherJobType.ACTIVATE_VOUCHER.ToString()
                 });
             }
 
@@ -192,7 +196,7 @@ namespace capstone_backend.Business.Services
                 {
                     VoucherId = voucher.Id,
                     JobId = endedJob,
-                    JobType = VoucherJobType.ENDED_VOUCHER.ToString()
+                    JobType = VoucherJobType.END_VOUCHER.ToString()
                 });
             }
 
