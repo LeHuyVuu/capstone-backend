@@ -156,30 +156,51 @@ namespace capstone_backend.Business.Services
                 voucher.Status = VoucherStatus.ACTIVE.ToString();
 
                 // call to generate voucher item code
-                await _voucherItemService.GenerateVoucherItemsAsync(voucher.Id, voucher.Quantity.Value);
+                await _voucherItemService.GenerateVoucherItemsAsync(voucher.Id, voucher.Quantity ?? 0);
             }
 
             voucher.UpdatedAt = now;
             _unitOfWork.Vouchers.Update(voucher);
             await _unitOfWork.SaveChangesAsync();
 
+            var voucherJobs = new List<VoucherJob>();
+
             // Add job for auto publish voucher at StartDate
             if (voucher.StartDate.HasValue && voucher.StartDate.Value > now)
             {
                 // Auto start
-                BackgroundJob.Schedule<IVoucherWorker>(
+                var activeJob = BackgroundJob.Schedule<IVoucherWorker>(
                     job => job.ActivateVoucherAsync(voucher.Id),
                     voucher.StartDate.Value - now
                 );  
+                voucherJobs.Add(new VoucherJob
+                {
+                    VoucherId = voucher.Id,
+                    JobId = activeJob,
+                    JobType = VoucherJobType.ACTIVE_VOUCHER.ToString()
+                });
             }
 
             // Auto expire
-            if (voucher.EndDate.HasValue)
+            if (voucher.EndDate.HasValue && voucher.EndDate.Value > now)
             {
-                BackgroundJob.Schedule<IVoucherWorker>(
+                var endedJob = BackgroundJob.Schedule<IVoucherWorker>(
                     job => job.EndVoucherAsync(voucher.Id),
                     voucher.EndDate.Value - now
                 );
+                voucherJobs.Add(new VoucherJob
+                {
+                    VoucherId = voucher.Id,
+                    JobId = endedJob,
+                    JobType = VoucherJobType.ENDED_VOUCHER.ToString()
+                });
+            }
+
+            // Save job id to database
+            if (voucherJobs.Any())
+            {
+                await _unitOfWork.VoucherJobs.AddRangeAsync(voucherJobs);
+                await _unitOfWork.SaveChangesAsync();
             }
 
             return voucher.Id;
