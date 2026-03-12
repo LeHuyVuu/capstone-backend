@@ -15,11 +15,31 @@ namespace capstone_backend.Data.Repositories
         public async Task ExecuteUpdateUnassignedVoucherItemsAsync(int voucherId)
         {
             await _dbSet
-                .Where(vi => vi.VoucherId == voucherId && vi.IsDeleted == false)
+                .Where(vi => vi.VoucherId == voucherId && vi.IsDeleted == false && vi.Status == VoucherItemStatus.AVAILABLE.ToString())
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(vi => vi.Status, VoucherItemStatus.ENDED.ToString())
                     .SetProperty(vi => vi.UpdatedAt, DateTime.UtcNow)
                 );
+        }
+
+        public async Task<VoucherItem?> GetByItemCodeWithDetailsAsync(string itemCode)
+        {
+            return await _dbSet
+                .Include(vi => vi.Voucher)
+                .Include(vi => vi.VoucherItemMember)
+                    .ThenInclude(vim => vim.Member)
+                        .ThenInclude(m => m.User)
+                .FirstOrDefaultAsync(vi => vi.ItemCode.ToLower() == itemCode.ToLower() && vi.IsDeleted == false);
+        }
+
+        public async Task<VoucherItem?> GetIncludeByIdAsync(int id)
+        {
+            return await _dbSet
+                .Include(vi => vi.Voucher)
+                .Include(vi => vi.VoucherItemMember)
+                    .ThenInclude(vim => vim.Member)
+                        .ThenInclude(m => m.User)
+                .FirstOrDefaultAsync(vi => vi.Id == id && vi.IsDeleted == false);
         }
 
         public async Task<bool> IsExistedCodeAsync(string code)

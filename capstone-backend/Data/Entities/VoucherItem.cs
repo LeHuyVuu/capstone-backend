@@ -39,4 +39,7 @@ public partial class VoucherItem
     [ForeignKey("VoucherItemMemberId")]
     [InverseProperty("VoucherItems")]
     public virtual VoucherItemMember? VoucherItemMember { get; set; }
+
+    [InverseProperty("VoucherItem")]
+    public virtual ICollection<VoucherItemJob> VoucherItemJobs { get; set; } = new List<VoucherItemJob>();
 }

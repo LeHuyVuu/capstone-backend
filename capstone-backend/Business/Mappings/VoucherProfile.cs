@@ -29,6 +29,45 @@ namespace capstone_backend.Business.Mappings
                 }).ToList()));
 
             CreateMap<Voucher, VoucherSummaryResponse>();
+
+            // Voucher Items
+            CreateMap<VoucherItem, VoucherItemResponse>()
+                .ForMember(dest => dest.IsAssigned, opt => opt.MapFrom(src => src.VoucherItemMemberId != null));
+            CreateMap<VoucherItem, VoucherItemDetailResponse>()
+                .ForMember(dest => dest.IsAssigned, opt => opt.MapFrom(src => src.VoucherItemMemberId != null))
+                .ForMember(dest => dest.Member,
+                    opt => opt.MapFrom(src => src.VoucherItemMemberId != null && src.VoucherItemMember != null
+                        ? new VoucherItemMemberBriefResponse
+                        {
+                            MemberId = src.VoucherItemMemberId.Value,
+                            FullName = src.VoucherItemMember.Member != null
+                                ? src.VoucherItemMember.Member.FullName
+                                : null,
+                            AvatarUrl = src.VoucherItemMember.Member != null && src.VoucherItemMember.Member.User != null
+                                ? src.VoucherItemMember.Member.User.AvatarUrl
+                                : null
+                        }
+                        : null));
+
+            CreateMap<VoucherItem, VoucherItemValidationAndRedemptionResponse>()
+                .ForMember(dest => dest.VoucherTitle, opt => opt.MapFrom(src => src.Voucher.Title))
+                .ForMember(dest => dest.VoucherDescription, opt => opt.MapFrom(src => src.Voucher.Description))
+                .ForMember(dest => dest.DiscountType, opt => opt.MapFrom(src => src.Voucher.DiscountType))
+                .ForMember(dest => dest.DiscountAmount, opt => opt.MapFrom(src => src.Voucher.DiscountAmount))
+                .ForMember(dest => dest.DiscountPercent, opt => opt.MapFrom(src => src.Voucher.DiscountPercent))
+                .ForMember(dest => dest.Member,
+                    opt => opt.MapFrom(src => src.VoucherItemMemberId != null && src.VoucherItemMember != null
+                        ? new VoucherItemMemberBriefResponse
+                        {
+                            MemberId = src.VoucherItemMemberId.Value,
+                            FullName = src.VoucherItemMember.Member != null
+                                ? src.VoucherItemMember.Member.FullName
+                                : null,
+                            AvatarUrl = src.VoucherItemMember.Member != null && src.VoucherItemMember.Member.User != null
+                                ? src.VoucherItemMember.Member.User.AvatarUrl
+                                : null
+                        }
+                        : null));
         }
     }
 }

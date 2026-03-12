@@ -91,6 +91,10 @@ public interface IUnitOfWork : IDisposable
 
     ICategoryRepository Categories { get; }
 
+    IVoucherJobRepository VoucherJobs { get; }
+
+    IVoucherItemJobRepository VoucherItemJobs { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>

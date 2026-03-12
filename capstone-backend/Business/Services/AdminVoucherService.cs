@@ -147,6 +147,9 @@ namespace capstone_backend.Business.Services
 
             var now = DateTime.UtcNow;
 
+            if (voucher.EndDate.HasValue && voucher.EndDate.Value <= now)
+                throw new Exception("Không thể duyệt voucher đã hết hạn");
+
             if (voucher.StartDate.HasValue && voucher.StartDate.Value > now)
             {
                 voucher.Status = VoucherStatus.APPROVED.ToString();
@@ -156,30 +159,52 @@ namespace capstone_backend.Business.Services
                 voucher.Status = VoucherStatus.ACTIVE.ToString();
 
                 // call to generate voucher item code
-                await _voucherItemService.GenerateVoucherItemsAsync(voucher.Id, voucher.Quantity.Value);
+                await _voucherItemService.GenerateVoucherItemsAsync(voucher.Id, voucher.Quantity ?? 0);
             }
 
             voucher.UpdatedAt = now;
+            voucher.RejectReason = null; // clear reject reason if any
             _unitOfWork.Vouchers.Update(voucher);
             await _unitOfWork.SaveChangesAsync();
+
+            var voucherJobs = new List<VoucherJob>();
 
             // Add job for auto publish voucher at StartDate
             if (voucher.StartDate.HasValue && voucher.StartDate.Value > now)
             {
                 // Auto start
-                BackgroundJob.Schedule<IVoucherWorker>(
+                var activeJob = BackgroundJob.Schedule<IVoucherWorker>(
                     job => job.ActivateVoucherAsync(voucher.Id),
                     voucher.StartDate.Value - now
                 );  
+                voucherJobs.Add(new VoucherJob
+                {
+                    VoucherId = voucher.Id,
+                    JobId = activeJob,
+                    JobType = VoucherJobType.ACTIVATE_VOUCHER.ToString()
+                });
             }
 
             // Auto expire
-            if (voucher.EndDate.HasValue)
+            if (voucher.EndDate.HasValue && voucher.EndDate.Value > now)
             {
-                BackgroundJob.Schedule<IVoucherWorker>(
+                var endedJob = BackgroundJob.Schedule<IVoucherWorker>(
                     job => job.EndVoucherAsync(voucher.Id),
                     voucher.EndDate.Value - now
                 );
+                voucherJobs.Add(new VoucherJob
+                {
+                    VoucherId = voucher.Id,
+                    JobId = endedJob,
+                    JobType = VoucherJobType.END_VOUCHER.ToString()
+                });
+            }
+
+            // Save job id to database
+            if (voucherJobs.Any())
+            {
+                await _unitOfWork.VoucherJobs.AddRangeAsync(voucherJobs);
+                await _unitOfWork.SaveChangesAsync();
             }
 
             return voucher.Id;

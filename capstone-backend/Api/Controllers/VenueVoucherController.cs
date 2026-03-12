@@ -86,6 +86,93 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Get list voucher items for a voucher
+        /// </summary>
+        [HttpGet("{voucherId:int}/items")]
+        public async Task<IActionResult> GetVenueVoucherItems(int voucherId, [FromQuery] GetVoucherItemsRequest query)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.GetVoucherItemsByVoucherIdAsync(userId.Value, voucherId, query);
+
+                return OkResponse(result, "Lấy danh sách voucher item thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get details of a voucher item
+        /// </summary>
+        [HttpGet("voucher-items/{voucherItemId:int}")]
+        public async Task<IActionResult> GetVenueVoucherItemDetails(int voucherItemId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.GetVoucherItemByIdAsync(userId.Value, voucherItemId);
+                if (result == null)
+                    return NotFoundResponse("Không tìm thấy voucher item cho địa điểm này");
+                return OkResponse(result, "Lấy chi tiết voucher item thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Validate voucher code for a venue (có thể là thêm 1 button 'Kiểm tra')
+        /// </summary>
+        [HttpPost("voucher-items/validate")]
+        public async Task<IActionResult> ValidateVenueVoucherCode([FromBody] ValidateAndRedeemVoucherItemRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.ValidateVoucherCodeAsync(userId.Value, request);
+                return OkResponse(result, result.IsValid ? "Mã voucher hợp lệ" : "Mã voucher không hợp lệ");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Redeem voucher code for a venue
+        /// </summary>
+        [HttpPost("voucher-items/redeem")]
+        public async Task<IActionResult> RedeemVenueVoucherCode([FromBody] ValidateAndRedeemVoucherItemRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.RedeemVoucherCodeAsync(userId.Value, request);
+                return OkResponse(result, result.IsValid ? "Mã voucher hợp lệ" : "Mã voucher không hợp lệ");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Create voucher for a venue
         /// </summary>
         /// <remarks>
@@ -259,5 +346,53 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Activate voucher manually
+        /// </summary>
+        [HttpPost("{voucherId:int}/activate")]
+        public async Task<IActionResult> ActivateVenueVoucher(int voucherId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.ActivateVoucherAsync(userId.Value, voucherId);
+                if (result <= 0)
+                    return BadRequestResponse("Không thể kích hoạt voucher");
+                return OkResponse(result, "Kích hoạt voucher thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// End voucher manually
+        /// </summary>
+        [HttpPost("{voucherId:int}/end")]
+        public async Task<IActionResult> EndVenueVoucher(int voucherId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.EndVoucherAsync(userId.Value, voucherId);
+                if (result <= 0)
+                    return BadRequestResponse("Không thể kết thúc voucher");
+                return OkResponse(result, "Kết thúc voucher thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        
     }
 }
