@@ -230,6 +230,24 @@ public class AdvertisementController : BaseController
         }
     }
 
+    [HttpGet("pending")]
+    [Authorize(Roles = "ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<List<MyAdvertisementResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    public async Task<IActionResult> GetPendingAdvertisements()
+    {
+        try
+        {
+            var advertisements = await _advertisementService.GetPendingAdvertisementsAsync();
+            return OkResponse(advertisements, $"Retrieved {advertisements.Count} pending advertisements");
+        }
+        catch (Exception)
+        {
+            return BadRequestResponse("Failed to retrieve pending advertisements");
+        }
+    }
+
     [HttpPost("approve")]
     [Authorize(Roles = "ADMIN")]
     [ProducesResponseType(typeof(ApiResponse<AdvertisementApprovalResult>), 200)]

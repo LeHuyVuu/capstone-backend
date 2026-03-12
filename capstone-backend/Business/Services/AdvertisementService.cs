@@ -866,6 +866,49 @@ public class AdvertisementService : IAdvertisementService
         return response;
     }
 
+    public async Task<List<MyAdvertisementResponse>> GetPendingAdvertisementsAsync()
+    {
+        var advertisements = await _unitOfWork.Context.Set<Advertisement>()
+            .Include(ad => ad.VenueLocationAdvertisements)
+                .ThenInclude(vla => vla.Venue)
+            .Where(ad => ad.Status == "PENDING" && ad.IsDeleted != true)
+            .OrderBy(ad => ad.CreatedAt)
+            .ToListAsync();
+
+        var responses = advertisements.Select(ad =>
+        {
+            var activeVenueAd = ad.VenueLocationAdvertisements
+                .Where(vla => vla.Status == "ACTIVE" && vla.EndDate >= DateTime.UtcNow)
+                .OrderByDescending(vla => vla.StartDate)
+                .FirstOrDefault();
+
+            return new MyAdvertisementResponse
+            {
+                Id = ad.Id,
+                Title = ad.Title ?? string.Empty,
+                BannerUrl = ad.BannerUrl ?? string.Empty,
+                PlacementType = ad.PlacementType ?? string.Empty,
+                Status = ad.Status ?? "PENDING",
+                RejectionReason = ad.RejectionReason,
+                DesiredStartDate = ad.DesiredStartDate,
+                CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
+                UpdatedAt = ad.UpdatedAt,
+                VenueLocationCount = ad.VenueLocationAdvertisements.Count,
+                ActiveVenueAd = activeVenueAd != null ? new ActiveVenueLocationAd
+                {
+                    Id = activeVenueAd.Id,
+                    VenueId = activeVenueAd.VenueId,
+                    VenueName = activeVenueAd.Venue?.Name ?? "Unknown",
+                    StartDate = activeVenueAd.StartDate,
+                    EndDate = activeVenueAd.EndDate,
+                    PriorityScore = activeVenueAd.PriorityScore
+                } : null
+            };
+        }).ToList();
+
+        return responses;
+    }
+
     private static List<string> ParseImageField(string? imageField)
     {
         if (string.IsNullOrWhiteSpace(imageField))
