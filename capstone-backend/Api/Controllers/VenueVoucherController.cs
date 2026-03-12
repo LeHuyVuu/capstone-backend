@@ -152,6 +152,27 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Redeem voucher code for a venue
+        /// </summary>
+        [HttpPost("voucher-items/redeem")]
+        public async Task<IActionResult> RedeemVenueVoucherCode([FromBody] ValidateAndRedeemVoucherItemRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.RedeemVoucherCodeAsync(userId.Value, request);
+                return OkResponse(result, result.IsValid ? "Mã voucher hợp lệ" : "Mã voucher không hợp lệ");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Create voucher for a venue
         /// </summary>
         /// <remarks>
