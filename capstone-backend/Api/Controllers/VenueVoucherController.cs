@@ -86,6 +86,28 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Get list voucher items for a voucher
+        /// </summary>
+        [HttpGet("{voucherId:int}/items")]
+        public async Task<IActionResult> GetVenueVoucherItems(int voucherId, [FromQuery] GetVoucherItemsRequest query)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.GetVoucherItemsByVoucherIdAsync(userId.Value, voucherId, query);
+
+                return OkResponse(result, "Lấy danh sách voucher item thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Create voucher for a venue
         /// </summary>
         /// <remarks>
@@ -305,5 +327,7 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        
     }
 }

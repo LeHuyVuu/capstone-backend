@@ -29,6 +29,10 @@ namespace capstone_backend.Business.Mappings
                 }).ToList()));
 
             CreateMap<Voucher, VoucherSummaryResponse>();
+
+            // Voucher Items
+            CreateMap<VoucherItem, VoucherItemResponse>()
+                .ForMember(dest => dest.IsAssigned, opt => opt.MapFrom(src => src.VoucherItemMemberId != null ? true : false));
         }
     }
 }
