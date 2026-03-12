@@ -129,6 +129,8 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<VoucherLocation> VoucherLocations { get; set; }
 
+    public virtual DbSet<VoucherJob> VoucherJobs { get; set; }
+
     public virtual DbSet<Wallet> Wallets { get; set; }
 
     public virtual DbSet<WithdrawRequest> WithdrawRequests { get; set; }
@@ -1046,6 +1048,16 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.VenueLocation).WithMany(p => p.VoucherLocations)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("voucher_locations_venue_location_id_fkey");
+        });
+
+        modelBuilder.Entity<VoucherJob>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("voucher_jobs_pkey");
+
+            entity.HasOne(j => j.Voucher)
+                  .WithMany(v => v.VoucherJobs)
+                  .HasConstraintName("voucher_jobs_voucher_id_fkey")
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Wallet>(entity =>
