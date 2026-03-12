@@ -12,6 +12,14 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<IEnumerable<Voucher>> GetByIdsWithItemsAsync(List<int> voucherIds)
+        {
+            return await _dbSet
+                .Include(v => v.VoucherItems.Where(vi => vi.IsDeleted == false))
+                .Where(v => voucherIds.Contains(v.Id) && v.IsDeleted == false)
+                .ToListAsync();
+        }
+
         public async Task<Voucher?> GetIncludeByIdAsync(int voucherId)
         {
             return await _dbSet

@@ -53,5 +53,27 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Exchange voucher for member
+        /// </summary>
+        [HttpPost("exchange")]
+        public async Task<IActionResult> ExchangeVoucher([FromBody] ExchangeVoucherRequest request)
+        {
+            try
+            {
+                var memberId = GetCurrentUserId();
+                if (memberId == null)
+                    return UnauthorizedResponse("Không xác thực được người dùng");
+
+                var result = await _memberVoucherService.ExchangeVoucherAsync(memberId.Value, request);
+
+                return OkResponse(result, "Đổi voucher thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

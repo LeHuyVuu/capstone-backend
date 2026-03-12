@@ -1,9 +1,12 @@
 ﻿using AutoMapper;
+using capstone_backend.Business.DTOs.Challenge;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Voucher;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Voucher;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Services
@@ -17,6 +20,208 @@ namespace capstone_backend.Business.Services
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+        }
+
+        public async Task<ExchangeVoucherResponse> ExchangeVoucherAsync(int userId, ExchangeVoucherRequest request)
+        {
+            // 1. Validate request
+            if (request == null || request.Items == null || !request.Items.Any())
+                throw new Exception("Danh sách voucher đổi không được để trống");
+
+            if (request.Items.Any(x => x.VoucherId <= 0 || x.Quantity <= 0))
+                throw new Exception("VoucherId hoặc số lượng không hợp lệ");
+
+            // Group by VoucherId to sum quantities for the same voucher
+            var groupedItems = request.Items
+                .GroupBy(x => x.VoucherId)
+                .Select(g => new ExchangeVoucherItemRequest
+                {
+                    VoucherId = g.Key,
+                    Quantity = g.Sum(x => x.Quantity)
+                }).ToList();
+
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Không tìm thấy thông tin thành viên");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Không tìm thấy thông tin cặp đôi");
+
+            var now = DateTime.UtcNow;
+
+            // 2. Get all vouchers
+            var voucherIds = groupedItems.Select(x => x.VoucherId).Distinct().ToList();
+            var vouchers = await _unitOfWork.Vouchers.GetByIdsWithItemsAsync(voucherIds);
+
+            if (vouchers.ToList().Count != voucherIds.Count)
+                throw new Exception("Có voucher không tồn tại");
+
+            int totalPointsRequired = 0;
+            int totalQuantity = 0;
+
+            var voucherMap = vouchers.ToDictionary(v => v.Id, v => v);
+
+            // 3. Validate each voucher
+            foreach (var reqItem in groupedItems)
+            {
+                var voucher = voucherMap[reqItem.VoucherId];
+
+                if (voucher.IsDeleted == true)
+                    throw new Exception($"Voucher '{voucher.Title}' không tồn tại");
+
+                if (voucher.Status != VoucherStatus.ACTIVE.ToString())
+                    throw new Exception($"Voucher '{voucher.Title}' hiện không khả dụng");
+
+                if (voucher.StartDate.HasValue && voucher.StartDate.Value > now)
+                    throw new Exception($"Voucher '{voucher.Title}' chưa đến thời gian áp dụng");
+
+                if (voucher.EndDate.HasValue && voucher.EndDate.Value < now)
+                    throw new Exception($"Voucher '{voucher.Title}' đã hết thời gian đổi");
+
+                if (voucher.PointPrice <= 0)
+                    throw new Exception($"Voucher '{voucher.Title}' chưa được cấu hình điểm đổi");
+
+                // Check remaining quantity
+                var availableCount = voucher.VoucherItems.Count(vi =>
+                    vi.IsDeleted == false &&
+                    vi.VoucherItemMemberId == null &&
+                    vi.Status == VoucherItemStatus.AVAILABLE.ToString()
+                );
+
+                if (availableCount < reqItem.Quantity)
+                    throw new Exception($"Voucher '{voucher.Title}' chỉ còn {availableCount} mã, không đủ để đổi");
+
+                if (voucher.UsageLimitPerMember.HasValue && voucher.UsageLimitPerMember > 0)
+                {
+                    var memberUsedCount = await _unitOfWork.VoucherItems.CountMemberAcquiredVoucherAsync(member.Id, voucher.Id);
+                    if (memberUsedCount + reqItem.Quantity > voucher.UsageLimitPerMember.Value)
+                        throw new Exception($"Bạn đã đổi voucher '{voucher.Title}' {memberUsedCount} lần, chỉ được đổi tối đa {voucher.UsageLimitPerMember.Value} lần");
+                }
+
+                totalPointsRequired += voucher.PointPrice * reqItem.Quantity;
+                totalQuantity += reqItem.Quantity;
+            }
+
+            // 4. Validate points
+            var currentCouplePoints = couple.TotalPoints ?? 0;
+            if (currentCouplePoints < totalPointsRequired)
+                throw new Exception($"Bạn cần {totalPointsRequired} điểm để đổi các voucher này, nhưng bạn chỉ có {currentCouplePoints} điểm");
+
+            // 5. Transaction
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                // Deduct points
+                couple.TotalPoints = currentCouplePoints - totalPointsRequired;
+                couple.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.CoupleProfiles.Update(couple);
+
+                // Create transaction record (voucher item member)
+                var voucherItemMember = new VoucherItemMember
+                {
+                    MemberId = member.Id,
+                    Quantity = totalQuantity,
+                    TotalPointsUsed = totalPointsRequired,
+                    Note = request.Note
+                };
+
+                await _unitOfWork.VoucherItemMembers.AddAsync(voucherItemMember);
+                await _unitOfWork.SaveChangesAsync();
+
+                var exchangedVoucherItems = new List<VoucherItem>();
+                var expireSchedules = new List<(int VoucherItemId, DateTime ExpiredAt)>();
+
+                // Assign voucher items member for each voucher item
+                foreach (var reqItem in groupedItems)
+                {
+                    var voucher = voucherMap[reqItem.VoucherId];
+
+                    // Get available voucher items for this voucher
+                    var availableVoucherItems = await _unitOfWork.VoucherItems.GetAvailableVoucherItemsForExchangeAsync(voucher.Id, reqItem.Quantity);
+
+                    if (availableVoucherItems.ToList().Count < reqItem.Quantity)
+                        throw new Exception($"Voucher '{voucher.Title}' đã hết số lượng");
+
+                    foreach (var voucherItem in availableVoucherItems)
+                    {
+                        voucherItem.VoucherItemMemberId = voucherItemMember.Id;
+                        voucherItem.Status = VoucherItemStatus.ACQUIRED.ToString();
+                        voucherItem.AcquiredAt = now;
+                        voucherItem.UpdatedAt = now;
+
+                        if (voucher.UsageValidDays.HasValue && voucher.UsageValidDays.Value > 0)
+                        {
+                            voucherItem.ExpiredAt = now.AddDays(voucher.UsageValidDays.Value);
+                            // TODO: Add expire job for this voucher item
+                            expireSchedules.Add((voucherItem.Id, voucherItem.ExpiredAt.Value));
+                        }
+
+                        _unitOfWork.VoucherItems.Update(voucherItem);
+                        exchangedVoucherItems.Add(voucherItem);
+                    }
+
+                    // Deduct remaining quantity for the voucher
+                    voucher.RemainingQuantity = (voucher.RemainingQuantity ?? 0) - reqItem.Quantity;
+                    voucher.UpdatedAt = now;
+                    _unitOfWork.Vouchers.Update(voucher);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                var voucherItemJobs = new List<VoucherItemJob>();
+
+                // Schedule after commit
+                foreach (var item in expireSchedules)
+                {
+                    var delay = item.ExpiredAt - DateTime.UtcNow;
+                    var jobId = string.Empty;
+
+                    if (delay <= TimeSpan.Zero)
+                    {
+                        jobId = BackgroundJob.Enqueue<IVoucherWorker>(job =>
+                            job.ExpireVoucherItemAsync(item.VoucherItemId));
+                    }
+                    else
+                    {
+                        jobId = BackgroundJob.Schedule<IVoucherWorker>(job =>
+                            job.ExpireVoucherItemAsync(item.VoucherItemId), delay);
+                    }
+                    voucherItemJobs.Add(new VoucherItemJob
+                    {
+                        VoucherItemId = item.VoucherItemId,
+                        JobId = jobId,
+                        JobType = VoucherItemJobType.EXPIRE_VOUCHER_ITEM.ToString()
+                    });
+                }
+
+                await _unitOfWork.VoucherItemJobs.AddRangeAsync(voucherItemJobs);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Map response
+                foreach (var voucherItem in exchangedVoucherItems)
+                {
+                    var voucher = voucherMap[voucherItem.VoucherId];
+                    voucherItem.Voucher = voucher; // Ensure Voucher is loaded for mapping
+                }
+
+                return new ExchangeVoucherResponse
+                {
+                    VoucherItemMemberId = voucherItemMember.Id,
+                    MemberId = member.Id,
+                    TotalQuantityExchanged = totalQuantity,
+                    TotalPointsUsed = totalPointsRequired,
+                    RemainingCouplePoints = couple.TotalPoints ?? 0,
+                    CreatedAt = voucherItemMember.CreatedAt ?? DateTime.UtcNow,
+                    VoucherItems = _mapper.Map<List<ExchangeVoucherItemResult>>(exchangedVoucherItems)
+                };
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
         }
 
         public async Task<MemberVoucherDetailResponse> GetMemberVoucherByIdAsync(int voucherId)
