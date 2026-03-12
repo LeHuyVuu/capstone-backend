@@ -9,6 +9,7 @@ namespace capstone_backend.Business.DTOs.Voucher
         public string Code { get; set; } = null!;
         public string Title { get; set; } = null!;
         public string Description { get; set; } = null!;
+        public int PointPrice { get; set; }
         public string DiscountType { get; set; } = null!;
         public decimal? DiscountAmount { get; set; }
         public decimal? DiscountPercent { get; set; }

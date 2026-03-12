@@ -13,6 +13,9 @@ namespace capstone_backend.Business.DTOs.Voucher
         [Required]
         public string Description { get; set; } = null!;
 
+        /// <example>10000</example>
+        public int PointPrice { get; set; }
+
         /// <example>FIXED_AMOUNT</example>
         [Required]
         public string DiscountType { get; set; } = null!;
