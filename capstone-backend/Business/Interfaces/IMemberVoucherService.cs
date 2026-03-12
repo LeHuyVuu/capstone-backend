@@ -1,6 +1,10 @@
-﻿namespace capstone_backend.Business.Interfaces
+﻿using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Business.DTOs.Voucher;
+
+namespace capstone_backend.Business.Interfaces
 {
     public interface IMemberVoucherService
     {
+        Task<PagedResult<MemberVoucherListItemResponse>> GetMemberVouchersAsync(GetMemberVouchersRequest request);
     }
 }
