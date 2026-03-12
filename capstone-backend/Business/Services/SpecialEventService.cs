@@ -23,7 +23,8 @@ public class SpecialEventService : ISpecialEventService
         var specialEvent = new SpecialEvent()
         {
             EventName = request.EventName,
-            Description = request.Description,
+            Description = request.Description,            
+            BannerUrl = request.BannerUrl,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
             CreatedAt = DateTime.UtcNow,
@@ -95,6 +96,11 @@ public class SpecialEventService : ISpecialEventService
         if (request.Description != null)
             specialEvent.Description = request.Description;
 
+        if (request.BannerUrl != null)
+            specialEvent.BannerUrl = request.BannerUrl;
+
+
+
         if (request.StartDate.HasValue)
             specialEvent.StartDate = request.StartDate.Value;
 
@@ -137,10 +143,9 @@ public class SpecialEventService : ISpecialEventService
             Id = specialEvent.Id,
             EventName = specialEvent.EventName,
             Description = specialEvent.Description,
+            BannerUrl = specialEvent.BannerUrl,
             StartDate = specialEvent.StartDate,
-            EndDate = specialEvent.EndDate,
-            CreatedAt = specialEvent.CreatedAt,
-            UpdatedAt = specialEvent.UpdatedAt
+            EndDate = specialEvent.EndDate
         };
     }
 }

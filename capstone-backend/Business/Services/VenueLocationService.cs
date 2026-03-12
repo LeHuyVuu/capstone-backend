@@ -170,6 +170,16 @@ public class VenueLocationService : IVenueLocationService
         response.InteriorImage = DeserializeImages(venue.InteriorImage);
         response.FullPageMenuImage = DeserializeImages(venue.FullPageMenuImage);
 
+        // Map categories from VenueLocationCategories
+        response.Categories = venue.VenueLocationCategories?
+            .Where(vlc => !vlc.IsDeleted && vlc.Category != null && !vlc.Category.IsDeleted)
+            .Select(vlc => new CategoryInfo
+            {
+                Id = vlc.Category.Id,
+                Name = vlc.Category.Name
+            })
+            .ToList();
+
         // Add today's opening hour info
         var todayOpeningHour = venue.VenueOpeningHours?.FirstOrDefault();
         if (todayOpeningHour != null)
