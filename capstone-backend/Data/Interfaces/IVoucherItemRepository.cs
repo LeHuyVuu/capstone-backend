@@ -8,5 +8,6 @@ namespace capstone_backend.Data.Interfaces
         Task<bool> IsExistedCodeAsync(string code);
         Task ExecuteUpdateUnassignedVoucherItemsAsync(int voucherId);
         Task<VoucherItem?> GetIncludeByIdAsync(int id);
+        Task<VoucherItem?> GetByItemCodeWithDetailsAsync(string itemCode);
     }
 }

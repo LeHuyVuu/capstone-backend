@@ -93,6 +93,8 @@ public interface IUnitOfWork : IDisposable
 
     IVoucherJobRepository VoucherJobs { get; }
 
+    IVoucherItemJobRepository VoucherItemJobs { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>

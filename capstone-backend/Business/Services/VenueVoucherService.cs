@@ -6,6 +6,7 @@ using capstone_backend.Business.Jobs.Voucher;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Hangfire;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 using System.Transactions;
@@ -546,6 +547,62 @@ namespace capstone_backend.Business.Services
             await _unitOfWork.SaveChangesAsync();
 
             return voucher.Id;
+        }
+
+        public async Task<VoucherItemValidationAndRedemptionResponse> ValidateVoucherCodeAsync(int userId, ValidateAndRedeemVoucherItemRequest request)
+        {
+            var validationMessage = string.Empty;
+
+            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
+            if (venueOwner == null)
+                throw new Exception("Không tìm thấy chủ địa điểm");
+
+            var voucherItem = await _unitOfWork.VoucherItems.GetByItemCodeWithDetailsAsync(request.ItemCode);
+            if (voucherItem == null)
+                throw new Exception("Mã voucher không hợp lệ");
+
+            if (voucherItem.Voucher == null)
+                throw new Exception("Mã voucher không hợp lệ");
+
+            if (voucherItem.Voucher.VenueOwnerId != venueOwner.Id)
+                throw new Exception("Bạn không có quyền xác thực voucher này");
+
+            var response = _mapper.Map<VoucherItemValidationAndRedemptionResponse>(voucherItem);
+
+            var now = DateTime.UtcNow;
+
+            if (voucherItem.VoucherItemMemberId == null)
+            {
+                response.IsValid = false;
+                response.ValidationMessage = "Mã voucher chưa có người sở hữu";
+                return response;
+            }
+
+            if (voucherItem.Status == VoucherItemStatus.USED.ToString())
+            {
+                response.IsValid = false;
+                response.ValidationMessage = "Mã voucher đã được sử dụng";
+                return response;
+            }
+
+            if ((voucherItem.ExpiredAt.HasValue && voucherItem.ExpiredAt.Value <= now)
+                || voucherItem.Status == VoucherItemStatus.EXPIRED.ToString())
+            {
+                response.IsValid = false;
+                response.ValidationMessage = "Mã voucher đã hết hạn";
+                return response;
+            }
+
+            if (voucherItem.Status != VoucherItemStatus.ACQUIRED.ToString())
+            {
+                response.IsValid = false;
+                response.ValidationMessage = "Mã voucher không ở trạng thái có thể sử dụng";
+                return response;
+            }
+
+            response.IsValid = true;
+            response.ValidationMessage = "Mã voucher hợp lệ";
+            return response;
         }
     }
 }

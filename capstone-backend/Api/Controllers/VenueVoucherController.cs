@@ -131,6 +131,27 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Validate voucher code for a venue (có thể là thêm 1 button 'Kiểm tra')
+        /// </summary>
+        [HttpPost("voucher-items/validate")]
+        public async Task<IActionResult> ValidateVenueVoucherCode([FromBody] ValidateAndRedeemVoucherItemRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.ValidateVoucherCodeAsync(userId.Value, request);
+                return OkResponse(result, result.IsValid ? "Mã voucher hợp lệ" : "Mã voucher không hợp lệ");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Create voucher for a venue
         /// </summary>
         /// <remarks>

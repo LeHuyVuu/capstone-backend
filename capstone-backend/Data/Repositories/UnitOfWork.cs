@@ -52,7 +52,8 @@ public class UnitOfWork : IUnitOfWork
         IVoucherItemMemberRepository voucherItemMemberRepository,
         IVoucherLocationRepository voucherLocationRepository,
         ICategoryRepository categoryRepository,
-        IVoucherJobRepository voucherJobRepository)
+        IVoucherJobRepository voucherJobRepository,
+        IVoucherItemJobRepository voucherItemJobRepository)
     {
         _context = context;
         Users = userRepository;
@@ -93,6 +94,7 @@ public class UnitOfWork : IUnitOfWork
         VoucherLocations = voucherLocationRepository;
         Categories = categoryRepository;
         VoucherJobs = voucherJobRepository;
+        VoucherItemJobs = voucherItemJobRepository;
     }
 
     public MyDbContext Context => _context;
@@ -172,6 +174,8 @@ public class UnitOfWork : IUnitOfWork
     public ICategoryRepository Categories { get; }
 
     public IVoucherJobRepository VoucherJobs { get; set; }
+
+    public IVoucherItemJobRepository VoucherItemJobs { get; set; }
 
     public async Task<int> SaveChangesAsync()
     {
