@@ -85,6 +85,9 @@ namespace capstone_backend.Business.Mappings
 
             CreateMap<VoucherItem, ExchangeVoucherItemResult>()
                 .ForMember(dest => dest.VoucherTitle, opt => opt.MapFrom(src => src.Voucher.Title));
+
+            CreateMap<VoucherItem, MemberVoucherItemResponse>()
+                .ForMember(dest => dest.VoucherTitle, opt => opt.MapFrom(src => src.Voucher.Title));
         }
     }
 }

@@ -293,5 +293,69 @@ namespace capstone_backend.Business.Services
                 PageSize = pageSize
             };
         }
+
+        public async Task<PagedResult<MemberVoucherItemResponse>> GetMyVouchersAsync(int userId, GetMyVouchersRequest request)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Không tìm thấy thông tin thành viên");
+
+            var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
+            var pageSize = request.PageSize < 1 ? 10 : request.PageSize;
+
+            var keyword = request.Keyword?.Trim().ToLower();
+
+            // Create order
+            Func<IQueryable<VoucherItem>, IOrderedQueryable<VoucherItem>> orderBy = q =>
+                q.OrderByDescending(v => v.CreatedAt); // Default order
+
+            if (!string.IsNullOrEmpty(request.SortBy))
+            {
+                var sortBy = request.SortBy.Trim().ToLower();
+                var order = request.OrderBy?.Trim().ToLower() ?? "desc";
+
+                orderBy = (sortBy, order) switch
+                {
+                    ("createdat", "asc") => q => q.OrderBy(x => x.CreatedAt),
+                    ("createdat", "desc") => q => q.OrderByDescending(x => x.CreatedAt),
+                    ("updatedat", "asc") => q => q.OrderBy(x => x.UpdatedAt),
+                    ("updatedat", "desc") => q => q.OrderByDescending(x => x.UpdatedAt),
+                    _ => q => q.OrderByDescending(x => x.CreatedAt) // Default order
+                };
+            }
+
+            var allowedStatuses = new List<string>
+            {
+                VoucherItemStatus.ACQUIRED.ToString(),
+                VoucherItemStatus.USED.ToString(),
+                VoucherItemStatus.EXPIRED.ToString()
+            };
+
+            var (voucherItems, totalCount) = await _unitOfWork.VoucherItems.GetPagedAsync(
+                    pageNumber,
+                    pageSize,
+                    vi => vi.IsDeleted == false && 
+                          (request.Status != null ? vi.Status == request.Status.ToString() : allowedStatuses.Contains(vi.Status)) &&
+                          vi.VoucherItemMember != null &&
+                          vi.VoucherItemMember.MemberId == member.Id &&
+                          (string.IsNullOrEmpty(keyword) || (
+                            vi.ItemCode != null && vi.ItemCode.ToLower().Contains(keyword) ||
+                            vi.Voucher.Title != null && vi.Voucher.Title.ToLower().Contains(keyword) ||
+                            vi.Voucher.Description != null && vi.Voucher.Description.ToLower().Contains(keyword)
+                         )),
+                    orderBy,
+                    vi => vi.Include(vi => vi.Voucher)
+                );
+
+
+            var response = _mapper.Map<List<MemberVoucherItemResponse>>(voucherItems);
+            return new PagedResult<MemberVoucherItemResponse>
+            {
+                Items = response,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
     }
 }

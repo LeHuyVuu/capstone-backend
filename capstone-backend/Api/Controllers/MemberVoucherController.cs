@@ -75,5 +75,26 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get member vouchers
+        /// </summary>
+        [HttpGet("my-vouchers")]
+        public async Task<IActionResult> GetMyVouchers([FromQuery] GetMyVouchersRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("Không xác thực được người dùng");
+
+                var result = await _memberVoucherService.GetMyVouchersAsync(userId.Value, request);
+                return OkResponse(result, "Lấy danh sách voucher của bạn thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
