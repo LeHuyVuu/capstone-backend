@@ -213,10 +213,10 @@ namespace capstone_backend.Business.Services
                             op = ChallengeConstants.RuleOps.In;
                             if (key == ChallengeConstants.RuleKeys.VENUE_ID)
                             {
-                                var intList = JsonSerializer.Deserialize<List<string>>(element.GetRawText());
+                                var intList = JsonSerializer.Deserialize<List<int>>(element.GetRawText());
                                 if (intList != null && intList.Any())
                                 {
-                                    var uniqueIds = intList.Distinct().ToList();
+                                    var uniqueIds = intList.Distinct().Select(x => x.ToString()).ToList();
                                     var invalidIds = await _unitOfWork.VenueLocations.GetInvalidVenueIdsAsync(uniqueIds);
                                     if (invalidIds.Any())
                                     {
