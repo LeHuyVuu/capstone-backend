@@ -15,7 +15,7 @@ namespace capstone_backend.Data.Repositories
         public async Task ExecuteUpdateUnassignedVoucherItemsAsync(int voucherId)
         {
             await _dbSet
-                .Where(vi => vi.VoucherId == voucherId && vi.IsDeleted == false)
+                .Where(vi => vi.VoucherId == voucherId && vi.IsDeleted == false && vi.Status == VoucherItemStatus.AVAILABLE.ToString())
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(vi => vi.Status, VoucherItemStatus.ENDED.ToString())
                     .SetProperty(vi => vi.UpdatedAt, DateTime.UtcNow)

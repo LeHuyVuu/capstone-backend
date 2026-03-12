@@ -443,5 +443,55 @@ namespace capstone_backend.Business.Services
 
             return voucher.Id;
         }
+
+        public async Task<int> EndVoucherAsync(int userId, int voucherId)
+        {
+            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
+            if (venueOwner == null)
+                throw new Exception("Không tìm thấy chủ địa điểm");
+
+            var voucher = await _unitOfWork.Vouchers.GetIncludeByIdAsync(voucherId);
+            if (voucher == null)
+                throw new Exception("Không tìm thấy voucher");
+
+            if (voucher.VenueOwnerId != venueOwner.Id)
+                throw new Exception("Bạn không có quyền kết thúc voucher này");
+
+            if (voucher.Status != VoucherStatus.ACTIVE.ToString() && 
+                voucher.Status != VoucherStatus.APPROVED.ToString())
+                throw new Exception("Chỉ có thể kết thúc voucher ở trạng thái ACTIVE hoặc APPROVED");
+
+            var now = DateTime.UtcNow;
+
+            // Remove start job for approved voucher if exist
+            if (voucher.Status == VoucherStatus.APPROVED.ToString())
+            {
+                var startJob = await _unitOfWork.VoucherJobs.GetByVoucherIdAndTypeAsync(voucher.Id, VoucherJobType.ACTIVATE_VOUCHER.ToString());
+                if (startJob != null)
+                {
+                    BackgroundJob.Delete(startJob.JobId);
+                    _unitOfWork.VoucherJobs.Delete(startJob);
+                }
+            }
+
+            // Remove end job if exist
+            var endJob = await _unitOfWork.VoucherJobs.GetByVoucherIdAndTypeAsync(voucher.Id, VoucherJobType.END_VOUCHER.ToString());
+            if (endJob != null)
+            {
+                BackgroundJob.Delete(endJob.JobId);
+                _unitOfWork.VoucherJobs.Delete(endJob);
+            }
+
+            // Update all remaining voucher items to end
+            await _unitOfWork.VoucherItems.ExecuteUpdateUnassignedVoucherItemsAsync(voucher.Id);
+
+            voucher.Status = VoucherStatus.ENDED.ToString();
+            voucher.UpdatedAt = now;
+
+            _unitOfWork.Vouchers.Update(voucher);
+            await _unitOfWork.SaveChangesAsync();
+
+            return voucher.Id;
+        }
     }
 }

@@ -14,5 +14,6 @@ namespace capstone_backend.Business.Interfaces
         Task<VoucherDetailResponse> GetVoucherByIdAsync(int userId, int voucherId);
         Task<VoucherSummaryResponse> GetVoucherSummaryByIdAsync(int userId, int voucherId);
         Task<int> ActivateVoucherAsync(int userId, int voucherId);
+        Task<int> EndVoucherAsync(int userId, int voucherId);
     }
 }

@@ -261,7 +261,7 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Activate voucher soon after approval
+        /// Activate voucher manually
         /// </summary>
         [HttpPost("{voucherId:int}/activate")]
         public async Task<IActionResult> ActivateVenueVoucher(int voucherId)
@@ -273,9 +273,32 @@ namespace capstone_backend.Api.Controllers
                     return UnauthorizedResponse("User không xác thực");
 
                 var result = await _venueVoucherService.ActivateVoucherAsync(userId.Value, voucherId);
-                if (result == null)
+                if (result <= 0)
                     return BadRequestResponse("Không thể kích hoạt voucher");
-                return OkResponse(result);
+                return OkResponse(result, "Kích hoạt voucher thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// End voucher manually
+        /// </summary>
+        [HttpPost("{voucherId:int}/end")]
+        public async Task<IActionResult> EndVenueVoucher(int voucherId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.EndVoucherAsync(userId.Value, voucherId);
+                if (result <= 0)
+                    return BadRequestResponse("Không thể kết thúc voucher");
+                return OkResponse(result, "Kết thúc voucher thành công");
             }
             catch (Exception ex)
             {
