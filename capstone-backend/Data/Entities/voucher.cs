@@ -19,6 +19,8 @@ public partial class Voucher
 
     public string? Description { get; set; }
 
+    public int PointPrice { get; set; } = 0;
+
     public string? DiscountType { get; set; }
 
     [Precision(18, 2)]

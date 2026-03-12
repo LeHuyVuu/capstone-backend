@@ -1,8 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
-
-namespace capstone_backend.Business.DTOs.Voucher
+﻿namespace capstone_backend.Business.DTOs.Voucher
 {
-    public class VoucherResponse
+    public class MemberVoucherDetailResponse
     {
         public int Id { get; set; }
         public int? VenueOwnerId { get; set; }
@@ -20,7 +18,13 @@ namespace capstone_backend.Business.DTOs.Voucher
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public string Status { get; set; } = null!;
+
+        public bool IsAvailable { get; set; }
+        public string? UnavailableReason { get; set; }
+
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+
+        public List<MemberVoucherLocationItemResponse> Locations { get; set; } = new();
     }
 }
