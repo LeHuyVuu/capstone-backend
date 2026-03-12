@@ -77,7 +77,7 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Get member vouchers history (voucher items)
+        /// Get member's voucher codes
         /// </summary>
         [HttpGet("my-vouchers")]
         public async Task<IActionResult> GetMyVouchers([FromQuery] GetMyVouchersRequest request)
@@ -98,7 +98,7 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
-        /// Get member voucher item detail
+        /// Get member voucher item (code) detail
         /// </summary>
         [HttpGet("my-vouchers/{voucherItemId:int}")]
         public async Task<IActionResult> GetMyVoucherDetails(int voucherItemId)
@@ -113,6 +113,27 @@ namespace capstone_backend.Api.Controllers
                 if (result == null)
                     return NotFoundResponse("Không tìm thấy voucher của bạn");
                 return OkResponse(result, "Lấy chi tiết voucher của bạn thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get transaction history for member
+        /// </summary>
+        [HttpGet("transactions")]
+        public async Task<IActionResult> GetMyVoucherTransactions([FromQuery] GetMemberVoucherTransactionsRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("Không xác thực được người dùng");
+
+                var result = await _memberVoucherService.GetMemberVoucherTransactionsAsync(userId.Value, request);
+                return OkResponse(result, "Lấy lịch sử giao dịch voucher của bạn thành công");
             }
             catch (Exception ex)
             {

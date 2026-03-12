@@ -2,7 +2,7 @@
 
 namespace capstone_backend.Business.DTOs.Voucher
 {
-    public class GetMyVouchersRequest
+    public class GetMemberVoucherTransactionsRequest
     {
         /// <example>1</example>
         public int PageNumber { get; set; } = 1;
@@ -12,15 +12,8 @@ namespace capstone_backend.Business.DTOs.Voucher
 
         public string? Keyword { get; set; }
 
-        public int? VoucherId { get; set; }
-
-        /// <summary>
-        /// Status:
-        /// - ACQUIRED
-        /// - USED
-        /// - EXPIRED
-        /// </summary>
-        public VoucherItemStatus? Status { get; set; }
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
 
         /// <summary>
         /// SortBy:

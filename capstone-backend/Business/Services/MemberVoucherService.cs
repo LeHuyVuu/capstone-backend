@@ -8,6 +8,7 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using static Microsoft.Extensions.Logging.EventSource.LoggingEventSource;
 
 namespace capstone_backend.Business.Services
 {
@@ -338,6 +339,7 @@ namespace capstone_backend.Business.Services
                           (request.Status != null ? vi.Status == request.Status.ToString() : allowedStatuses.Contains(vi.Status)) &&
                           vi.VoucherItemMember != null &&
                           vi.VoucherItemMember.MemberId == member.Id &&
+                          (!request.VoucherId.HasValue || vi.VoucherId == request.VoucherId.Value) &&
                           (string.IsNullOrEmpty(keyword) || (
                             vi.ItemCode != null && vi.ItemCode.ToLower().Contains(keyword) ||
                             vi.Voucher.Title != null && vi.Voucher.Title.ToLower().Contains(keyword) ||
@@ -373,6 +375,61 @@ namespace capstone_backend.Business.Services
 
             var response = _mapper.Map<MemberVoucherItemDetailResponse>(voucherItem);
             return response;
+        }
+
+        public async Task<PagedResult<MemberVoucherTransactionListItemResponse>> GetMemberVoucherTransactionsAsync(int userId, GetMemberVoucherTransactionsRequest request)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Không tìm thấy thông tin thành viên");
+
+            var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
+            var pageSize = request.PageSize < 1 ? 10 : request.PageSize;
+
+            var keyword = request.Keyword?.Trim().ToLower();
+
+            // Create order
+            Func<IQueryable<VoucherItemMember>, IOrderedQueryable<VoucherItemMember>> orderBy = q =>
+                q.OrderByDescending(v => v.CreatedAt); // Default order
+
+            if (!string.IsNullOrEmpty(request.SortBy))
+            {
+                var sortBy = request.SortBy.Trim().ToLower();
+                var order = request.OrderBy?.Trim().ToLower() ?? "desc";
+                orderBy = (sortBy, order) switch
+                {
+                    ("createdat", "asc") => q => q.OrderBy(x => x.CreatedAt),
+                    ("createdat", "desc") => q => q.OrderByDescending(x => x.CreatedAt),
+                    ("updatedat", "asc") => q => q.OrderBy(x => x.UpdatedAt),
+                    ("updatedat", "desc") => q => q.OrderByDescending(x => x.UpdatedAt),
+                    _ => q => q.OrderByDescending(x => x.CreatedAt) // Default order
+                };
+            }
+
+            var (transactions, totalCount) = await _unitOfWork.VoucherItemMembers.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                vim => vim.MemberId == member.Id &&
+                       (!request.FromDate.HasValue || vim.CreatedAt >= request.FromDate.Value) &&
+                       (!request.ToDate.HasValue || vim.CreatedAt <= request.ToDate.Value) &&
+                       (string.IsNullOrEmpty(keyword) || (
+                            vim.VoucherItems.Any(vi => vi.ItemCode != null && vi.ItemCode.ToLower().Contains(keyword)) ||
+                            vim.VoucherItems.Any(vi => vi.Voucher.Title != null && vi.Voucher.Title.ToLower().Contains(keyword)) ||
+                            vim.VoucherItems.Any(vi => vi.Voucher.Description != null && vi.Voucher.Description.ToLower().Contains(keyword))
+                       )),
+                orderBy,
+                vim => vim.Include(vim => vim.VoucherItems).ThenInclude(vi => vi.Voucher)
+            );
+
+            var response = _mapper.Map<List<MemberVoucherTransactionListItemResponse>>(transactions);
+
+            return new PagedResult<MemberVoucherTransactionListItemResponse>
+            {
+                Items = response,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
         }
     }
 }
