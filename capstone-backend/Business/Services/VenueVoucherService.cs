@@ -666,6 +666,8 @@ namespace capstone_backend.Business.Services
             {
                 BackgroundJob.Delete(expireJob.JobId);
                 _unitOfWork.VoucherItemJobs.Delete(expireJob);
+
+                voucherItem.ExpiredAt = null;
             }
 
             // Update status to USED

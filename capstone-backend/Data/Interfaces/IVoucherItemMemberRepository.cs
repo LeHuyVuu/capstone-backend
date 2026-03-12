@@ -5,5 +5,6 @@ namespace capstone_backend.Data.Interfaces
 {
     public interface IVoucherItemMemberRepository : IGenericRepository<VoucherItemMember>
     {
+        Task<VoucherItemMember?> GetIncludeByIdAsync(int memberId, int voucherItemMemberId);
     }
 }

@@ -9,5 +9,7 @@ namespace capstone_backend.Data.Interfaces
         Task ExecuteUpdateUnassignedVoucherItemsAsync(int voucherId);
         Task<VoucherItem?> GetIncludeByIdAsync(int id);
         Task<VoucherItem?> GetByItemCodeWithDetailsAsync(string itemCode);
+        Task<int> CountMemberAcquiredVoucherAsync(int memberId, int voucherId);
+        Task<IEnumerable<VoucherItem>> GetAvailableVoucherItemsForExchangeAsync(int voucherId, int quantity);
     }
 }

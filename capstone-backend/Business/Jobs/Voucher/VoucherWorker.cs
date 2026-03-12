@@ -66,13 +66,42 @@ namespace capstone_backend.Business.Jobs.Voucher
             await _unitOfWork.SaveChangesAsync();
         }
 
+        public async Task ExpireVoucherItemAsync(int voucherItemId)
+        {
+            var now = DateTime.UtcNow;
+
+            var voucherItem = await _unitOfWork.VoucherItems.GetByIdAsync(voucherItemId);
+            if (voucherItem == null || voucherItem.IsDeleted == true)
+                return;
+
+            if (voucherItem.Status != VoucherItemStatus.ACQUIRED.ToString())
+                return;
+
+            voucherItem.Status = VoucherItemStatus.EXPIRED.ToString();
+            voucherItem.UpdatedAt = now;
+
+            // remove job in db for auto expire
+            await CleanupItemJobAsync(voucherItemId, VoucherItemJobType.EXPIRE_VOUCHER_ITEM.ToString());
+            _unitOfWork.VoucherItems.Update(voucherItem);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         private async Task CleanupJobAsync(int voucherId, string type)
         {
             var job = await _unitOfWork.VoucherJobs.GetByVoucherIdAndTypeAsync(voucherId, type);
             if (job == null) 
                 return;
 
-            BackgroundJob.Delete(job.JobId);
+            _unitOfWork.VoucherJobs.Delete(job);
+        }
+
+        private async Task CleanupItemJobAsync(int voucherItemId, string type)
+        {
+            var job = await _unitOfWork.VoucherItemJobs.GetByVoucherItemIdAndTypeAsync(voucherItemId, type);
+            if (job == null)
+                return;
+
+            _unitOfWork.VoucherItemJobs.Delete(job);
         }
     }
 }

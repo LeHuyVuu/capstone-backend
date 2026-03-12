@@ -12,6 +12,13 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<int> CountMemberAcquiredVoucherAsync(int memberId, int voucherId)
+        {
+            return await _dbSet
+                .Where(vi => vi.VoucherId == voucherId && vi.IsDeleted == false && vi.VoucherItemMember != null && vi.VoucherItemMember.MemberId == memberId)
+                .CountAsync();
+        }
+
         public async Task ExecuteUpdateUnassignedVoucherItemsAsync(int voucherId)
         {
             await _dbSet
@@ -20,6 +27,19 @@ namespace capstone_backend.Data.Repositories
                     .SetProperty(vi => vi.Status, VoucherItemStatus.ENDED.ToString())
                     .SetProperty(vi => vi.UpdatedAt, DateTime.UtcNow)
                 );
+        }
+
+        public async Task<IEnumerable<VoucherItem>> GetAvailableVoucherItemsForExchangeAsync(int voucherId, int quantity)
+        {
+            return await _dbSet
+                .Where(vi =>
+                    vi.VoucherId == voucherId &&
+                    vi.IsDeleted == false &&
+                    vi.VoucherItemMemberId == null &&
+                    vi.Status == VoucherItemStatus.AVAILABLE.ToString()
+                ).OrderBy(vi => vi.Id)
+                .Take(quantity)
+                .ToListAsync();
         }
 
         public async Task<VoucherItem?> GetByItemCodeWithDetailsAsync(string itemCode)

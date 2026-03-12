@@ -4,5 +4,6 @@
     {
         Task ActivateVoucherAsync(int voucherId);
         Task EndVoucherAsync(int voucherId);
+        Task ExpireVoucherItemAsync(int voucherItemId);
     }
 }
