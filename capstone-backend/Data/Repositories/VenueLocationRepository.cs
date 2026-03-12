@@ -36,6 +36,8 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
             .Include(v => v.VenueLocationTags)
                 .ThenInclude(vlt => vlt.LocationTag)
                     .ThenInclude(lt => lt!.CouplePersonalityType)
+            .Include(v => v.VenueLocationCategories)
+                .ThenInclude(vlc => vlc.Category)
             .Include(v => v.VenueOwner)
             .Include(v => v.VenueOpeningHours.Where(oh => oh.Day == todayDbFormat))
             .AsSplitQuery()

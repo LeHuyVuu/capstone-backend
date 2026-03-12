@@ -11,6 +11,10 @@ public class CreateSpecialEventRequest
     [StringLength(1000, ErrorMessage = "Description cannot exceed 1000 characters")]
     public string? Description { get; set; }
     
+    [StringLength(500, ErrorMessage = "Banner URL cannot exceed 500 characters")]
+    public string? BannerUrl { get; set; }
+    
+    
     [Required(ErrorMessage = "Start date is required")]
     public DateTime StartDate { get; set; }
     

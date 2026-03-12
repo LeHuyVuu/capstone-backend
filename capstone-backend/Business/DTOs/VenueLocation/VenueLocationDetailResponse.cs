@@ -24,6 +24,7 @@ public class VenueLocationDetailResponse
     public int? FavoriteCount { get; set; }
     public string? Status { get; set; }
     public List<string>? Category { get; set; }
+    public List<CategoryInfo>? Categories { get; set; }
     public List<string>? CoverImage { get; set; }
     public List<string>? InteriorImage { get; set; }
     public List<string>? FullPageMenuImage { get; set; }
@@ -78,6 +79,15 @@ public class CouplePersonalityTypeInfo
     public int Id { get; set; }
     public string? Name { get; set; }
 
+}
+
+/// <summary>
+/// Category information
+/// </summary>
+public class CategoryInfo
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = null!;
 }
 
 /// <summary>

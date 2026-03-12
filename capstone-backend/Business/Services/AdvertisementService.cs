@@ -859,10 +859,7 @@ public class AdvertisementService : IAdvertisementService
             Description = specialEvent.Description,
             StartDate = specialEvent.StartDate,
             EndDate = specialEvent.EndDate,
-            BannerUrl = specialEvent.BannerUrl ?? string.Empty,
-            IsYearly = specialEvent.IsYearly ?? false,
-            CreatedAt = specialEvent.CreatedAt ?? DateTime.UtcNow
-        };
+            BannerUrl = specialEvent.BannerUrl        };
 
         _logger.LogInformation("Retrieved special event detail: '{EventName}'", specialEvent.EventName);
 
