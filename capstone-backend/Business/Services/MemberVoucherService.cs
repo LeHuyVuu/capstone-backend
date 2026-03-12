@@ -19,6 +19,25 @@ namespace capstone_backend.Business.Services
             _mapper = mapper;
         }
 
+        public async Task<MemberVoucherDetailResponse> GetMemberVoucherByIdAsync(int voucherId)
+        {
+            var voucher = await _unitOfWork.Vouchers.GetIncludeByIdAsync(voucherId);
+            if (voucher == null || voucher.Status != VoucherStatus.ACTIVE.ToString())
+                throw new Exception("Không tìm thấy voucher");
+
+            var response = _mapper.Map<MemberVoucherDetailResponse>(voucher);
+            if ((voucher.RemainingQuantity ?? 0) <= 0)
+            {
+                response.IsAvailable = false;
+                response.UnavailableReason = "Voucher đã hết số lượng";
+                return response;
+            }
+
+            response.IsAvailable = true;
+            response.UnavailableReason = null;
+            return response;
+        }
+
         public async Task<PagedResult<MemberVoucherListItemResponse>> GetMemberVouchersAsync(GetMemberVouchersRequest request)
         {
             var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
