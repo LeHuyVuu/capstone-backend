@@ -418,7 +418,7 @@ public partial class MeilisearchService
            ?? "http://167.99.68.193:7700";
 
 var apiKey = Environment.GetEnvironmentVariable("MEILI_MASTER_KEY") 
-           ?? "Zp9xQ2f7wY8kLmN5rT4uH1cV6bA3sD0qa";
+           ?? "couplemood123";
 
 var client = new MeilisearchClient(host, apiKey);
 
