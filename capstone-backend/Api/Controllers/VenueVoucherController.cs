@@ -393,6 +393,46 @@ namespace capstone_backend.Api.Controllers
             }
         }
 
-        
+        /// <summary>
+        /// Get redemption history of a voucher (xem lịch sử đã sử dụng tại địa điểm)
+        /// </summary>
+        [HttpGet("{voucherId:int}/redemptions")]
+        public async Task<IActionResult> GetVenueVoucherRedemptions(int voucherId, [FromQuery] GetVoucherActivityRequest query)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.GetVoucherRedemptionsAsync(userId.Value, voucherId, query);
+                return OkResponse(result, "Lấy lịch sử sử dụng voucher thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get exchange history of a voucher (xem lịch sử đã đổi tại địa điểm)
+        /// </summary>
+        [HttpGet("{voucherId:int}/exchanges")]
+        public async Task<IActionResult> GetVenueVoucherExchanges(int voucherId, [FromQuery] GetVoucherActivityRequest query)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User không xác thực");
+
+                var result = await _venueVoucherService.GetVoucherExchangesAsync(userId.Value, voucherId, query);
+                return OkResponse(result, "Lấy lịch sử đổi voucher thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
