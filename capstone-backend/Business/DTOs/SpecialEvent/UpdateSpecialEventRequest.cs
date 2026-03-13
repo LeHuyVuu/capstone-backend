@@ -13,6 +13,7 @@ public class UpdateSpecialEventRequest
     [StringLength(500, ErrorMessage = "Banner URL cannot exceed 500 characters")]
     public string? BannerUrl { get; set; }
     
+    public bool? IsYearly { get; set; }
     
     public DateTime? StartDate { get; set; }
     
