@@ -23,11 +23,9 @@ public partial class MeilisearchService : IMeilisearchService
         ILogger<MeilisearchService> logger)
     {
         var host = Environment.GetEnvironmentVariable("MEILISEARCH_HOST") 
-                   ?? configuration["Meilisearch:Host"] 
-                   ?? "http://localhost:7700";
-        var apiKey = Environment.GetEnvironmentVariable("MEILISEARCH_API_KEY") 
-                     ?? configuration["Meilisearch:ApiKey"] 
-                     ?? "masterKey123";
+                   ?? "http://167.99.68.193:7700";
+        var apiKey = Environment.GetEnvironmentVariable("MEILI_MASTER_KEY") 
+                     ?? "Zp9xQ2f7wY8kLmN5rT4uH1cV6bA3sD0qa";
         _indexName = configuration["Meilisearch:IndexName"] ?? "venue_locations";
 
         _meilisearchClient = new MeilisearchClient(host, apiKey);

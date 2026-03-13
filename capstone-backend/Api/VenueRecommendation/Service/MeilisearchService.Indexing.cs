@@ -22,8 +22,7 @@ public partial class MeilisearchService
 
             var document = await MapToQueryResultAsync(venue);
             var index = _meilisearchClient.Index(_indexName);
-            await index.AddDocumentsAsync(new[] { document });
-
+await index.AddDocumentsAsync(new[] { document }, "id");
             _logger.LogInformation("Indexed venue location {VenueId} to Meilisearch", venueId);
             return true;
         }
@@ -55,8 +54,7 @@ public partial class MeilisearchService
             }
 
             var index = _meilisearchClient.Index(_indexName);
-            await index.AddDocumentsAsync(documents);
-
+            await index.AddDocumentsAsync(documents, "id");
             _logger.LogInformation("Successfully indexed {Count} venue locations to Meilisearch", documents.Count);
             return documents.Count;
         }

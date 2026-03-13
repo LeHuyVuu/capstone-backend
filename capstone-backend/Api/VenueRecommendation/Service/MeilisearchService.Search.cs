@@ -415,9 +415,12 @@ public partial class MeilisearchService
         SearchQuery searchQuery)
     {
         var host = Environment.GetEnvironmentVariable("MEILISEARCH_HOST") 
-                   ?? "http://167.99.68.193:7700";
-        var apiKey = Environment.GetEnvironmentVariable("MEILISEARCH_API_KEY") 
-                     ?? "masterKey123";
+           ?? "http://167.99.68.193:7700";
+
+var apiKey = Environment.GetEnvironmentVariable("MEILI_MASTER_KEY") 
+           ?? "Zp9xQ2f7wY8kLmN5rT4uH1cV6bA3sD0qa";
+
+var client = new MeilisearchClient(host, apiKey);
 
         using var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
