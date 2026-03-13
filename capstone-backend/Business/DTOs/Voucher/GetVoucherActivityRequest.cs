@@ -1,6 +1,6 @@
 ﻿namespace capstone_backend.Business.DTOs.Voucher
 {
-    public class GetVoucherRedemptionsRequest
+    public class GetVoucherActivityRequest
     {
         /// <example>1</example>
         public int PageNumber { get; set; } = 1;
@@ -12,13 +12,6 @@
 
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
-
-        /// <summary>
-        /// SortBy:
-        /// - usedAt
-        /// </summary>
-        /// <example>usedAt</example>
-        public string? SortBy { get; set; } = "usedAt";
 
         /// <summary>
         /// OrderBy:
