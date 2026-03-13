@@ -666,8 +666,6 @@ namespace capstone_backend.Business.Services
             {
                 BackgroundJob.Delete(expireJob.JobId);
                 _unitOfWork.VoucherItemJobs.Delete(expireJob);
-
-                voucherItem.ExpiredAt = null;
             }
 
             // Update status to USED
@@ -682,6 +680,113 @@ namespace capstone_backend.Business.Services
             redeemedResponse.IsValid = true;
             redeemedResponse.ValidationMessage = "Mã voucher đã được sử dụng thành công";
             return redeemedResponse;
+        }
+
+        public async Task<PagedResult<VenueVoucherActivityResponse>> GetVoucherRedemptionsAsync(int userId, int voucherId, GetVoucherRedemptionsRequest query)
+        {
+            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
+            if (venueOwner == null)
+                throw new Exception("Không tìm thấy chủ địa điểm");
+
+            var voucher = await _unitOfWork.Vouchers.GetByIdAsync(voucherId);
+            if (voucher == null || voucher.IsDeleted == true)
+                throw new Exception("Không tìm thấy voucher");
+
+            if (voucher.VenueOwnerId != venueOwner.Id)
+                throw new Exception("Bạn không có quyền xem lịch sử sử dụng voucher này");
+
+            if (query.FromDate.HasValue && query.ToDate.HasValue && query.FromDate.Value > query.ToDate.Value)
+                throw new Exception("FromDate phải nhỏ hơn hoặc bằng ToDate");
+
+            var pageNumber = query.PageNumber < 1 ? 1 : query.PageNumber;
+            var pageSize = query.PageSize < 1 ? 10 : query.PageSize;
+
+            var keyword = query.Keyword?.Trim().ToLower();
+
+            Func<IQueryable<VoucherItem>, IOrderedQueryable<VoucherItem>> orderBy = q =>
+                q.OrderByDescending(vi => vi.UsedAt);
+
+            if (!string.IsNullOrWhiteSpace(query.SortBy))
+            {
+                var sortBy = query.SortBy.Trim().ToLower();
+                var order = query.OrderBy?.Trim().ToLower() ?? "desc";
+
+                orderBy = (sortBy, order) switch
+                {
+                    ("usedat", "asc") => q => q.OrderBy(vi => vi.UsedAt),
+                    ("usedat", "desc") => q => q.OrderByDescending(vi => vi.UsedAt),
+                    _ => q => q.OrderByDescending(vi => vi.UsedAt)
+                };
+            }
+
+            var (voucherItems, totalCount) = await _unitOfWork.VoucherItems.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                vi => vi.VoucherId == voucherId
+                    && vi.VoucherItemMemberId != null
+                    && vi.UsedAt != null
+                    && vi.Status == VoucherItemStatus.USED.ToString()
+                    && vi.IsDeleted == false
+                    && (!query.FromDate.HasValue || vi.UsedAt >= query.FromDate.Value)
+                    && (!query.ToDate.HasValue || vi.UsedAt <= query.ToDate.Value)
+                    && (
+                    string.IsNullOrEmpty(keyword) ||
+                    (
+                        (vi.ItemCode != null && vi.ItemCode.ToLower().Contains(keyword)) ||
+                        (vi.VoucherItemMember != null &&
+                             vi.VoucherItemMember.Member != null &&
+                             vi.VoucherItemMember.Member.FullName != null &&
+                             vi.VoucherItemMember.Member.FullName.ToLower().Contains(keyword)) ||
+                        (vi.VoucherItemMember != null &&
+                             vi.VoucherItemMember.Member != null &&
+                             vi.VoucherItemMember.Member.User != null &&
+                             vi.VoucherItemMember.Member.User.Email != null &&
+                             vi.VoucherItemMember.Member.User.Email.ToLower().Contains(keyword)) ||
+                         (vi.VoucherItemMember != null &&
+                             vi.VoucherItemMember.Member != null &&
+                             vi.VoucherItemMember.Member.User != null &&
+                             vi.VoucherItemMember.Member.User.PhoneNumber != null &&
+                             vi.VoucherItemMember.Member.User.PhoneNumber.ToLower().Contains(keyword)
+                         )
+                    )
+                ),
+                orderBy,
+                q => q.Include(vi => vi.VoucherItemMember).ThenInclude(vim => vim.Member).ThenInclude(m => m.User)
+            );
+
+            var response = voucherItems.Select(vi =>
+            {
+                return new VenueVoucherActivityResponse
+                {
+                    VoucherId = vi.VoucherId,
+                    VoucherItemId = vi.Id,
+                    VoucherItemMemberId = vi.VoucherItemMemberId,
+
+                    ItemCode = vi.ItemCode,
+                    Status = vi.Status,
+
+                    MemberId = vi.VoucherItemMember?.MemberId,
+                    MemberName = vi.VoucherItemMember?.Member?.FullName,
+                    MemberEmail = vi.VoucherItemMember?.Member?.User?.Email,
+                    MemberPhone = vi.VoucherItemMember?.Member?.User?.PhoneNumber,
+
+                    Quantity = vi.VoucherItemMember?.Quantity ?? 0,
+                    TotalPointsUsed = vi.VoucherItemMember?.TotalPointsUsed ?? 0,
+                    Note = vi.VoucherItemMember?.Note,
+
+                    AcquiredAt = vi.AcquiredAt,
+                    UsedAt = vi.UsedAt,
+                    ExpiredAt = vi.ExpiredAt
+                };
+            }).ToList();
+
+            return new PagedResult<VenueVoucherActivityResponse>
+             {
+                 Items = response,
+                 TotalCount = totalCount,
+                 PageNumber = pageNumber,
+                 PageSize = pageSize
+             };
         }
     }
 }
