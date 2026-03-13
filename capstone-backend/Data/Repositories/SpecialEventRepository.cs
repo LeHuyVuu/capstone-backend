@@ -14,27 +14,48 @@ public class SpecialEventRepository : GenericRepository<SpecialEvent>, ISpecialE
     public async Task<List<SpecialEvent>> GetActiveSpecialEventsAsync()
     {
         var now = DateTime.UtcNow;
+        var currentMonth = now.Month;
+        var currentDay = now.Day;
 
-        return await _dbSet
-            .Where(e =>
-                e.IsDeleted == false
-                && e.StartDate.HasValue
-                && e.EndDate.HasValue
-                && (
-                    // Nếu là sự kiện hằng năm, chỉ so sánh ngày/tháng
-                    (e.IsYearly == true
-                        && now.Month >= e.StartDate.Value.Month
-                        && now.Month <= e.EndDate.Value.Month
-                        && now.Day >= e.StartDate.Value.Day
-                        && now.Day <= e.EndDate.Value.Day)
-                    ||
-                    // Nếu không, so sánh đầy đủ như cũ
-                    (e.IsYearly != true
-                        && e.StartDate.Value <= now
-                        && e.EndDate.Value >= now)
-                )
-            )
-            .OrderBy(e => e.StartDate)
+        // Lấy tất cả events chưa bị xóa
+        var allEvents = await _dbSet
+            .Where(e => e.IsDeleted == false)
             .ToListAsync();
+
+        // Filter in-memory để xử lý logic phức tạp
+        var activeEvents = allEvents.Where(e =>
+        {
+            if (!e.StartDate.HasValue || !e.EndDate.HasValue)
+                return false;
+
+            if (e.IsYearly == true)
+            {
+                // So sánh theo ngày/tháng cho sự kiện hằng năm
+                var startMonth = e.StartDate.Value.Month;
+                var startDay = e.StartDate.Value.Day;
+                var endMonth = e.EndDate.Value.Month;
+                var endDay = e.EndDate.Value.Day;
+
+                // Xử lý trường hợp event cross-year (vd: 20/12 - 5/1)
+                if (endMonth < startMonth || (endMonth == startMonth && endDay < startDay))
+                {
+                    return (currentMonth > startMonth || (currentMonth == startMonth && currentDay >= startDay)) ||
+                           (currentMonth < endMonth || (currentMonth == endMonth && currentDay <= endDay));
+                }
+
+                // Trường hợp bình thường trong cùng năm
+                return (currentMonth > startMonth || (currentMonth == startMonth && currentDay >= startDay)) &&
+                       (currentMonth < endMonth || (currentMonth == endMonth && currentDay <= endDay));
+            }
+            else
+            {
+                // So sánh đầy đủ cho sự kiện một lần
+                return e.StartDate.Value <= now && e.EndDate.Value >= now;
+            }
+        })
+        .OrderBy(e => e.StartDate)
+        .ToList();
+
+        return activeEvents;
     }
 }
