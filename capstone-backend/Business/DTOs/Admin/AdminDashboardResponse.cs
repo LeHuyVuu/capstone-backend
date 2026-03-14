@@ -23,6 +23,10 @@ public class AdminDashboardResponse
     public List<ChartDataPoint> TransactionChart { get; set; } = new();
     public List<ChartDataPoint> VenueGrowthChart { get; set; } = new();
     public List<ChartDataPoint> PostActivityChart { get; set; } = new();
+    
+    public string Period { get; set; } = null!;
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
 }
 
 public class ChartDataPoint
