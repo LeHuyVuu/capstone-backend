@@ -12,7 +12,6 @@ namespace capstone_backend.Business.DTOs.Voucher
 
         /// <summary>
         /// Status:
-        /// - DRAFTED
         /// - PENDING
         /// - APPROVED
         /// - REJECTED
