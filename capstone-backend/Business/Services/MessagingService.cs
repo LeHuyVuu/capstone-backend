@@ -377,6 +377,10 @@ public class MessagingService : IMessagingService
         {
             try
             {
+                // Get conversation info to check if it's a group
+                var conversation = await _conversationRepository.GetByIdAsync(request.ConversationId);
+                var isGroupConversation = conversation?.Type == "GROUP";
+                
                 // Get sender info for notification
                 var sender = await _unitOfWork.Users.GetByIdAsync(currentUserId);
                 var senderName = !string.IsNullOrWhiteSpace(sender?.DisplayName) 
@@ -407,16 +411,25 @@ public class MessagingService : IMessagingService
                         _ => request.Content ?? "Đã gửi một tin nhắn"
                     };
 
+                    // For group conversations, format: "SenderName in GroupName"
+                    string notificationTitle = senderName;
+                    if (isGroupConversation && !string.IsNullOrWhiteSpace(conversation?.Name))
+                    {
+                        notificationTitle = $"thông báo từ {conversation.Name}";
+                    }
+
                     var notificationRequest = new SendNotificationRequest
                     {
-                        Title = senderName,
+                        Title = notificationTitle,
                         Body = notificationBody,
                         ImageUrl = sender?.AvatarUrl,
                         Data = new Dictionary<string, string>
                         {
                             { "type", "CHAT" },
                             { "conversationId", request.ConversationId.ToString() },
-                            { "messageId", message.Id.ToString() }
+                            { "messageId", message.Id.ToString() },
+                            { "click_action", "FLUTTER_NOTIFICATION_CLICK" },
+                            { "route", "/chat" }
                         }
                     };
 
