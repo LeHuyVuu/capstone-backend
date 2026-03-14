@@ -54,6 +54,7 @@ namespace capstone_backend.Business.Services
                 pageSize,
                 v => (query.VenueOwnerId == null || v.VenueOwnerId == query.VenueOwnerId)
                     && v.IsDeleted == false
+                    && v.Status != VoucherStatus.DRAFTED.ToString()
                     && (query.Status == null || v.Status == query.Status.ToString())
                     && (string.IsNullOrEmpty(keyword) || (
                         v.Code != null && v.Code.ToLower().Contains(keyword) ||
