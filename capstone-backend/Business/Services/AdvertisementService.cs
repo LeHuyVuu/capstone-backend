@@ -761,7 +761,7 @@ public class AdvertisementService : IAdvertisementService
             };
         }
 
-        advertisement.Status = "DRAFT";
+        advertisement.Status = "REJECTED";
         advertisement.UpdatedAt = DateTime.UtcNow;
         advertisement.RejectionReason = request.Reason;
 
