@@ -415,7 +415,7 @@ public class MessagingService : IMessagingService
                     string notificationTitle = senderName;
                     if (isGroupConversation && !string.IsNullOrWhiteSpace(conversation?.Name))
                     {
-                        notificationTitle = $"thông báo từ {conversation.Name}";
+                        notificationTitle = $"{conversation.Name} đã gửi tin nhắn";                    
                     }
 
                     var notificationRequest = new SendNotificationRequest
