@@ -120,13 +120,12 @@ namespace capstone_backend.Api.Controllers
         /// Get list voucher items for admin
         /// </summary>
         [HttpGet("{voucherId:int}/items")]
-        public async Task<IActionResult> GetAdminVoucherItems(int voucherId)
+        public async Task<IActionResult> GetAdminVoucherItems(int voucherId, [FromQuery] GetVoucherItemsRequest query)
         {
             try
             {
-                var result = await _adminVoucherService.GetAdminVoucherByIdAsync(voucherId);
-                if (result == null)
-                    return NotFoundResponse("Không tìm thấy voucher");
+                var result = await _adminVoucherService.GetVoucherItemAsync(voucherId, query);
+
                 return OkResponse(result, "Lấy danh sách voucher item thành công");
             }
             catch (Exception ex)

@@ -48,6 +48,9 @@
         /// </summary>
         public decimal UsageRate { get; set; }
 
+        public int PointPrice { get; set; }
+        public int TotalPointsExchanged { get; set; }
+
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
     }

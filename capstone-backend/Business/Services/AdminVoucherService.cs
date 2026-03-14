@@ -235,5 +235,38 @@ namespace capstone_backend.Business.Services
 
             return voucher.Id;
         }
+
+        public async Task<PagedResult<VoucherItemResponse>> GetVoucherItemAsync(int voucherId, GetVoucherItemsRequest query)
+        {
+            var voucher = await _unitOfWork.Vouchers.GetIncludeByIdAsync(voucherId);
+            if (voucher == null)
+                throw new Exception("Không tìm thấy voucher cho địa điểm này");
+
+            int pageNumber = query.PageNumber < 1 ? 1 : query.PageNumber;
+            int pageSize = query.PageSize < 1 ? 10 : query.PageSize;
+
+            var keyword = query.Code?.Trim().ToLower();
+
+            var (voucherItems, totalCount) = await _unitOfWork.VoucherItems.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                vi => vi.VoucherId == voucherId
+                    && (query.Status == null || vi.Status == query.Status.ToString())
+                    && vi.IsDeleted == false
+                    && (string.IsNullOrEmpty(keyword) || (
+                        vi.ItemCode != null && vi.ItemCode.ToLower().Contains(keyword)
+                    )),
+                q => q.OrderByDescending(vi => vi.CreatedAt)
+            );
+
+            var response = _mapper.Map<List<VoucherItemResponse>>(voucherItems);
+            return new PagedResult<VoucherItemResponse>
+            {
+                Items = response,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
     }
 }

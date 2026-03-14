@@ -132,6 +132,10 @@ namespace capstone_backend.Business.Services
             response.EndedCount = endedCount;
             response.AvailableCount = availableCount;
             response.UsageRate = usageRate;
+            response.RemainingQuantity = remainingQuantity;
+
+            response.PointPrice = voucher.PointPrice;
+            response.TotalPointsExchanged = (totalQuantity - remainingQuantity) * voucher.PointPrice;
 
             return response;
         }
