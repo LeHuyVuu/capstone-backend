@@ -379,7 +379,7 @@ public class CollectionService : ICollectionService
                 Description = v.Description,
                 Address = v.Address,
                 CoverImage = v.CoverImage,
-                InteriorImage = v.InteriorImage,
+                InteriorImage = ParseImageToList(v.InteriorImage),
                 CoupleMoodTypes = v.VenueLocationTags
                     ?.Where(vlt => vlt.IsDeleted != true && vlt.LocationTag?.CoupleMoodType != null)
                     .Select(vlt => new DTOs.VenueLocation.CoupleMoodTypeInfo
@@ -400,5 +400,37 @@ public class CollectionService : ICollectionService
                     .ToList()
             }).ToList()
         };
+    }
+
+    private static List<string> ParseImageToList(string? imageField)
+    {
+        if (string.IsNullOrWhiteSpace(imageField))
+            return new List<string>();
+
+        var trimmed = imageField.Trim();
+
+        while ((trimmed.StartsWith("'") && trimmed.EndsWith("'")) ||
+               (trimmed.StartsWith("\"") && trimmed.EndsWith("\"")))
+        {
+            trimmed = trimmed.Substring(1, trimmed.Length - 2).Trim();
+        }
+
+        if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+        {
+            try
+            {
+                var unescaped = trimmed.Replace("\\\"", "\"");
+                var parsed = System.Text.Json.JsonSerializer.Deserialize<List<string>>(unescaped);
+                if (parsed != null && parsed.Any())
+                {
+                    return parsed.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        return new List<string> { trimmed };
     }
 }
