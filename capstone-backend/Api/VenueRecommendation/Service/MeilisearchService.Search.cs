@@ -8,7 +8,7 @@ namespace capstone_backend.Api.VenueRecommendation.Service;
 
 public partial class MeilisearchService
 {
-    public async Task<VenueLocationQueryResponse> SearchVenueLocationsAsync(VenueLocationQueryRequest request, string? coupleMoodTypeName, string? memberMoodTypeName, string? couplePersonalityTypeName, string? memberMbtiType)
+    public async Task<VenueLocationQueryResponse> SearchVenueLocationsAsync(VenueLocationQueryRequest request, string? coupleMoodTypeName, string? memberMoodTypeName, string? couplePersonalityTypeName, string? memberMbtiType, int? memberId = null)
     {
         
         if(memberMoodTypeName != null)
@@ -170,6 +170,46 @@ public partial class MeilisearchService
 
             var pagedResult = new PagedResult<VenueLocationQueryResult>(
                 hits, request.Page, request.PageSize, totalHits);
+
+            // Save search history if user has query and is logged in
+            if (!string.IsNullOrWhiteSpace(request.Query) && memberId.HasValue)
+            {
+                try
+                {
+                    var filterCriteria = new
+                    {
+                        Category = request.Category,
+                        Area = request.Area,
+                        MinRating = request.MinRating,
+                        MaxRating = request.MaxRating,
+                        MinPrice = request.MinPrice,
+                        MaxPrice = request.MaxPrice,
+                        OnlyOpenNow = request.OnlyOpenNow,
+                        Latitude = request.Latitude,
+                        Longitude = request.Longitude,
+                        RadiusKm = request.RadiusKm,
+                        CoupleMoodType = coupleMoodTypeName,
+                        MemberMoodType = memberMoodTypeName,
+                        CouplePersonalityType = couplePersonalityTypeName,
+                        MemberMbtiType = memberMbtiType
+                    };
+
+                    await _searchHistoryService.CreateSearchHistoryAsync(
+                        memberId.Value,
+                        request.Query,
+                        filterCriteria,
+                        totalHits
+                    );
+
+                    _logger.LogInformation("[SEARCH HISTORY] Saved search for member {MemberId}: '{Query}' - {ResultCount} results", 
+                        memberId.Value, request.Query, totalHits);
+                }
+                catch (Exception ex)
+                {
+                    // Don't fail the search if history save fails
+                    _logger.LogError(ex, "[SEARCH HISTORY] Failed to save search history for member {MemberId}", memberId);
+                }
+            }
 
             return new VenueLocationQueryResponse
             {
