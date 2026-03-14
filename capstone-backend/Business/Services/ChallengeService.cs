@@ -572,7 +572,6 @@ namespace capstone_backend.Business.Services
                     if (map.TryGetValue(item.Id, out var cc))
                     {
                         item.CoupleChallengeId = cc.Id;
-                        item.CoupleChallengeStatus = cc.Status;
                         item.CurrentProgress = cc.CurrentProgress ?? 0;
 
                         var progress = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(cc.ProgressData);
@@ -582,10 +581,12 @@ namespace capstone_backend.Business.Services
                             progress.MemberState.TryGetValue(memberKey, out var memberState))
                         {
                             item.IsJoined = memberState.IsJoined;
+                            item.CoupleChallengeStatus = memberState.IsJoined ? cc.Status : null;
                         }
                         else
                         {
                             item.IsJoined = false;
+                            item.CoupleChallengeStatus = null;
                         }
                     }
                 }
