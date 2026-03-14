@@ -196,6 +196,10 @@ public static class ServiceExtensions
 
         // Register Couple Invitation Service
         services.AddScoped<ICoupleInvitationService, CoupleInvitationService>();
+        
+        // Register Couple Profile Service
+        services.AddScoped<ICoupleProfileService, CoupleProfileService>();
+        
         // Register Hangfire Jobs
         services.AddScoped<IDatePlanWorker, DatePlanWorker>();
         services.AddScoped<IReviewWorker, ReviewWorker>();
