@@ -1,5 +1,7 @@
-﻿using capstone_backend.Business.DTOs.Voucher;
+﻿using Amazon.Rekognition.Model;
+using capstone_backend.Business.DTOs.Voucher;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Services;
 using capstone_backend.Data.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -127,6 +129,25 @@ namespace capstone_backend.Api.Controllers
                 var result = await _adminVoucherService.GetVoucherItemAsync(voucherId, query);
 
                 return OkResponse(result, "Lấy danh sách voucher item thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get voucher item details for admin
+        /// </summary>
+        [HttpGet("voucher-items/{voucherItemId:int}")]
+        public async Task<IActionResult> GetAdminVoucherItemDetails(int voucherItemId)
+        {
+            try
+            {
+                var result = await _adminVoucherService.GetVoucherItemByIdAsync(voucherItemId);
+                if (result == null)
+                    return NotFoundResponse("Không tìm thấy voucher item cho địa điểm này");
+                return OkResponse(result, "Lấy chi tiết voucher item thành công");
             }
             catch (Exception ex)
             {

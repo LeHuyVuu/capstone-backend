@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Amazon.Rekognition.Model;
+using AutoMapper;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Voucher;
 using capstone_backend.Business.Interfaces;
@@ -177,7 +178,7 @@ namespace capstone_backend.Business.Services
                 var activeJob = BackgroundJob.Schedule<IVoucherWorker>(
                     job => job.ActivateVoucherAsync(voucher.Id),
                     voucher.StartDate.Value - now
-                );  
+                );
                 voucherJobs.Add(new VoucherJob
                 {
                     VoucherId = voucher.Id,
@@ -267,6 +268,16 @@ namespace capstone_backend.Business.Services
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
+        }
+
+        public async Task<VoucherItemDetailResponse> GetVoucherItemByIdAsync(int voucherItemId)
+        {
+            var voucherItem = await _unitOfWork.VoucherItems.GetIncludeByIdAsync(voucherItemId);
+            if (voucherItem == null)
+                throw new Exception("Không tìm thấy voucher item");
+
+            var response = _mapper.Map<VoucherItemDetailResponse>(voucherItem);
+            return response;
         }
     }
 }
