@@ -31,11 +31,54 @@ namespace capstone_backend.Api.Controllers
         }
 
         [HttpGet("dashboard")]
-        [Authorize(Roles = "ADMIN")]
-        public async Task<IActionResult> GetDashboard([FromQuery] int days = 30)
+        // [Authorize(Roles = "ADMIN")]
+        public async Task<IActionResult> GetDashboard([FromQuery] AdminDashboardRequest request)
         {
             var now = DateTime.UtcNow;
-            var startDate = now.AddDays(-days);
+            DateTime calculatedStartDate;
+            DateTime calculatedEndDate;
+            string period;
+
+            try
+            {
+                // Xác định period và tính toán startDate/endDate dựa trên tham số
+                if (request.Day.HasValue && request.Month.HasValue && request.Year.HasValue)
+                {
+                    // Lọc theo ngày cụ thể
+                    period = "day";
+                    calculatedStartDate = new DateTime(request.Year.Value, request.Month.Value, request.Day.Value, 0, 0, 0, DateTimeKind.Utc);
+                    calculatedEndDate = calculatedStartDate.AddDays(1).AddSeconds(-1);
+                }
+                else if (request.Month.HasValue && request.Year.HasValue)
+                {
+                    // Lọc theo tháng cụ thể
+                    period = "month";
+                    calculatedStartDate = new DateTime(request.Year.Value, request.Month.Value, 1, 0, 0, 0, DateTimeKind.Utc);
+                    calculatedEndDate = calculatedStartDate.AddMonths(1).AddSeconds(-1);
+                }
+                else if (request.Year.HasValue)
+                {
+                    // Lọc theo năm cụ thể
+                    period = "year";
+                    calculatedStartDate = new DateTime(request.Year.Value, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                    calculatedEndDate = calculatedStartDate.AddYears(1).AddSeconds(-1);
+                }
+                else
+                {
+                    // Mặc định: 30 ngày gần nhất
+                    period = "month";
+                    calculatedStartDate = now.AddDays(-30);
+                    calculatedEndDate = now;
+                }
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return BadRequestResponse("Invalid date. Please check the day, month, and year values");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse($"Error processing date parameters: {ex.Message}");
+            }
 
             var totalUsers = await _unitOfWork.Context.Set<Data.Entities.UserAccount>()
                 .Where(u => u.IsDeleted != true)
@@ -92,40 +135,31 @@ namespace capstone_backend.Api.Controllers
                 .Where(v => v.Status == "ACTIVE" && v.EndDate >= DateTime.UtcNow)
                 .CountAsync();
 
-            var userGrowth = await _unitOfWork.Context.Set<Data.Entities.UserAccount>()
-                .Where(u => u.CreatedAt >= startDate && u.IsDeleted != true)
-                .GroupBy(u => u.CreatedAt.HasValue ? u.CreatedAt.Value.Date : DateTime.MinValue)
-                .Select(g => new { Date = g.Key, Count = g.Count() })
-                .OrderBy(x => x.Date)
-                .ToListAsync();
+            // Group data theo period
+            var userGrowth = await GroupDataByPeriod(
+                _unitOfWork.Context.Set<Data.Entities.UserAccount>()
+                    .Where(u => u.CreatedAt >= calculatedStartDate && u.CreatedAt <= calculatedEndDate && u.IsDeleted != true),
+                period);
 
-            var revenueByDay = await _unitOfWork.Context.Set<Data.Entities.Transaction>()
-                .Where(t => t.CreatedAt >= startDate && t.Status == "SUCCESS")
-                .GroupBy(t => t.CreatedAt.HasValue ? t.CreatedAt.Value.Date : DateTime.MinValue)
-                .Select(g => new { Date = g.Key, Amount = g.Sum(t => t.Amount) })
-                .OrderBy(x => x.Date)
-                .ToListAsync();
+            var revenueByPeriod = await GroupTransactionsByPeriod(
+                _unitOfWork.Context.Set<Data.Entities.Transaction>()
+                    .Where(t => t.CreatedAt >= calculatedStartDate && t.CreatedAt <= calculatedEndDate && t.Status == "SUCCESS"),
+                period);
 
-            var transactionsByDay = await _unitOfWork.Context.Set<Data.Entities.Transaction>()
-                .Where(t => t.CreatedAt >= startDate)
-                .GroupBy(t => t.CreatedAt.HasValue ? t.CreatedAt.Value.Date : DateTime.MinValue)
-                .Select(g => new { Date = g.Key, Count = g.Count() })
-                .OrderBy(x => x.Date)
-                .ToListAsync();
+            var transactionsByPeriod = await GroupDataByPeriod(
+                _unitOfWork.Context.Set<Data.Entities.Transaction>()
+                    .Where(t => t.CreatedAt >= calculatedStartDate && t.CreatedAt <= calculatedEndDate),
+                period);
 
-            var venueGrowth = await _unitOfWork.Context.Set<Data.Entities.VenueLocation>()
-                .Where(v => v.CreatedAt >= startDate && v.IsDeleted != true)
-                .GroupBy(v => v.CreatedAt.HasValue ? v.CreatedAt.Value.Date : DateTime.MinValue)
-                .Select(g => new { Date = g.Key, Count = g.Count() })
-                .OrderBy(x => x.Date)
-                .ToListAsync();
+            var venueGrowth = await GroupDataByPeriod(
+                _unitOfWork.Context.Set<Data.Entities.VenueLocation>()
+                    .Where(v => v.CreatedAt >= calculatedStartDate && v.CreatedAt <= calculatedEndDate && v.IsDeleted != true),
+                period);
 
-            var postActivity = await _unitOfWork.Context.Set<Data.Entities.Post>()
-                .Where(p => p.CreatedAt >= startDate && p.IsDeleted != true)
-                .GroupBy(p => p.CreatedAt.HasValue ? p.CreatedAt.Value.Date : DateTime.MinValue)
-                .Select(g => new { Date = g.Key, Count = g.Count() })
-                .OrderBy(x => x.Date)
-                .ToListAsync();
+            var postActivity = await GroupDataByPeriod(
+                _unitOfWork.Context.Set<Data.Entities.Post>()
+                    .Where(p => p.CreatedAt >= calculatedStartDate && p.CreatedAt <= calculatedEndDate && p.IsDeleted != true),
+                period);
 
             var dashboard = new AdminDashboardResponse
             {
@@ -144,34 +178,116 @@ namespace capstone_backend.Api.Controllers
                 ActiveMemberSubscriptions = activeMemberSubscriptions,
                 TotalVenueSubscriptions = totalVenueSubscriptions,
                 ActiveVenueSubscriptions = activeVenueSubscriptions,
-                UserGrowthChart = userGrowth.Select(x => new ChartDataPoint 
-                { 
-                    Label = x.Date.ToString("yyyy-MM-dd"), 
-                    Value = x.Count 
-                }).ToList(),
-                RevenueChart = revenueByDay.Select(x => new ChartDataPoint 
-                { 
-                    Label = x.Date.ToString("yyyy-MM-dd"), 
-                    Value = x.Amount 
-                }).ToList(),
-                TransactionChart = transactionsByDay.Select(x => new ChartDataPoint 
-                { 
-                    Label = x.Date.ToString("yyyy-MM-dd"), 
-                    Value = x.Count 
-                }).ToList(),
-                VenueGrowthChart = venueGrowth.Select(x => new ChartDataPoint 
-                { 
-                    Label = x.Date.ToString("yyyy-MM-dd"), 
-                    Value = x.Count 
-                }).ToList(),
-                PostActivityChart = postActivity.Select(x => new ChartDataPoint 
-                { 
-                    Label = x.Date.ToString("yyyy-MM-dd"), 
-                    Value = x.Count 
-                }).ToList()
+                UserGrowthChart = userGrowth,
+                RevenueChart = revenueByPeriod,
+                TransactionChart = transactionsByPeriod,
+                VenueGrowthChart = venueGrowth,
+                PostActivityChart = postActivity,
+                Period = period,
+                StartDate = calculatedStartDate,
+                EndDate = calculatedEndDate
             };
 
             return OkResponse(dashboard);
+        }
+
+        private async Task<List<ChartDataPoint>> GroupDataByPeriod<T>(IQueryable<T> query, string period) where T : class
+        {
+            var createdAtProperty = typeof(T).GetProperty("CreatedAt");
+            if (createdAtProperty == null)
+                return new List<ChartDataPoint>();
+
+            var data = await query.ToListAsync();
+
+            var grouped = period.ToLower() switch
+            {
+                "day" => data
+                    .GroupBy(x => {
+                        var createdAt = createdAtProperty.GetValue(x) as DateTime?;
+                        return createdAt?.ToString("yyyy-MM-dd HH:00") ?? "Unknown";
+                    })
+                    .Select(g => new ChartDataPoint { Label = g.Key, Value = g.Count() })
+                    .OrderBy(x => x.Label)
+                    .ToList(),
+                
+                "week" => data
+                    .GroupBy(x => {
+                        var createdAt = createdAtProperty.GetValue(x) as DateTime?;
+                        return createdAt?.ToString("yyyy-MM-dd") ?? "Unknown";
+                    })
+                    .Select(g => new ChartDataPoint { Label = g.Key, Value = g.Count() })
+                    .OrderBy(x => x.Label)
+                    .ToList(),
+                
+                "month" => data
+                    .GroupBy(x => {
+                        var createdAt = createdAtProperty.GetValue(x) as DateTime?;
+                        return createdAt?.ToString("yyyy-MM-dd") ?? "Unknown";
+                    })
+                    .Select(g => new ChartDataPoint { Label = g.Key, Value = g.Count() })
+                    .OrderBy(x => x.Label)
+                    .ToList(),
+                
+                "year" => data
+                    .GroupBy(x => {
+                        var createdAt = createdAtProperty.GetValue(x) as DateTime?;
+                        return createdAt?.ToString("yyyy-MM") ?? "Unknown";
+                    })
+                    .Select(g => new ChartDataPoint { Label = g.Key, Value = g.Count() })
+                    .OrderBy(x => x.Label)
+                    .ToList(),
+                
+                _ => data
+                    .GroupBy(x => {
+                        var createdAt = createdAtProperty.GetValue(x) as DateTime?;
+                        return createdAt?.ToString("yyyy-MM-dd") ?? "Unknown";
+                    })
+                    .Select(g => new ChartDataPoint { Label = g.Key, Value = g.Count() })
+                    .OrderBy(x => x.Label)
+                    .ToList()
+            };
+
+            return grouped;
+        }
+
+        private async Task<List<ChartDataPoint>> GroupTransactionsByPeriod(IQueryable<Data.Entities.Transaction> query, string period)
+        {
+            var data = await query.ToListAsync();
+
+            var grouped = period.ToLower() switch
+            {
+                "day" => data
+                    .GroupBy(x => x.CreatedAt?.ToString("yyyy-MM-dd HH:00") ?? "Unknown")
+                    .Select(g => new ChartDataPoint { Label = g.Key, Value = g.Sum(t => t.Amount) })
+                    .OrderBy(x => x.Label)
+                    .ToList(),
+                
+                "week" => data
+                    .GroupBy(x => x.CreatedAt?.ToString("yyyy-MM-dd") ?? "Unknown")
+                    .Select(g => new ChartDataPoint { Label = g.Key, Value = g.Sum(t => t.Amount) })
+                    .OrderBy(x => x.Label)
+                    .ToList(),
+                
+                "month" => data
+                    .GroupBy(x => x.CreatedAt?.ToString("yyyy-MM-dd") ?? "Unknown")
+                    .Select(g => new ChartDataPoint { Label = g.Key, Value = g.Sum(t => t.Amount) })
+                    .OrderBy(x => x.Label)
+                    .ToList(),
+                
+                "year" => data
+                    .GroupBy(x => x.CreatedAt?.ToString("yyyy-MM") ?? "Unknown")
+                    .Select(g => new ChartDataPoint { Label = g.Key, Value = g.Sum(t => t.Amount) })
+                    .OrderBy(x => x.Label)
+                    .ToList(),
+                
+                _ => data
+                    .GroupBy(x => x.CreatedAt?.ToString("yyyy-MM-dd") ?? "Unknown")
+                    .Select(g => new ChartDataPoint { Label = g.Key, Value = g.Sum(t => t.Amount) })
+                    .OrderBy(x => x.Label)
+                    .ToList()
+            };
+
+            return grouped;
         }
     }
 }
