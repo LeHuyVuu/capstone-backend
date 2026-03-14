@@ -14,7 +14,7 @@ public class LoginRequest
     /// <summary>
     /// User's email address
     /// </summary>
-    /// <example>admin@example.com</example>
+    /// <example>minidora2707@gmail.com</example>
     [Required(ErrorMessage = "Email is required")]
     [EmailAddress(ErrorMessage = "Invalid email format")]
     public string Email { get; set; } = string.Empty;
@@ -22,7 +22,7 @@ public class LoginRequest
     /// <summary>
     /// User's password
     /// </summary>
-    /// <example>Password123!</example>
+    /// <example>string</example>
     [Required(ErrorMessage = "Password is required")]
     [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
     public string Password { get; set; } = string.Empty;
