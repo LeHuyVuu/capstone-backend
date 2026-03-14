@@ -31,7 +31,7 @@ namespace capstone_backend.Api.Controllers
         }
 
         [HttpGet("dashboard")]
-        // [Authorize(Roles = "ADMIN")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> GetDashboard([FromQuery] AdminDashboardRequest request)
         {
             var now = DateTime.UtcNow;
