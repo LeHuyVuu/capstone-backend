@@ -147,4 +147,11 @@ public interface IVenueLocationService
     /// </summary>
     /// <returns>Tuple with total, active, pending, drafted, deleted counts and status breakdown</returns>
     Task<(int Total, int Active, int Pending, int Drafted, int Deleted, Dictionary<string, int> StatusBreakdown)> GetAllVenuesForStatsAsync();
+
+    /// <summary>
+    /// Get venue location with KYC documents and venue owner profile
+    /// </summary>
+    /// <param name="venueId">Venue location ID</param>
+    /// <returns>Venue location with KYC documents and owner profile or null if not found</returns>
+    Task<VenueLocationWithKycResponse?> GetVenueLocationWithKycAsync(int venueId);
 }

@@ -1772,4 +1772,31 @@ public class VenueLocationService : IVenueLocationService
 
         return (total, active, pending, drafted, deleted, statusBreakdown);
     }
+
+    /// <summary>
+    /// Get venue location with KYC documents and venue owner profile
+    /// </summary>
+    public async Task<VenueLocationWithKycResponse?> GetVenueLocationWithKycAsync(int venueId)
+    {
+
+        var venue = await _unitOfWork.VenueLocations.GetByIdWithOwnerAsync(venueId);
+
+        if (venue == null || venue.IsDeleted == true)
+        {
+           return null;
+        }
+
+        var response = new VenueLocationWithKycResponse
+        {
+            Id = venue.Id,
+            Name = venue.Name,
+            WebsiteUrl = venue.WebsiteUrl,
+            Status = venue.Status,
+            BusinessLicenseUrl = venue.BusinessLicenseUrl,
+            VenueOwner = _mapper.Map<VenueOwnerProfileResponse>(venue.VenueOwner)
+        };
+
+
+        return response;
+    }
 }

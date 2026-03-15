@@ -494,4 +494,24 @@ public class VenueLocationController : BaseController
             return BadRequestResponse("Error retrieving statistics");
         }
     }
+
+
+    /// <param name="id">Venue location ID</param>
+    /// <returns>Venue location with KYC documents and owner profile</returns>
+    [HttpGet("{id}/docs")]
+    [ProducesResponseType(typeof(ApiResponse<VenueLocationWithKycResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetVenueLocationWithKyc(int id)
+    {
+        _logger.LogInformation("Requesting venue location with KYC for ID: {VenueId}", id);
+
+        var venue = await _venueLocationService.GetVenueLocationWithKycAsync(id);
+        
+        if (venue == null)
+        {
+            return NotFoundResponse($"Venue location with ID {id} not found");
+        }
+
+        return OkResponse(venue, "Venue location with KYC retrieved successfully");
+    }
 }
