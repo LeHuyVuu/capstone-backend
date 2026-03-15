@@ -193,7 +193,7 @@ public class SepayWebhookController : ControllerBase
             }
 
             var transaction = await _unitOfWork.Context.Set<Transaction>()
-                .FirstOrDefaultAsync(t => t.TransType == 1 // VENUE_SUBSCRIPTION
+                .FirstOrDefaultAsync(t => t.TransType == (int)TransactionType.VENUE_SUBSCRIPTION
                     && t.DocNo == subscriptionId);
 
             if (transaction == null)
@@ -446,7 +446,7 @@ public class SepayWebhookController : ControllerBase
             }
 
             var transaction = await _unitOfWork.Context.Set<Transaction>()
-                .FirstOrDefaultAsync(t => t.TransType == 2 // ADS_ORDER
+                .FirstOrDefaultAsync(t => t.TransType == (int)TransactionType.ADS_ORDER
                     && t.DocNo == adsOrderId);
 
             if (transaction == null)
@@ -593,16 +593,24 @@ public class SepayWebhookController : ControllerBase
                 // 14. Update Advertisement status to PENDING for admin approval
                 if (adsOrder.Advertisement != null)
                 {
-                    if (adsOrder.Advertisement.Status == "DRAFTED" || adsOrder.Advertisement.Status == "DRAFT")
+                    var oldStatus = adsOrder.Advertisement.Status;
+                    
+                    _logger.LogInformation("[{RequestId}] 🔍 DEBUG - Advertisement {AdId} current status: '{Status}', checking if can update to PENDING", 
+                        requestId, adsOrder.Advertisement.Id, oldStatus);
+                    
+                    if (adsOrder.Advertisement.Status == "DRAFTED" 
+                        || adsOrder.Advertisement.Status == "DRAFT"
+                        || adsOrder.Advertisement.Status == AdvertisementStatus.REJECTED.ToString())
                     {
-                        adsOrder.Advertisement.Status = "PENDING";
+                        adsOrder.Advertisement.Status = AdvertisementStatus.PENDING.ToString();
                         adsOrder.Advertisement.UpdatedAt = now;
                         _unitOfWork.Context.Set<Advertisement>().Update(adsOrder.Advertisement);
-                        _logger.LogInformation("[{RequestId}] Updated advertisement {AdId} status to PENDING", requestId, adsOrder.Advertisement.Id);
+                        _logger.LogInformation("[{RequestId}] ✅ Updated advertisement {AdId} status from '{OldStatus}' to 'PENDING'", 
+                            requestId, adsOrder.Advertisement.Id, oldStatus);
                     }
                     else
                     {
-                        _logger.LogWarning("[{RequestId}] Advertisement {AdId} status is {Status}, not updating to PENDING", 
+                        _logger.LogWarning("[{RequestId}] ⚠️ Advertisement {AdId} status is '{Status}', not updating to PENDING", 
                             requestId, adsOrder.Advertisement.Id, adsOrder.Advertisement.Status);
                     }
 
@@ -614,7 +622,7 @@ public class SepayWebhookController : ControllerBase
                         {
                             // Only update status, keep original desired StartDate and EndDate
                             // Dates will be auto-adjusted by admin approval logic if needed
-                            venueLocationAd.Status = "PENDING_APPROVAL"; // Wait for admin approval
+                            venueLocationAd.Status = VenueLocationAdvertisementStatus.PENDING_APPROVAL.ToString();
                             venueLocationAd.UpdatedAt = now;
                             _unitOfWork.Context.Set<VenueLocationAdvertisement>().Update(venueLocationAd);
                         }

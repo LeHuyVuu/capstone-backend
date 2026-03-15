@@ -12,6 +12,7 @@ public class AdvertisementService : IAdvertisementService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AdvertisementService> _logger;
     private readonly SepayService _sepayService;
+    private readonly RefundService _refundService;
     private static int _rotationIndex = 0;
     private static readonly object _lock = new object();
     private static readonly Random _random = new Random();
@@ -19,11 +20,13 @@ public class AdvertisementService : IAdvertisementService
     public AdvertisementService(
         IUnitOfWork unitOfWork, 
         ILogger<AdvertisementService> logger,
-        SepayService sepayService)
+        SepayService sepayService,
+        RefundService refundService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _sepayService = sepayService;
+        _refundService = refundService;
     }
 
     public async Task<List<AdvertisementResponse>> GetRotatingAdvertisementsAsync(string? placementType = null)
@@ -223,7 +226,7 @@ public class AdvertisementService : IAdvertisementService
         var responses = advertisements.Select(ad =>
         {
             var activeVenueAd = ad.VenueLocationAdvertisements
-                .Where(vla => vla.Status == "ACTIVE" && vla.EndDate >= DateTime.UtcNow)
+                .Where(vla => vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString() && vla.EndDate >= DateTime.UtcNow)
                 .OrderByDescending(vla => vla.StartDate)
                 .FirstOrDefault();
 
@@ -235,6 +238,7 @@ public class AdvertisementService : IAdvertisementService
                 PlacementType = ad.PlacementType ?? string.Empty,
                 Status = ad.Status ?? AdvertisementStatus.DRAFT.ToString(),
                 RejectionReason = ad.RejectionReason,
+                RejectionHistory = ParseRejectionHistory(ad.RejectionReason),
                 DesiredStartDate = ad.DesiredStartDate,
                 CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
                 UpdatedAt = ad.UpdatedAt,
@@ -322,13 +326,14 @@ public class AdvertisementService : IAdvertisementService
             };
         }
 
-        // 3. Validate status
-        if (advertisement.Status != AdvertisementStatus.DRAFT.ToString())
+        // 3. Validate status - Allow DRAFT or REJECTED
+        if (advertisement.Status != AdvertisementStatus.DRAFT.ToString() 
+            && advertisement.Status != AdvertisementStatus.REJECTED.ToString())
         {
             return new SubmitAdvertisementWithPaymentResponse
             {
                 IsSuccess = false,
-                Message = $"Advertisement status is {advertisement.Status}, cannot submit."
+                Message = $"Advertisement status is {advertisement.Status}, cannot submit. Only DRAFT or REJECTED advertisements can be submitted."
             };
         }
 
@@ -499,7 +504,7 @@ public class AdvertisementService : IAdvertisementService
                 Amount = totalAmount,
                 Currency = "VND",
                 PaymentMethod = "VIETQR",
-                TransType = 2, // ADS_ORDER
+                TransType = (int)TransactionType.ADS_ORDER,
                 DocNo = adsOrder.Id,
                 Description = $"Thanh toán quảng cáo {package.Name} cho {venues.Count} địa điểm: {venueNames}",
                 Status = "PENDING",
@@ -650,6 +655,9 @@ public class AdvertisementService : IAdvertisementService
 
     private AdvertisementDetailResponse MapToDetailResponse(Advertisement ad)
     {
+        // Parse rejection history
+        var rejectionHistory = ParseRejectionHistory(ad.RejectionReason);
+
         return new AdvertisementDetailResponse
         {
             Id = ad.Id,
@@ -661,6 +669,7 @@ public class AdvertisementService : IAdvertisementService
             PlacementType = ad.PlacementType ?? string.Empty,
             Status = ad.Status ?? AdvertisementStatus.DRAFT.ToString(),
             RejectionReason = ad.RejectionReason,
+            RejectionHistory = rejectionHistory,
             DesiredStartDate = ad.DesiredStartDate,
             CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
             UpdatedAt = ad.UpdatedAt,
@@ -683,6 +692,59 @@ public class AdvertisementService : IAdvertisementService
                 CreatedAt = ao.CreatedAt ?? DateTime.UtcNow
             }).ToList()
         };
+    }
+
+    private List<RejectionHistoryEntry>? ParseRejectionHistory(string? rejectionReason)
+    {
+        if (string.IsNullOrEmpty(rejectionReason))
+            return null;
+
+        try
+        {
+            var history = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, object>>>(rejectionReason);
+            if (history == null)
+                return null;
+
+            return history.Select(entry =>
+            {
+                var rejectedAt = DateTime.UtcNow;
+                var reason = "No reason provided";
+                var rejectedBy = "Unknown";
+
+                if (entry.ContainsKey("rejectedAt"))
+                {
+                    DateTime.TryParse(entry["rejectedAt"]?.ToString(), out rejectedAt);
+                }
+                if (entry.ContainsKey("reason"))
+                {
+                    reason = entry["reason"]?.ToString() ?? reason;
+                }
+                if (entry.ContainsKey("rejectedBy"))
+                {
+                    rejectedBy = entry["rejectedBy"]?.ToString() ?? rejectedBy;
+                }
+
+                return new RejectionHistoryEntry
+                {
+                    RejectedAt = rejectedAt,
+                    Reason = reason,
+                    RejectedBy = rejectedBy
+                };
+            }).ToList();
+        }
+        catch
+        {
+            // If not JSON format, return as single entry (backward compatibility)
+            return new List<RejectionHistoryEntry>
+            {
+                new RejectionHistoryEntry
+                {
+                    RejectedAt = DateTime.UtcNow,
+                    Reason = rejectionReason,
+                    RejectedBy = "Unknown"
+                }
+            };
+        }
     }
 
     #endregion
@@ -790,21 +852,169 @@ public class AdvertisementService : IAdvertisementService
             };
         }
 
-        advertisement.Status = AdvertisementStatus.REJECTED.ToString();
-        advertisement.UpdatedAt = DateTime.UtcNow;
-        advertisement.RejectionReason = request.Reason;
+        using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
+        
+        try
+        {
+            var now = DateTime.UtcNow;
+            
+            // 1. Build rejection history (support multiple rejections)
+            var rejectionHistory = new List<Dictionary<string, object>>();
+            
+            // Parse existing rejection history
+            if (!string.IsNullOrEmpty(advertisement.RejectionReason))
+            {
+                try
+                {
+                    var existingHistory = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, object>>>(
+                        advertisement.RejectionReason);
+                    
+                    if (existingHistory != null)
+                    {
+                        rejectionHistory = existingHistory;
+                    }
+                }
+                catch
+                {
+                    // If old format (plain string), convert to history format
+                    rejectionHistory.Add(new Dictionary<string, object>
+                    {
+                        { "rejectedAt", (advertisement.UpdatedAt ?? now).ToString("O") },
+                        { "reason", advertisement.RejectionReason },
+                        { "rejectedBy", "Unknown" }
+                    });
+                }
+            }
+            
+            // Add new rejection entry
+            rejectionHistory.Add(new Dictionary<string, object>
+            {
+                { "rejectedAt", now.ToString("O") },
+                { "reason", request.Reason ?? "No reason provided" },
+                { "rejectedBy", "Admin" } // TODO: Get actual admin email/ID from JWT
+            });
+            
+            // 2. Update advertisement status
+            advertisement.Status = AdvertisementStatus.REJECTED.ToString();
+            advertisement.UpdatedAt = now;
+            advertisement.RejectionReason = System.Text.Json.JsonSerializer.Serialize(rejectionHistory);
 
-        _unitOfWork.Advertisements.Update(advertisement);
-        await _unitOfWork.SaveChangesAsync();
+            // 3. Cancel all VenueLocationAdvertisements
+            if (advertisement.VenueLocationAdvertisements != null && advertisement.VenueLocationAdvertisements.Any())
+            {
+                foreach (var vla in advertisement.VenueLocationAdvertisements)
+                {
+                    vla.Status = VenueLocationAdvertisementStatus.CANCELLED.ToString();
+                    vla.UpdatedAt = now;
+                }
+            }
 
-        _logger.LogInformation("Advertisement {AdId} rejected. Reason: {Reason}", 
-            request.AdvertisementId, request.Reason ?? "No reason provided");
+            // 3. Find the completed AdsOrder and process refund
+            var completedOrder = await _unitOfWork.Context.Set<AdsOrder>()
+                .FirstOrDefaultAsync(ao => ao.AdvertisementId == request.AdvertisementId 
+                    && ao.Status == AdsOrderStatus.COMPLETED.ToString());
 
-        return new AdvertisementApprovalResult 
-        { 
-            IsSuccess = true, 
-            Message = "Advertisement rejected successfully" 
-        };
+            string refundMessage = "";
+            
+            if (completedOrder != null && completedOrder.PricePaid.HasValue && completedOrder.PricePaid.Value > 0)
+            {
+                // Find the successful transaction
+                var successfulTransaction = await _unitOfWork.Context.Set<Transaction>()
+                    .FirstOrDefaultAsync(t => t.TransType == (int)TransactionType.ADS_ORDER 
+                        && t.DocNo == completedOrder.Id
+                        && t.Status == TransactionStatus.SUCCESS.ToString());
+
+                if (successfulTransaction != null)
+                {
+                    // Get VenueOwner's UserId for refund
+                    var venueOwner = await _unitOfWork.Context.Set<VenueOwnerProfile>()
+                        .FirstOrDefaultAsync(vop => vop.Id == advertisement.VenueOwnerId);
+
+                    if (venueOwner != null)
+                    {
+                        // Use RefundService to process refund to wallet
+                        var refundMetadata = new Dictionary<string, object>
+                        {
+                            { "advertisementId", advertisement.Id },
+                            { "advertisementTitle", advertisement.Title ?? "" },
+                            { "rejectionReason", request.Reason ?? "Advertisement rejected by admin" }
+                        };
+
+                        var refundResult = await _refundService.ProcessRefundAsync(
+                            userId: venueOwner.UserId,
+                            amount: completedOrder.PricePaid.Value,
+                            transType: (int)TransactionType.ADS_ORDER,
+                            docNo: completedOrder.Id,
+                            reason: $"Quảng cáo '{advertisement.Title}' bị từ chối. Lý do: {request.Reason ?? "Không đạt yêu cầu"}",
+                            originalTransactionId: successfulTransaction.Id,
+                            metadata: refundMetadata
+                        );
+
+                        if (refundResult.IsSuccess)
+                        {
+                            // Update AdsOrder status to REFUNDED
+                            completedOrder.Status = AdsOrderStatus.REFUNDED.ToString();
+                            completedOrder.UpdatedAt = now;
+                            _unitOfWork.Context.Set<AdsOrder>().Update(completedOrder);
+
+                            refundMessage = $" Đã hoàn {refundResult.RefundAmount:N0} VND vào ví (Balance: {refundResult.OldBalance:N0} → {refundResult.NewBalance:N0} VND).";
+                            
+                            _logger.LogInformation(
+                                "✅ Refund processed for advertisement {AdId}. Amount: {Amount} VND, UserId: {UserId}, TxId: {TxId}",
+                                request.AdvertisementId, completedOrder.PricePaid.Value, venueOwner.UserId, refundResult.TransactionId);
+                        }
+                        else
+                        {
+                            _logger.LogError("Failed to process refund for advertisement {AdId}: {Message}", 
+                                request.AdvertisementId, refundResult.Message);
+                            await dbTransaction.RollbackAsync();
+                            
+                            return new AdvertisementApprovalResult 
+                            { 
+                                IsSuccess = false, 
+                                Message = $"Failed to process refund: {refundResult.Message}" 
+                            };
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("VenueOwner not found for advertisement {AdId}, cannot process refund", request.AdvertisementId);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("No successful transaction found for AdsOrder {OrderId}", completedOrder.Id);
+                }
+            }
+            else
+            {
+                _logger.LogInformation("No completed order with payment found for advertisement {AdId}, no refund needed", request.AdvertisementId);
+            }
+
+            _unitOfWork.Advertisements.Update(advertisement);
+            await _unitOfWork.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
+
+            _logger.LogInformation("Advertisement {AdId} rejected. Reason: {Reason}", 
+                request.AdvertisementId, request.Reason ?? "No reason provided");
+
+            return new AdvertisementApprovalResult 
+            { 
+                IsSuccess = true, 
+                Message = $"Advertisement rejected successfully.{refundMessage}"
+            };
+        }
+        catch (Exception ex)
+        {
+            await dbTransaction.RollbackAsync();
+            _logger.LogError(ex, "Error rejecting advertisement {AdId} with refund", request.AdvertisementId);
+            
+            return new AdvertisementApprovalResult 
+            { 
+                IsSuccess = false, 
+                Message = "Failed to reject advertisement and process refund" 
+            };
+        }
     }
 
     #endregion
@@ -819,9 +1029,9 @@ public class AdvertisementService : IAdvertisementService
             .Include(vla => vla.Advertisement)
             .Include(vla => vla.Venue)
             .Where(vla => vla.AdvertisementId == advertisementId 
-                && vla.Status == "ACTIVE"
+                && vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString()
                 && vla.Advertisement.IsDeleted != true
-                && vla.Advertisement.Status == "APPROVED")
+                && vla.Advertisement.Status == AdvertisementStatus.APPROVED.ToString())
             .ToListAsync();
 
         if (venueLocationAds == null || !venueLocationAds.Any())
@@ -909,7 +1119,7 @@ public class AdvertisementService : IAdvertisementService
         var responses = advertisements.Select(ad =>
         {
             var activeVenueAd = ad.VenueLocationAdvertisements
-                .Where(vla => vla.Status == "ACTIVE" && vla.EndDate >= DateTime.UtcNow)
+                .Where(vla => vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString() && vla.EndDate >= DateTime.UtcNow)
                 .OrderByDescending(vla => vla.StartDate)
                 .FirstOrDefault();
 
@@ -921,6 +1131,7 @@ public class AdvertisementService : IAdvertisementService
                 PlacementType = ad.PlacementType ?? string.Empty,
                 Status = ad.Status ?? AdvertisementStatus.PENDING.ToString(),
                 RejectionReason = ad.RejectionReason,
+                RejectionHistory = ParseRejectionHistory(ad.RejectionReason),
                 DesiredStartDate = ad.DesiredStartDate,
                 CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
                 UpdatedAt = ad.UpdatedAt,
