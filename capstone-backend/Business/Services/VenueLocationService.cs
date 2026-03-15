@@ -1775,15 +1775,20 @@ public class VenueLocationService : IVenueLocationService
 
     /// <summary>
     /// Get venue location with KYC documents and venue owner profile
+    /// Query directly from DbContext to get full citizen information from UserAccount
     /// </summary>
     public async Task<VenueLocationWithKycResponse?> GetVenueLocationWithKycAsync(int venueId)
     {
+        // Query trực tiếp từ DbContext để lấy đầy đủ thông tin citizen từ UserAccount
+        var venue = await _unitOfWork.Context.Set<VenueLocation>()
+            .Include(v => v.VenueOwner)
+                .ThenInclude(vo => vo.User)
+            .FirstOrDefaultAsync(v => v.Id == venueId && v.IsDeleted != true);
 
-        var venue = await _unitOfWork.VenueLocations.GetByIdWithOwnerAsync(venueId);
-
-        if (venue == null || venue.IsDeleted == true)
+        if (venue == null)
         {
-           return null;
+            _logger.LogWarning("Venue location with ID {VenueId} not found or deleted", venueId);
+            return null;
         }
 
         var response = new VenueLocationWithKycResponse
@@ -1791,12 +1796,23 @@ public class VenueLocationService : IVenueLocationService
             Id = venue.Id,
             Name = venue.Name,
             WebsiteUrl = venue.WebsiteUrl,
-            Status = venue.Status,
+            Status = venue.Status ?? "DRAFTED",
             BusinessLicenseUrl = venue.BusinessLicenseUrl,
-            VenueOwner = _mapper.Map<VenueOwnerProfileResponse>(venue.VenueOwner)
+            VenueOwner = new VenueOwnerKycInfo
+            {
+                Id = venue.VenueOwner.Id,
+                BusinessName = venue.VenueOwner.BusinessName,
+                PhoneNumber = venue.VenueOwner.PhoneNumber,
+                Email = venue.VenueOwner.Email,
+                Address = venue.VenueOwner.Address,
+                // Lấy citizen documents từ UserAccount
+                CitizenIdFrontUrl = venue.VenueOwner.User?.CitizenIdFrontUrl,
+                CitizenIdBackUrl = venue.VenueOwner.User?.CitizenIdBackUrl,
+                BusinessLicenseUrl = venue.VenueOwner.User?.BusinessLicenseUrl
+            }
         };
 
-
+        _logger.LogInformation("Retrieved venue location with KYC for ID {VenueId}", venueId);
         return response;
     }
 }
