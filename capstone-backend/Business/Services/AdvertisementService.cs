@@ -387,23 +387,42 @@ public class AdvertisementService : IAdvertisementService
             };
         }
 
-        // 7. Validate venue from request
-        var venue = await _unitOfWork.VenueLocations.GetByIdAsync(request.VenueId);
-        if (venue == null || venue.IsDeleted == true)
+        // 7. Validate venues from request
+        if (request.VenueIds == null || !request.VenueIds.Any())
         {
             return new SubmitAdvertisementWithPaymentResponse
             {
                 IsSuccess = false,
-                Message = $"Venue with ID {request.VenueId} not found"
+                Message = "At least one VenueId is required"
             };
         }
 
-        if (venue.VenueOwnerId != venueOwnerProfile.Id)
+        // Remove duplicates
+        var uniqueVenueIds = request.VenueIds.Distinct().ToList();
+
+        var venues = await _unitOfWork.Context.Set<VenueLocation>()
+            .Where(v => uniqueVenueIds.Contains(v.Id) && v.IsDeleted != true)
+            .ToListAsync();
+
+        if (venues.Count != uniqueVenueIds.Count)
+        {
+            var foundIds = venues.Select(v => v.Id).ToList();
+            var missingIds = uniqueVenueIds.Except(foundIds).ToList();
+            return new SubmitAdvertisementWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = $"Venue(s) not found: {string.Join(", ", missingIds)}"
+            };
+        }
+
+        // Check ownership for all venues
+        var notOwnedVenues = venues.Where(v => v.VenueOwnerId != venueOwnerProfile.Id).ToList();
+        if (notOwnedVenues.Any())
         {
             return new SubmitAdvertisementWithPaymentResponse
             {
                 IsSuccess = false,
-                Message = "You can only create advertisements for your own venues"
+                Message = $"You can only create advertisements for your own venues. Unauthorized venues: {string.Join(", ", notOwnedVenues.Select(v => v.Name))}"
             };
         }
 
@@ -419,7 +438,7 @@ public class AdvertisementService : IAdvertisementService
 
         var desiredStartDate = advertisement.DesiredStartDate.Value;
 
-        // 8. Calculate amount
+        // 8. Calculate amount (same price for all venues in the package)
         var totalAmount = package.Price;
 
         // 9. Start transaction
@@ -443,27 +462,35 @@ public class AdvertisementService : IAdvertisementService
 
             _logger.LogInformation("✅ Created AdsOrder ID: {OrderId}", adsOrder.Id);
 
-            // 10.5 Create VenueLocationAdvertisement with desired start date
-            var venueLocationAd = new VenueLocationAdvertisement
+            // 10.5 Create VenueLocationAdvertisement for each venue with desired start date
+            var venueLocationAds = new List<VenueLocationAdvertisement>();
+            
+            foreach (var venue in venues)
             {
-                AdvertisementId = advertisementId,
-                VenueId = request.VenueId,
-                PriorityScore = package.PriorityScore, // Set from package
-                StartDate = desiredStartDate, // Use desired start date from advertisement
-                EndDate = desiredStartDate.AddDays(package.DurationDays),
-                Status = "PENDING_PAYMENT",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+                var venueLocationAd = new VenueLocationAdvertisement
+                {
+                    AdvertisementId = advertisementId,
+                    VenueId = venue.Id,
+                    PriorityScore = package.PriorityScore, // Set from package
+                    StartDate = desiredStartDate, // Use desired start date from advertisement
+                    EndDate = desiredStartDate.AddDays(package.DurationDays),
+                    Status = "PENDING_PAYMENT",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
 
-            await _unitOfWork.Context.Set<VenueLocationAdvertisement>().AddAsync(venueLocationAd);
+                venueLocationAds.Add(venueLocationAd);
+            }
+
+            await _unitOfWork.Context.Set<VenueLocationAdvertisement>().AddRangeAsync(venueLocationAds);
             await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("✅ Created VenueLocationAdvertisement ID: {VlaId} for VenueId: {VenueId}, DesiredStartDate: {StartDate}", 
-                venueLocationAd.Id, request.VenueId, desiredStartDate);
+            _logger.LogInformation("✅ Created {Count} VenueLocationAdvertisement(s) for VenueIds: {VenueIds}, DesiredStartDate: {StartDate}", 
+                venueLocationAds.Count, string.Join(", ", venues.Select(v => v.Id)), desiredStartDate);
 
             // 11. Create Transaction
             var paymentContent = $"ADO{adsOrder.Id}";
+            var venueNames = string.Join(", ", venues.Select(v => v.Name));
 
             var transaction = new Transaction
             {
@@ -473,7 +500,7 @@ public class AdvertisementService : IAdvertisementService
                 PaymentMethod = "VIETQR",
                 TransType = 2, // ADS_ORDER
                 DocNo = adsOrder.Id,
-                Description = $"Thanh toán quảng cáo {package.Name} cho {venue.Name}",
+                Description = $"Thanh toán quảng cáo {package.Name} cho {venues.Count} địa điểm: {venueNames}",
                 Status = "PENDING",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -482,7 +509,7 @@ public class AdvertisementService : IAdvertisementService
             await _unitOfWork.Context.Set<Transaction>().AddAsync(transaction);
             await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("✅ Created transaction ID: {TxId} for VenueId: {VenueId}", transaction.Id, request.VenueId);
+            _logger.LogInformation("✅ Created transaction ID: {TxId} for {Count} venue(s)", transaction.Id, venues.Count);
 
             // 12. Create Sepay transaction
             SepayTransactionResponse sepayResponse;
@@ -526,7 +553,7 @@ public class AdvertisementService : IAdvertisementService
                 qrCodeUrl = sepayResponse.Data.QrCode, // VietQR image URL
                 qrData = sepayResponse.Data.QrData,
                 orderCode = sepayResponse.Data.OrderCode,
-                venueId = request.VenueId, // Store venueId for webhook processing
+                venueIds = uniqueVenueIds, // Store all venueIds for webhook processing
                 expireAt,
                 bankInfo = new { bankName, accountNumber, accountName }
             });
@@ -540,8 +567,8 @@ public class AdvertisementService : IAdvertisementService
             // 14. Commit transaction
             await dbTransaction.CommitAsync();
 
-            _logger.LogInformation("✅ Payment initiated - TxId: {TxId}, AdsOrderId: {AdsOrderId}, SepayId: {SepayId}, VenueId: {VenueId}", 
-                transaction.Id, adsOrder.Id, sepayResponse.Data.Id, request.VenueId);
+            _logger.LogInformation("✅ Payment initiated - TxId: {TxId}, AdsOrderId: {AdsOrderId}, SepayId: {SepayId}, VenueCount: {Count}, VenueIds: {VenueIds}", 
+                transaction.Id, adsOrder.Id, sepayResponse.Data.Id, venues.Count, string.Join(", ", uniqueVenueIds));
 
             // 15. Return response with QR code
             return new SubmitAdvertisementWithPaymentResponse

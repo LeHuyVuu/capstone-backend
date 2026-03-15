@@ -8,7 +8,7 @@ public class SubmitAdvertisementWithPaymentRequest
     [Range(1, int.MaxValue, ErrorMessage = "PackageId must be greater than 0")]
     public int PackageId { get; set; }
 
-    [Required(ErrorMessage = "VenueId is required")]
-    [Range(1, int.MaxValue, ErrorMessage = "VenueId must be greater than 0")]
-    public int VenueId { get; set; }
+    [Required(ErrorMessage = "VenueIds is required")]
+    [MinLength(1, ErrorMessage = "At least one VenueId is required")]
+    public List<int> VenueIds { get; set; } = new List<int>();
 }

@@ -606,17 +606,25 @@ public class SepayWebhookController : ControllerBase
                     }
 
                     // 15. Update VenueLocationAdvertisement status - keep desired dates unchanged
-                    var venueLocationAd = adsOrder.Advertisement.VenueLocationAdvertisements.FirstOrDefault();
-                    if (venueLocationAd != null)
+                    var venueLocationAds = adsOrder.Advertisement.VenueLocationAdvertisements.ToList();
+                    if (venueLocationAds.Any())
                     {
-                        // Only update status, keep original desired StartDate and EndDate
-                        // Dates will be auto-adjusted by admin approval logic if needed
-                        venueLocationAd.Status = "PENDING_APPROVAL"; // Wait for admin approval
-                        venueLocationAd.UpdatedAt = now;
-                        _unitOfWork.Context.Set<VenueLocationAdvertisement>().Update(venueLocationAd);
+                        foreach (var venueLocationAd in venueLocationAds)
+                        {
+                            // Only update status, keep original desired StartDate and EndDate
+                            // Dates will be auto-adjusted by admin approval logic if needed
+                            venueLocationAd.Status = "PENDING_APPROVAL"; // Wait for admin approval
+                            venueLocationAd.UpdatedAt = now;
+                            _unitOfWork.Context.Set<VenueLocationAdvertisement>().Update(venueLocationAd);
+                        }
                         
-                        _logger.LogInformation("[{RequestId}] Updated VenueLocationAdvertisement {VlaId} to PENDING_APPROVAL, desired dates: {Start} to {End}",
-                            requestId, venueLocationAd.Id, venueLocationAd.StartDate, venueLocationAd.EndDate);
+                        _logger.LogInformation("[{RequestId}] Updated {Count} VenueLocationAdvertisement(s) to PENDING_APPROVAL, desired dates: {Start} to {End}",
+                            requestId, venueLocationAds.Count, venueLocationAds.First().StartDate, venueLocationAds.First().EndDate);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("[{RequestId}] No VenueLocationAdvertisements found for advertisement {AdId}", 
+                            requestId, adsOrder.Advertisement.Id);
                     }
                 }
                 else
