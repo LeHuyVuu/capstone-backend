@@ -49,6 +49,16 @@ namespace capstone_backend.Business.Services
             if (couple == null)
                 throw new Exception("Không tìm thấy thông tin cặp đôi");
 
+            var wallet = await _unitOfWork.Wallets.GetByUserIdAsync(userId);
+            if (wallet == null)
+                await _unitOfWork.Wallets.AddAsync(new Wallet
+                {
+                    UserId = userId,
+                    Balance = 0,
+                    Points = 0,
+                    IsActive = true,
+                });
+
             var now = DateTime.UtcNow;
 
             // 2. Get all vouchers
@@ -105,18 +115,18 @@ namespace capstone_backend.Business.Services
             }
 
             // 4. Validate points
-            var currentCouplePoints = couple.TotalPoints ?? 0;
-            if (currentCouplePoints < totalPointsRequired)
-                throw new Exception($"Bạn cần {totalPointsRequired} điểm để đổi các voucher này, nhưng bạn chỉ có {currentCouplePoints} điểm");
+            var currentPoints = wallet.Points ?? 0;
+            if (currentPoints < totalPointsRequired)
+                throw new Exception($"Bạn cần {totalPointsRequired} điểm để đổi các voucher này, nhưng bạn chỉ có {currentPoints} điểm");
 
             // 5. Transaction
             await _unitOfWork.BeginTransactionAsync();
             try
             {
                 // Deduct points
-                couple.TotalPoints = currentCouplePoints - totalPointsRequired;
-                couple.UpdatedAt = DateTime.UtcNow;
-                _unitOfWork.CoupleProfiles.Update(couple);
+                wallet.Points = currentPoints - totalPointsRequired;
+                wallet.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Wallets.Update(wallet);
 
                 // Create transaction record (voucher item member)
                 var voucherItemMember = new VoucherItemMember
@@ -213,7 +223,7 @@ namespace capstone_backend.Business.Services
                     MemberId = member.Id,
                     TotalQuantityExchanged = totalQuantity,
                     TotalPointsUsed = totalPointsRequired,
-                    RemainingCouplePoints = couple.TotalPoints ?? 0,
+                    RemainingPoints = wallet.Points ?? 0,
                     CreatedAt = voucherItemMember.CreatedAt ?? DateTime.UtcNow,
                     VoucherItems = _mapper.Map<List<ExchangeVoucherItemResult>>(exchangedVoucherItems)
                 };

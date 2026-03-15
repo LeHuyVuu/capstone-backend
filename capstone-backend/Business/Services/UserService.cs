@@ -79,38 +79,59 @@ public class UserService : IUserService
         // Tạo user account với BCrypt hashing
         string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
-        var user = new UserAccount()
+        await _unitOfWork.BeginTransactionAsync();
+        try
         {
-            Email = request.Email,
-            PasswordHash = passwordHash,
-            DisplayName = request.FullName,
-            PhoneNumber = request.PhoneNumber,
-            Role = "MEMBER", // Luôn là member (lowercase theo database constraint)
-            IsActive = true,
-            IsVerified = false,
-            IsDeleted = false,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-            LastLoginAt = DateTime.UtcNow
-        };
+            var user = new UserAccount()
+            {
+                Email = request.Email,
+                PasswordHash = passwordHash,
+                DisplayName = request.FullName,
+                PhoneNumber = request.PhoneNumber,
+                Role = "MEMBER", // Luôn là member (lowercase theo database constraint)
+                IsActive = true,
+                IsVerified = false,
+                IsDeleted = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                LastLoginAt = DateTime.UtcNow
+            };
 
-        await _unitOfWork.Users.AddAsync(user);
-        await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.Users.AddAsync(user);
+            await _unitOfWork.SaveChangesAsync();
 
-        // Tạo member profile
-        await CreateMemberProfileAsync(user.Id, request);
+            // Generate wallet for new member
+            await _unitOfWork.Wallets.AddAsync(new Wallet
+            {
+                UserId = user.Id,
+                Balance = 0,
+                Points = 0,
+                IsActive = true,
+            });
 
-        // Generate JWT tokens
-        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, "MEMBER", request.FullName);
-        var refreshToken = _jwtService.GenerateRefreshToken();
-        var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
+            // Tạo member profile
+            await CreateMemberProfileAsync(user.Id, request);
 
-        return new LoginResponse
+            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.CommitTransactionAsync();
+
+            // Generate JWT tokens
+            var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, "MEMBER", request.FullName);
+            var refreshToken = _jwtService.GenerateRefreshToken();
+            var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
+
+            return new LoginResponse
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes)
+            };
+        }
+        catch
         {
-            AccessToken = accessToken,
-            RefreshToken = refreshToken,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes)
-        };
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
     }
 
     /// <summary>
