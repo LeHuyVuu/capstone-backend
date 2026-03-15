@@ -1,6 +1,7 @@
 using capstone_backend.Business.DTOs.Advertisement;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -185,7 +186,7 @@ public class AdvertisementService : IAdvertisementService
             TargetUrl = request.TargetUrl,
             PlacementType = request.PlacementType,
             DesiredStartDate = request.DesiredStartDate,
-            Status = "DRAFT", // Default to DRAFT, will be updated to PENDING after payment
+            Status = AdvertisementStatus.DRAFT.ToString(), // Default to DRAFT, will be updated to PENDING after payment
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             IsDeleted = false
@@ -232,7 +233,7 @@ public class AdvertisementService : IAdvertisementService
                 Title = ad.Title ?? string.Empty,
                 BannerUrl = ad.BannerUrl ?? string.Empty,
                 PlacementType = ad.PlacementType ?? string.Empty,
-                Status = ad.Status ?? "DRAFT",
+                Status = ad.Status ?? AdvertisementStatus.DRAFT.ToString(),
                 RejectionReason = ad.RejectionReason,
                 DesiredStartDate = ad.DesiredStartDate,
                 CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
@@ -322,7 +323,7 @@ public class AdvertisementService : IAdvertisementService
         }
 
         // 3. Validate status
-        if (advertisement.Status != "DRAFT")
+        if (advertisement.Status != AdvertisementStatus.DRAFT.ToString())
         {
             return new SubmitAdvertisementWithPaymentResponse
             {
@@ -374,7 +375,7 @@ public class AdvertisementService : IAdvertisementService
         // 6. Check if there's already a pending payment
         var existingPending = await _unitOfWork.Context.Set<AdsOrder>()
             .Where(ao => ao.AdvertisementId == advertisementId
-                && ao.Status == "PENDING"
+                && ao.Status == AdsOrderStatus.PENDING.ToString()
                 && ao.CreatedAt > DateTime.UtcNow.AddMinutes(-15))
             .FirstOrDefaultAsync();
 
@@ -452,7 +453,7 @@ public class AdvertisementService : IAdvertisementService
                 PackageId = request.PackageId,
                 AdvertisementId = advertisementId,
                 PricePaid = null, // Will be set after payment confirmation
-                Status = "PENDING",
+                Status = AdsOrderStatus.PENDING.ToString(),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -474,7 +475,7 @@ public class AdvertisementService : IAdvertisementService
                     PriorityScore = package.PriorityScore, // Set from package
                     StartDate = desiredStartDate, // Use desired start date from advertisement
                     EndDate = desiredStartDate.AddDays(package.DurationDays),
-                    Status = "PENDING_PAYMENT",
+                    Status = VenueLocationAdvertisementStatus.PENDING_PAYMENT.ToString(),
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -658,7 +659,7 @@ public class AdvertisementService : IAdvertisementService
             BannerUrl = ad.BannerUrl ?? string.Empty,
             TargetUrl = ad.TargetUrl,
             PlacementType = ad.PlacementType ?? string.Empty,
-            Status = ad.Status ?? "DRAFT",
+            Status = ad.Status ?? AdvertisementStatus.DRAFT.ToString(),
             RejectionReason = ad.RejectionReason,
             DesiredStartDate = ad.DesiredStartDate,
             CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
@@ -703,7 +704,7 @@ public class AdvertisementService : IAdvertisementService
             };
         }
 
-        if (advertisement.Status != "PENDING")
+        if (advertisement.Status != AdvertisementStatus.PENDING.ToString())
         {
             return new AdvertisementApprovalResult 
             { 
@@ -712,7 +713,7 @@ public class AdvertisementService : IAdvertisementService
             };
         }
 
-        advertisement.Status = "APPROVED";
+        advertisement.Status = AdvertisementStatus.APPROVED.ToString();
         advertisement.UpdatedAt = DateTime.UtcNow;
         advertisement.RejectionReason = null;
         
@@ -723,7 +724,8 @@ public class AdvertisementService : IAdvertisementService
         {
             // Process both PENDING and PENDING_APPROVAL status
             foreach (var vla in advertisement.VenueLocationAdvertisements
-                .Where(v => v.Status == "PENDING" || v.Status == "PENDING_APPROVAL"))
+                .Where(v => v.Status == VenueLocationAdvertisementStatus.PENDING.ToString() || 
+                           v.Status == VenueLocationAdvertisementStatus.PENDING_APPROVAL.ToString()))
             {
                 // Auto-adjust dates if admin approves after desired start date
                 if (approvalDate > vla.StartDate)
@@ -742,7 +744,7 @@ public class AdvertisementService : IAdvertisementService
                         vla.Id, originalStart, vla.StartDate, originalEnd, vla.EndDate, (approvalDate - originalStart).Days);
                 }
                 
-                vla.Status = "ACTIVE";
+                vla.Status = VenueLocationAdvertisementStatus.ACTIVE.ToString();
                 vla.UpdatedAt = approvalDate;
             }
         }
@@ -779,7 +781,7 @@ public class AdvertisementService : IAdvertisementService
             };
         }
 
-        if (advertisement.Status != "PENDING")
+        if (advertisement.Status != AdvertisementStatus.PENDING.ToString())
         {
             return new AdvertisementApprovalResult 
             { 
@@ -788,7 +790,7 @@ public class AdvertisementService : IAdvertisementService
             };
         }
 
-        advertisement.Status = "REJECTED";
+        advertisement.Status = AdvertisementStatus.REJECTED.ToString();
         advertisement.UpdatedAt = DateTime.UtcNow;
         advertisement.RejectionReason = request.Reason;
 
@@ -900,7 +902,7 @@ public class AdvertisementService : IAdvertisementService
         var advertisements = await _unitOfWork.Context.Set<Advertisement>()
             .Include(ad => ad.VenueLocationAdvertisements)
                 .ThenInclude(vla => vla.Venue)
-            .Where(ad => ad.Status == "PENDING" && ad.IsDeleted != true)
+            .Where(ad => ad.Status == AdvertisementStatus.PENDING.ToString() && ad.IsDeleted != true)
             .OrderBy(ad => ad.CreatedAt)
             .ToListAsync();
 
@@ -917,7 +919,7 @@ public class AdvertisementService : IAdvertisementService
                 Title = ad.Title ?? string.Empty,
                 BannerUrl = ad.BannerUrl ?? string.Empty,
                 PlacementType = ad.PlacementType ?? string.Empty,
-                Status = ad.Status ?? "PENDING",
+                Status = ad.Status ?? AdvertisementStatus.PENDING.ToString(),
                 RejectionReason = ad.RejectionReason,
                 DesiredStartDate = ad.DesiredStartDate,
                 CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
