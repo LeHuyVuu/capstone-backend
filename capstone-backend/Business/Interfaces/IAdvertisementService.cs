@@ -12,6 +12,7 @@ public interface IAdvertisementService
     
     // Venue owner advertisement management (userId is UserAccount.Id, service will find VenueOwnerProfile.Id)
     Task<AdvertisementDetailResponse> CreateAdvertisementAsync(CreateAdvertisementRequest request, int userId);
+    Task<AdvertisementDetailResponse> UpdateAdvertisementAndRevertToDraftAsync(int advertisementId, int userId, UpdateAdvertisementRequest request);
     Task<List<MyAdvertisementResponse>> GetMyAdvertisementsAsync(int userId);
     Task<AdvertisementDetailResponse?> GetAdvertisementByIdAsync(int id, int userId);
     Task<SubmitAdvertisementWithPaymentResponse> SubmitAdvertisementWithPaymentAsync(int advertisementId, int userId, SubmitAdvertisementWithPaymentRequest request);
