@@ -32,8 +32,6 @@ public class MoodTypeController : BaseController
     /// <summary>
     /// Get mood type by ID
     /// </summary>
-    /// <param name="id">ID cá»§a mood type</param>
-    /// <param name="gender">male | female (optional)</param>
     [HttpGet("{id}")]
     [AllowAnonymous]
     public async Task<IActionResult> GetMoodTypeById(int id, [FromQuery] string? gender)
@@ -45,15 +43,6 @@ public class MoodTypeController : BaseController
         return OkResponse(moodType);
     }
 
-    /// <summary>
-    /// Cáº­p nháº­t mood type vÃ o member profile (user chá»n tá»« danh sÃ¡ch mood type)
-    /// </summary>
-    /// <param name="request">Request chá»©a mood type ID</param>
-    /// <returns>ThÃ´ng tin mood type Ä‘Ã£ Ä‘Æ°á»£c cáº­p nháº­t</returns>
-    /// <response code="200">Cáº­p nháº­t thÃ nh cÃ´ng</response>
-    /// <response code="400">Dá»¯ liá»‡u khÃ´ng há»£p lá»‡</response>
-    /// <response code="401">ChÆ°a Ä‘Äƒng nháº­p</response>
-    /// <response code="404">KhÃ´ng tÃ¬m tháº¥y mood type hoáº·c member profile</response>
     [HttpPost("update-mood")]
     [Authorize]
     [ProducesResponseType(typeof(ApiResponse<UpdateMoodTypeResponse>), 200)]
@@ -62,7 +51,6 @@ public class MoodTypeController : BaseController
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> UpdateMoodType([FromBody] UpdateMoodTypeRequest request)
     {
-        // Láº¥y user ID tá»« token
         var userId = GetCurrentUserId();
         if (!userId.HasValue)
         {
@@ -86,14 +74,7 @@ public class MoodTypeController : BaseController
         }
     }
 
-    /// <summary>
-    /// Lấy tâm trạng hiện tại của người dùng
-    /// Nếu người dùng có partner trong couple, trả về mood của partner và couple mood type
-    /// </summary>
-    /// <returns>Thông tin mood hiện tại của người dùng và partner (nếu có)</returns>
-    /// <response code="200">Lấy thành công</response>
-    /// <response code="401">Chưa đăng nhập</response>
-    /// <response code="404">Không tìm thấy member profile</response>
+
     [HttpGet("current-mood")]
     [Authorize]
     [ProducesResponseType(typeof(ApiResponse<CurrentMoodResponse>), 200)]
