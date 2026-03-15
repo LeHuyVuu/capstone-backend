@@ -1,5 +1,6 @@
 ﻿using capstone_backend.Business.DTOs.Challenge;
 using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Data.Entities;
 
 namespace capstone_backend.Business.Interfaces
 {
@@ -16,6 +17,7 @@ namespace capstone_backend.Business.Interfaces
         Task<PagedResult<MemberChallengeResponse>> GetMemberChallengesAsync(int userId, int pageNumber, int pageSize);
         Task<PagedResult<CoupleChallengeListItemResponse>> GetMyCoupleChallengesAsync(int userId, CoupleChallengeQuery query);
         Task<CoupleChallengeListItemResponse> JoinChallengeAsync(int userId, int challengeId);
+        Task<int> JoinCoupleChallengeAsync(CoupleProfile couple, int challengeId);
         Task<int> LeaveCoupleChallengeAsync(int userId, int coupleChallengeId);
         Task<ChallengeResponse> UpdateChallengeAsync(int challengeId, UpdateChallengeRequest request);
 
