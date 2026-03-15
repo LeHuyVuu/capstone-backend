@@ -260,11 +260,14 @@ public class CollectionService : ICollectionService
             collection.Venues.Add(venue);
             collection.UpdatedAt = DateTime.UtcNow;
             
-            venue.FavoriteCount = (venue.FavoriteCount ?? 0) + 1;
+            // Chỉ tăng FavoriteCount khi add vào collection mặc định (Mục yêu thích)
+            if (collection.CollectionName == CollectionConstants.DEFAULT_COLLECTION_NAME)
+            {
+                venue.FavoriteCount = (venue.FavoriteCount ?? 0) + 1;
+            }
             
             await _unitOfWork.SaveChangesAsync();
             
-            _logger.LogInformation("Added venue {VenueId} to collection {CollectionId}", venueId, collectionId);
         }
 
         collection = await _unitOfWork.Context.Set<Collection>()
@@ -294,12 +297,19 @@ public class CollectionService : ICollectionService
             .Where(v => request.VenueIds.Contains(v.Id))
             .ToListAsync(cancellationToken);
 
+        // Chỉ tăng FavoriteCount khi add vào collection mặc định
+        bool isDefaultCollection = collection.CollectionName == CollectionConstants.DEFAULT_COLLECTION_NAME;
+
         foreach (var venue in venuesToAdd)
         {
             if (!collection.Venues.Any(v => v.Id == venue.Id))
             {
                 collection.Venues.Add(venue);
-                venue.FavoriteCount = (venue.FavoriteCount ?? 0) + 1;
+                
+                if (isDefaultCollection)
+                {
+                    venue.FavoriteCount = (venue.FavoriteCount ?? 0) + 1;
+                }
             }
         }
 
@@ -333,11 +343,14 @@ public class CollectionService : ICollectionService
             .Where(v => request.VenueIds.Contains(v.Id))
             .ToList();
 
+        // Chỉ giảm FavoriteCount khi remove khỏi collection mặc định
+        bool isDefaultCollection = collection.CollectionName == CollectionConstants.DEFAULT_COLLECTION_NAME;
+
         foreach (var venue in venuesToRemove)
         {
             collection.Venues.Remove(venue);
             
-            if (venue.FavoriteCount > 0)
+            if (isDefaultCollection && venue.FavoriteCount > 0)
             {
                 venue.FavoriteCount = venue.FavoriteCount - 1;
             }
