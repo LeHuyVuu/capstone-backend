@@ -207,6 +207,100 @@ public class AdvertisementService : IAdvertisementService
         return MapToDetailResponse(created!);
     }
 
+    public async Task<AdvertisementDetailResponse> UpdateAdvertisementAndRevertToDraftAsync(
+        int advertisementId, 
+        int userId, 
+        UpdateAdvertisementRequest request)
+    {
+        var venueOwnerProfile = await _unitOfWork.Context.Set<VenueOwnerProfile>()
+            .FirstOrDefaultAsync(vop => vop.UserId == userId && vop.IsDeleted != true);
+
+        if (venueOwnerProfile == null)
+        {
+            throw new InvalidOperationException("You are not registered as a venue owner");
+        }
+
+        var advertisement = await _unitOfWork.Advertisements.GetByIdWithDetailsAsync(advertisementId);
+
+        if (advertisement == null || advertisement.IsDeleted == true)
+        {
+            throw new InvalidOperationException("Advertisement not found");
+        }
+
+        if (advertisement.VenueOwnerId != venueOwnerProfile.Id)
+        {
+            throw new InvalidOperationException("You don't have permission to update this advertisement");
+        }
+
+        if (advertisement.Status != AdvertisementStatus.REJECTED.ToString() && advertisement.Status != AdvertisementStatus.DRAFT.ToString())
+        {
+            throw new InvalidOperationException($"Can only update REJECTED or DRAFT advertisements. Current status: {advertisement.Status}");
+        }
+
+        var now = DateTime.UtcNow;
+        if (request.DesiredStartDate < now.AddHours(-1))
+        {
+            throw new InvalidOperationException("Desired start date cannot be in the past");
+        }
+
+        if (request.DesiredStartDate > now.AddYears(1))
+        {
+            throw new InvalidOperationException("Desired start date cannot be more than 1 year in the future");
+        }
+
+        using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
+
+        try
+        {
+            advertisement.Title = request.Title;
+            advertisement.Content = request.Content;
+            advertisement.BannerUrl = request.BannerUrl;
+            advertisement.TargetUrl = request.TargetUrl;
+            advertisement.PlacementType = request.PlacementType;
+            advertisement.DesiredStartDate = request.DesiredStartDate;
+            advertisement.Status = AdvertisementStatus.DRAFT.ToString();
+            advertisement.UpdatedAt = DateTime.UtcNow;
+
+            if (advertisement.VenueLocationAdvertisements != null && advertisement.VenueLocationAdvertisements.Any())
+            {
+                foreach (var vla in advertisement.VenueLocationAdvertisements)
+                {
+                    vla.Status = VenueLocationAdvertisementStatus.CANCELLED.ToString();
+                    vla.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+
+            _unitOfWork.Advertisements.Update(advertisement);
+            await _unitOfWork.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
+
+            var updated = await _unitOfWork.Advertisements.GetByIdWithDetailsAsync(advertisementId);
+            
+            var rejectionHistory = ParseRejectionHistory(updated!.RejectionReason);
+            
+            return new AdvertisementDetailResponse
+            {
+                Id = updated.Id,
+                VenueOwnerId = updated.VenueOwnerId,
+                Title = updated.Title ?? string.Empty,
+                Content = updated.Content,
+                BannerUrl = updated.BannerUrl ?? string.Empty,
+                TargetUrl = updated.TargetUrl,
+                PlacementType = updated.PlacementType ?? string.Empty,
+                Status = updated.Status ?? AdvertisementStatus.DRAFT.ToString(),
+                RejectionHistory = rejectionHistory,
+                DesiredStartDate = updated.DesiredStartDate,
+                CreatedAt = updated.CreatedAt ?? DateTime.UtcNow,
+                UpdatedAt = updated.UpdatedAt
+            };
+        }
+        catch (Exception ex)
+        {
+            await dbTransaction.RollbackAsync();
+            throw;
+        }
+    }
+
     public async Task<List<MyAdvertisementResponse>> GetMyAdvertisementsAsync(int userId)
     {
         _logger.LogInformation("Getting advertisements for user {UserId}", userId);
