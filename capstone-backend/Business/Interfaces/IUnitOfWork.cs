@@ -95,6 +95,10 @@ public interface IUnitOfWork : IDisposable
 
     IVoucherItemJobRepository VoucherItemJobs { get; }
 
+    IWalletRepository Wallets { get; }
+
+    IWithdrawRequestRepository WithdrawRequests { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>
