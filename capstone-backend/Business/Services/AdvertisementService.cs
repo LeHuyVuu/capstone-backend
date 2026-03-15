@@ -237,7 +237,6 @@ public class AdvertisementService : IAdvertisementService
                 BannerUrl = ad.BannerUrl ?? string.Empty,
                 PlacementType = ad.PlacementType ?? string.Empty,
                 Status = ad.Status ?? AdvertisementStatus.DRAFT.ToString(),
-                RejectionReason = ad.RejectionReason,
                 RejectionHistory = ParseRejectionHistory(ad.RejectionReason),
                 DesiredStartDate = ad.DesiredStartDate,
                 CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
@@ -335,6 +334,20 @@ public class AdvertisementService : IAdvertisementService
                 IsSuccess = false,
                 Message = $"Advertisement status is {advertisement.Status}, cannot submit. Only DRAFT or REJECTED advertisements can be submitted."
             };
+        }
+
+        // 3.5. Check rejection count - Block if rejected more than 5 times
+        if (advertisement.Status == AdvertisementStatus.REJECTED.ToString())
+        {
+            var rejectionHistory = ParseRejectionHistory(advertisement.RejectionReason);
+            if (rejectionHistory != null && rejectionHistory.Count >= 5)
+            {
+                return new SubmitAdvertisementWithPaymentResponse
+                {
+                    IsSuccess = false,
+                    Message = $"This advertisement has been rejected {rejectionHistory.Count} times. Maximum 5 rejections allowed. Please contact support for assistance."
+                };
+            }
         }
 
         // 4. Validate required fields
@@ -668,7 +681,6 @@ public class AdvertisementService : IAdvertisementService
             TargetUrl = ad.TargetUrl,
             PlacementType = ad.PlacementType ?? string.Empty,
             Status = ad.Status ?? AdvertisementStatus.DRAFT.ToString(),
-            RejectionReason = ad.RejectionReason,
             RejectionHistory = rejectionHistory,
             DesiredStartDate = ad.DesiredStartDate,
             CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
@@ -1130,7 +1142,6 @@ public class AdvertisementService : IAdvertisementService
                 BannerUrl = ad.BannerUrl ?? string.Empty,
                 PlacementType = ad.PlacementType ?? string.Empty,
                 Status = ad.Status ?? AdvertisementStatus.PENDING.ToString(),
-                RejectionReason = ad.RejectionReason,
                 RejectionHistory = ParseRejectionHistory(ad.RejectionReason),
                 DesiredStartDate = ad.DesiredStartDate,
                 CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,

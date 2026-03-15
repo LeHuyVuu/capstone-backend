@@ -10,7 +10,6 @@ public class AdvertisementDetailResponse
     public string? TargetUrl { get; set; }
     public string PlacementType { get; set; } = null!;
     public string Status { get; set; } = null!; // DRAFT, PENDING, ACTIVE, REJECTED, EXPIRED
-    public string? RejectionReason { get; set; }
     public List<RejectionHistoryEntry>? RejectionHistory { get; set; }
     public DateTime? DesiredStartDate { get; set; }
     public DateTime CreatedAt { get; set; }
