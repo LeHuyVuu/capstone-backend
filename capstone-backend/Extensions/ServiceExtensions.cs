@@ -135,6 +135,9 @@ public static class ServiceExtensions
         services.AddScoped<IVoucherJobRepository, VoucherJobRepository>();
         services.AddScoped<IVoucherItemJobRepository, VoucherItemJobRepository>();
 
+        services.AddScoped<IWalletRepository, WalletRepository>();
+        services.AddScoped<IWithdrawRequestRepository, WithdrawRequestRepository>();
+
         // Messaging repositories
         services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddScoped<IConversationMemberRepository, ConversationMemberRepository>();
@@ -236,6 +239,8 @@ public static class ServiceExtensions
 
         // Register Voucher Code Generator
         services.AddScoped<IVoucherCodeGenerator, VoucherCodeGenerator>();
+
+        services.AddScoped<WalletService>();
 
         return services;
     }
