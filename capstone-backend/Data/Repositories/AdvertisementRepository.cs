@@ -1,5 +1,6 @@
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,10 +20,10 @@ public class AdvertisementRepository : GenericRepository<Advertisement>, IAdvert
             .Include(vla => vla.Advertisement)
             .Include(vla => vla.Venue)
             .Where(vla =>
-                vla.Status == "ACTIVE" &&
+                vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString() &&
                 // vla.StartDate <= now &&
                 // vla.EndDate >= now &&
-                vla.Advertisement.Status == "APPROVED" &&
+                vla.Advertisement.Status == AdvertisementStatus.APPROVED.ToString() &&
                 vla.Advertisement.IsDeleted == false &&
                 vla.Venue.IsDeleted == false &&
                 vla.Venue.Status == "ACTIVE"

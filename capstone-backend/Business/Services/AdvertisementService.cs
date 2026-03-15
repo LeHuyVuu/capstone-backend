@@ -1,6 +1,7 @@
 using capstone_backend.Business.DTOs.Advertisement;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -185,7 +186,7 @@ public class AdvertisementService : IAdvertisementService
             TargetUrl = request.TargetUrl,
             PlacementType = request.PlacementType,
             DesiredStartDate = request.DesiredStartDate,
-            Status = "DRAFT", // Default to DRAFT, will be updated to PENDING after payment
+            Status = AdvertisementStatus.DRAFT.ToString(), // Default to DRAFT, will be updated to PENDING after payment
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             IsDeleted = false
@@ -232,7 +233,7 @@ public class AdvertisementService : IAdvertisementService
                 Title = ad.Title ?? string.Empty,
                 BannerUrl = ad.BannerUrl ?? string.Empty,
                 PlacementType = ad.PlacementType ?? string.Empty,
-                Status = ad.Status ?? "DRAFT",
+                Status = ad.Status ?? AdvertisementStatus.DRAFT.ToString(),
                 RejectionReason = ad.RejectionReason,
                 DesiredStartDate = ad.DesiredStartDate,
                 CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
@@ -322,7 +323,7 @@ public class AdvertisementService : IAdvertisementService
         }
 
         // 3. Validate status
-        if (advertisement.Status != "DRAFT")
+        if (advertisement.Status != AdvertisementStatus.DRAFT.ToString())
         {
             return new SubmitAdvertisementWithPaymentResponse
             {
@@ -374,7 +375,7 @@ public class AdvertisementService : IAdvertisementService
         // 6. Check if there's already a pending payment
         var existingPending = await _unitOfWork.Context.Set<AdsOrder>()
             .Where(ao => ao.AdvertisementId == advertisementId
-                && ao.Status == "PENDING"
+                && ao.Status == AdsOrderStatus.PENDING.ToString()
                 && ao.CreatedAt > DateTime.UtcNow.AddMinutes(-15))
             .FirstOrDefaultAsync();
 
@@ -387,23 +388,42 @@ public class AdvertisementService : IAdvertisementService
             };
         }
 
-        // 7. Validate venue from request
-        var venue = await _unitOfWork.VenueLocations.GetByIdAsync(request.VenueId);
-        if (venue == null || venue.IsDeleted == true)
+        // 7. Validate venues from request
+        if (request.VenueIds == null || !request.VenueIds.Any())
         {
             return new SubmitAdvertisementWithPaymentResponse
             {
                 IsSuccess = false,
-                Message = $"Venue with ID {request.VenueId} not found"
+                Message = "At least one VenueId is required"
             };
         }
 
-        if (venue.VenueOwnerId != venueOwnerProfile.Id)
+        // Remove duplicates
+        var uniqueVenueIds = request.VenueIds.Distinct().ToList();
+
+        var venues = await _unitOfWork.Context.Set<VenueLocation>()
+            .Where(v => uniqueVenueIds.Contains(v.Id) && v.IsDeleted != true)
+            .ToListAsync();
+
+        if (venues.Count != uniqueVenueIds.Count)
+        {
+            var foundIds = venues.Select(v => v.Id).ToList();
+            var missingIds = uniqueVenueIds.Except(foundIds).ToList();
+            return new SubmitAdvertisementWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = $"Venue(s) not found: {string.Join(", ", missingIds)}"
+            };
+        }
+
+        // Check ownership for all venues
+        var notOwnedVenues = venues.Where(v => v.VenueOwnerId != venueOwnerProfile.Id).ToList();
+        if (notOwnedVenues.Any())
         {
             return new SubmitAdvertisementWithPaymentResponse
             {
                 IsSuccess = false,
-                Message = "You can only create advertisements for your own venues"
+                Message = $"You can only create advertisements for your own venues. Unauthorized venues: {string.Join(", ", notOwnedVenues.Select(v => v.Name))}"
             };
         }
 
@@ -419,7 +439,7 @@ public class AdvertisementService : IAdvertisementService
 
         var desiredStartDate = advertisement.DesiredStartDate.Value;
 
-        // 8. Calculate amount
+        // 8. Calculate amount (same price for all venues in the package)
         var totalAmount = package.Price;
 
         // 9. Start transaction
@@ -433,7 +453,7 @@ public class AdvertisementService : IAdvertisementService
                 PackageId = request.PackageId,
                 AdvertisementId = advertisementId,
                 PricePaid = null, // Will be set after payment confirmation
-                Status = "PENDING",
+                Status = AdsOrderStatus.PENDING.ToString(),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -443,27 +463,35 @@ public class AdvertisementService : IAdvertisementService
 
             _logger.LogInformation("✅ Created AdsOrder ID: {OrderId}", adsOrder.Id);
 
-            // 10.5 Create VenueLocationAdvertisement with desired start date
-            var venueLocationAd = new VenueLocationAdvertisement
+            // 10.5 Create VenueLocationAdvertisement for each venue with desired start date
+            var venueLocationAds = new List<VenueLocationAdvertisement>();
+            
+            foreach (var venue in venues)
             {
-                AdvertisementId = advertisementId,
-                VenueId = request.VenueId,
-                PriorityScore = package.PriorityScore, // Set from package
-                StartDate = desiredStartDate, // Use desired start date from advertisement
-                EndDate = desiredStartDate.AddDays(package.DurationDays),
-                Status = "PENDING_PAYMENT",
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+                var venueLocationAd = new VenueLocationAdvertisement
+                {
+                    AdvertisementId = advertisementId,
+                    VenueId = venue.Id,
+                    PriorityScore = package.PriorityScore, // Set from package
+                    StartDate = desiredStartDate, // Use desired start date from advertisement
+                    EndDate = desiredStartDate.AddDays(package.DurationDays),
+                    Status = VenueLocationAdvertisementStatus.PENDING_PAYMENT.ToString(),
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
 
-            await _unitOfWork.Context.Set<VenueLocationAdvertisement>().AddAsync(venueLocationAd);
+                venueLocationAds.Add(venueLocationAd);
+            }
+
+            await _unitOfWork.Context.Set<VenueLocationAdvertisement>().AddRangeAsync(venueLocationAds);
             await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("✅ Created VenueLocationAdvertisement ID: {VlaId} for VenueId: {VenueId}, DesiredStartDate: {StartDate}", 
-                venueLocationAd.Id, request.VenueId, desiredStartDate);
+            _logger.LogInformation("✅ Created {Count} VenueLocationAdvertisement(s) for VenueIds: {VenueIds}, DesiredStartDate: {StartDate}", 
+                venueLocationAds.Count, string.Join(", ", venues.Select(v => v.Id)), desiredStartDate);
 
             // 11. Create Transaction
             var paymentContent = $"ADO{adsOrder.Id}";
+            var venueNames = string.Join(", ", venues.Select(v => v.Name));
 
             var transaction = new Transaction
             {
@@ -473,7 +501,7 @@ public class AdvertisementService : IAdvertisementService
                 PaymentMethod = "VIETQR",
                 TransType = 2, // ADS_ORDER
                 DocNo = adsOrder.Id,
-                Description = $"Thanh toán quảng cáo {package.Name} cho {venue.Name}",
+                Description = $"Thanh toán quảng cáo {package.Name} cho {venues.Count} địa điểm: {venueNames}",
                 Status = "PENDING",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -482,7 +510,7 @@ public class AdvertisementService : IAdvertisementService
             await _unitOfWork.Context.Set<Transaction>().AddAsync(transaction);
             await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("✅ Created transaction ID: {TxId} for VenueId: {VenueId}", transaction.Id, request.VenueId);
+            _logger.LogInformation("✅ Created transaction ID: {TxId} for {Count} venue(s)", transaction.Id, venues.Count);
 
             // 12. Create Sepay transaction
             SepayTransactionResponse sepayResponse;
@@ -526,7 +554,7 @@ public class AdvertisementService : IAdvertisementService
                 qrCodeUrl = sepayResponse.Data.QrCode, // VietQR image URL
                 qrData = sepayResponse.Data.QrData,
                 orderCode = sepayResponse.Data.OrderCode,
-                venueId = request.VenueId, // Store venueId for webhook processing
+                venueIds = uniqueVenueIds, // Store all venueIds for webhook processing
                 expireAt,
                 bankInfo = new { bankName, accountNumber, accountName }
             });
@@ -540,8 +568,8 @@ public class AdvertisementService : IAdvertisementService
             // 14. Commit transaction
             await dbTransaction.CommitAsync();
 
-            _logger.LogInformation("✅ Payment initiated - TxId: {TxId}, AdsOrderId: {AdsOrderId}, SepayId: {SepayId}, VenueId: {VenueId}", 
-                transaction.Id, adsOrder.Id, sepayResponse.Data.Id, request.VenueId);
+            _logger.LogInformation("✅ Payment initiated - TxId: {TxId}, AdsOrderId: {AdsOrderId}, SepayId: {SepayId}, VenueCount: {Count}, VenueIds: {VenueIds}", 
+                transaction.Id, adsOrder.Id, sepayResponse.Data.Id, venues.Count, string.Join(", ", uniqueVenueIds));
 
             // 15. Return response with QR code
             return new SubmitAdvertisementWithPaymentResponse
@@ -631,7 +659,7 @@ public class AdvertisementService : IAdvertisementService
             BannerUrl = ad.BannerUrl ?? string.Empty,
             TargetUrl = ad.TargetUrl,
             PlacementType = ad.PlacementType ?? string.Empty,
-            Status = ad.Status ?? "DRAFT",
+            Status = ad.Status ?? AdvertisementStatus.DRAFT.ToString(),
             RejectionReason = ad.RejectionReason,
             DesiredStartDate = ad.DesiredStartDate,
             CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
@@ -676,7 +704,7 @@ public class AdvertisementService : IAdvertisementService
             };
         }
 
-        if (advertisement.Status != "PENDING")
+        if (advertisement.Status != AdvertisementStatus.PENDING.ToString())
         {
             return new AdvertisementApprovalResult 
             { 
@@ -685,7 +713,7 @@ public class AdvertisementService : IAdvertisementService
             };
         }
 
-        advertisement.Status = "APPROVED";
+        advertisement.Status = AdvertisementStatus.APPROVED.ToString();
         advertisement.UpdatedAt = DateTime.UtcNow;
         advertisement.RejectionReason = null;
         
@@ -696,7 +724,8 @@ public class AdvertisementService : IAdvertisementService
         {
             // Process both PENDING and PENDING_APPROVAL status
             foreach (var vla in advertisement.VenueLocationAdvertisements
-                .Where(v => v.Status == "PENDING" || v.Status == "PENDING_APPROVAL"))
+                .Where(v => v.Status == VenueLocationAdvertisementStatus.PENDING.ToString() || 
+                           v.Status == VenueLocationAdvertisementStatus.PENDING_APPROVAL.ToString()))
             {
                 // Auto-adjust dates if admin approves after desired start date
                 if (approvalDate > vla.StartDate)
@@ -715,7 +744,7 @@ public class AdvertisementService : IAdvertisementService
                         vla.Id, originalStart, vla.StartDate, originalEnd, vla.EndDate, (approvalDate - originalStart).Days);
                 }
                 
-                vla.Status = "ACTIVE";
+                vla.Status = VenueLocationAdvertisementStatus.ACTIVE.ToString();
                 vla.UpdatedAt = approvalDate;
             }
         }
@@ -752,7 +781,7 @@ public class AdvertisementService : IAdvertisementService
             };
         }
 
-        if (advertisement.Status != "PENDING")
+        if (advertisement.Status != AdvertisementStatus.PENDING.ToString())
         {
             return new AdvertisementApprovalResult 
             { 
@@ -761,7 +790,7 @@ public class AdvertisementService : IAdvertisementService
             };
         }
 
-        advertisement.Status = "REJECTED";
+        advertisement.Status = AdvertisementStatus.REJECTED.ToString();
         advertisement.UpdatedAt = DateTime.UtcNow;
         advertisement.RejectionReason = request.Reason;
 
@@ -873,7 +902,7 @@ public class AdvertisementService : IAdvertisementService
         var advertisements = await _unitOfWork.Context.Set<Advertisement>()
             .Include(ad => ad.VenueLocationAdvertisements)
                 .ThenInclude(vla => vla.Venue)
-            .Where(ad => ad.Status == "PENDING" && ad.IsDeleted != true)
+            .Where(ad => ad.Status == AdvertisementStatus.PENDING.ToString() && ad.IsDeleted != true)
             .OrderBy(ad => ad.CreatedAt)
             .ToListAsync();
 
@@ -890,7 +919,7 @@ public class AdvertisementService : IAdvertisementService
                 Title = ad.Title ?? string.Empty,
                 BannerUrl = ad.BannerUrl ?? string.Empty,
                 PlacementType = ad.PlacementType ?? string.Empty,
-                Status = ad.Status ?? "PENDING",
+                Status = ad.Status ?? AdvertisementStatus.PENDING.ToString(),
                 RejectionReason = ad.RejectionReason,
                 DesiredStartDate = ad.DesiredStartDate,
                 CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,

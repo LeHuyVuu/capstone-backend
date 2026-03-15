@@ -1,6 +1,7 @@
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Services;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -204,14 +205,14 @@ public class SepayWebhookController : ControllerBase
             // ========== IDEMPOTENCY & STATE VALIDATION ==========
             
             // 6. Check if already processed (IDEMPOTENCY - prevent duplicate webhook processing)
-            if (transaction.Status == "SUCCESS")
+            if (transaction.Status == TransactionStatus.SUCCESS.ToString())
             {
                 _logger.LogInformation("[{RequestId}] ℹ️ Transaction already processed: {Id}. Returning success (idempotent).", requestId, transaction.Id);
                 return Ok(new { 
                     message = "Transaction already processed",
                     transactionId = transaction.Id,
                     subscriptionId = subscription.Id,
-                    status = "SUCCESS",
+                    status = TransactionStatus.SUCCESS.ToString(),
                     idempotent = true
                 });
             }
@@ -243,7 +244,7 @@ public class SepayWebhookController : ControllerBase
                     requestId, transaction.Amount, webhook.Amount);
                     
                 // Mark transaction as FAILED due to amount mismatch
-                transaction.Status = "FAILED";
+                transaction.Status = TransactionStatus.FAILED.ToString();
                 transaction.UpdatedAt = DateTime.UtcNow;
                 _unitOfWork.Context.Set<Transaction>().Update(transaction);
                 await _unitOfWork.SaveChangesAsync();
@@ -267,7 +268,7 @@ public class SepayWebhookController : ControllerBase
                         requestId, transaction.CreatedAt);
                     
                     // Mark as EXPIRED if too old
-                    transaction.Status = "EXPIRED";
+                    transaction.Status = TransactionStatus.EXPIRED.ToString();
                     transaction.UpdatedAt = DateTime.UtcNow;
                     _unitOfWork.Context.Set<Transaction>().Update(transaction);
                     await _unitOfWork.SaveChangesAsync();
@@ -281,7 +282,7 @@ public class SepayWebhookController : ControllerBase
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Payment not successful - Status: {Status}", requestId, webhook.Status);
                 
-                transaction.Status = "FAILED";
+                transaction.Status = TransactionStatus.FAILED.ToString();
                 transaction.UpdatedAt = DateTime.UtcNow;
                 subscription.Status = "PAYMENT_FAILED";
                 subscription.UpdatedAt = DateTime.UtcNow;
@@ -303,7 +304,7 @@ public class SepayWebhookController : ControllerBase
             {
                 // Re-check status after acquiring lock (double-check locking pattern)
                 await _unitOfWork.Context.Entry(transaction).ReloadAsync();
-                if (transaction.Status == "SUCCESS")
+                if (transaction.Status == TransactionStatus.SUCCESS.ToString())
                 {
                     _logger.LogInformation("[{RequestId}] ℹ️ Transaction already processed by concurrent request: {Id}", requestId, transaction.Id);
                     await dbTransaction.RollbackAsync();
@@ -439,7 +440,7 @@ public class SepayWebhookController : ControllerBase
             }
 
             // Validate order status
-            if (adsOrder.Status == "COMPLETED")
+            if (adsOrder.Status == AdsOrderStatus.COMPLETED.ToString())
             {
                 _logger.LogInformation("[{RequestId}] ℹ️ AdsOrder already COMPLETED: {Id}", requestId, adsOrderId);
             }
@@ -457,14 +458,14 @@ public class SepayWebhookController : ControllerBase
             // ========== IDEMPOTENCY & STATE VALIDATION ==========
             
             // 6. Check if already processed (IDEMPOTENCY)
-            if (transaction.Status == "SUCCESS")
+            if (transaction.Status == TransactionStatus.SUCCESS.ToString())
             {
                 _logger.LogInformation("[{RequestId}] ℹ️ Transaction already processed: {Id}. Returning success (idempotent).", requestId, transaction.Id);
                 return Ok(new { 
                     message = "Transaction already processed",
                     transactionId = transaction.Id,
                     adsOrderId = adsOrder.Id,
-                    status = "SUCCESS",
+                    status = TransactionStatus.SUCCESS.ToString(),
                     idempotent = true
                 });
             }
@@ -606,17 +607,25 @@ public class SepayWebhookController : ControllerBase
                     }
 
                     // 15. Update VenueLocationAdvertisement status - keep desired dates unchanged
-                    var venueLocationAd = adsOrder.Advertisement.VenueLocationAdvertisements.FirstOrDefault();
-                    if (venueLocationAd != null)
+                    var venueLocationAds = adsOrder.Advertisement.VenueLocationAdvertisements.ToList();
+                    if (venueLocationAds.Any())
                     {
-                        // Only update status, keep original desired StartDate and EndDate
-                        // Dates will be auto-adjusted by admin approval logic if needed
-                        venueLocationAd.Status = "PENDING_APPROVAL"; // Wait for admin approval
-                        venueLocationAd.UpdatedAt = now;
-                        _unitOfWork.Context.Set<VenueLocationAdvertisement>().Update(venueLocationAd);
+                        foreach (var venueLocationAd in venueLocationAds)
+                        {
+                            // Only update status, keep original desired StartDate and EndDate
+                            // Dates will be auto-adjusted by admin approval logic if needed
+                            venueLocationAd.Status = "PENDING_APPROVAL"; // Wait for admin approval
+                            venueLocationAd.UpdatedAt = now;
+                            _unitOfWork.Context.Set<VenueLocationAdvertisement>().Update(venueLocationAd);
+                        }
                         
-                        _logger.LogInformation("[{RequestId}] Updated VenueLocationAdvertisement {VlaId} to PENDING_APPROVAL, desired dates: {Start} to {End}",
-                            requestId, venueLocationAd.Id, venueLocationAd.StartDate, venueLocationAd.EndDate);
+                        _logger.LogInformation("[{RequestId}] Updated {Count} VenueLocationAdvertisement(s) to PENDING_APPROVAL, desired dates: {Start} to {End}",
+                            requestId, venueLocationAds.Count, venueLocationAds.First().StartDate, venueLocationAds.First().EndDate);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("[{RequestId}] No VenueLocationAdvertisements found for advertisement {AdId}", 
+                            requestId, adsOrder.Advertisement.Id);
                     }
                 }
                 else
