@@ -219,6 +219,9 @@ public static class ServiceExtensions
         // Register Sepay Service for payment (generates VietQR codes + receives webhooks)
         services.AddScoped<SepayService>();
 
+        // Register Refund Service (reusable for all refund scenarios)
+        services.AddScoped<RefundService>();
+
         // Register Advertisement Service
         services.AddScoped<IAdvertisementService, AdvertisementService>();
 

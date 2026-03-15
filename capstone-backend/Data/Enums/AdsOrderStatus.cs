@@ -5,6 +5,7 @@ namespace capstone_backend.Data.Enums
         PENDING,
         COMPLETED,
         PAYMENT_FAILED,
-        CANCELLED
+        CANCELLED,
+        REFUNDED
     }
 }

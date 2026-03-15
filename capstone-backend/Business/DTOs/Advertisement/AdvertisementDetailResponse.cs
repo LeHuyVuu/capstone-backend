@@ -11,6 +11,7 @@ public class AdvertisementDetailResponse
     public string PlacementType { get; set; } = null!;
     public string Status { get; set; } = null!; // DRAFT, PENDING, ACTIVE, REJECTED, EXPIRED
     public string? RejectionReason { get; set; }
+    public List<RejectionHistoryEntry>? RejectionHistory { get; set; }
     public DateTime? DesiredStartDate { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
@@ -38,6 +39,16 @@ public class AdsOrderInfo
     public int Id { get; set; }
     public string PackageName { get; set; } = null!;
     public decimal? PricePaid { get; set; }
-    public string Status { get; set; } = null!; // PENDING, PAID, CANCELLED
+    public string Status { get; set; } = null!; 
     public DateTime CreatedAt { get; set; }
+    public bool HasRefund { get; set; }
+    public RefundInfo? RefundInfo { get; set; }
+}
+
+public class RefundInfo
+{
+    public int TransactionId { get; set; }
+    public decimal Amount { get; set; }
+    public string Reason { get; set; } = null!;
+    public DateTime RefundedAt { get; set; }
 }
