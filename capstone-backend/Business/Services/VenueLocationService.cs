@@ -1797,6 +1797,7 @@ public class VenueLocationService : IVenueLocationService
             Name = venue.Name,
             WebsiteUrl = venue.WebsiteUrl,
             Status = venue.Status ?? "DRAFTED",
+            Address = venue.VenueOwner.Address,
             BusinessLicenseUrl = venue.BusinessLicenseUrl,
             VenueOwner = new VenueOwnerKycInfo
             {
@@ -1804,7 +1805,6 @@ public class VenueLocationService : IVenueLocationService
                 BusinessName = venue.VenueOwner.BusinessName,
                 PhoneNumber = venue.VenueOwner.PhoneNumber,
                 Email = venue.VenueOwner.Email,
-                Address = venue.VenueOwner.Address,
                 // Lấy citizen documents từ UserAccount
                 CitizenIdFrontUrl = venue.VenueOwner.User?.CitizenIdFrontUrl,
                 CitizenIdBackUrl = venue.VenueOwner.User?.CitizenIdBackUrl,
