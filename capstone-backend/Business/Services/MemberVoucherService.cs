@@ -210,6 +210,7 @@ namespace capstone_backend.Business.Services
                 // Wait for all uploads to complete
                 await Task.WhenAll(uploadTasks);
 
+                // Update voucher items with qr code url
                 _unitOfWork.VoucherItems.UpdateRange(exchangedVoucherItems);
                 await _unitOfWork.SaveChangesAsync();
             }
