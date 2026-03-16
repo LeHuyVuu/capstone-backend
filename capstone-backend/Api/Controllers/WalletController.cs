@@ -18,6 +18,7 @@ public class WalletController : BaseController
         _walletService = walletService;
     }
 
+    /// <summary>VENUE OWNER</summary>
     [HttpGet("balance")]
     public async Task<IActionResult> GetBalance()
     {
@@ -33,6 +34,7 @@ public class WalletController : BaseController
         return OkResponse(balance, "Wallet balance retrieved successfully");
     }
 
+    /// <summary>VENUE OWNER</summary>
     [HttpPost("withdraw")]
     public async Task<IActionResult> CreateWithdrawRequest([FromBody] CreateWithdrawRequestRequest request)
     {
@@ -50,7 +52,8 @@ public class WalletController : BaseController
             return BadRequestResponse(ex.Message);
         }
     }
-
+    
+    /// <summary>VENUE OWNER</summary>
     [HttpGet("withdraw-requests")]
     public async Task<IActionResult> GetMyWithdrawRequests()
     {

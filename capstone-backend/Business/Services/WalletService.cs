@@ -26,8 +26,6 @@ public class WalletService
         {
             WalletId = wallet.Id,
             Balance = wallet.Balance ?? 0,
-            Points = wallet.Points ?? 0,
-            IsActive = wallet.IsActive ?? false
         };
     }
 

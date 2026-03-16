@@ -4,6 +4,4 @@ public class WalletBalanceResponse
 {
     public int WalletId { get; set; }
     public decimal Balance { get; set; }
-    public int Points { get; set; }
-    public bool IsActive { get; set; }
 }
