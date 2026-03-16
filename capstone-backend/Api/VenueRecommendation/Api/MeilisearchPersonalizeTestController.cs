@@ -1,18 +1,22 @@
 using System.Text;
 using System.Text.Json;
 using System.Security.Claims;
+using capstone_backend.Api.Controllers;
+using capstone_backend.Api.Models;
 using capstone_backend.Data.Context;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using capstone_backend.Api.VenueRecommendation.Api.DTOs;
+using capstone_backend.Business.DTOs.Common;
+using Newtonsoft.Json;
 
 namespace capstone_backend.Api.VenueRecommendation.Api;
 
 [ApiController]
 [Route("api/v1")]
 [Authorize]
-public class MeilisearchPersonalizeController : ControllerBase
+public class MeilisearchPersonalizeController : BaseController
 {
     private readonly MyDbContext _dbContext;
     private readonly ILogger<MeilisearchPersonalizeController> _logger;
@@ -26,6 +30,7 @@ public class MeilisearchPersonalizeController : ControllerBase
     }
 
     [HttpPost("personalized")]
+    [ProducesResponseType(typeof(ApiResponse<VenueLocationQueryResponse>), 200)]
     public async Task<IActionResult> PersonalizedSearch([FromBody] MeilisearchPersonalizeTestRequest? request)
     {
         request ??= new MeilisearchPersonalizeTestRequest();
@@ -43,7 +48,7 @@ public class MeilisearchPersonalizeController : ControllerBase
 
         if (!int.TryParse(userIdClaim, out var userId))
         {
-            return Unauthorized(new { error = "invalid token user id" });
+            return UnauthorizedResponse("Invalid token user id");
         }
 
         var memberProfile = await _dbContext.MemberProfiles
@@ -52,7 +57,7 @@ public class MeilisearchPersonalizeController : ControllerBase
 
         if (memberProfile == null)
         {
-            return NotFound(new { error = "member profile not found" });
+            return NotFoundResponse("Member profile not found");
         }
 
         var latestInteraction = await _dbContext.Interactions
@@ -117,12 +122,12 @@ public class MeilisearchPersonalizeController : ControllerBase
 
         if (string.IsNullOrWhiteSpace(userContext))
         {
-            return BadRequest(new { error = "cannot build user context from interactions or mood" });
+            return BadRequestResponse("Cannot build user context from interactions or mood");
         }
 
         if (string.IsNullOrWhiteSpace(request.IndexUid))
         {
-            return BadRequest(new { error = "indexUid is required" });
+            return BadRequestResponse("IndexUid is required");
         }
 
         var body = new Dictionary<string, object?>
@@ -154,11 +159,60 @@ public class MeilisearchPersonalizeController : ControllerBase
             httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
         }
 
-        var json = JsonSerializer.Serialize(body);
+        var json = System.Text.Json.JsonSerializer.Serialize(body);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         using var response = await httpClient.PostAsync($"{host.TrimEnd('/')}/indexes/{request.IndexUid}/search", content);
         var responseBody = await response.Content.ReadAsStringAsync();
-        return Content(responseBody, "application/json");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("[MEILI TEST] Personalized search failed with status {StatusCode}: {ResponseBody}", (int)response.StatusCode, responseBody);
+            return StatusCode(
+                (int)response.StatusCode,
+                ApiResponse<object>.ErrorData(responseBody, "Meilisearch personalized search failed", (int)response.StatusCode, GetTraceId()));
+        }
+
+        var meilisearchResponse = JsonConvert.DeserializeObject<MeilisearchSearchResponse<VenueLocationQueryResult>>(responseBody);
+        if (meilisearchResponse == null)
+        {
+            return InternalServerErrorResponse("Invalid Meilisearch response");
+        }
+
+        var hits = meilisearchResponse.Hits ?? new List<VenueLocationQueryResult>();
+        var totalCount = meilisearchResponse.TotalHits
+                         ?? meilisearchResponse.EstimatedTotalHits
+                         ?? hits.Count;
+        var pageNumber = request.Limit > 0 ? (request.Offset / request.Limit) + 1 : 1;
+        var pageSize = request.Limit > 0 ? request.Limit : 20;
+
+        var result = new VenueLocationQueryResponse
+        {
+            Recommendations = new PagedResult<VenueLocationQueryResult>(hits, pageNumber, pageSize, totalCount),
+            Explanation = "Personalized search results based on the latest viewed venue category and latest mood.",
+            ProcessingTimeMs = meilisearchResponse.ProcessingTimeMs,
+            Query = request.Q,
+            PersonalityTags = !string.IsNullOrWhiteSpace(latestInteraction?.CategoryInteraction)
+                ? new List<string> { latestInteraction.CategoryInteraction }
+                : null,
+            CoupleMoodType = latestMood?.MoodName
+        };
+
+        return OkResponse(result, $"Found {result.Recommendations.TotalCount} venues in {result.ProcessingTimeMs}ms");
+    }
+
+    private sealed class MeilisearchSearchResponse<T>
+    {
+        [JsonProperty("hits")]
+        public List<T>? Hits { get; set; }
+
+        [JsonProperty("processingTimeMs")]
+        public long ProcessingTimeMs { get; set; }
+
+        [JsonProperty("totalHits")]
+        public int? TotalHits { get; set; }
+
+        [JsonProperty("estimatedTotalHits")]
+        public int? EstimatedTotalHits { get; set; }
     }
 }
