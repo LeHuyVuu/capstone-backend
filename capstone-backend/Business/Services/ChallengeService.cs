@@ -582,6 +582,11 @@ namespace capstone_backend.Business.Services
                         {
                             item.IsJoined = memberState.IsJoined;
                             item.CoupleChallengeStatus = memberState.IsJoined ? cc.Status : null;
+
+                            // Get claimed reward info if joined
+                            item.IsRewardClaimed = cc.IsRewardClaimed ?? false;
+                            item.RewardClaimedAt = cc.RewardClaimedAt;
+                            item.RewardClaimedByMemberId = cc.RewardClaimedByMemberId;
                         }
                         else
                         {
