@@ -18,6 +18,8 @@ public partial class VoucherItem
 
     public string ItemCode { get; set; } = null!;
 
+    public string? QrCodeUrl { get; set; }
+
     public string? Status { get; set; }
 
     public DateTime? AcquiredAt { get; set; }
