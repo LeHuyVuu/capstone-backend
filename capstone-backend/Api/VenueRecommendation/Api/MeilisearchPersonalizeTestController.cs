@@ -35,12 +35,10 @@ public class MeilisearchPersonalizeController : BaseController
     {
         request ??= new MeilisearchPersonalizeTestRequest();
 
-        var host = Environment.GetEnvironmentVariable("MEILISEARCH_HOST_TEST")
-                   ?? Environment.GetEnvironmentVariable("MEILISEARCH_HOST")
+        var host =  Environment.GetEnvironmentVariable("MEILISEARCH_HOST")
                    ?? "http://134.209.108.208:7700";
 
-        var apiKey = Environment.GetEnvironmentVariable("MEILI_MASTER_KEY_TEST")
-                    ?? Environment.GetEnvironmentVariable("MEILI_MASTER_KEY")
+        var apiKey =  Environment.GetEnvironmentVariable("MEILI_MASTER_KEY")
                     ?? string.Empty;
 
         var userIdClaim = User.Claims
