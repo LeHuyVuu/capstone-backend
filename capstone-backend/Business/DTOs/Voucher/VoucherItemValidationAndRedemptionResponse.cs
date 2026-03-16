@@ -5,6 +5,7 @@
         public int Id { get; set; }
         public int VoucherId { get; set; }
         public string ItemCode { get; set; } = null!;
+        public string? QrCodeUrl { get; set; }
         public string Status { get; set; } = null!;
         public bool IsValid { get; set; }
         public string? ValidationMessage { get; set; } = null!;

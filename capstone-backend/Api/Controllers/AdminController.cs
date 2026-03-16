@@ -1,6 +1,9 @@
 ﻿using capstone_backend.Business.DTOs.Admin;
 using capstone_backend.Business.DTOs.TestType;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Services;
+using capstone_backend.Data.Enums;
+using DotNetEnv;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -26,7 +29,7 @@ namespace capstone_backend.Api.Controllers
         {
             if (GetCurrentUserRole() != "ADMIN")
                 return ForbiddenResponse("You do not have permission to access this resource");
-            else 
+            else
                 return OkResponse("You are an admin");
         }
 
