@@ -33,6 +33,7 @@
         <PackageReference Include="OpenAI" Version="2.8.0" />
         <PackageReference Include="Scalar.AspNetCore" Version="2.11.10" />
         <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.2" />
         <PackageReference Include="SkiaSharp.QrCode" Version="0.12.0" />
         <PackageReference Include="StackExchange.Redis" Version="2.10.1" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
@@ -70,6 +71,12 @@
 
     <ItemGroup>
       <Folder Include="Business\Entities\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Update="wwwroot\assets\logo.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
     </ItemGroup>
 
     <ItemGroup>
