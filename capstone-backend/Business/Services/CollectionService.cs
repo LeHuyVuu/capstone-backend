@@ -244,40 +244,32 @@ public class CollectionService : ICollectionService
     {
         var collection = await _unitOfWork.Context.Set<Collection>()
             .Include(c => c.Venues)
-                .ThenInclude(v => v.VenueLocationTags)
-                    .ThenInclude(vlt => vlt.LocationTag)
-                        .ThenInclude(lt => lt.CoupleMoodType)
-            .Include(c => c.Venues)
-                .ThenInclude(v => v.VenueLocationTags)
-                    .ThenInclude(vlt => vlt.LocationTag)
-                        .ThenInclude(lt => lt.CouplePersonalityType)
             .FirstOrDefaultAsync(c => c.Id == collectionId && c.MemberId == memberId && c.IsDeleted != true, cancellationToken);
 
         if (collection == null)
             return null;
 
-        // Kiểm tra venue có tồn tại không
         var venue = await _unitOfWork.Context.Set<VenueLocation>()
             .FirstOrDefaultAsync(v => v.Id == venueId, cancellationToken);
 
         if (venue == null)
             return null;
 
-        // Chỉ add nếu chưa có trong collection
         if (!collection.Venues.Any(v => v.Id == venueId))
         {
             collection.Venues.Add(venue);
             collection.UpdatedAt = DateTime.UtcNow;
+            
+            // Chỉ tăng FavoriteCount khi add vào collection mặc định (Mục yêu thích)
+            if (collection.CollectionName == CollectionConstants.DEFAULT_COLLECTION_NAME)
+            {
+                venue.FavoriteCount = (venue.FavoriteCount ?? 0) + 1;
+            }
+            
             await _unitOfWork.SaveChangesAsync();
             
-            _logger.LogInformation("Added venue {VenueId} to collection {CollectionId}", venueId, collectionId);
-        }
-        else
-        {
-            _logger.LogInformation("Venue {VenueId} already exists in collection {CollectionId}", venueId, collectionId);
         }
 
-        // Reload with tags
         collection = await _unitOfWork.Context.Set<Collection>()
             .Include(c => c.Venues)
                 .ThenInclude(v => v.VenueLocationTags)
@@ -305,20 +297,25 @@ public class CollectionService : ICollectionService
             .Where(v => request.VenueIds.Contains(v.Id))
             .ToListAsync(cancellationToken);
 
+        // Chỉ tăng FavoriteCount khi add vào collection mặc định
+        bool isDefaultCollection = collection.CollectionName == CollectionConstants.DEFAULT_COLLECTION_NAME;
+
         foreach (var venue in venuesToAdd)
         {
             if (!collection.Venues.Any(v => v.Id == venue.Id))
             {
                 collection.Venues.Add(venue);
+                
+                if (isDefaultCollection)
+                {
+                    venue.FavoriteCount = (venue.FavoriteCount ?? 0) + 1;
+                }
             }
         }
 
         collection.UpdatedAt = DateTime.UtcNow;
         await _unitOfWork.SaveChangesAsync();
 
-        _logger.LogInformation("Added {Count} venues to collection {CollectionId}", venuesToAdd.Count, collectionId);
-
-        // Reload with tags
         collection = await _unitOfWork.Context.Set<Collection>()
             .Include(c => c.Venues)
                 .ThenInclude(v => v.VenueLocationTags)
@@ -346,17 +343,22 @@ public class CollectionService : ICollectionService
             .Where(v => request.VenueIds.Contains(v.Id))
             .ToList();
 
+        // Chỉ giảm FavoriteCount khi remove khỏi collection mặc định
+        bool isDefaultCollection = collection.CollectionName == CollectionConstants.DEFAULT_COLLECTION_NAME;
+
         foreach (var venue in venuesToRemove)
         {
             collection.Venues.Remove(venue);
+            
+            if (isDefaultCollection && venue.FavoriteCount > 0)
+            {
+                venue.FavoriteCount = venue.FavoriteCount - 1;
+            }
         }
 
         collection.UpdatedAt = DateTime.UtcNow;
         await _unitOfWork.SaveChangesAsync();
 
-        _logger.LogInformation("Removed {Count} venues from collection {CollectionId}", venuesToRemove.Count, collectionId);
-
-        // Reload with tags
         collection = await _unitOfWork.Context.Set<Collection>()
             .Include(c => c.Venues)
                 .ThenInclude(v => v.VenueLocationTags)
@@ -390,7 +392,7 @@ public class CollectionService : ICollectionService
                 Description = v.Description,
                 Address = v.Address,
                 CoverImage = v.CoverImage,
-                InteriorImage = v.InteriorImage,
+                InteriorImage = ParseImageToList(v.InteriorImage),
                 CoupleMoodTypes = v.VenueLocationTags
                     ?.Where(vlt => vlt.IsDeleted != true && vlt.LocationTag?.CoupleMoodType != null)
                     .Select(vlt => new DTOs.VenueLocation.CoupleMoodTypeInfo
@@ -411,5 +413,37 @@ public class CollectionService : ICollectionService
                     .ToList()
             }).ToList()
         };
+    }
+
+    private static List<string> ParseImageToList(string? imageField)
+    {
+        if (string.IsNullOrWhiteSpace(imageField))
+            return new List<string>();
+
+        var trimmed = imageField.Trim();
+
+        while ((trimmed.StartsWith("'") && trimmed.EndsWith("'")) ||
+               (trimmed.StartsWith("\"") && trimmed.EndsWith("\"")))
+        {
+            trimmed = trimmed.Substring(1, trimmed.Length - 2).Trim();
+        }
+
+        if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+        {
+            try
+            {
+                var unescaped = trimmed.Replace("\\\"", "\"");
+                var parsed = System.Text.Json.JsonSerializer.Deserialize<List<string>>(unescaped);
+                if (parsed != null && parsed.Any())
+                {
+                    return parsed.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        return new List<string> { trimmed };
     }
 }

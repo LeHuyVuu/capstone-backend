@@ -135,6 +135,9 @@ public static class ServiceExtensions
         services.AddScoped<IVoucherJobRepository, VoucherJobRepository>();
         services.AddScoped<IVoucherItemJobRepository, VoucherItemJobRepository>();
 
+        services.AddScoped<IWalletRepository, WalletRepository>();
+        services.AddScoped<IWithdrawRequestRepository, WithdrawRequestRepository>();
+
         // Messaging repositories
         services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddScoped<IConversationMemberRepository, ConversationMemberRepository>();
@@ -197,6 +200,13 @@ public static class ServiceExtensions
 
         // Register Couple Invitation Service
         services.AddScoped<ICoupleInvitationService, CoupleInvitationService>();
+        
+        // Register Couple Profile Service
+        services.AddScoped<ICoupleProfileService, CoupleProfileService>();
+        
+        // Register Venue Owner Dashboard Service
+        services.AddScoped<IVenueOwnerDashboardService, VenueOwnerDashboardService>();
+        
         // Register Hangfire Jobs
         services.AddScoped<IDatePlanWorker, DatePlanWorker>();
         services.AddScoped<IReviewWorker, ReviewWorker>();
@@ -213,6 +223,9 @@ public static class ServiceExtensions
         // Register Sepay Service for payment (generates VietQR codes + receives webhooks)
         services.AddScoped<SepayService>();
 
+        // Register Refund Service (reusable for all refund scenarios)
+        services.AddScoped<RefundService>();
+
         // Register Advertisement Service
         services.AddScoped<IAdvertisementService, AdvertisementService>();
 
@@ -227,6 +240,8 @@ public static class ServiceExtensions
 
         // Register Voucher Code Generator
         services.AddScoped<IVoucherCodeGenerator, VoucherCodeGenerator>();
+
+        services.AddScoped<WalletService>();
 
         return services;
     }

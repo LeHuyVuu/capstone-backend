@@ -20,7 +20,7 @@ public class SpecialEventController : BaseController
     /// ADMIN ONLY - Create a new special event
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> CreateSpecialEvent([FromBody] CreateSpecialEventRequest request)
     {
         var specialEvent = await _specialEventService.CreateSpecialEventAsync(request);
@@ -31,7 +31,7 @@ public class SpecialEventController : BaseController
     /// ADMIN ONLY - Get special event by ID
     /// </summary>
     [HttpGet("{id}")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "ADMIN")]
     [AllowAnonymous]
     public async Task<IActionResult> GetSpecialEventById(int id)
     {
@@ -68,7 +68,7 @@ public class SpecialEventController : BaseController
     /// ADMIN ONLY - Update special event
     /// </summary>
     [HttpPut("{id}")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> UpdateSpecialEvent(int id, [FromBody] UpdateSpecialEventRequest request)
     {
         var specialEvent = await _specialEventService.UpdateSpecialEventAsync(id, request);
@@ -82,7 +82,7 @@ public class SpecialEventController : BaseController
     /// ADMIN ONLY - Patch (partial update) special event
     /// </summary>
     [HttpPatch("{id}")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> PatchSpecialEvent(int id, [FromBody] UpdateSpecialEventRequest request)
     {
         // PATCH uses same DTO as PUT but fields are optional
@@ -97,7 +97,7 @@ public class SpecialEventController : BaseController
     /// ADMIN ONLY - Delete special event
     /// </summary>
     [HttpDelete("{id}")]
-    [Authorize(Roles = "admin")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> DeleteSpecialEvent(int id)
     {
         var result = await _specialEventService.DeleteSpecialEventAsync(id);

@@ -20,12 +20,23 @@ public class SpecialEventService : ISpecialEventService
 
     public async Task<SpecialEventResponse> CreateSpecialEventAsync(CreateSpecialEventRequest request, CancellationToken cancellationToken = default)
     {
+        // Nếu là sự kiện hằng năm, normalize về năm 2000 để chỉ lưu ngày/tháng
+        var startDate = request.IsYearly 
+            ? new DateTime(2000, request.StartDate.Month, request.StartDate.Day)
+            : request.StartDate;
+        
+        var endDate = request.IsYearly 
+            ? new DateTime(2000, request.EndDate.Month, request.EndDate.Day)
+            : request.EndDate;
+
         var specialEvent = new SpecialEvent()
         {
             EventName = request.EventName,
-            Description = request.Description,
-            StartDate = request.StartDate,
-            EndDate = request.EndDate,
+            Description = request.Description,            
+            BannerUrl = request.BannerUrl,
+            StartDate = startDate,
+            EndDate = endDate,
+            IsYearly = request.IsYearly,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             IsDeleted = false
@@ -34,7 +45,8 @@ public class SpecialEventService : ISpecialEventService
         await _unitOfWork.Context.Set<SpecialEvent>().AddAsync(specialEvent, cancellationToken);
         await _unitOfWork.SaveChangesAsync();
 
-        _logger.LogInformation("Created special event {EventId} - {EventName}", specialEvent.Id, specialEvent.EventName);
+        _logger.LogInformation("Created special event {EventId} - {EventName} (IsYearly: {IsYearly})", 
+            specialEvent.Id, specialEvent.EventName, specialEvent.IsYearly);
 
         return MapToResponse(specialEvent);
     }
@@ -71,14 +83,45 @@ public class SpecialEventService : ISpecialEventService
     public async Task<List<SpecialEventResponse>> GetActiveSpecialEventsAsync(CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
+        var currentMonth = now.Month;
+        var currentDay = now.Day;
+        
         var events = await _unitOfWork.Context.Set<SpecialEvent>()
-            .Where(e => e.IsDeleted != true && 
-                       e.StartDate <= now && 
-                       e.EndDate >= now)
-            .OrderBy(e => e.StartDate)
+            .Where(e => e.IsDeleted != true)
             .ToListAsync(cancellationToken);
 
-        return events.Select(MapToResponse).ToList();
+        // Filter events based on IsYearly flag
+        var activeEvents = events.Where(e =>
+        {
+            if (e.IsYearly == true)
+            {
+                // So sánh theo ngày/tháng cho sự kiện hằng năm
+                var startMonth = e.StartDate?.Month ?? 0;
+                var startDay = e.StartDate?.Day ?? 0;
+                var endMonth = e.EndDate?.Month ?? 0;
+                var endDay = e.EndDate?.Day ?? 0;
+
+                // Xử lý trường hợp event cross-year (vd: 20/12 - 5/1)
+                if (endMonth < startMonth || (endMonth == startMonth && endDay < startDay))
+                {
+                    return (currentMonth > startMonth || (currentMonth == startMonth && currentDay >= startDay)) ||
+                           (currentMonth < endMonth || (currentMonth == endMonth && currentDay <= endDay));
+                }
+                
+                // Trường hợp bình thường trong cùng năm
+                return (currentMonth > startMonth || (currentMonth == startMonth && currentDay >= startDay)) &&
+                       (currentMonth < endMonth || (currentMonth == endMonth && currentDay <= endDay));
+            }
+            else
+            {
+                // So sánh đầy đủ cho sự kiện một lần
+                return e.StartDate <= now && e.EndDate >= now;
+            }
+        })
+        .OrderBy(e => e.StartDate)
+        .ToList();
+
+        return activeEvents.Select(MapToResponse).ToList();
     }
 
     public async Task<SpecialEventResponse?> UpdateSpecialEventAsync(int id, UpdateSpecialEventRequest request, CancellationToken cancellationToken = default)
@@ -95,11 +138,29 @@ public class SpecialEventService : ISpecialEventService
         if (request.Description != null)
             specialEvent.Description = request.Description;
 
-        if (request.StartDate.HasValue)
-            specialEvent.StartDate = request.StartDate.Value;
+        if (request.BannerUrl != null)
+            specialEvent.BannerUrl = request.BannerUrl;
 
+        if (request.IsYearly.HasValue)
+            specialEvent.IsYearly = request.IsYearly.Value;
+
+        // Xử lý StartDate dựa trên IsYearly
+        if (request.StartDate.HasValue)
+        {
+            var isYearly = request.IsYearly ?? specialEvent.IsYearly ?? false;
+            specialEvent.StartDate = isYearly 
+                ? new DateTime(2000, request.StartDate.Value.Month, request.StartDate.Value.Day)
+                : request.StartDate.Value;
+        }
+
+        // Xử lý EndDate dựa trên IsYearly
         if (request.EndDate.HasValue)
-            specialEvent.EndDate = request.EndDate.Value;
+        {
+            var isYearly = request.IsYearly ?? specialEvent.IsYearly ?? false;
+            specialEvent.EndDate = isYearly 
+                ? new DateTime(2000, request.EndDate.Value.Month, request.EndDate.Value.Day)
+                : request.EndDate.Value;
+        }
 
         specialEvent.UpdatedAt = DateTime.UtcNow;
 
@@ -137,10 +198,10 @@ public class SpecialEventService : ISpecialEventService
             Id = specialEvent.Id,
             EventName = specialEvent.EventName,
             Description = specialEvent.Description,
+            BannerUrl = specialEvent.BannerUrl,
             StartDate = specialEvent.StartDate,
             EndDate = specialEvent.EndDate,
-            CreatedAt = specialEvent.CreatedAt,
-            UpdatedAt = specialEvent.UpdatedAt
+            IsYearly = specialEvent.IsYearly
         };
     }
 }

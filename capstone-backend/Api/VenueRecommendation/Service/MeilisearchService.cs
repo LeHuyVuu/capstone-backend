@@ -14,26 +14,27 @@ public partial class MeilisearchService : IMeilisearchService
     private readonly IVenueLocationRepository _venueLocationRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<MeilisearchService> _logger;
+    private readonly ISearchHistoryService _searchHistoryService;
     private readonly string _indexName;
 
     public MeilisearchService(
         IConfiguration configuration,
         IVenueLocationRepository venueLocationRepository,
         IUnitOfWork unitOfWork,
-        ILogger<MeilisearchService> logger)
+        ILogger<MeilisearchService> logger,
+        ISearchHistoryService searchHistoryService)
     {
         var host = Environment.GetEnvironmentVariable("MEILISEARCH_HOST") 
-                   ?? configuration["Meilisearch:Host"] 
-                   ?? "http://localhost:7700";
-        var apiKey = Environment.GetEnvironmentVariable("MEILISEARCH_API_KEY") 
-                     ?? configuration["Meilisearch:ApiKey"] 
-                     ?? "masterKey123";
+                   ?? "http://167.99.68.193:7700";
+        var apiKey = Environment.GetEnvironmentVariable("MEILI_MASTER_KEY") 
+                     ?? "couplemood123";
         _indexName = configuration["Meilisearch:IndexName"] ?? "venue_locations";
 
         _meilisearchClient = new MeilisearchClient(host, apiKey);
         _venueLocationRepository = venueLocationRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _searchHistoryService = searchHistoryService;
 
         _logger.LogInformation("Meilisearch client initialized with host: {Host}, index: {Index}", host, _indexName);
     }

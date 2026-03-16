@@ -24,8 +24,13 @@ public interface IMeilisearchService
     /// Query venue locations with filters
     /// </summary>
     /// <param name="request">Query request with filters</param>
+    /// <param name="coupleMoodTypeName">Couple mood type name for filtering</param>
+    /// <param name="memberMoodTypeName">Member mood type name for filtering</param>
+    /// <param name="couplePersonalityTypeName">Couple personality type name for filtering</param>
+    /// <param name="memberMbtiType">Member MBTI type for filtering</param>
+    /// <param name="memberId">Optional member ID for saving search history</param>
     /// <returns>Query response with paginated results</returns>
-    Task<VenueLocationQueryResponse> SearchVenueLocationsAsync(VenueLocationQueryRequest request, string? coupleMoodTypeName, string? memberMoodTypeName, string? couplePersonalityTypeName, string? memberMbtiType);
+    Task<VenueLocationQueryResponse> SearchVenueLocationsAsync(VenueLocationQueryRequest request, string? coupleMoodTypeName, string? memberMoodTypeName, string? couplePersonalityTypeName, string? memberMbtiType, int? memberId = null);
 
     /// <summary>
     /// Delete a venue location from Meilisearch index

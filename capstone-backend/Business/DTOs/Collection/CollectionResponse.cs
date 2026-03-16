@@ -25,7 +25,7 @@ public class VenueSimpleResponse
     public string? Description { get; set; }
     public string Address { get; set; } = null!;
     public string? CoverImage { get; set; }
-    public string? InteriorImage { get; set; }
+    public List<string>? InteriorImage { get; set; }
     public List<CoupleMoodTypeInfo>? CoupleMoodTypes { get; set; }
     public List<CouplePersonalityTypeInfo>? CouplePersonalityTypes { get; set; }
 }

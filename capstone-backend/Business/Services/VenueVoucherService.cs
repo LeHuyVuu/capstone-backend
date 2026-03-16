@@ -125,12 +125,16 @@ namespace capstone_backend.Business.Services
                 ? 0
                 : Math.Round((decimal)usedCount * 100 / totalQuantity, 2);
 
+            response.TotalQuantity = totalQuantity;
             response.AcquiredCount = acquiredCount;
             response.UsedCount = usedCount;
             response.ExpiredCount = expiredCount;
             response.EndedCount = endedCount;
             response.AvailableCount = availableCount;
             response.UsageRate = usageRate;
+
+            response.PointPrice = voucher.PointPrice;
+            response.TotalPointsExchanged = (totalQuantity - remainingQuantity) * voucher.PointPrice;
 
             return response;
         }

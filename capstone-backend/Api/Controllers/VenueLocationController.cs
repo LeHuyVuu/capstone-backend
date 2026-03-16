@@ -24,7 +24,6 @@ public class VenueLocationController : BaseController
 
     /// <summary>
     /// Get venue location detail by ID.
-    /// Returns venue information with location tag (couple mood type and couple personality type) and venue owner profile.
     /// </summary>
     /// <param name="id">Venue location ID</param>
     /// <returns>Venue location detail</returns>
@@ -45,10 +44,7 @@ public class VenueLocationController : BaseController
 
     /// <summary>
     /// Get all venue locations for the authenticated venue owner.
-    /// Requires VENUEOWNER role. User ID is extracted from JWT token (sub claim).
-    /// Returns venue locations with location tag details (couple mood type and couple personality type).
     /// </summary>
-    /// <returns>List of venue locations owned by the authenticated user</returns>
     [HttpGet("my-venues")]
     [Authorize(Roles = "VENUEOWNER")]
     [ProducesResponseType(typeof(ApiResponse<List<VenueOwnerVenueLocationResponse>>), 200)]
@@ -71,14 +67,7 @@ public class VenueLocationController : BaseController
 
     /// <summary>
     /// Get reviews for a specific venue location with summary statistics.
-    /// Returns:
-    /// - Summary: Average rating, total reviews, rating distribution (5-1 stars with count and percentage)
-    /// - Reviews: Paginated list with member info (name, avatar), attached images, and matched tag in Vietnamese
     /// </summary>
-    /// <param name="id">Venue location ID</param>
-    /// <param name="page">Page number (default: 1)</param>
-    /// <param name="pageSize">Page size (default: 10)</param>
-    /// <returns>Reviews with summary and paginated list</returns>
     [HttpGet("{id}/reviews")]
     public async Task<IActionResult> GetReviewsByVenueId(int id, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
@@ -91,20 +80,7 @@ public class VenueLocationController : BaseController
 
     /// <summary>
     /// Get reviews for a specific venue location with optional date/month/year filter and review likes.
-    /// If no date filter provided, returns all reviews.
-    /// Priority: Date > Month+Year > Year only
-    /// Returns:
-    /// - Summary: Average rating, total reviews, rating distribution, mood match percentage (from all reviews)
-    /// - Reviews: Paginated list (optionally filtered) with member info, attached images, matched tag, and review likes
     /// </summary>
-    /// <param name="id">Venue location ID</param>
-    /// <param name="date">Optional: Specific date to filter (format: yyyy-MM-dd). If provided, month and year are ignored</param>
-    /// <param name="month">Optional: Month to filter (1-12). Requires year parameter</param>
-    /// <param name="year">Optional: Year to filter. Can be used alone or with month</param>
-    /// <param name="page">Page number (default: 1)</param>
-    /// <param name="pageSize">Page size (default: 10)</param>
-    /// <param name="sortDescending">Sort by created time descending - newest first (default: true)</param>
-    /// <returns>Reviews with summary, paginated list, and review likes</returns>
     [HttpGet("{id}/reviews/with-likes")]
     [ProducesResponseType(typeof(ApiResponse<VenueReviewsWithSummaryResponse>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
@@ -180,11 +156,7 @@ public class VenueLocationController : BaseController
 
     /// <summary>
     /// Register a new venue location with associated location tags.
-    /// Requires authentication - user must be a venue owner.
-    /// Location tag is determined based on couple mood type ID and couple personality type ID.
     /// </summary>
-    /// <param name="request">Venue location registration request</param>
-    /// <returns>Created venue location detail</returns>
     [HttpPost("register")]
     public async Task<IActionResult> RegisterVenueLocation([FromBody] CreateVenueLocationRequest request)
     {
@@ -216,11 +188,7 @@ public class VenueLocationController : BaseController
 
     /// <summary>
     /// Delete (soft delete) a location tag from venue.
-    /// Venue must have at least 2 tags to allow deletion.
     /// </summary>
-    /// <param name="venueId">Venue location ID</param>
-    /// <param name="locationTagId">Location tag ID to delete</param>
-    /// <returns>Success status</returns>
     [HttpDelete("{venueId}/tags/{locationTagId}")]
     [Authorize]
     public async Task<IActionResult> DeleteVenueLocationTag(int venueId, int locationTagId)
@@ -239,11 +207,7 @@ public class VenueLocationController : BaseController
 
     /// <summary>
     /// Update venue location information.
-    /// Requires authentication - user must be the venue owner.
     /// </summary>
-    /// <param name="id">Venue location ID</param>
-    /// <param name="request">Venue location update request</param>
-    /// <returns>Updated venue location detail</returns>
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateVenueLocation(int id, [FromBody] UpdateVenueLocationRequest request)
     {
@@ -263,7 +227,6 @@ public class VenueLocationController : BaseController
     /// Get all couple mood types.
     /// Returns a list of all active couple mood types that can be used for venue registration.
     /// </summary>
-    /// <returns>List of couple mood types</returns>
     [HttpGet("mood-types/all")]
     public async Task<IActionResult> GetAllCoupleMoodTypes()
     {
@@ -276,9 +239,7 @@ public class VenueLocationController : BaseController
 
     /// <summary>
     /// Get all couple personality types.
-    /// Returns a list of all active couple personality types that can be used for venue registration.
     /// </summary>
-    /// <returns>List of couple personality types</returns>
     [HttpGet("personality-types/all")]
     public async Task<IActionResult> GetAllCouplePersonalityTypes()
     {
@@ -289,13 +250,6 @@ public class VenueLocationController : BaseController
         return OkResponse(personalityTypes, $"Retrieved {personalityTypes.Count} couple personality types");
     }
 
-    /// <summary>
-    /// Update venue opening hours for a specific day.
-    /// Automatically updates is_closed based on current time.
-    /// Requires authentication - user must be the venue owner.
-    /// </summary>
-    /// <param name="request">Update venue opening hour request with venue ID, day (2-8), open time, and close time</param>
-    /// <returns>Updated venue opening hour information</returns>
     [HttpPost("opening-hours/update")]
     [Authorize]
     [ProducesResponseType(typeof(ApiResponse<VenueOpeningHourResponse>), 200)]
@@ -320,13 +274,8 @@ public class VenueLocationController : BaseController
 
         return OkResponse(result, "Venue opening hours updated successfully");
     }
-    /// <summary>
-    /// Submit venue location to admin for approval.
-    /// Validates required fields before changing status to PENDING.
-    /// Requires authentication - user must be the venue owner.
-    /// </summary>
-    /// <param name="id">Venue location ID</param>
-    /// <returns>Submission result</returns>
+
+   /// <summary>Deprecated !!!! </summary>
     [HttpPost("{id}/submit")]
     [Authorize]
     [ProducesResponseType(typeof(ApiResponse<VenueSubmissionResult>), 200)]
@@ -359,14 +308,7 @@ public class VenueLocationController : BaseController
         return OkResponse(result, "Venue submitted successfully");
     }
 
-    /// <summary>
-    /// Submit venue with payment - validates venue, generates QR code for payment.
-    /// After payment is confirmed (via webhook), venue status will change to PENDING for admin approval.
-    /// Requires authentication - user must be the venue owner.
-    /// </summary>
-    /// <param name="id">Venue location ID</param>
-    /// <param name="request">Payment request with packageId and quantity</param>
-    /// <returns>Payment QR code and transaction info</returns>
+
     [HttpPost("{id}/submit-with-payment")]
     [Authorize(Roles = "VENUEOWNER")]
     [ProducesResponseType(typeof(ApiResponse<SubmitVenueWithPaymentResponse>), 200)]
@@ -394,14 +336,7 @@ public class VenueLocationController : BaseController
         return OkResponse(result, "Payment QR code generated. Please scan to complete payment.");
     }
     
-    /// <summary>
-    /// Get pending venue locations for admin.
-    /// Requires ADMIN role.
-    /// Returns a paginated list of venues waiting for approval.
-    /// </summary>
-    /// <param name="page">Page number (default: 1)</param>
-    /// <param name="pageSize">Page size (default: 10)</param>
-    /// <returns>Paginated list of pending venues</returns>
+    /// <summary>ADMIN get list venue pending</summary>
     [HttpGet("pending")]
     [Authorize(Roles = "ADMIN")]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<VenueOwnerVenueLocationResponse>>), 200)]
@@ -416,13 +351,8 @@ public class VenueLocationController : BaseController
         return OkResponse(result, $"Retrieved {result.Items.Count()} pending venues");
     }
 
-    /// <summary>
-    /// Approve or reject a venue location.
-    /// Requires ADMIN role.
-    /// Accepted statuses: "ACTIVE" (Approve) or "DRAFTED" (Reject).
-    /// </summary>
-    /// <param name="request">Approval request</param>
-    /// <returns>Result of operation</returns>
+        /// <summary>ADMIN</summary>
+
     [HttpPost("approve")]
     [Authorize(Roles = "ADMIN")]
     [ProducesResponseType(typeof(ApiResponse<VenueSubmissionResult>), 200)]
@@ -493,5 +423,25 @@ public class VenueLocationController : BaseController
             _logger.LogError(ex, "Error getting search statistics");
             return BadRequestResponse("Error retrieving statistics");
         }
+    }
+
+
+    /// <param name="id">Venue location ID</param>
+    /// <returns>Venue location with KYC documents and owner profile</returns>
+    [HttpGet("{id}/docs")]
+    [ProducesResponseType(typeof(ApiResponse<VenueLocationWithKycResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetVenueLocationWithKyc(int id)
+    {
+        _logger.LogInformation("Requesting venue location with KYC for ID: {VenueId}", id);
+
+        var venue = await _venueLocationService.GetVenueLocationWithKycAsync(id);
+        
+        if (venue == null)
+        {
+            return NotFoundResponse($"Venue location with ID {id} not found");
+        }
+
+        return OkResponse(venue, "Venue location with KYC retrieved successfully");
     }
 }

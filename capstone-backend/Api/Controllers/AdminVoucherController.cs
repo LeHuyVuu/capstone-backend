@@ -1,5 +1,8 @@
-﻿using capstone_backend.Business.DTOs.Voucher;
+﻿using Amazon.Rekognition.Model;
+using capstone_backend.Business.DTOs.Voucher;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Services;
+using capstone_backend.Data.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -26,6 +29,10 @@ namespace capstone_backend.Api.Controllers
         {
             try
             {
+                // temp validate
+                if (query.Status.HasValue && query.Status == VoucherStatus.DRAFTED)
+                    return BadRequestResponse("Không thể lọc voucher theo trạng thái DRAFTED");
+
                 var result = await _adminVoucherService.GetAdminVouchersAsync(query);
                 return OkResponse(result, "Lấy danh sách voucher thành công");
             }
@@ -104,6 +111,43 @@ namespace capstone_backend.Api.Controllers
                 if (result <= 0)
                     return NotFoundResponse("Từ chối voucher không thành công");
                 return OkResponse(result, "Từ chối voucher thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get list voucher items for admin
+        /// </summary>
+        [HttpGet("{voucherId:int}/items")]
+        public async Task<IActionResult> GetAdminVoucherItems(int voucherId, [FromQuery] GetVoucherItemsRequest query)
+        {
+            try
+            {
+                var result = await _adminVoucherService.GetVoucherItemAsync(voucherId, query);
+
+                return OkResponse(result, "Lấy danh sách voucher item thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get voucher item details for admin
+        /// </summary>
+        [HttpGet("voucher-items/{voucherItemId:int}")]
+        public async Task<IActionResult> GetAdminVoucherItemDetails(int voucherItemId)
+        {
+            try
+            {
+                var result = await _adminVoucherService.GetVoucherItemByIdAsync(voucherItemId);
+                if (result == null)
+                    return NotFoundResponse("Không tìm thấy voucher item cho địa điểm này");
+                return OkResponse(result, "Lấy chi tiết voucher item thành công");
             }
             catch (Exception ex)
             {

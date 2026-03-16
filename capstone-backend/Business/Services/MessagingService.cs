@@ -1,7 +1,9 @@
 using capstone_backend.Business.DTOs.Messaging;
+using capstone_backend.Business.DTOs.Notification;
 using capstone_backend.Business.Exceptions;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Interfaces;
 using capstone_backend.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -18,19 +20,25 @@ public class MessagingService : IMessagingService
     private readonly IMessageRepository _messageRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHubContext<MessagingHub> _hubContext;
+    private readonly IFcmService _fcmService;
+    private readonly IDeviceTokenRepository _deviceTokenRepository;
 
     public MessagingService(
         IConversationRepository conversationRepository,
         IConversationMemberRepository memberRepository,
         IMessageRepository messageRepository,
         IUnitOfWork unitOfWork,
-        IHubContext<MessagingHub> hubContext)
+        IHubContext<MessagingHub> hubContext,
+        IFcmService fcmService,
+        IDeviceTokenRepository deviceTokenRepository)
     {
         _conversationRepository = conversationRepository;
         _memberRepository = memberRepository;
         _messageRepository = messageRepository;
         _unitOfWork = unitOfWork;
         _hubContext = hubContext;
+        _fcmService = fcmService;
+        _deviceTokenRepository = deviceTokenRepository;
     }
 
     public async Task<ConversationResponse> CreateConversationAsync(
@@ -347,15 +355,93 @@ public class MessagingService : IMessagingService
 
         // Notify conversation members via SignalR - create response for each member with correct IsMine
         var members = await _memberRepository.GetActiveConversationMembersAsync(request.ConversationId, cancellationToken);
+        
+        // Collect all member user IDs (excluding sender) for notification
+        var memberUserIds = new List<int>();
+        
         foreach (var member in members)
         {
             if (member.UserId == null || member.UserId == currentUserId)
                 continue;
                 
+            memberUserIds.Add(member.UserId.Value);
+            
             // Create response specific to this member so IsMine is correct
             var memberResponse = await MapToMessageResponseAsync(messageWithSender, member.UserId.Value);
             await _hubContext.Clients.User(member.UserId.Value.ToString())
                 .SendAsync("ReceiveMessage", memberResponse, cancellationToken);
+        }
+
+        // Send push notification to members who are not online
+        if (memberUserIds.Any())
+        {
+            try
+            {
+                // Get conversation info to check if it's a group
+                var conversation = await _conversationRepository.GetByIdAsync(request.ConversationId);
+                var isGroupConversation = conversation?.Type == "GROUP";
+                
+                // Get sender info for notification
+                var sender = await _unitOfWork.Users.GetByIdAsync(currentUserId);
+                var senderName = !string.IsNullOrWhiteSpace(sender?.DisplayName) 
+                    ? sender.DisplayName 
+                    : sender?.Email ?? "Someone";
+
+                // Collect all device tokens from all members
+                var allTokens = new List<string>();
+                foreach (var memberId in memberUserIds)
+                {
+                    var tokens = await _deviceTokenRepository.GetTokensByUserId(memberId);
+                    if (tokens != null && tokens.Any())
+                    {
+                        allTokens.AddRange(tokens);
+                    }
+                }
+
+                if (allTokens.Any())
+                {
+                    // Prepare notification content based on message type
+                    string notificationBody = request.MessageType switch
+                    {
+                        "IMAGE" => "Đã gửi một hình ảnh",
+                        "FILE" => "Đã gửi một tệp",
+                        "VIDEO" => "Đã gửi một video",
+                        "AUDIO" => "Đã gửi một tin nhắn thoại",
+                        "DATE_PLAN" => "Đã chia sẻ một kế hoạch hẹn hò",
+                        _ => request.Content ?? "Đã gửi một tin nhắn"
+                    };
+
+                    // For group conversations, format: "SenderName in GroupName"
+                    string notificationTitle = senderName;
+                    if (isGroupConversation && !string.IsNullOrWhiteSpace(conversation?.Name))
+                    {
+                        notificationTitle = $"{conversation.Name} đã gửi tin nhắn";                    
+                    }
+
+                    var notificationRequest = new SendNotificationRequest
+                    {
+                        Title = notificationTitle,
+                        Body = notificationBody,
+                        ImageUrl = sender?.AvatarUrl,
+                        Data = new Dictionary<string, string>
+                        {
+                            { "type", "CHAT" },
+                            { "conversationId", request.ConversationId.ToString() },
+                            { "messageId", message.Id.ToString() },
+                            { "click_action", "FLUTTER_NOTIFICATION_CLICK" },
+                            { "route", "/chat" }
+                        }
+                    };
+
+                    // Send notification to all tokens
+                    await _fcmService.SendMultiNotificationAsync(allTokens, notificationRequest);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the message send operation
+                Console.WriteLine($"Failed to send push notification: {ex.Message}");
+            }
         }
 
         // Return response for sender with IsMine = true

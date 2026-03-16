@@ -76,11 +76,7 @@ public class AdvertisementController : BaseController
         }
     }
 
-    /// <summary>
-    /// Create a new advertisement (draft status).
-    /// Requires VENUEOWNER role. User ID is extracted from JWT token (sub claim).
-    /// Advertisement will be created in DRAFT status. Use submit-with-payment endpoint to activate.
-    /// </summary>
+
     /// <param name="request">Advertisement creation request</param>
     /// <returns>Created advertisement detail</returns>
     [HttpPost("create")]
@@ -112,12 +108,38 @@ public class AdvertisementController : BaseController
         }
     }
 
-    /// <summary>
-    /// Get all advertisements for the authenticated venue owner.
-    /// Requires VENUEOWNER role. User ID is extracted from JWT token (sub claim).
-    /// Returns advertisements with status, venue location count, and active venue ad info.
-    /// </summary>
-    /// <returns>List of advertisements owned by the authenticated user</returns>
+
+    [HttpPut("{id}/update-and-draft")]
+    [Authorize(Roles = "VENUEOWNER")]
+    [ProducesResponseType(typeof(ApiResponse<AdvertisementDetailResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> UpdateAdvertisementAndRevertToDraft(int id, [FromBody] UpdateAdvertisementRequest request)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (!currentUserId.HasValue)
+        {
+            return UnauthorizedResponse("User not authenticated");
+        }
+
+        try
+        {
+            var advertisement = await _advertisementService.UpdateAdvertisementAndRevertToDraftAsync(id, currentUserId.Value, request);
+            return OkResponse(advertisement, "Advertisement updated successfully and reverted to DRAFT status. You can now resubmit with payment.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+        catch (Exception)
+        {
+            return BadRequestResponse("Failed to update advertisement");
+        }
+    }
+
+
     [HttpGet("my-advertisements")]
     [Authorize(Roles = "VENUEOWNER")]
     [ProducesResponseType(typeof(ApiResponse<List<MyAdvertisementResponse>>), 200)]
@@ -145,11 +167,7 @@ public class AdvertisementController : BaseController
         }
     }
 
-    /// <summary>
-    /// Get advertisement detail by ID.
-    /// Requires VENUEOWNER role. User must own the advertisement.
-    /// Returns advertisement information with venue location ads and ads orders.
-    /// </summary>
+
     /// <param name="id">Advertisement ID</param>
     /// <returns>Advertisement detail</returns>
     [HttpGet("{id}")]
@@ -227,6 +245,24 @@ public class AdvertisementController : BaseController
         {
             _logger.LogError(ex, "Error submitting advertisement {AdId} with payment for user {UserId}", id, currentUserId);
             return BadRequestResponse("Failed to submit advertisement with payment");
+        }
+    }
+
+    [HttpGet("pending")]
+    [Authorize(Roles = "ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<List<MyAdvertisementResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    public async Task<IActionResult> GetPendingAdvertisements()
+    {
+        try
+        {
+            var advertisements = await _advertisementService.GetPendingAdvertisementsAsync();
+            return OkResponse(advertisements, $"Retrieved {advertisements.Count} pending advertisements");
+        }
+        catch (Exception)
+        {
+            return BadRequestResponse("Failed to retrieve pending advertisements");
         }
     }
 

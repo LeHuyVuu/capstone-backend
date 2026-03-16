@@ -13,5 +13,4 @@ public class SpecialEventDetailResponse
     public DateTime? EndDate { get; set; }
     public string? BannerUrl { get; set; }
     public bool? IsYearly { get; set; }
-    public DateTime? CreatedAt { get; set; }
 }

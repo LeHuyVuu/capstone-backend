@@ -170,6 +170,16 @@ public class VenueLocationService : IVenueLocationService
         response.InteriorImage = DeserializeImages(venue.InteriorImage);
         response.FullPageMenuImage = DeserializeImages(venue.FullPageMenuImage);
 
+        // Map categories from VenueLocationCategories
+        response.Categories = venue.VenueLocationCategories?
+            .Where(vlc => !vlc.IsDeleted && vlc.Category != null && !vlc.Category.IsDeleted)
+            .Select(vlc => new CategoryInfo
+            {
+                Id = vlc.Category.Id,
+                Name = vlc.Category.Name
+            })
+            .ToList();
+
         // Add today's opening hour info
         var todayOpeningHour = venue.VenueOpeningHours?.FirstOrDefault();
         if (todayOpeningHour != null)
@@ -1761,5 +1771,48 @@ public class VenueLocationService : IVenueLocationService
             total, active, pending, drafted, deleted);
 
         return (total, active, pending, drafted, deleted, statusBreakdown);
+    }
+
+    /// <summary>
+    /// Get venue location with KYC documents and venue owner profile
+    /// Query directly from DbContext to get full citizen information from UserAccount
+    /// </summary>
+    public async Task<VenueLocationWithKycResponse?> GetVenueLocationWithKycAsync(int venueId)
+    {
+        // Query trực tiếp từ DbContext để lấy đầy đủ thông tin citizen từ UserAccount
+        var venue = await _unitOfWork.Context.Set<VenueLocation>()
+            .Include(v => v.VenueOwner)
+                .ThenInclude(vo => vo.User)
+            .FirstOrDefaultAsync(v => v.Id == venueId && v.IsDeleted != true);
+
+        if (venue == null)
+        {
+            _logger.LogWarning("Venue location with ID {VenueId} not found or deleted", venueId);
+            return null;
+        }
+
+        var response = new VenueLocationWithKycResponse
+        {
+            Id = venue.Id,
+            Name = venue.Name,
+            WebsiteUrl = venue.WebsiteUrl,
+            Status = venue.Status ?? "DRAFTED",
+            Address = venue.VenueOwner.Address,
+            BusinessLicenseUrl = venue.BusinessLicenseUrl,
+            VenueOwner = new VenueOwnerKycInfo
+            {
+                Id = venue.VenueOwner.Id,
+                BusinessName = venue.VenueOwner.BusinessName,
+                PhoneNumber = venue.VenueOwner.PhoneNumber,
+                Email = venue.VenueOwner.Email,
+                // Lấy citizen documents từ UserAccount
+                CitizenIdFrontUrl = venue.VenueOwner.User?.CitizenIdFrontUrl,
+                CitizenIdBackUrl = venue.VenueOwner.User?.CitizenIdBackUrl,
+                BusinessLicenseUrl = venue.VenueOwner.User?.BusinessLicenseUrl
+            }
+        };
+
+        _logger.LogInformation("Retrieved venue location with KYC for ID {VenueId}", venueId);
+        return response;
     }
 }

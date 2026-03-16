@@ -19,12 +19,7 @@ public class AuthController : BaseController
         _userService = userService;
     }
 
-    /// <summary>
-    /// Login - Works for both WEB and MOBILE
-    /// Sets cookie for web AND returns JWT tokens for mobile
-    /// Web: Use cookie (ignore tokens in response)
-    /// Mobile: Use tokens from response (ignore cookie)
-    /// </summary>
+
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
@@ -62,10 +57,7 @@ public class AuthController : BaseController
         return OkResponse(loginResponse, "Login successful");
     }
 
-    /// <summary>
-    /// Register new Member account - Works for both WEB and MOBILE
-    /// Creates user_account with role="member" and member_profile
-    /// </summary>
+
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
@@ -111,10 +103,7 @@ public class AuthController : BaseController
         }
     }
 
-    /// <summary>
-    /// Register new VenueOwner account
-    /// Creates user_account with role="venueowner" and venue_owner_profile
-    /// </summary>
+
     [HttpPost("register-venue-owner")]
     [AllowAnonymous]
     public async Task<IActionResult> RegisterVenueOwner([FromBody] RegisterVenueOwnerRequest request)
@@ -160,11 +149,7 @@ public class AuthController : BaseController
         }
     }
 
-    /// <summary>
-    /// Logout - Works for both WEB and MOBILE
-    /// Web: Clears authentication cookie
-    /// Mobile: Client removes tokens from storage
-    /// </summary>
+
     [HttpPost("logout")]
     [Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme + "," + "Bearer")]
     public async Task<IActionResult> Logout()
@@ -181,10 +166,7 @@ public class AuthController : BaseController
         return OkResponse<object?>(null, "Logout successful");
     }
 
-    /// <summary>
-    /// Get current user information
-    /// Works for both Web (Cookie) and Mobile (JWT Bearer)
-    /// </summary>
+
     [HttpGet("me")]
     [Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme + "," + "Bearer")]
     public async Task<IActionResult> GetMe()

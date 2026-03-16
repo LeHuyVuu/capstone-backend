@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Amazon.Rekognition.Model;
+using AutoMapper;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Voucher;
 using capstone_backend.Business.Interfaces;
@@ -54,6 +55,7 @@ namespace capstone_backend.Business.Services
                 pageSize,
                 v => (query.VenueOwnerId == null || v.VenueOwnerId == query.VenueOwnerId)
                     && v.IsDeleted == false
+                    && v.Status != VoucherStatus.DRAFTED.ToString()
                     && (query.Status == null || v.Status == query.Status.ToString())
                     && (string.IsNullOrEmpty(keyword) || (
                         v.Code != null && v.Code.ToLower().Contains(keyword) ||
@@ -176,7 +178,7 @@ namespace capstone_backend.Business.Services
                 var activeJob = BackgroundJob.Schedule<IVoucherWorker>(
                     job => job.ActivateVoucherAsync(voucher.Id),
                     voucher.StartDate.Value - now
-                );  
+                );
                 voucherJobs.Add(new VoucherJob
                 {
                     VoucherId = voucher.Id,
@@ -233,6 +235,49 @@ namespace capstone_backend.Business.Services
             await _unitOfWork.SaveChangesAsync();
 
             return voucher.Id;
+        }
+
+        public async Task<PagedResult<VoucherItemResponse>> GetVoucherItemAsync(int voucherId, GetVoucherItemsRequest query)
+        {
+            var voucher = await _unitOfWork.Vouchers.GetIncludeByIdAsync(voucherId);
+            if (voucher == null)
+                throw new Exception("Không tìm thấy voucher cho địa điểm này");
+
+            int pageNumber = query.PageNumber < 1 ? 1 : query.PageNumber;
+            int pageSize = query.PageSize < 1 ? 10 : query.PageSize;
+
+            var keyword = query.Code?.Trim().ToLower();
+
+            var (voucherItems, totalCount) = await _unitOfWork.VoucherItems.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                vi => vi.VoucherId == voucherId
+                    && (query.Status == null || vi.Status == query.Status.ToString())
+                    && vi.IsDeleted == false
+                    && (string.IsNullOrEmpty(keyword) || (
+                        vi.ItemCode != null && vi.ItemCode.ToLower().Contains(keyword)
+                    )),
+                q => q.OrderByDescending(vi => vi.CreatedAt)
+            );
+
+            var response = _mapper.Map<List<VoucherItemResponse>>(voucherItems);
+            return new PagedResult<VoucherItemResponse>
+            {
+                Items = response,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
+
+        public async Task<VoucherItemDetailResponse> GetVoucherItemByIdAsync(int voucherItemId)
+        {
+            var voucherItem = await _unitOfWork.VoucherItems.GetIncludeByIdAsync(voucherItemId);
+            if (voucherItem == null)
+                throw new Exception("Không tìm thấy voucher item");
+
+            var response = _mapper.Map<VoucherItemDetailResponse>(voucherItem);
+            return response;
         }
     }
 }

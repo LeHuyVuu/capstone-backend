@@ -6,7 +6,7 @@
         public int MemberId { get; set; }
         public int TotalQuantityExchanged { get; set; }
         public int TotalPointsUsed { get; set; }
-        public int RemainingCouplePoints { get; set; }
+        public int RemainingPoints { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<ExchangeVoucherItemResult> VoucherItems { get; set; } = new();
     }
