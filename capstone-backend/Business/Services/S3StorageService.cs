@@ -51,6 +51,29 @@ public class S3StorageService
         return $"https://{_bucketName}.s3.{_region}.amazonaws.com/{key}";
     }
 
+    public async Task<string> UploadBytesAsync(byte[] fileBytes, string key)
+    {
+        if (fileBytes == null || fileBytes.Length == 0)
+            throw new ArgumentException("File bytes rỗng");
+
+        var contentType = "image/png";
+
+        await using var stream = new MemoryStream(fileBytes);
+
+        var putRequest = new PutObjectRequest
+        {
+            BucketName = _bucketName,
+            Key = key,
+            InputStream = stream,
+            ContentType = string.IsNullOrWhiteSpace(contentType)
+                ? "application/octet-stream"
+                : contentType
+        };
+
+        await _s3Client.PutObjectAsync(putRequest);
+        return $"https://{_bucketName}.s3.{_region}.amazonaws.com/{key}";
+    }
+
     public async Task DeleteFileByKeyAsync(string key)
     {
         if (string.IsNullOrWhiteSpace(key))

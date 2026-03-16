@@ -8,7 +8,7 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
-using static Microsoft.Extensions.Logging.EventSource.LoggingEventSource;
+using NanoidDotNet;
 
 namespace capstone_backend.Business.Services
 {
@@ -16,11 +16,17 @@ namespace capstone_backend.Business.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly ILogger<MemberVoucherService> _logger;
+        private readonly IQrCodeService _qrCodeService;
+        private readonly S3StorageService _s3Service;
 
-        public MemberVoucherService(IUnitOfWork unitOfWork, IMapper mapper)
+        public MemberVoucherService(IUnitOfWork unitOfWork, IMapper mapper, ILogger<MemberVoucherService> logger, IQrCodeService qrCodeService, S3StorageService s3Service)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _logger = logger;
+            _qrCodeService = qrCodeService;
+            _s3Service = s3Service;
         }
 
         public async Task<ExchangeVoucherResponse> ExchangeVoucherAsync(int userId, ExchangeVoucherRequest request)
@@ -121,6 +127,9 @@ namespace capstone_backend.Business.Services
 
             // 5. Transaction
             await _unitOfWork.BeginTransactionAsync();
+            VoucherItemMember voucherItemMember;
+            var exchangedVoucherItems = new List<VoucherItem>();
+            var expireSchedules = new List<(int VoucherItemId, DateTime ExpiredAt)>();
             try
             {
                 // Deduct points
@@ -129,7 +138,7 @@ namespace capstone_backend.Business.Services
                 _unitOfWork.Wallets.Update(wallet);
 
                 // Create transaction record (voucher item member)
-                var voucherItemMember = new VoucherItemMember
+                voucherItemMember = new VoucherItemMember
                 {
                     MemberId = member.Id,
                     Quantity = totalQuantity,
@@ -139,9 +148,6 @@ namespace capstone_backend.Business.Services
 
                 await _unitOfWork.VoucherItemMembers.AddAsync(voucherItemMember);
                 await _unitOfWork.SaveChangesAsync();
-
-                var exchangedVoucherItems = new List<VoucherItem>();
-                var expireSchedules = new List<(int VoucherItemId, DateTime ExpiredAt)>();
 
                 // Assign voucher items member for each voucher item
                 foreach (var reqItem in groupedItems)
@@ -180,59 +186,85 @@ namespace capstone_backend.Business.Services
 
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
-
-                var voucherItemJobs = new List<VoucherItemJob>();
-
-                // Schedule after commit
-                foreach (var item in expireSchedules)
-                {
-                    var delay = item.ExpiredAt - DateTime.UtcNow;
-                    var jobId = string.Empty;
-
-                    if (delay <= TimeSpan.Zero)
-                    {
-                        jobId = BackgroundJob.Enqueue<IVoucherWorker>(job =>
-                            job.ExpireVoucherItemAsync(item.VoucherItemId));
-                    }
-                    else
-                    {
-                        jobId = BackgroundJob.Schedule<IVoucherWorker>(job =>
-                            job.ExpireVoucherItemAsync(item.VoucherItemId), delay);
-                    }
-                    voucherItemJobs.Add(new VoucherItemJob
-                    {
-                        VoucherItemId = item.VoucherItemId,
-                        JobId = jobId,
-                        JobType = VoucherItemJobType.EXPIRE_VOUCHER_ITEM.ToString()
-                    });
-                }
-
-                await _unitOfWork.VoucherItemJobs.AddRangeAsync(voucherItemJobs);
-                await _unitOfWork.SaveChangesAsync();
-
-                // Map response
-                foreach (var voucherItem in exchangedVoucherItems)
-                {
-                    var voucher = voucherMap[voucherItem.VoucherId];
-                    voucherItem.Voucher = voucher; // Ensure Voucher is loaded for mapping
-                }
-
-                return new ExchangeVoucherResponse
-                {
-                    VoucherItemMemberId = voucherItemMember.Id,
-                    MemberId = member.Id,
-                    TotalQuantityExchanged = totalQuantity,
-                    TotalPointsUsed = totalPointsRequired,
-                    RemainingPoints = wallet.Points ?? 0,
-                    CreatedAt = voucherItemMember.CreatedAt ?? DateTime.UtcNow,
-                    VoucherItems = _mapper.Map<List<ExchangeVoucherItemResult>>(exchangedVoucherItems)
-                };
             }
             catch
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
+
+            // Gen qrCode
+            try
+            {
+                var uploadTasks = exchangedVoucherItems.Select(async item =>
+                {
+                    var qrBytes = await Task.Run(() => _qrCodeService.GenerateQrWithLogoAsync(item.ItemCode));
+
+                    // upload to s3
+                    var fileName = $"vouchers/qr_{item.Id}_{Guid.NewGuid():N}.png";
+                    var s3Url = await _s3Service.UploadBytesAsync(qrBytes, fileName);
+
+                    item.QrCodeUrl = s3Url;
+                });
+
+                // Wait for all uploads to complete
+                await Task.WhenAll(uploadTasks);
+
+                // Update voucher items with qr code url
+                _unitOfWork.VoucherItems.UpdateRange(exchangedVoucherItems);
+                await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exchange success but error at gen qrCode {Id}", voucherItemMember.Id);
+            }
+
+            var voucherItemJobs = new List<VoucherItemJob>();
+
+            // Schedule after commit
+            foreach (var item in expireSchedules)
+            {
+                var delay = item.ExpiredAt - DateTime.UtcNow;
+                var jobId = string.Empty;
+
+                if (delay <= TimeSpan.Zero)
+                {
+                    jobId = BackgroundJob.Enqueue<IVoucherWorker>(job =>
+                        job.ExpireVoucherItemAsync(item.VoucherItemId));
+                }
+                else
+                {
+                    jobId = BackgroundJob.Schedule<IVoucherWorker>(job =>
+                        job.ExpireVoucherItemAsync(item.VoucherItemId), delay);
+                }
+                voucherItemJobs.Add(new VoucherItemJob
+                {
+                    VoucherItemId = item.VoucherItemId,
+                    JobId = jobId,
+                    JobType = VoucherItemJobType.EXPIRE_VOUCHER_ITEM.ToString()
+                });
+            }
+
+            await _unitOfWork.VoucherItemJobs.AddRangeAsync(voucherItemJobs);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Map response
+            foreach (var voucherItem in exchangedVoucherItems)
+            {
+                var voucher = voucherMap[voucherItem.VoucherId];
+                voucherItem.Voucher = voucher; // Ensure Voucher is loaded for mapping
+            }
+
+            return new ExchangeVoucherResponse
+            {
+                VoucherItemMemberId = voucherItemMember.Id,
+                MemberId = member.Id,
+                TotalQuantityExchanged = totalQuantity,
+                TotalPointsUsed = totalPointsRequired,
+                RemainingPoints = couple.TotalPoints ?? 0,
+                CreatedAt = voucherItemMember.CreatedAt ?? DateTime.UtcNow,
+                VoucherItems = _mapper.Map<List<ExchangeVoucherItemResult>>(exchangedVoucherItems)
+            };
         }
 
         public async Task<MemberVoucherDetailResponse> GetMemberVoucherByIdAsync(int voucherId)
