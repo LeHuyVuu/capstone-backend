@@ -260,7 +260,7 @@ namespace capstone_backend.Business.Services
                 MemberId = member.Id,
                 TotalQuantityExchanged = totalQuantity,
                 TotalPointsUsed = totalPointsRequired,
-                RemainingCouplePoints = couple.TotalPoints ?? 0,
+                RemainingPoints = couple.TotalPoints ?? 0,
                 CreatedAt = voucherItemMember.CreatedAt ?? DateTime.UtcNow,
                 VoucherItems = _mapper.Map<List<ExchangeVoucherItemResult>>(exchangedVoucherItems)
             };
