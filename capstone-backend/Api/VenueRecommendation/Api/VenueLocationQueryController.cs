@@ -40,12 +40,15 @@ public class VenueLocationQueryController : BaseController
           string? memberMoodTypeName = null;
           string? couplePersonalityTypeName = null;
           string? memberMbtiType = null;
+          int? memberId = null;
           
             if (userId != null)
             {
                 var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId.Value);
                 if (member != null)
                 {
+                    memberId = member.Id;
+                    
                     // Kiểm tra xem member có couple đang ACTIVE không
                     var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
                     
@@ -91,16 +94,17 @@ public class VenueLocationQueryController : BaseController
             "MinPrice: {MinPrice}, MaxPrice: {MaxPrice}, OnlyOpenNow: {OnlyOpenNow}, " +
             "SortBy: '{SortBy}', SortDirection: '{SortDirection}', " +
             "CoupleMoodType: '{CoupleMoodType}', MemberMoodType: '{MemberMoodType}', " +
-            "CouplePersonalityType: '{CouplePersonalityType}', MemberMbtiType: '{MemberMbtiType}'",
+            "CouplePersonalityType: '{CouplePersonalityType}', MemberMbtiType: '{MemberMbtiType}', " +
+            "UserId: {UserId}, MemberId: {MemberId}",
             request.Query, request.Page, request.PageSize,
             request.Category, request.Area, request.Latitude, request.Longitude, request.RadiusKm,
             request.MinRating, request.MaxRating,
             request.MinPrice, request.MaxPrice, request.OnlyOpenNow,
             request.SortBy, request.SortDirection,
             coupleMoodTypeName, memberMoodTypeName,
-            couplePersonalityTypeName, memberMbtiType);
+            couplePersonalityTypeName, memberMbtiType, userId, memberId);
         
-        var result = await _meilisearchService.SearchVenueLocationsAsync(request, coupleMoodTypeName, memberMoodTypeName, couplePersonalityTypeName, memberMbtiType);
+        var result = await _meilisearchService.SearchVenueLocationsAsync(request, coupleMoodTypeName, memberMoodTypeName, couplePersonalityTypeName, memberMbtiType, memberId);
 
         return OkResponse(result, $"Found {result.Recommendations.TotalCount} venues in {result.ProcessingTimeMs}ms");
     }
