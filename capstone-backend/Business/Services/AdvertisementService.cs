@@ -1333,5 +1333,69 @@ public class AdvertisementService : IAdvertisementService
         return new List<string> { trimmed };
     }
 
+    public async Task<List<AdsOrderResponse>> GetMyAdsOrdersAsync(int userId, string? status = null)
+    {
+        _logger.LogInformation("Getting ads orders for user {UserId} with status filter: {Status}", userId, status ?? "all");
+
+        // Find VenueOwnerProfile from userId
+        var venueOwnerProfile = await _unitOfWork.Context.Set<VenueOwnerProfile>()
+            .FirstOrDefaultAsync(vop => vop.UserId == userId && vop.IsDeleted != true);
+
+        if (venueOwnerProfile == null)
+        {
+            _logger.LogWarning("User {UserId} does not have a venue owner profile", userId);
+            return new List<AdsOrderResponse>();
+        }
+
+        // Query directly from AdsOrder table
+        var query = _unitOfWork.Context.Set<AdsOrder>()
+            .Include(ao => ao.Package)
+            .Include(ao => ao.Advertisement)
+            .Where(ao => ao.Advertisement.VenueOwnerId == venueOwnerProfile.Id 
+                      && ao.Advertisement.IsDeleted != true)
+            .AsQueryable();
+
+        // Filter by advertisement status if provided
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            var normalizedStatus = status.Trim().ToUpper();
+            query = query.Where(ao => ao.Advertisement.Status == normalizedStatus);
+        }
+
+        var adsOrders = await query
+            .OrderByDescending(ao => ao.CreatedAt)
+            .ToListAsync();
+
+        var responses = adsOrders.Select(ao =>
+        {
+            return new AdsOrderResponse
+            {
+                Id = ao.Id,
+                Status = ao.Status ?? "PENDING",
+                CreatedAt = ao.CreatedAt ?? DateTime.UtcNow,
+                UpdatedAt = ao.UpdatedAt,
+                Payment = new PaymentInfo
+                {
+                    TransactionId = ao.Id,
+                    Amount = ao.PricePaid ?? 0,
+                    PaymentStatus = ao.Status ?? "PENDING",
+                    PaymentMethod = "VIETQR",
+                    PaidAt = ao.UpdatedAt,
+                    TransactionCode = null
+                },
+                Package = ao.Package != null ? new PackageInfo
+                {
+                    Id = ao.Package.Id,
+                    Name = ao.Package.Name ?? "Unknown Package",
+                    Price = ao.Package.Price,
+                    DurationDays = ao.Package.DurationDays,
+                    PlacementType = ao.Package.Placement ?? string.Empty
+                } : null
+            };
+        }).ToList();
+
+        return responses;
+    }
+
     #endregion
 }

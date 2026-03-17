@@ -167,6 +167,37 @@ public class AdvertisementController : BaseController
         }
     }
 
+    /// <summary>
+    /// Get ads orders for venue owner with detailed payment and status information
+    /// </summary>
+    [HttpGet("my-ads-orders")]
+    [Authorize(Roles = "VENUEOWNER")]
+    [ProducesResponseType(typeof(ApiResponse<List<AdsOrderResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    public async Task<IActionResult> GetMyAdsOrders([FromQuery] string? status = null)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (!currentUserId.HasValue)
+        {
+            return UnauthorizedResponse("User not authenticated");
+        }
+
+        _logger.LogInformation("VenueOwner {UserId} requesting their ads orders (Status: {Status})", 
+            currentUserId.Value, status ?? "all");
+
+        try
+        {
+            var adsOrders = await _advertisementService.GetMyAdsOrdersAsync(currentUserId.Value, status);
+            return OkResponse(adsOrders, $"Retrieved {adsOrders.Count} ads orders");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving ads orders for user {UserId}", currentUserId);
+            return BadRequestResponse("Failed to retrieve ads orders");
+        }
+    }
+
 
     /// <param name="id">Advertisement ID</param>
     /// <returns>Advertisement detail</returns>

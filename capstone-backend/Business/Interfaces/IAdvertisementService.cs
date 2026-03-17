@@ -14,6 +14,7 @@ public interface IAdvertisementService
     Task<AdvertisementDetailResponse> CreateAdvertisementAsync(CreateAdvertisementRequest request, int userId);
     Task<AdvertisementDetailResponse> UpdateAdvertisementAndRevertToDraftAsync(int advertisementId, int userId, UpdateAdvertisementRequest request);
     Task<List<MyAdvertisementResponse>> GetMyAdvertisementsAsync(int userId);
+    Task<List<AdsOrderResponse>> GetMyAdsOrdersAsync(int userId, string? status = null);
     Task<AdvertisementDetailResponse?> GetAdvertisementByIdAsync(int id, int userId);
     Task<SubmitAdvertisementWithPaymentResponse> SubmitAdvertisementWithPaymentAsync(int advertisementId, int userId, SubmitAdvertisementWithPaymentRequest request);
     

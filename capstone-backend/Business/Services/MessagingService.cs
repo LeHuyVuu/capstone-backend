@@ -332,18 +332,14 @@ public class MessagingService : IMessagingService
         }
 
         // Auto-generate content for media messages
-        string? messageContent = request.Content?.Trim();
-        if (string.IsNullOrWhiteSpace(messageContent))
+        string? messageContent = request.MessageType switch
         {
-            messageContent = request.MessageType switch
-            {
-                "IMAGE" => "đã gửi 1 ảnh",
-                "VIDEO" => "đã gửi 1 video",
-                "AUDIO" => "đã gửi 1 tin nhắn thoại",
-                "FILE" => "đã gửi 1 tệp",
-                _ => messageContent
-            };
-        }
+            "IMAGE" => "đã gửi 1 ảnh",
+            "VIDEO" => "đã gửi 1 video",
+            "AUDIO" => "đã gửi 1 tin nhắn thoại",
+            "FILE" => "đã gửi 1 tệp",
+            _ => request.Content?.Trim()
+        };
 
         // Create message
         var message = new Message
