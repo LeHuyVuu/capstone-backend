@@ -16,6 +16,10 @@ public class MessagingHub : Hub
     private readonly IConversationRepository _conversationRepository;
     private static readonly ConcurrentDictionary<int, HashSet<string>> UserConnections = new();
     private static readonly ConcurrentDictionary<string, DateTime> TypingUsers = new();
+    private static readonly ConcurrentDictionary<string, DateTime> ConnectionHeartbeats = new();
+    private static readonly ConcurrentDictionary<string, CancellationTokenSource> HeartbeatTimers = new();
+    
+    private const int HeartbeatTimeoutSeconds = 30; // Timeout after 30 seconds of no heartbeat
 
     public MessagingHub(IConversationRepository conversationRepository)
     {
@@ -40,6 +44,10 @@ public class MessagingHub : Hub
                     return existingSet;
                 });
 
+            // Initialize heartbeat
+            ConnectionHeartbeats[Context.ConnectionId] = DateTime.UtcNow;
+            StartHeartbeatMonitor(userId, Context.ConnectionId);
+
             // Notify others that user is online
             await Clients.Others.SendAsync("UserOnline", userId);
         }
@@ -55,6 +63,15 @@ public class MessagingHub : Hub
         var userId = GetCurrentUserId();
         if (userId > 0)
         {
+            // Stop heartbeat monitor
+            if (HeartbeatTimers.TryRemove(Context.ConnectionId, out var cts))
+            {
+                cts.Cancel();
+                cts.Dispose();
+            }
+            
+            ConnectionHeartbeats.TryRemove(Context.ConnectionId, out _);
+            
             if (UserConnections.TryGetValue(userId, out var connections))
             {
                 connections.Remove(Context.ConnectionId);
@@ -220,5 +237,70 @@ public class MessagingHub : Hub
     public static bool IsUserOnline(int userId)
     {
         return UserConnections.ContainsKey(userId);
+    }
+    
+    /// <summary>
+    /// Heartbeat to keep connection alive
+    /// </summary>
+    public async Task Heartbeat()
+    {
+        ConnectionHeartbeats[Context.ConnectionId] = DateTime.UtcNow;
+        await Task.CompletedTask;
+    }
+    
+    /// <summary>
+    /// Monitor heartbeat and auto-disconnect if timeout
+    /// </summary>
+    private void StartHeartbeatMonitor(int userId, string connectionId)
+    {
+        var cts = new CancellationTokenSource();
+        HeartbeatTimers[connectionId] = cts;
+        
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (!cts.Token.IsCancellationRequested)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(10), cts.Token);
+                    
+                    if (ConnectionHeartbeats.TryGetValue(connectionId, out var lastHeartbeat))
+                    {
+                        var timeSinceLastHeartbeat = DateTime.UtcNow - lastHeartbeat;
+                        
+                        if (timeSinceLastHeartbeat.TotalSeconds > HeartbeatTimeoutSeconds)
+                        {
+                            // Connection timed out, force disconnect
+                            Console.WriteLine($"Connection {connectionId} timed out for user {userId}");
+                            
+                            // Clean up
+                            ConnectionHeartbeats.TryRemove(connectionId, out _);
+                            HeartbeatTimers.TryRemove(connectionId, out _);
+                            
+                            if (UserConnections.TryGetValue(userId, out var connections))
+                            {
+                                connections.Remove(connectionId);
+                                
+                                if (connections.Count == 0)
+                                {
+                                    UserConnections.TryRemove(userId, out _);
+                                    await Clients.Others.SendAsync("UserOffline", userId, DateTime.UtcNow);
+                                }
+                            }
+                            
+                            break;
+                        }
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Normal cancellation
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in heartbeat monitor: {ex.Message}");
+            }
+        }, cts.Token);
     }
 }
