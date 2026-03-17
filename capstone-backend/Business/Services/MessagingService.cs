@@ -331,12 +331,26 @@ public class MessagingService : IMessagingService
             Console.WriteLine($"[DEBUG] No DATE_PLAN or FileUrl: ReferenceType={request.ReferenceType}, ReferenceId={request.ReferenceId}");
         }
 
+        // Auto-generate content for media messages
+        string? messageContent = request.Content?.Trim();
+        if (string.IsNullOrWhiteSpace(messageContent))
+        {
+            messageContent = request.MessageType switch
+            {
+                "IMAGE" => "đã gửi 1 ảnh",
+                "VIDEO" => "đã gửi 1 video",
+                "AUDIO" => "đã gửi 1 tin nhắn thoại",
+                "FILE" => "đã gửi 1 tệp",
+                _ => messageContent
+            };
+        }
+
         // Create message
         var message = new Message
         {
             ConversationId = request.ConversationId,
             SenderId = currentUserId,
-            Content = request.Content?.Trim(),
+            Content = messageContent,
             MessageType = request.MessageType,
             ReferenceId = request.ReferenceId,
             ReferenceType = request.ReferenceType?.Trim(),
