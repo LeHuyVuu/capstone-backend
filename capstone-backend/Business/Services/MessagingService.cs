@@ -789,7 +789,7 @@ public class MessagingService : IMessagingService
                 Avatar = m.User?.AvatarUrl,
                 Role = m.Role ?? "MEMBER",
                 JoinedAt = m.JoinedAt,
-                IsOnline = false // TODO: Implement online status tracking
+                IsOnline = MessagingHub.IsUserOnline(m.UserId ?? 0)
             }).ToList() ?? new List<ConversationMemberResponse>()
         };
 
