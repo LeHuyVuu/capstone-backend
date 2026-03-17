@@ -127,4 +127,54 @@ public class SubscriptionPackageService : ISubscriptionPackageService
             throw;
         }
     }
+
+    public async Task<List<VenueSubscriptionPackageDto>> GetVenueSubscriptionPackagesByVenueIdAsync(int venueId)
+    {
+        try
+        {
+            _logger.LogInformation("Getting venue subscription packages for venue ID: {VenueId}", venueId);
+
+            var venueSubscriptions = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
+                .Include(vsp => vsp.Package)
+                .Where(vsp => vsp.VenueId == venueId)
+                .OrderByDescending(vsp => vsp.CreatedAt)
+                .Select(vsp => new VenueSubscriptionPackageDto
+                {
+                    Id = vsp.Id,
+                    VenueId = vsp.VenueId,
+                    PackageId = vsp.PackageId,
+                    StartDate = vsp.StartDate,
+                    EndDate = vsp.EndDate,
+                    Quantity = vsp.Quantity,
+                    Status = vsp.Status,
+                    CreatedAt = vsp.CreatedAt,
+                    UpdatedAt = vsp.UpdatedAt,
+                    Package = vsp.Package != null ? new SubscriptionPackageDto
+                    {
+                        Id = vsp.Package.Id,
+                        PackageName = vsp.Package.PackageName,
+                        Price = vsp.Package.Price,
+                        DurationDays = vsp.Package.DurationDays,
+                        Type = vsp.Package.Type,
+                        Description = vsp.Package.Description,
+                        IsActive = vsp.Package.IsActive,
+                        CreatedAt = vsp.Package.CreatedAt,
+                        UpdatedAt = vsp.Package.UpdatedAt
+                    } : null
+                })
+                .ToListAsync();
+
+            _logger.LogInformation(
+                "Found {Count} venue subscription packages for venue ID {VenueId}", 
+                venueSubscriptions.Count, 
+                venueId);
+
+            return venueSubscriptions;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting venue subscription packages for venue ID: {VenueId}", venueId);
+            throw;
+        }
+    }
 }

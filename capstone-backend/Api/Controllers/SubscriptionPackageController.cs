@@ -94,4 +94,34 @@ public class SubscriptionPackageController : BaseController
             return InternalServerErrorResponse("An error occurred while updating the subscription package");
         }
     }
+
+    /// <summary>
+    /// Get venue subscription packages by venue ID
+    /// </summary>
+    /// <param name="venueId">Venue ID</param>
+    /// <returns>List of venue subscription packages</returns>
+    /// <response code="200">Returns the list of venue subscription packages</response>
+    /// <response code="400">If the venue ID is invalid</response>
+    /// <response code="500">If there was an internal server error</response>
+    [HttpGet("venue/{venueId}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetVenueSubscriptionPackagesByVenueId([FromRoute] int venueId)
+    {
+        try
+        {
+            if (venueId <= 0)
+            {
+                return BadRequestResponse("Invalid venue ID");
+            }
+
+            var packages = await _subscriptionPackageService.GetVenueSubscriptionPackagesByVenueIdAsync(venueId);
+            
+            return OkResponse(packages, $"Successfully retrieved {packages.Count} venue subscription packages");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting venue subscription packages for venue ID: {VenueId}", venueId);
+            return InternalServerErrorResponse("An error occurred while retrieving venue subscription packages");
+        }
+    }
 }
