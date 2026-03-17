@@ -258,12 +258,12 @@ public class MessagingService : IMessagingService
 
         // Validate content based on message type
         if (request.MessageType == "TEXT" && string.IsNullOrWhiteSpace(request.Content))
-            throw new Exception("Message content is required for text messages");
+            throw new BadRequestException("Message content is required for text messages", "CONTENT_REQUIRED");
 
         if ((request.MessageType == "IMAGE" || request.MessageType == "FILE" || 
              request.MessageType == "VIDEO" || request.MessageType == "AUDIO") && 
             string.IsNullOrWhiteSpace(request.FileUrl))
-            throw new Exception($"File URL is required for {request.MessageType} messages");
+            throw new BadRequestException($"File URL is required for {request.MessageType} messages. Please upload the file first using /api/upload endpoint.", "FILE_URL_REQUIRED");
 
         // Build metadata JSON for file attachments or date plan
         string? metadata = request.Metadata;
@@ -320,9 +320,9 @@ public class MessagingService : IMessagingService
             Console.WriteLine($"[DEBUG] File attachment detected");
             var fileInfo = new
             {
-                fileUrl = request.FileUrl,
-                fileName = request.FileName,
-                fileSize = request.FileSize
+                FileUrl = request.FileUrl,
+                FileName = request.FileName,
+                FileSize = request.FileSize
             };
             metadata = System.Text.Json.JsonSerializer.Serialize(fileInfo);
         }
@@ -890,7 +890,8 @@ public class MessagingService : IMessagingService
             try
             {
                 // Parse based on message type for better reliability
-                if (message.MessageType == "FILE" || message.MessageType == "IMAGE")
+                if (message.MessageType == "FILE" || message.MessageType == "IMAGE" || 
+                    message.MessageType == "VIDEO" || message.MessageType == "AUDIO")
                 {
                     // Parse as file metadata
                     var fileInfo = System.Text.Json.JsonSerializer.Deserialize<FileMetadata>(message.Metadata);
@@ -927,13 +928,13 @@ public class MessagingService : IMessagingService
 
     private class FileMetadata
     {
-        [System.Text.Json.Serialization.JsonPropertyName("fileUrl")]
+        [System.Text.Json.Serialization.JsonPropertyName("FileUrl")]
         public string? FileUrl { get; set; }
         
-        [System.Text.Json.Serialization.JsonPropertyName("fileName")]
+        [System.Text.Json.Serialization.JsonPropertyName("FileName")]
         public string? FileName { get; set; }
         
-        [System.Text.Json.Serialization.JsonPropertyName("fileSize")]
+        [System.Text.Json.Serialization.JsonPropertyName("FileSize")]
         public long? FileSize { get; set; }
     }
 
