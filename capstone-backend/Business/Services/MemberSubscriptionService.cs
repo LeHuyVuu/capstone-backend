@@ -33,7 +33,7 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Không ghi nhận được gói đăng ký của member");
 
             var metadata = JsonConverterUtil.DeserializeOrDefault<MomoTransactionMetadata>(tx.ExternalRefCode);
-            var response = _mapper.Map<MemberSubscriptionResponse>(tx);
+            var response = _mapper.Map<MemberSubscriptionResponse>(sub);
             response.PayUrl = metadata?.PayUrl;
             response.QrCodeUrl = metadata?.QrCodeUrl;
             response.DeepLink = metadata?.DeepLink;
