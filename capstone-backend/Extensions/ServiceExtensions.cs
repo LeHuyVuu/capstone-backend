@@ -138,6 +138,10 @@ public static class ServiceExtensions
         services.AddScoped<IWalletRepository, WalletRepository>();
         services.AddScoped<IWithdrawRequestRepository, WithdrawRequestRepository>();
 
+        services.AddScoped<ITransactionRepository, TransactionRepository>();
+        services.AddScoped<ISubscriptionPackageRepository, SubscriptionPackageRepository>();
+        services.AddScoped<IMemberSubscriptionPackageRepository, MemberSubscriptionPackageRepository>();
+
         // Messaging repositories
         services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddScoped<IConversationMemberRepository, ConversationMemberRepository>();

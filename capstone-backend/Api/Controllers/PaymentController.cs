@@ -1,4 +1,5 @@
 using capstone_backend.Api.Models;
+using capstone_backend.Business.DTOs.Momo;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -15,13 +16,16 @@ public class PaymentController : BaseController
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<PaymentController> _logger;
+    private readonly IMomoService _momoService;
 
     public PaymentController(
         IUnitOfWork unitOfWork,
-        ILogger<PaymentController> logger)
+        ILogger<PaymentController> logger,
+        IMomoService momoService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _momoService = momoService;
     }
 
     /// <summary>
@@ -187,6 +191,33 @@ public class PaymentController : BaseController
             await dbTransaction.RollbackAsync();
             _logger.LogError(ex, "Error cancelling payment");
             return InternalServerErrorResponse("Failed to cancel payment");
+        }
+    }
+
+    /// <summary>
+    /// Process subscription payment (For Members)
+    /// </summary>
+    [Authorize(Roles = "MEMBER, member")]
+    [HttpPost("member/momo-pay")]
+    public async Task<IActionResult> ProcessMemberSubscriptionPayment([FromBody] ProcessMemberSubscriptionPaymentRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return UnauthorizedResponse("Unauthorized");
+            }
+
+            var result = await _momoService.ProcessMemberSubscriptionPaymentAsync(userId.Value, request);
+            if (result == null)
+                return BadRequestResponse("Lấy link thanh toán thất bại");
+
+            return OkResponse(result, "Lấy link thanh toán thành công");
+        }
+        catch (Exception ex)
+        {
+            return BadRequestResponse(ex.Message);
         }
     }
 }

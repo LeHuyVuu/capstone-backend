@@ -1,5 +1,6 @@
 ﻿using capstone_backend.Business.DTOs.Momo;
 using capstone_backend.Business.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
@@ -20,6 +21,7 @@ namespace capstone_backend.Api.Controllers
         }
 
         [HttpPost("ipn")]
+        [AllowAnonymous]
         public async Task<IActionResult> HandleMomoIPN([FromBody] MomoIpnRequest request)
         {
 
@@ -28,7 +30,19 @@ namespace capstone_backend.Api.Controllers
                 WriteIndented = true
             }));
 
-            return NoContent();
+            try
+            {
+                // Implement logic
+                var isOk = await _momoService.VerifyPaymentProcessing(request);
+                if (!isOk)
+                    return BadRequest();
+
+                return NoContent();
+            }
+            catch (Exception)
+            {
+                return BadRequest();
+            }
         }
     }
 }

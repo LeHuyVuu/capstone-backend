@@ -99,6 +99,12 @@ public interface IUnitOfWork : IDisposable
 
     IWithdrawRequestRepository WithdrawRequests { get; }
 
+    ITransactionRepository Transactions { get; }
+
+    ISubscriptionPackageRepository SubscriptionPackages { get; }
+
+    IMemberSubscriptionPackageRepository MemberSubscriptionPackages { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>
