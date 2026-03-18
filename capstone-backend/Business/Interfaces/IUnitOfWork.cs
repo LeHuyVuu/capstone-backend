@@ -105,6 +105,8 @@ public interface IUnitOfWork : IDisposable
 
     IMemberSubscriptionPackageRepository MemberSubscriptionPackages { get; }
 
+    ILeaderboardRepository Leaderboards { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>

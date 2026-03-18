@@ -147,6 +147,8 @@ public static class ServiceExtensions
         services.AddScoped<IConversationMemberRepository, ConversationMemberRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
 
+        services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
+
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
@@ -248,6 +250,9 @@ public static class ServiceExtensions
         services.AddScoped<IVoucherCodeGenerator, VoucherCodeGenerator>();
 
         services.AddScoped<WalletService>();
+
+        // Register Leaderboard Service
+        services.AddScoped<ILeaderboardService, LeaderboardService>();
 
         return services;
     }
