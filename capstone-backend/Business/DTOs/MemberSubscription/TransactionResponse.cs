@@ -1,6 +1,6 @@
 ﻿namespace capstone_backend.Business.DTOs.MemberSubscription
 {
-    public class MemberSubscriptionResponse
+    public class TransactionResponse
     {
         public int Id { get; set; }
         public decimal Amount { get; set; }

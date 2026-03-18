@@ -18,22 +18,30 @@ namespace capstone_backend.Business.Services
             _mapper = mapper;
         }
 
-        public async Task<MemberSubscriptionResponse> CheckPaymentStatusAsync(int userId, int transactionId)
+        public async Task<TransactionResponse> CheckPaymentStatusAsync(int userId, string orderId)
         {
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Hồ sơ thành viên không tồn tại");
 
-            var tx = await _unitOfWork.Transactions.GetByIdAsync(transactionId);
+            var orderParts = orderId.Split("_");
+            if (orderParts.Length < 3)
+                throw new Exception("Order ID không hợp lệ");
+            var transactionId = IdEncoder.Decode(orderParts[2]);
+
+            var tx = await _unitOfWork.Transactions.GetByIdAsync((int)transactionId);
             if (tx == null || tx.UserId != userId)
                 throw new Exception("Giao dịch không tồn tại hoặc không thuộc về người dùng");
+
+            if (tx.TransType != 3)
+                throw new Exception("Giao dịch không phải thanh toán gói member");
 
             var sub = await _unitOfWork.MemberSubscriptionPackages.GetByIdAsync(tx.DocNo);
             if (sub == null)
                 throw new Exception("Không ghi nhận được gói đăng ký của member");
 
             var metadata = JsonConverterUtil.DeserializeOrDefault<MomoTransactionMetadata>(tx.ExternalRefCode);
-            var response = _mapper.Map<MemberSubscriptionResponse>(tx);
+            var response = _mapper.Map<TransactionResponse>(tx);
             response.PayUrl = metadata?.PayUrl;
             response.QrCodeUrl = metadata?.QrCodeUrl;
             response.DeepLink = metadata?.DeepLink;
