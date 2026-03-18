@@ -5,6 +5,7 @@ using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 namespace capstone_backend.Business.Services
 {
@@ -36,11 +37,22 @@ namespace capstone_backend.Business.Services
 
             var now = DateTime.UtcNow;
 
+            MemberSubscriptionPackage subscription;
+            Transaction transaction;
+
             await _unitOfWork.BeginTransactionAsync();
             try
             {
+                Transaction? recentTransaction = await _unitOfWork.Transactions.GetRecentPendingAsync(userId, request.PackageId, now.AddMinutes(-30));
+
+                if (recentTransaction != null)
+                {
+                    recentTransaction.Status = TransactionStatus.CANCELLED.ToString();
+                    _unitOfWork.Transactions.Update(recentTransaction);
+                }
+
                 // 1. Create subscription record
-                var subscription = new MemberSubscriptionPackage
+                subscription = new MemberSubscriptionPackage
                 {
                     MemberId = member.Id,
                     PackageId = package.Id,
@@ -52,7 +64,7 @@ namespace capstone_backend.Business.Services
                 await _unitOfWork.SaveChangesAsync();
 
                 // 2. Create transaction record
-                var transaction = new Transaction
+                transaction = new Transaction
                 {
                     UserId = userId,
                     DocNo = subscription.Id,
@@ -68,67 +80,88 @@ namespace capstone_backend.Business.Services
                 await _unitOfWork.SaveChangesAsync();
 
                 // 3. Generate MoMo payment link
-                var orderId = $"CM_T_{IdEncoder.Encode(transaction.Id)}";
                 var seed = Guid.NewGuid().ToString("N")[..6];
-                var requestId = $"CM_R_{transaction.Id}_{seed}";
+                transaction.ExternalRefCode = $"CM_R_{transaction.Id}_{seed}";
+                _unitOfWork.Transactions.Update(transaction);
 
-                // Update external ref code
-                transaction.ExternalRefCode = requestId;
                 await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
 
-                // 4. Call Momo
-                var momoRequest = new CreateMomoPaymentRequest
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+
+            var orderId = $"CM_T_{IdEncoder.Encode(transaction.Id)}";
+            var requestId = transaction.ExternalRefCode!;
+
+            var momoRequest = new CreateMomoPaymentRequest
+            {
+                PartnerCode = _partnerCode,
+                StoreName = "Couplemood",
+                RequestId = requestId,
+                Amount = (long)package.Price!.Value,
+                OrderId = orderId,
+                OrderInfo = $"Thanh toán gói {package.PackageName} qua MoMo",
+                RedirectUrl = Environment.GetEnvironmentVariable("PAYMENT_REDIRECT_URL"),
+                IpnUrl = _ipnUrl,
+                RequestType = "captureWallet",
+                ExtraData = "",
+                Items = new List<PaymentItems>
                 {
-                    PartnerCode = _partnerCode,
-                    StoreName = "Couplemood",
-                    RequestId = requestId,
-                    Amount = (long)package.Price.Value,
-                    OrderId = orderId,
-                    OrderInfo = $"Thanh toán gói {package.PackageName} qua MoMo",
-                    RedirectUrl = Environment.GetEnvironmentVariable("PAYMENT_REDIRECT_URL"),
-                    IpnUrl = _ipnUrl,
-                    RequestType = "captureWallet",
-                    ExtraData = "",
-                    Items = new List<PaymentItems>
+                    new PaymentItems
                     {
-                        new PaymentItems
-                        {
-                            Id = package.Id.ToString(),
-                            Name = package.PackageName,
-                            Description = package.Description,
-                            Price = (long)package.Price.Value,
-                            Manufacturer = "Couplemood",
-                            Quantity = 1,
-                            Currency = "VND",
-                            Unit = "gói",
-                            TaxAmount = 0
-                        }
-                    },
-                    UserInfo = new UserInfo
-                    {
-                        Name = member.FullName,
-                        Email = member.User.Email,
-                        PhoneNumber = member.User.PhoneNumber
-                    },
-                    Lang = "vi",
-                    Signature = ""
-                };
+                        Id = package.Id.ToString(),
+                        Name = package.PackageName,
+                        Description = package.Description,
+                        Price = (long)package.Price.Value,
+                        Manufacturer = "Couplemood",
+                        Quantity = 1,
+                        Currency = "VND",
+                        Unit = "gói",
+                        TaxAmount = 0
+                    }
+                },
+                UserInfo = new UserInfo
+                {
+                    Name = member.FullName,
+                    Email = member.User.Email,
+                    PhoneNumber = member.User.PhoneNumber
+                },
+                Lang = "vi",
+                Signature = ""
+            };
 
-                // Generate signature
-                var rawSignature = $"accessKey={_accessKey}&amount={momoRequest.Amount}&extraData=&ipnUrl={_ipnUrl}&orderId={orderId}&orderInfo={momoRequest.OrderInfo}&partnerCode={_partnerCode}&redirectUrl={momoRequest.RedirectUrl}&requestId={requestId}&requestType={momoRequest.RequestType}";
+            var rawSignature =
+                $"accessKey={_accessKey}" +
+                $"&amount={momoRequest.Amount}" +
+                $"&extraData=" +
+                $"&ipnUrl={_ipnUrl}" +
+                $"&orderId={orderId}" +
+                $"&orderInfo={momoRequest.OrderInfo}" +
+                $"&partnerCode={_partnerCode}" +
+                $"&redirectUrl={momoRequest.RedirectUrl}" +
+                $"&requestId={requestId}" +
+                $"&requestType={momoRequest.RequestType}";
 
-                momoRequest.Signature = GetSignature(rawSignature, _secretKey);
+            momoRequest.Signature = GetSignature(rawSignature, _secretKey);
+
+            CreateMomoPaymenResponse? result = null;
+
+            try
+            {
                 var client = _httpClientFactory.CreateClient();
                 var response = await client.PostAsJsonAsync(_endpoint, momoRequest);
-                var result = await response.Content.ReadFromJsonAsync<CreateMomoPaymenResponse>();
+                var responseText = await response.Content.ReadAsStringAsync();
 
-                if (result == null || string.IsNullOrEmpty(result.PayUrl))
+                result = JsonConverterUtil.DeserializeOrDefault<CreateMomoPaymenResponse>(responseText);
+
+                if (!response.IsSuccessStatusCode || result == null || string.IsNullOrWhiteSpace(result.PayUrl))
                 {
-                    throw new Exception($"Lỗi từ MoMo: {result?.Message ?? "Không thể kết nối API MoMo"}");
+                    throw new Exception($"Lỗi từ MoMo: {result?.Message ?? responseText}");
                 }
-
-                // 5. Commit transaction
-                await _unitOfWork.CommitTransactionAsync();
 
                 return new MomoLinkResponse
                 {
@@ -140,9 +173,30 @@ namespace capstone_backend.Business.Services
             }
             catch
             {
-                await _unitOfWork.RollbackTransactionAsync();
+                await MarkTransactionFailedAsync(transaction.Id);
                 throw;
             }
+        }
+
+        private async Task MarkTransactionFailedAsync(int transactionId)
+        {
+            var transaction = await _unitOfWork.Transactions.GetByIdAsync(transactionId);
+            if (transaction == null) 
+                return;
+
+            if (transaction.Status == TransactionStatus.SUCCESS.ToString())
+                return;
+
+            var sub = await _unitOfWork.MemberSubscriptionPackages.GetByIdAsync(transaction.DocNo);
+            if (sub != null)
+            {
+                sub.Status = MemberSubscriptionPackageStatus.CANCELED.ToString();
+                _unitOfWork.MemberSubscriptionPackages.Update(sub);
+            }
+
+            transaction.Status = TransactionStatus.FAILED.ToString();
+            _unitOfWork.Transactions.Update(transaction);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         private static string GetSignature(string message, string key)

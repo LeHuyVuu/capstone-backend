@@ -3,6 +3,7 @@
     public enum MemberSubscriptionPackageStatus
     {
         ACTIVE,
-        INACTIVE
+        INACTIVE,
+        CANCELED,
     }
 }
