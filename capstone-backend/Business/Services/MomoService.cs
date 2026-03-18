@@ -3,10 +3,8 @@ using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
-using Npgsql.Replication.PgOutput.Messages;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 
 namespace capstone_backend.Business.Services
 {
@@ -40,6 +38,8 @@ namespace capstone_backend.Business.Services
 
             MemberSubscriptionPackage subscription;
             Transaction transaction;
+            string orderId;
+            string requestId;
 
             await _unitOfWork.BeginTransactionAsync();
             try
@@ -82,7 +82,16 @@ namespace capstone_backend.Business.Services
 
                 // 3. Generate MoMo payment link
                 var seed = Guid.NewGuid().ToString("N")[..6];
-                transaction.ExternalRefCode = $"CM_R_{transaction.Id}_{seed}";
+                orderId = $"CM_T_{IdEncoder.Encode(transaction.Id)}";
+                requestId = $"CM_R_{transaction.Id}_{seed}";
+
+                var metadata = new MomoTransactionMetadata
+                {
+                    RequestId = requestId,
+                    OrderId = orderId
+                };
+
+                transaction.ExternalRefCode = ToMomoMetadataJson(metadata);
                 _unitOfWork.Transactions.Update(transaction);
 
                 await _unitOfWork.SaveChangesAsync();
@@ -94,9 +103,6 @@ namespace capstone_backend.Business.Services
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
-
-            var orderId = $"CM_T_{IdEncoder.Encode(transaction.Id)}";
-            var requestId = transaction.ExternalRefCode!;
 
             var momoRequest = new CreateMomoPaymentRequest
             {
@@ -164,6 +170,20 @@ namespace capstone_backend.Business.Services
                     throw new Exception($"Lỗi từ MoMo: {result?.Message ?? responseText}");
                 }
 
+                var tx = await _unitOfWork.Transactions.GetByIdAsync(transaction.Id);
+                if (tx == null)
+                    throw new Exception("Không tìm thấy transaction sau khi tạo");
+
+                var metadata = GetMomoMetadata(tx.ExternalRefCode);
+                metadata.PayUrl = result.PayUrl;
+                metadata.DeepLink = result.DeepLink;
+                metadata.QrCodeUrl = result.QrCodeUrl;
+                metadata.DeeplinkMiniApp = result.DeeplinkMiniApp;
+
+                tx.ExternalRefCode = ToMomoMetadataJson(metadata);
+                _unitOfWork.Transactions.Update(tx);
+                await _unitOfWork.SaveChangesAsync();
+
                 return new MomoLinkResponse
                 {
                     PayUrl = result.PayUrl,
@@ -210,8 +230,9 @@ namespace capstone_backend.Business.Services
 
         public async Task<bool> VerifyPaymentProcessing(MomoIpnRequest request)
         {
-            // 1. Verify result
-            if (string.IsNullOrWhiteSpace(request.OrderId) || string.IsNullOrWhiteSpace(request.RequestId) || string.IsNullOrWhiteSpace(request.PartnerCode))
+            if (string.IsNullOrWhiteSpace(request.OrderId) ||
+                string.IsNullOrWhiteSpace(request.RequestId) ||
+                string.IsNullOrWhiteSpace(request.PartnerCode))
                 return false;
 
             if (request.PartnerCode != _partnerCode)
@@ -220,26 +241,25 @@ namespace capstone_backend.Business.Services
             if (request.Amount <= 0)
                 return false;
 
-            // 2. Verify signature
-            var rawdata = $"accessKey={_accessKey}" +
-                            $"&amount={request.Amount}" +
-                            $"&extraData={request.ExtraData}" +
-                            $"&message={request.Message}" +
-                            $"&orderId={request.OrderId}" +
-                            $"&orderInfo={request.OrderInfo}" +
-                            $"&orderType={request.OrderType}" +
-                            $"&partnerCode={request.PartnerCode}" +
-                            $"&payType={request.PayType}" +
-                            $"&requestId={request.RequestId}" +
-                            $"&responseTime={request.ResponseTime}" +
-                            $"&resultCode={request.ResultCode}" +
-                            $"&transId={request.TransId}";
+            var rawdata =
+                $"accessKey={_accessKey}" +
+                $"&amount={request.Amount}" +
+                $"&extraData={request.ExtraData}" +
+                $"&message={request.Message}" +
+                $"&orderId={request.OrderId}" +
+                $"&orderInfo={request.OrderInfo}" +
+                $"&orderType={request.OrderType}" +
+                $"&partnerCode={request.PartnerCode}" +
+                $"&payType={request.PayType}" +
+                $"&requestId={request.RequestId}" +
+                $"&responseTime={request.ResponseTime}" +
+                $"&resultCode={request.ResultCode}" +
+                $"&transId={request.TransId}";
 
             if (!VerifySignature(rawdata, _secretKey, request.Signature!))
                 return false;
 
-            // 3. Verify request with database
-            var parts = request.OrderId!.Split('_');
+            var parts = request.OrderId.Split('_');
             if (parts.Length < 3)
                 return false;
 
@@ -251,26 +271,45 @@ namespace capstone_backend.Business.Services
             {
                 var tx = await _unitOfWork.Transactions.GetByIdAsync((int)txId);
                 if (tx == null)
-                    return false;
-
-                if (tx.Status == TransactionStatus.SUCCESS.ToString() ||
-                    (tx.Status == TransactionStatus.FAILED.ToString() && request.ResultCode != 0))
                 {
                     await _unitOfWork.RollbackTransactionAsync();
                     return false;
                 }
 
+                var metadata = GetMomoMetadata(tx.ExternalRefCode);
+
+                if (!string.Equals(metadata.OrderId, request.OrderId, StringComparison.Ordinal) ||
+                    !string.Equals(metadata.RequestId, request.RequestId, StringComparison.Ordinal))
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return false;
+                }
+
+                if (tx.Status == TransactionStatus.SUCCESS.ToString())
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return true;
+                }
+
+                if (tx.Status == TransactionStatus.FAILED.ToString() && request.ResultCode != 0)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return true;
+                }
+
                 if (request.ResultCode == 0)
                 {
                     tx.Status = TransactionStatus.SUCCESS.ToString();
-                    tx.ExternalRefCode = request.TransId.ToString();
+
+                    metadata.TransId = request.TransId;
+                    tx.ExternalRefCode = ToMomoMetadataJson(metadata);
 
                     var sub = await _unitOfWork.MemberSubscriptionPackages.GetByIdAsync(tx.DocNo);
                     if (sub != null)
                     {
                         var package = await _unitOfWork.SubscriptionPackages.GetByIdAsync(sub.PackageId);
-                        
                         var realNow = DateTime.UtcNow;
+
                         sub.StartDate = realNow;
                         sub.EndDate = realNow.AddDays(package?.DurationDays ?? 0);
                         sub.Status = MemberSubscriptionPackageStatus.ACTIVE.ToString();
@@ -286,16 +325,14 @@ namespace capstone_backend.Business.Services
                 _unitOfWork.Transactions.Update(tx);
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
+
+                return true;
             }
-            catch (Exception)
+            catch
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 return false;
             }
-
-            // 4. Return true if processing is successful, false otherwise
-
-            return true;
         }
 
         private static bool VerifySignature(string rawData, string secretKey, string providedSignature)
@@ -309,6 +346,20 @@ namespace capstone_backend.Business.Services
                 return false;
 
             return CryptographicOperations.FixedTimeEquals(computedBytes, providedBytes);
+        }
+
+        private static MomoTransactionMetadata GetMomoMetadata(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+                return new MomoTransactionMetadata();
+
+            return JsonConverterUtil.DeserializeOrDefault<MomoTransactionMetadata>(json)
+                   ?? new MomoTransactionMetadata();
+        }
+
+        private static string ToMomoMetadataJson(MomoTransactionMetadata metadata)
+        {
+            return JsonConverterUtil.Serialize(metadata);
         }
     }
 }

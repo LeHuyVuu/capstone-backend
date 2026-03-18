@@ -199,6 +199,7 @@ public static class ServiceExtensions
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IQrCodeService, QrCodeService>();
         services.AddScoped<IMomoService, MomoService>();
+        services.AddScoped<IMemberSubscriptionService, MemberSubscriptionService>();
 
         // Register Subscription Package Service
         services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
