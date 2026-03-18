@@ -20,8 +20,8 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Check payment status (For Members)
         /// </summary>
-        [HttpGet("status/{transactionId:int}")]
-        public async Task<IActionResult> CheckPaymentStatus(int transactionId)
+        [HttpGet("status/{orderId}")]
+        public async Task<IActionResult> CheckPaymentStatus([FromRoute] string orderId)
         {
             try
             {
@@ -31,7 +31,7 @@ namespace capstone_backend.Api.Controllers
                     return UnauthorizedResponse("Unauthorized");
                 }
 
-                var result = await _memberSubscriptionService.CheckPaymentStatusAsync(userId.Value, transactionId);
+                var result = await _memberSubscriptionService.CheckPaymentStatusAsync(userId.Value, orderId);
                 if (result == null)
                 {
                     return NotFoundResponse("Giao dịch không khả dụng");
