@@ -423,8 +423,8 @@ public class MoodTypeService : IMoodTypeService
             var actionSuggestion = GetActionSuggestionFromCoupleMood(coupleMoodName, coupleMoodDescription);
             var notificationRequest = new SendNotificationRequest
             {
-                Title = $"{senderName} đang {senderMood} nè! 💕",
-                Body = $"Mood của tụi mình giờ là \"{coupleMoodName}\" đó, {actionSuggestion}"
+                Title = $"Mood tụi mình vừa thay đổi 💕",
+                Body = $"{senderName} đang {senderMood} nè!\nMood của tụi mình giờ là \"{coupleMoodName}\" đó, {actionSuggestion}"
             };
 
             await _fcmService.SendMultiNotificationAsync(tokens, notificationRequest);
@@ -438,24 +438,24 @@ public class MoodTypeService : IMoodTypeService
     }
 
     private string GetActionSuggestionFromCoupleMood(string coupleMoodName, string? description)
+{
+    return coupleMoodName switch
     {
-        return coupleMoodName switch
-        {
-            "Vui chung" => "cùng nhau đi chơi thôiii 🎉",
-            "Cả hai yên tĩnh" => "tìm chỗ yên tĩnh chill chill nào 🌿",
-            "Cần được an ủi" => "vào chat động viên nhau đi bồ ơi 🤗",
-            "Căng thẳng hai chiều" => "hít thở thôi, mình cùng vượt qua nha 💪",
-            "Lệch pha cảm xúc" => "vào chat chia sẻ với nhau đi nè 💬",
-            "Hứng thú khám phá" => "cùng nhau khám phá địa điểm mới thôi 🗺️",
-            "Vui nhưng dễ tổn thương" => "vào chat nói chuyện nhẹ nhàng nào 🌸",
-            "Cần được trấn an" => "động viên nhau đi bồ ơiii 💝",
-            "Giảm thân mật" => "cho nhau chút không gian nha 🌙",
-            "Cần hòa giải" => "vào chat nói chuyện thật lòng đi 💕",
-            "Năng lượng không đồng đều" => "tìm hoạt động vừa vừa thôi nè 🎈",
-            "Trung tính" => "làm gì cũng được, vào chat bàn nào 💭",
-            _ => "vào chat xem thử đi nàooo~ 💬"
-        };
-    }
+        "Vui vẻ" => "cùng nhau đi chơi thôiii 🎉",
+        "Yên tĩnh" => "tìm chỗ yên tĩnh ngồi cạnh nhau nha 🌿",
+        "Cần an ủi" => "ở bên nhau và quan tâm nhau nhiều hơn nhé 🤗",
+        "Cân bằng" => "mọi thứ đang ổn, tận hưởng khoảnh khắc này nha 🌼",
+        "Hòa hợp" => "quá hợp vibe rồi, làm gì cùng nhau cũng vui 💞",
+        "Khám phá" => "cùng nhau khám phá địa điểm mới thôi 🗺️",
+        "Tình cảm" => "dành cho nhau chút ngọt ngào đi nè 💕",
+        "An tâm" => "chỉ cần ở cạnh nhau là đủ rồi 💝",
+        "Động lực" => "cùng nhau cố gắng và phát triển nha 💪",
+        "Trung lập" => "rủ nhau làm gì đó nhẹ nhàng thôi 💭",
+        "Thư giãn" => "cùng nghỉ ngơi và thư giãn nha 🌙",
+        "Hòa giải" => "nhẹ nhàng nói chuyện và hiểu nhau hơn nha 💗",
+        _ => "ở cạnh nhau là được rồi đó 💬"
+    };
+}
 
     /// <summary>
     /// Translate mood name to Vietnamese using the reusable translation function
