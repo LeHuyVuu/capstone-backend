@@ -3,6 +3,7 @@ using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
+using Npgsql.Replication.PgOutput.Messages;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -205,6 +206,109 @@ namespace capstone_backend.Business.Services
             var messageBytes = Encoding.UTF8.GetBytes(message);
             using var hmac = new HMACSHA256(keyBytes);
             return BitConverter.ToString(hmac.ComputeHash(messageBytes)).Replace("-", "").ToLower();
+        }
+
+        public async Task<bool> VerifyPaymentProcessing(MomoIpnRequest request)
+        {
+            // 1. Verify result
+            if (string.IsNullOrWhiteSpace(request.OrderId) || string.IsNullOrWhiteSpace(request.RequestId) || string.IsNullOrWhiteSpace(request.PartnerCode))
+                return false;
+
+            if (request.PartnerCode != _partnerCode)
+                return false;
+
+            if (request.Amount <= 0)
+                return false;
+
+            // 2. Verify signature
+            var rawdata = $"accessKey={_accessKey}" +
+                            $"&amount={request.Amount}" +
+                            $"&extraData={request.ExtraData}" +
+                            $"&message={request.Message}" +
+                            $"&orderId={request.OrderId}" +
+                            $"&orderInfo={request.OrderInfo}" +
+                            $"&orderType={request.OrderType}" +
+                            $"&partnerCode={request.PartnerCode}" +
+                            $"&payType={request.PayType}" +
+                            $"&requestId={request.RequestId}" +
+                            $"&responseTime={request.ResponseTime}" +
+                            $"&resultCode={request.ResultCode}" +
+                            $"&transId={request.TransId}";
+
+            if (!VerifySignature(rawdata, _secretKey, request.Signature!))
+                return false;
+
+            // 3. Verify request with database
+            var parts = request.OrderId!.Split('_');
+            if (parts.Length < 3)
+                return false;
+
+            var realEncodedId = parts[2];
+            var txId = IdEncoder.Decode(realEncodedId);
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var tx = await _unitOfWork.Transactions.GetByIdAsync((int)txId);
+                if (tx == null)
+                    return false;
+
+                if (tx.Status == TransactionStatus.SUCCESS.ToString() ||
+                    (tx.Status == TransactionStatus.FAILED.ToString() && request.ResultCode != 0))
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return false;
+                }
+
+                if (request.ResultCode == 0)
+                {
+                    tx.Status = TransactionStatus.SUCCESS.ToString();
+                    tx.ExternalRefCode = request.TransId.ToString();
+
+                    var sub = await _unitOfWork.MemberSubscriptionPackages.GetByIdAsync(tx.DocNo);
+                    if (sub != null)
+                    {
+                        var package = await _unitOfWork.SubscriptionPackages.GetByIdAsync(sub.PackageId);
+                        
+                        var realNow = DateTime.UtcNow;
+                        sub.StartDate = realNow;
+                        sub.EndDate = realNow.AddDays(package?.DurationDays ?? 0);
+                        sub.Status = MemberSubscriptionPackageStatus.ACTIVE.ToString();
+
+                        _unitOfWork.MemberSubscriptionPackages.Update(sub);
+                    }
+                }
+                else
+                {
+                    tx.Status = TransactionStatus.FAILED.ToString();
+                }
+
+                _unitOfWork.Transactions.Update(tx);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return false;
+            }
+
+            // 4. Return true if processing is successful, false otherwise
+
+            return true;
+        }
+
+        private static bool VerifySignature(string rawData, string secretKey, string providedSignature)
+        {
+            var computedSignature = GetSignature(rawData, secretKey);
+
+            var computedBytes = Encoding.UTF8.GetBytes(computedSignature);
+            var providedBytes = Encoding.UTF8.GetBytes(providedSignature);
+
+            if (computedBytes.Length!= providedBytes.Length)
+                return false;
+
+            return CryptographicOperations.FixedTimeEquals(computedBytes, providedBytes);
         }
     }
 }
