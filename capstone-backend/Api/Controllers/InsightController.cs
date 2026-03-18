@@ -1,6 +1,7 @@
 using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OpenAI.Chat;
 
 namespace capstone_backend.Api.Controllers;
 
@@ -10,11 +11,13 @@ public class InsightController : BaseController
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<InsightController> _logger;
+    private readonly IConfiguration _configuration;
 
-    public InsightController(IUnitOfWork unitOfWork, ILogger<InsightController> logger)
+    public InsightController(IUnitOfWork unitOfWork, ILogger<InsightController> logger, IConfiguration configuration)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -35,14 +38,8 @@ public class InsightController : BaseController
                 _ => null
             };
 
-            // Top Searches
-            var topSearchesQuery = _unitOfWork.Context.SearchHistories
-                .Where(sh => !sh.IsDeleted.HasValue || !sh.IsDeleted.Value);
-
-            if (startDate.HasValue)
-                topSearchesQuery = topSearchesQuery.Where(sh => sh.SearchedAt >= startDate.Value);
-
-            var topSearches = await topSearchesQuery
+            var topSearches = await _unitOfWork.Context.SearchHistories
+                .Where(sh => (!sh.IsDeleted.HasValue || !sh.IsDeleted.Value) && (!startDate.HasValue || sh.SearchedAt >= startDate.Value))
                 .GroupBy(sh => sh.Keyword)
                 .Select(g => new { Keyword = g.Key, Count = g.Count() })
                 .OrderByDescending(x => x.Count)
@@ -50,143 +47,66 @@ public class InsightController : BaseController
                 .ToListAsync();
 
             var totalSearches = topSearches.Sum(x => x.Count);
-            var topSearchInsights = topSearches.Select(ts => new
-            {
-                Keyword = ts.Keyword,
-                Count = ts.Count,
-                Percentage = totalSearches > 0 ? Math.Round((double)ts.Count / totalSearches * 100, 0) : 0
-            }).Take(3).ToList();
+            var topSearchInsights = topSearches.Take(3).Select(ts => new { ts.Keyword, ts.Count, Percentage = totalSearches > 0 ? Math.Round((double)ts.Count / totalSearches * 100, 0) : 0 }).ToList();
 
-            // Hot Moods - from MemberMoodLog
-            var hotMoodQuery = _unitOfWork.Context.MemberMoodLogs
-                .Where(mml => (!mml.IsDeleted.HasValue || !mml.IsDeleted.Value));
-
-            if (startDate.HasValue)
-                hotMoodQuery = hotMoodQuery.Where(mml => mml.CreatedAt >= startDate.Value);
-
-            var hotMoods = await hotMoodQuery
-                .Include(mml => mml.MoodType)
-                .GroupBy(mml => new { mml.MoodTypeId, mml.MoodType.Name })
-                .Select(g => new { MoodTypeId = g.Key.MoodTypeId, MoodName = g.Key.Name, Count = g.Count() })
+            var hotMoods = await _unitOfWork.Context.MemberMoodLogs
+                .Where(mml => (!mml.IsDeleted.HasValue || !mml.IsDeleted.Value) && (!startDate.HasValue || mml.CreatedAt >= startDate.Value))
+                .GroupBy(mml => new { mml.MoodTypeId, MoodName = mml.MoodType.Name })
+                .Select(g => new { g.Key.MoodTypeId, g.Key.MoodName, Count = g.Count() })
                 .OrderByDescending(x => x.Count)
                 .Take(10)
                 .ToListAsync();
 
             var totalMoodLogs = hotMoods.Sum(x => x.Count);
-            var hotMoodInsights = hotMoods.Select(hm => new
-            {
-                MoodTypeId = hm.MoodTypeId,
-                MoodName = hm.MoodName,
-                Count = hm.Count,
-                Percentage = totalMoodLogs > 0 ? Math.Round((double)hm.Count / totalMoodLogs * 100, 0) : 0
-            }).Take(3).ToList();
+            var hotMoodInsights = hotMoods.Take(3).Select(hm => new { hm.MoodTypeId, hm.MoodName, hm.Count, Percentage = totalMoodLogs > 0 ? Math.Round((double)hm.Count / totalMoodLogs * 100, 0) : 0 }).ToList();
 
-            // Mood Trends by Month (last 12 months)
             var yearAgo = now.AddYears(-1);
             var moodTrends = await _unitOfWork.Context.CoupleMoodLogs
                 .Where(cml => (!cml.IsDeleted.HasValue || !cml.IsDeleted.Value) && cml.CreatedAt >= yearAgo)
-                .Include(cml => cml.CoupleMoodType)
                 .GroupBy(cml => new { 
                     Month = new DateTime(cml.CreatedAt!.Value.Year, cml.CreatedAt.Value.Month, 1),
                     MoodName = cml.CoupleMoodType.Name
                 })
-                .Select(g => new
-                {
-                    Month = g.Key.Month,
-                    MoodName = g.Key.MoodName,
-                    Count = g.Count()
-                })
+                .Select(g => new { g.Key.Month, g.Key.MoodName, Count = g.Count() })
                 .OrderBy(x => x.Month)
                 .ToListAsync();
 
-            var moodTrendsByMonth = moodTrends
-                .GroupBy(mt => mt.Month)
-                .Select(g => new
-                {
-                    Month = g.Key.ToString("yyyy-MM"),
-                    MonthName = g.Key.ToString("MMM"),
-                    Moods = g.Select(x => new { MoodName = x.MoodName, Count = x.Count }).ToList(),
-                    TotalCount = g.Sum(x => x.Count)
-                })
-                .OrderBy(x => x.Month)
-                .ToList();
+            var moodTrendsByMonth = moodTrends.GroupBy(mt => mt.Month).Select(g => new { Month = g.Key.ToString("yyyy-MM"), MonthName = g.Key.ToString("MMM"), Moods = g.Select(x => new { x.MoodName, x.Count }).ToList(), TotalCount = g.Sum(x => x.Count) }).OrderBy(x => x.Month).ToList();
 
-            // ========================================
-            // FAVORITES & INTERACTIONS STATISTICS
-            // ========================================
-            
-            // Base interaction query with timeframe filter
-            var baseInteractionQuery = _unitOfWork.Context.Interactions.AsQueryable();
-            if (startDate.HasValue)
-                baseInteractionQuery = baseInteractionQuery.Where(i => i.CreatedAt >= startDate.Value);
-
-            // 1. TOP VENUE CATEGORIES BY INTERACTIONS
-            var venueInteractionQuery = baseInteractionQuery
-                .Where(i => i.TargetType == "VenueLocation" && i.TargetId.HasValue);
-
-            // Fetch data first, then process in memory
-            var venueInteractionData = await venueInteractionQuery
-                .Join(_unitOfWork.Context.VenueLocations,
-                    i => i.TargetId!.Value,
-                    v => v.Id,
-                    (i, v) => new { i.InteractionType, v.Category, i.MemberId })
+            var venueInteractionData = await _unitOfWork.Context.Interactions
+                .Where(i => i.TargetType == "VenueLocation" && i.TargetId.HasValue && (!startDate.HasValue || i.CreatedAt >= startDate.Value))
+                .Join(_unitOfWork.Context.VenueLocations, i => i.TargetId!.Value, v => v.Id, (i, v) => new { i.InteractionType, v.Category, i.MemberId })
                 .Where(x => !string.IsNullOrEmpty(x.Category))
                 .ToListAsync();
 
-            // Process category splits in memory
             var topVenueCategories = venueInteractionData
-                .SelectMany(x => x.Category!.Split(new[] { " / ", "/" }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(cat => new { Category = cat.Trim(), x.InteractionType, x.MemberId }))
+                .SelectMany(x => x.Category!.Split(new[] { " / ", "/" }, StringSplitOptions.RemoveEmptyEntries).Select(cat => new { Category = cat.Trim(), x.InteractionType, x.MemberId }))
                 .GroupBy(x => x.Category)
-                .Select(g => new
-                {
-                    Category = g.Key,
-                    TotalInteractions = g.Count(),
-                    UniqueUsers = g.Select(x => x.MemberId).Distinct().Count(),
-                    InteractionBreakdown = g.GroupBy(x => x.InteractionType ?? "UNKNOWN")
-                        .Select(ig => new { Type = ig.Key, Count = ig.Count() })
-                        .ToList()
-                })
+                .Select(g => new { Category = g.Key, TotalInteractions = g.Count(), UniqueUsers = g.Select(x => x.MemberId).Distinct().Count(), InteractionBreakdown = g.GroupBy(x => x.InteractionType ?? "UNKNOWN").Select(ig => new { Type = ig.Key, Count = ig.Count() }).ToList() })
                 .OrderByDescending(x => x.TotalInteractions)
                 .Take(5)
                 .ToList();
 
-            // 2. ADVERTISEMENT PERFORMANCE BY CATEGORY
-            var adPerformanceQuery = baseInteractionQuery
-                .Where(i => i.TargetType == "Advertisement" && i.TargetId.HasValue)
-                .Join(_unitOfWork.Context.Advertisements,
-                    i => i.TargetId!.Value,
-                    a => a.Id,
-                    (i, a) => new { i.InteractionType, a.Category, a.PlacementType, i.MemberId });
-
-            var adPerformanceByCategory = await adPerformanceQuery
+            var adPerformanceByCategory = await _unitOfWork.Context.Interactions
+                .Where(i => i.TargetType == "Advertisement" && i.TargetId.HasValue && (!startDate.HasValue || i.CreatedAt >= startDate.Value))
+                .Join(_unitOfWork.Context.Advertisements, i => i.TargetId!.Value, a => a.Id, (i, a) => new { i.InteractionType, a.Category, a.PlacementType, i.MemberId })
                 .Where(x => !string.IsNullOrEmpty(x.Category))
                 .GroupBy(x => new { x.Category, x.PlacementType })
                 .Select(g => new
                 {
-                    Category = g.Key.Category,
-                    PlacementType = g.Key.PlacementType,
+                    g.Key.Category,
+                    g.Key.PlacementType,
                     Views = g.Count(x => x.InteractionType == "VIEW"),
                     Clicks = g.Count(x => x.InteractionType == "CLICK"),
-                    UniqueViewers = g.Where(x => x.InteractionType == "VIEW")
-                        .Select(x => x.MemberId).Distinct().Count(),
-                    CTR = g.Count(x => x.InteractionType == "VIEW") > 0
-                        ? Math.Round((double)g.Count(x => x.InteractionType == "CLICK") / 
-                            g.Count(x => x.InteractionType == "VIEW") * 100, 2)
-                        : 0
+                    UniqueViewers = g.Where(x => x.InteractionType == "VIEW").Select(x => x.MemberId).Distinct().Count(),
+                    CTR = g.Count(x => x.InteractionType == "VIEW") > 0 ? Math.Round((double)g.Count(x => x.InteractionType == "CLICK") / g.Count(x => x.InteractionType == "VIEW") * 100, 2) : 0
                 })
                 .OrderByDescending(x => x.Clicks)
                 .ThenByDescending(x => x.Views)
                 .ToListAsync();
 
-            // 5. CHECK-IN STATISTICS
-            var checkInQuery = _unitOfWork.Context.CheckInHistories
-                .Where(ch => ch.IsValid == true);
-
-            if (startDate.HasValue)
-                checkInQuery = checkInQuery.Where(ch => ch.CreatedAt >= startDate.Value);
-
-            var topCheckInVenues = await checkInQuery
+            var topCheckInVenues = await _unitOfWork.Context.CheckInHistories
+                .Where(ch => ch.IsValid == true && (!startDate.HasValue || ch.CreatedAt >= startDate.Value))
                 .GroupBy(ch => ch.VenueId)
                 .Select(g => new { VenueId = g.Key, CheckInCount = g.Count() })
                 .OrderByDescending(x => x.CheckInCount)
@@ -199,20 +119,8 @@ public class InsightController : BaseController
                 .Select(v => new { v.Id, v.Name, v.Category, v.AverageRating, v.Status })
                 .ToListAsync();
 
-            var topCheckInVenuesWithDetails = topCheckInVenues
-                .Join(topCheckInVenueDetails, tc => tc.VenueId, v => v.Id, (tc, v) => new
-                {
-                    VenueId = v.Id,
-                    VenueName = v.Name,
-                    Category = v.Category,
-                    CheckInCount = tc.CheckInCount,
-                    AverageRating = v.AverageRating,
-                    Status = v.Status
-                })
-                .Take(5)
-                .ToList();
-
-            var totalCheckIns = await checkInQuery.CountAsync();
+            var topCheckInVenuesWithDetails = topCheckInVenues.Join(topCheckInVenueDetails, tc => tc.VenueId, v => v.Id, (tc, v) => new { v.Id, v.Name, v.Category, tc.CheckInCount, v.AverageRating, v.Status }).Take(5).ToList();
+            var totalCheckIns = topCheckInVenues.Sum(x => x.CheckInCount);
 
             var result = new
             {
@@ -230,7 +138,46 @@ public class InsightController : BaseController
                 }
             };
 
-            return OkResponse(result, "Insights retrieved successfully");
+            var apiKey = _configuration["OPENAI_API_KEY"];
+            var modelName = _configuration["MODEL_NAME"] ?? "gpt-4o-mini";
+            var client = new ChatClient(modelName, apiKey);
+            var prompt = $@"Phân tích dữ liệu insight và trả về ĐÚNG định dạng JSON (không có markdown, không có ```json):
+{{
+  ""searchTrends"": {{
+    ""summary"": ""Tóm tắt xu hướng tìm kiếm"",
+    ""topKeywords"": [{{""keyword"": ""tên từ khóa"", ""insight"": ""phân tích ngắn gọn""}}]
+  }},
+  ""moodAnalysis"": {{
+    ""dominantMoods"": [{{""mood"": ""tên mood"", ""percentage"": số phần trăm, ""trend"": ""xu hướng""}}],
+    ""monthlyTrend"": [{{""month"": ""tháng"", ""insight"": ""phân tích biến động""}}]
+  }},
+  ""venuePreferences"": {{
+    ""topCategories"": [{{""category"": ""danh mục"", ""reason"": ""lý do phổ biến""}}],
+    ""userBehavior"": ""Mô tả hành vi người dùng""
+  }},
+  ""checkInInsights"": {{
+    ""popularVenues"": [{{""name"": ""tên địa điểm"", ""appeal"": ""điểm hấp dẫn""}}]
+  }},
+  ""businessStrategy"": {{
+    ""recommendations"": [""Đề xuất 1"", ""Đề xuất 2""],
+    ""opportunities"": [""Cơ hội 1"", ""Cơ hội 2""]
+  }}
+}}
+
+Dữ liệu: {System.Text.Json.JsonSerializer.Serialize(result)}
+
+Chỉ trả về JSON thuần, không thêm text hay markdown.";
+
+            var completion = await client.CompleteChatAsync(prompt);
+            var analysisText = completion.Value.Content[0].Text.Trim();
+            if (analysisText.StartsWith("```json")) analysisText = analysisText.Substring(7);
+            if (analysisText.StartsWith("```")) analysisText = analysisText.Substring(3);
+            if (analysisText.EndsWith("```")) analysisText = analysisText.Substring(0, analysisText.Length - 3);
+            analysisText = analysisText.Trim();
+
+            var analysis = System.Text.Json.JsonSerializer.Deserialize<object>(analysisText);
+
+            return OkResponse(new { Data = result, TrendAnalysis = analysis }, "Insights retrieved successfully");
         }
         catch (Exception ex)
         {
