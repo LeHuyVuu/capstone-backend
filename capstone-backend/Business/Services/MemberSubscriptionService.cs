@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.MemberSubscription;
 using capstone_backend.Business.DTOs.Momo;
+using capstone_backend.Business.DTOs.SubscriptionPackage;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
@@ -53,6 +55,27 @@ namespace capstone_backend.Business.Services
             response.IsActive = sub.Status == MemberSubscriptionPackageStatus.ACTIVE.ToString();
 
             return response;
+        }
+
+        public async Task<PagedResult<SubscriptionPackageDto>> GetAvailablePackagesAsync(int pageNumber, int pageSize)
+        {
+            var (packages, totalCount) = await _unitOfWork.SubscriptionPackages.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                p => p.IsDeleted == false &&
+                p.IsActive == true &&
+                p.Type == "MEMBER",
+                p => p.OrderBy(sp => sp.Price)
+            );
+
+            var response = _mapper.Map<List<SubscriptionPackageDto>>(packages);
+            return new PagedResult<SubscriptionPackageDto>
+            {
+                Items = response,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
         }
 
         public async Task<MemberSubscriptionResponse?> GetCurrentSubscriptionAsync(int userId)

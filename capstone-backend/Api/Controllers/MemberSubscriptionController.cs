@@ -70,5 +70,22 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get available subscription packages
+        /// </summary>
+        [HttpGet("packages")]
+        public async Task<IActionResult> GetAvailablePackages([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var result = await _memberSubscriptionService.GetAvailablePackagesAsync(pageNumber, pageSize);
+                return OkResponse(result, "Lấy danh sách gói đăng ký thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
