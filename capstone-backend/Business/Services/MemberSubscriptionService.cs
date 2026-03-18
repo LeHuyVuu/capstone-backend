@@ -54,5 +54,19 @@ namespace capstone_backend.Business.Services
 
             return response;
         }
+
+        public async Task<MemberSubscriptionResponse?> GetCurrentSubscriptionAsync(int userId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var sub = await _unitOfWork.MemberSubscriptionPackages.GetCurrentActiveSubscriptionAsync(member.Id);
+            if (sub == null)
+                return null;
+
+            var response = _mapper.Map<MemberSubscriptionResponse>(sub);
+            return response;
+        }
     }
 }

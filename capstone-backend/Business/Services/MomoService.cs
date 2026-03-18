@@ -34,6 +34,10 @@ namespace capstone_backend.Business.Services
             if (package == null || package.IsDeleted == true || package.IsActive == false)
                 throw new Exception("Gói đăng ký không tồn tại hoặc không hợp lệ");
 
+            var activeSub = await _unitOfWork.MemberSubscriptionPackages.GetCurrentActiveSubscriptionAsync(member.Id);
+            if (activeSub != null)
+                throw new Exception("Bạn đã có gói đăng ký đang hoạt động. Vui lòng chờ đến khi gói hiện tại hết hạn hoặc hủy bỏ trước khi mua gói mới.");
+
             var now = DateTime.UtcNow;
 
             MemberSubscriptionPackage subscription;
