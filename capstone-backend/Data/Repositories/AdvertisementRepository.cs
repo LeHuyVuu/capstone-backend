@@ -50,8 +50,7 @@ public class AdvertisementRepository : GenericRepository<Advertisement>, IAdvert
     {
         return await _context.Advertisements
             .Include(a => a.VenueOwner)
-            .Include(a => a.VenueLocationAdvertisements
-                .Where(vla => vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString()))
+            .Include(a => a.VenueLocationAdvertisements)
                 .ThenInclude(vla => vla.Venue)
             .Include(a => a.AdsOrders)
                 .ThenInclude(ao => ao.Package)

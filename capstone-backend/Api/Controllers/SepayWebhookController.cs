@@ -622,12 +622,12 @@ public class SepayWebhookController : ControllerBase
                         {
                             // Only update status, keep original desired StartDate and EndDate
                             // Dates will be auto-adjusted by admin approval logic if needed
-                            venueLocationAd.Status = VenueLocationAdvertisementStatus.PENDING_APPROVAL.ToString();
+                            venueLocationAd.Status = VenueLocationAdvertisementStatus.PENDING.ToString();
                             venueLocationAd.UpdatedAt = now;
                             _unitOfWork.Context.Set<VenueLocationAdvertisement>().Update(venueLocationAd);
                         }
                         
-                        _logger.LogInformation("[{RequestId}] Updated {Count} VenueLocationAdvertisement(s) to PENDING_APPROVAL, desired dates: {Start} to {End}",
+                        _logger.LogInformation("[{RequestId}] Updated {Count} VenueLocationAdvertisement(s) to PENDING, desired dates: {Start} to {End}",
                             requestId, venueLocationAds.Count, venueLocationAds.First().StartDate, venueLocationAds.First().EndDate);
                     }
                     else

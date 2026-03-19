@@ -890,10 +890,9 @@ public class AdvertisementService : IAdvertisementService
         
         if (advertisement.VenueLocationAdvertisements != null && advertisement.VenueLocationAdvertisements.Any())
         {
-            // Process both PENDING and PENDING_APPROVAL status
+            // Process PENDING status
             foreach (var vla in advertisement.VenueLocationAdvertisements
-                .Where(v => v.Status == VenueLocationAdvertisementStatus.PENDING.ToString() || 
-                           v.Status == VenueLocationAdvertisementStatus.PENDING_APPROVAL.ToString()))
+                .Where(v => v.Status == VenueLocationAdvertisementStatus.PENDING.ToString()))
             {
                 // Auto-adjust dates if admin approves after desired start date
                 if (approvalDate > vla.StartDate)
