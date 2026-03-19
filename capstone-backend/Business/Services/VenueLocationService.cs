@@ -1,5 +1,6 @@
 using AutoMapper;
 using capstone_backend.Api.Models;
+using capstone_backend.Api.VenueRecommendation.Service;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.User;
 using capstone_backend.Business.DTOs.VenueLocation;
@@ -22,19 +23,25 @@ public class VenueLocationService : IVenueLocationService
     private readonly ILogger<VenueLocationService> _logger;
     private readonly ICurrentUser _currentUser;
     private readonly SepayService _sepayService;
+    private readonly IMeilisearchService _meilisearchService;
+    private readonly RefundService _refundService;
 
     public VenueLocationService(
         IUnitOfWork unitOfWork, 
         IMapper mapper, 
         ILogger<VenueLocationService> logger, 
         ICurrentUser currentUser,
-        SepayService sepayService)
+        SepayService sepayService,
+        IMeilisearchService meilisearchService,
+        RefundService refundService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _logger = logger;
         _currentUser = currentUser;
         _sepayService = sepayService;
+        _meilisearchService = meilisearchService;
+        _refundService = refundService;
     }
 
     #region Category & Image Helpers
@@ -1624,9 +1631,6 @@ public class VenueLocationService : IVenueLocationService
     /// </summary>
     public async Task<VenueSubmissionResult> ApproveVenueAsync(VenueApprovalRequest request)
     {
-        _logger.LogInformation("Processing venue approval request for Venue {VenueId}, Status: {Status}", request.VenueId, request.Status);
-
-        // Validate Status
         var status = request.Status?.ToUpper();
         if (status != "ACTIVE" && status != "DRAFTED")
         {
@@ -1640,33 +1644,118 @@ public class VenueLocationService : IVenueLocationService
             return new VenueSubmissionResult { IsSuccess = false, Message = "Venue not found" };
         }
 
-        // Only allow PENDING venues to be approved/rejected
-        // Wait, user might want to ban an ACTIVE venue back to DRAFTED? 
-        // User request: "approve location" implies pending -> active. "reject" implies pending -> drafted.
-        // Let's strict check PENDING for now, unless user specified otherwise.
         if (venue.Status != "PENDING")
         {
              return new VenueSubmissionResult { IsSuccess = false, Message = $"Cannot approve/reject venue with status '{venue.Status}'. Only 'PENDING' venues can be processed." };
         }
 
-        venue.Status = status;
-        venue.UpdatedAt = DateTime.UtcNow;
-        
-        // Fix DateTime fields for PostgreSQL
-        if (venue.CreatedAt.HasValue && venue.CreatedAt.Value.Kind == DateTimeKind.Unspecified)
-            venue.CreatedAt = DateTime.SpecifyKind(venue.CreatedAt.Value, DateTimeKind.Utc);
-        // If rejected, maybe append reason to description or send notification (out of scope for now)
-        if (status == "DRAFTED" && !string.IsNullOrEmpty(request.Reason))
+        if (status == "DRAFTED" && string.IsNullOrWhiteSpace(request.Reason))
         {
-            _logger.LogInformation("Venue {VenueId} rejected. Reason: {Reason}", request.VenueId, request.Reason);
+            return new VenueSubmissionResult { IsSuccess = false, Message = "Reason is required when rejecting venue to DRAFTED status." };
         }
 
-        _unitOfWork.VenueLocations.Update(venue);
-        await _unitOfWork.SaveChangesAsync();
+        using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
+        
+        try
+        {
+            venue.Status = status;
+            venue.UpdatedAt = DateTime.UtcNow;
+            
+            if (venue.CreatedAt.HasValue && venue.CreatedAt.Value.Kind == DateTimeKind.Unspecified)
+                venue.CreatedAt = DateTime.SpecifyKind(venue.CreatedAt.Value, DateTimeKind.Utc);
 
-        _logger.LogInformation("Venue {VenueId} status updated to {Status}", request.VenueId, status);
+            string refundMessage = "";
 
-        return new VenueSubmissionResult { IsSuccess = true, Message = $"Venue {status} successfully" };
+            if (status == "DRAFTED")
+            {
+                var completedSubscription = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
+                    .Include(vsp => vsp.Package)
+                    .FirstOrDefaultAsync(vsp => vsp.VenueId == request.VenueId 
+                        && vsp.Status == "COMPLETED");
+
+                if (completedSubscription != null)
+                {
+                    var successfulTransaction = await _unitOfWork.Context.Set<Transaction>()
+                        .FirstOrDefaultAsync(t => t.TransType == (int)TransactionType.VENUE_SUBSCRIPTION 
+                            && t.DocNo == completedSubscription.Id
+                            && t.Status == TransactionStatus.SUCCESS.ToString());
+
+                    if (successfulTransaction != null && successfulTransaction.Amount > 0)
+                    {
+                        var venueOwner = await _unitOfWork.Context.Set<VenueOwnerProfile>()
+                            .FirstOrDefaultAsync(vop => vop.Id == venue.VenueOwnerId);
+
+                        if (venueOwner != null)
+                        {
+                            var refundMetadata = new Dictionary<string, object>
+                            {
+                                { "venueId", venue.Id },
+                                { "venueName", venue.Name ?? "" },
+                                { "rejectionReason", request.Reason ?? "Venue rejected by admin" }
+                            };
+
+                            var refundResult = await _refundService.ProcessRefundAsync(
+                                userId: venueOwner.UserId,
+                                amount: successfulTransaction.Amount,
+                                transType: (int)TransactionType.VENUE_SUBSCRIPTION,
+                                docNo: completedSubscription.Id,
+                                reason: $"Địa điểm '{venue.Name}' bị từ chối. Lý do: {request.Reason}",
+                                originalTransactionId: successfulTransaction.Id,
+                                metadata: refundMetadata
+                            );
+
+                            if (refundResult.IsSuccess)
+                            {
+                                completedSubscription.Status = "REFUNDED";
+                                completedSubscription.UpdatedAt = DateTime.UtcNow;
+                                _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(completedSubscription);
+
+                                refundMessage = $" Đã hoàn {refundResult.RefundAmount:N0} VND vào ví (Balance: {refundResult.OldBalance:N0} → {refundResult.NewBalance:N0} VND).";
+                            }
+                            else
+                            {
+                                await dbTransaction.RollbackAsync();
+                                return new VenueSubmissionResult 
+                                { 
+                                    IsSuccess = false, 
+                                    Message = $"Failed to process refund: {refundResult.Message}" 
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+
+            _unitOfWork.VenueLocations.Update(venue);
+            await _unitOfWork.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
+
+            if (status == "ACTIVE")
+            {
+                try
+                {
+                    await _meilisearchService.IndexVenueLocationAsync(request.VenueId);
+                }
+                catch
+                {
+                }
+            }
+
+            return new VenueSubmissionResult 
+            { 
+                IsSuccess = true, 
+                Message = $"Venue {status} successfully{refundMessage}" 
+            };
+        }
+        catch
+        {
+            await dbTransaction.RollbackAsync();
+            return new VenueSubmissionResult 
+            { 
+                IsSuccess = false, 
+                Message = "Failed to process venue approval/rejection" 
+            };
+        }
     }
 
     /// <summary>
