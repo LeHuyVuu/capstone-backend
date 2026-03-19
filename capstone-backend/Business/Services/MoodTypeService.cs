@@ -263,7 +263,8 @@ public class MoodTypeService : IMoodTypeService
             CoupleMood = coupleMood,
             Description = description,
             IsCouple = isCouple,
-            HasCoupleMood = hasCoupleMood
+            HasCoupleMood = hasCoupleMood,
+            CoupleProfileId = coupleProfile?.id
         };
     }
 
