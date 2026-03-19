@@ -12,6 +12,12 @@ public class AdsOrderResponse
     
     // Package information
     public PackageInfo? Package { get; set; }
+    
+    // Advertisement information
+    public AdvertisementInfo? Advertisement { get; set; }
+    
+    // Venue location advertisements
+    public List<VenueLocationAdInfo>? VenueLocationAds { get; set; }
 }
 
 public class PaymentInfo
@@ -48,4 +54,16 @@ public class VenueLocationInfo
     public string Name { get; set; } = null!;
     public string? Address { get; set; }
     public string? CoverImage { get; set; }
+}
+
+public class AdvertisementInfo
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = null!;
+    public string? Content { get; set; }
+    public string BannerUrl { get; set; } = null!;
+    public string? TargetUrl { get; set; }
+    public string PlacementType { get; set; } = null!;
+    public string Status { get; set; } = null!;
+    public DateTime? DesiredStartDate { get; set; }
 }

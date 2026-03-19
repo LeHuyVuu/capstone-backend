@@ -1351,15 +1351,17 @@ public class AdvertisementService : IAdvertisementService
         var query = _unitOfWork.Context.Set<AdsOrder>()
             .Include(ao => ao.Package)
             .Include(ao => ao.Advertisement)
+                .ThenInclude(ad => ad.VenueLocationAdvertisements)
+                    .ThenInclude(vla => vla.Venue)
             .Where(ao => ao.Advertisement.VenueOwnerId == venueOwnerProfile.Id 
                       && ao.Advertisement.IsDeleted != true)
             .AsQueryable();
 
-        // Filter by advertisement status if provided
+        // Filter by ads order status if provided
         if (!string.IsNullOrWhiteSpace(status))
         {
             var normalizedStatus = status.Trim().ToUpper();
-            query = query.Where(ao => ao.Advertisement.Status == normalizedStatus);
+            query = query.Where(ao => ao.Status == normalizedStatus);
         }
 
         var adsOrders = await query
@@ -1390,7 +1392,29 @@ public class AdvertisementService : IAdvertisementService
                     Price = ao.Package.Price,
                     DurationDays = ao.Package.DurationDays,
                     PlacementType = ao.Package.Placement ?? string.Empty
-                } : null
+                } : null,
+                Advertisement = ao.Advertisement != null ? new AdvertisementInfo
+                {
+                    Id = ao.Advertisement.Id,
+                    Title = ao.Advertisement.Title ?? string.Empty,
+                    Content = ao.Advertisement.Content,
+                    BannerUrl = ao.Advertisement.BannerUrl ?? string.Empty,
+                    TargetUrl = ao.Advertisement.TargetUrl,
+                    PlacementType = ao.Advertisement.PlacementType ?? string.Empty,
+                    Status = ao.Advertisement.Status ?? string.Empty,
+                    DesiredStartDate = ao.Advertisement.DesiredStartDate
+                } : null,
+                VenueLocationAds = ao.Advertisement?.VenueLocationAdvertisements?
+                    .Select(vla => new VenueLocationAdInfo
+                    {
+                        Id = vla.Id,
+                        VenueId = vla.VenueId,
+                        VenueName = vla.Venue?.Name ?? "Unknown",
+                        StartDate = vla.StartDate,
+                        EndDate = vla.EndDate,
+                        PriorityScore = vla.PriorityScore,
+                        Status = vla.Status ?? string.Empty
+                    }).ToList()
             };
         }).ToList();
 
