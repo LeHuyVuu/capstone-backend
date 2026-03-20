@@ -1668,16 +1668,17 @@ public class VenueLocationService : IVenueLocationService
 
             if (status == "DRAFTED")
             {
-                var completedSubscription = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
+                // Tìm subscription với status ACTIVE (không phải COMPLETED)
+                var activeSubscription = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
                     .Include(vsp => vsp.Package)
                     .FirstOrDefaultAsync(vsp => vsp.VenueId == request.VenueId 
-                        && vsp.Status == "COMPLETED");
+                        && vsp.Status == "ACTIVE");
 
-                if (completedSubscription != null)
+                if (activeSubscription != null)
                 {
                     var successfulTransaction = await _unitOfWork.Context.Set<Transaction>()
                         .FirstOrDefaultAsync(t => t.TransType == (int)TransactionType.VENUE_SUBSCRIPTION 
-                            && t.DocNo == completedSubscription.Id
+                            && t.DocNo == activeSubscription.Id
                             && t.Status == TransactionStatus.SUCCESS.ToString());
 
                     if (successfulTransaction != null && successfulTransaction.Amount > 0)
@@ -1698,7 +1699,7 @@ public class VenueLocationService : IVenueLocationService
                                 userId: venueOwner.UserId,
                                 amount: successfulTransaction.Amount,
                                 transType: (int)TransactionType.VENUE_SUBSCRIPTION,
-                                docNo: completedSubscription.Id,
+                                docNo: activeSubscription.Id,
                                 reason: $"Địa điểm '{venue.Name}' bị từ chối. Lý do: {request.Reason}",
                                 originalTransactionId: successfulTransaction.Id,
                                 metadata: refundMetadata
@@ -1706,9 +1707,9 @@ public class VenueLocationService : IVenueLocationService
 
                             if (refundResult.IsSuccess)
                             {
-                                completedSubscription.Status = "REFUNDED";
-                                completedSubscription.UpdatedAt = DateTime.UtcNow;
-                                _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(completedSubscription);
+                                activeSubscription.Status = "REFUNDED";
+                                activeSubscription.UpdatedAt = DateTime.UtcNow;
+                                _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(activeSubscription);
 
                                 refundMessage = $" Đã hoàn {refundResult.RefundAmount:N0} VND vào ví (Balance: {refundResult.OldBalance:N0} → {refundResult.NewBalance:N0} VND).";
                             }
@@ -1722,12 +1723,101 @@ public class VenueLocationService : IVenueLocationService
                                 };
                             }
                         }
+                        else
+                        {
+                            // Không tìm thấy venue owner, vẫn cancel subscription
+                            activeSubscription.Status = "CANCELLED";
+                            activeSubscription.UpdatedAt = DateTime.UtcNow;
+                            _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(activeSubscription);
+                            _logger.LogWarning("Venue owner not found for venue {VenueId}, subscription cancelled without refund", venue.Id);
+                        }
+                    }
+                    else
+                    {
+                        // Không có transaction hoặc amount = 0, chỉ cancel subscription
+                        activeSubscription.Status = "CANCELLED";
+                        activeSubscription.UpdatedAt = DateTime.UtcNow;
+                        _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(activeSubscription);
+                        _logger.LogInformation("No valid transaction found for subscription {SubId}, status updated to CANCELLED", activeSubscription.Id);
                     }
                 }
             }
 
             _unitOfWork.VenueLocations.Update(venue);
             await _unitOfWork.SaveChangesAsync();
+            
+            // Tạo STAFF account khi venue được approve
+            string staffAccountMessage = "";
+            if (status == "ACTIVE")
+            {
+                try
+                {
+                    // Lấy thông tin venue owner
+                    var venueOwner = await _unitOfWork.Context.Set<VenueOwnerProfile>()
+                        .Include(vop => vop.User)
+                        .FirstOrDefaultAsync(vop => vop.Id == venue.VenueOwnerId);
+
+                    if (venueOwner != null)
+                    {
+                        // Tạo email an toàn cho STAFF (loại bỏ ký tự đặc biệt)
+                        var businessNameSafe = System.Text.RegularExpressions.Regex.Replace(
+                            venueOwner.BusinessName?.ToLower() ?? "venue", 
+                            @"[^a-z0-9]", 
+                            ""
+                        );
+                        if (string.IsNullOrEmpty(businessNameSafe))
+                            businessNameSafe = "venue";
+                        
+                        var staffEmail = $"staff.venue{venue.Id}.{businessNameSafe}@system.com";
+                        
+                        // Kiểm tra email đã tồn tại chưa
+                        var existingUser = await _unitOfWork.Context.Set<UserAccount>()
+                            .FirstOrDefaultAsync(u => u.Email == staffEmail);
+                        
+                        if (existingUser == null)
+                        {
+                            var staffPassword = GenerateRandomPassword(12);
+
+                            // send email to owner with staff account info here
+
+                            
+                            var staffUser = new UserAccount
+                            {
+                                Email = staffEmail,
+                                PasswordHash = BCrypt.Net.BCrypt.HashPassword(staffPassword),
+                                DisplayName = $"Staff - {venue.Name}",
+                                PhoneNumber = venue.PhoneNumber,
+                                Role = "STAFF", // Role STAFF đã có trong database constraint
+                                IsActive = true,
+                                IsVerified = true,
+                                IsDeleted = false,
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow
+                            };
+
+                            await _unitOfWork.Context.Set<UserAccount>().AddAsync(staffUser);
+                            await _unitOfWork.SaveChangesAsync();
+
+                            _logger.LogInformation("✅ Created STAFF account for venue {VenueId}: Email={Email}, UserId={UserId}", 
+                                venue.Id, staffEmail, staffUser.Id);
+
+                            staffAccountMessage = $" | STAFF account created";
+                        }
+                        else
+                        {
+                            _logger.LogInformation("ℹ️ STAFF account already exists for venue {VenueId}: {Email}", venue.Id, staffEmail);
+                            staffAccountMessage = $" | STAFF account already exists: {staffEmail}";
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "❌ Failed to create STAFF account for venue {VenueId}", venue.Id);
+                    staffAccountMessage = " | Failed to create STAFF account (check logs)";
+                    // Không rollback transaction, chỉ log lỗi
+                }
+            }
+            
             await dbTransaction.CommitAsync();
 
             if (status == "ACTIVE")
@@ -1744,7 +1834,7 @@ public class VenueLocationService : IVenueLocationService
             return new VenueSubmissionResult 
             { 
                 IsSuccess = true, 
-                Message = $"Venue {status} successfully{refundMessage}" 
+                Message = $"Venue {status} successfully{refundMessage}{staffAccountMessage}" 
             };
         }
         catch
@@ -1903,5 +1993,35 @@ public class VenueLocationService : IVenueLocationService
 
         _logger.LogInformation("Retrieved venue location with KYC for ID {VenueId}", venueId);
         return response;
+    }
+
+    /// <summary>
+    /// Generate random password for STAFF account
+    /// </summary>
+    private string GenerateRandomPassword(int length)
+    {
+        const string upperChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const string lowerChars = "abcdefghijklmnopqrstuvwxyz";
+        const string digitChars = "0123456789";
+        const string specialChars = "!@#$%^&*";
+        const string allChars = upperChars + lowerChars + digitChars + specialChars;
+
+        var random = new Random();
+        var password = new char[length];
+
+        // Đảm bảo có ít nhất 1 ký tự mỗi loại
+        password[0] = upperChars[random.Next(upperChars.Length)];
+        password[1] = lowerChars[random.Next(lowerChars.Length)];
+        password[2] = digitChars[random.Next(digitChars.Length)];
+        password[3] = specialChars[random.Next(specialChars.Length)];
+
+        // Fill phần còn lại với random characters
+        for (int i = 4; i < length; i++)
+        {
+            password[i] = allChars[random.Next(allChars.Length)];
+        }
+
+        // Shuffle password
+        return new string(password.OrderBy(x => random.Next()).ToArray());
     }
 }
