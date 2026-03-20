@@ -1,4 +1,5 @@
 using capstone_backend.Api.VenueRecommendation.Api.DTOs;
+using capstone_backend.Data.Enums;
 
 namespace capstone_backend.Api.VenueRecommendation.Service;
 
@@ -39,7 +40,7 @@ await index.AddDocumentsAsync(new[] { document }, "id");
         try
         {
             var allVenues = await _venueLocationRepository.GetAllAsync();
-            var venues = allVenues.Where(v => v.IsDeleted != true && v.Status == "ACTIVE").ToList();
+            var venues = allVenues.Where(v => v.IsDeleted != true && v.Status == VenueLocationStatus.ACTIVE.ToString()).ToList();
 
             var documents = new List<VenueLocationQueryResult>();
 
