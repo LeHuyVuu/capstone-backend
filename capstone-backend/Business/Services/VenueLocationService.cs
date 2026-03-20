@@ -604,7 +604,7 @@ public class VenueLocationService : IVenueLocationService
             IsOwnerVerified = request.IsOwnerVerified ?? false,
             BusinessLicenseUrl = request.BusinessLicenseUrl,
             VenueOwnerId = venueOwnerProfile.Id,
-            Status = "DRAFTED",
+            Status = VenueLocationStatus.DRAFTED.ToString(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             IsDeleted = false,
@@ -1243,7 +1243,7 @@ public class VenueLocationService : IVenueLocationService
         }
 
         // 3. Check Status (Allow DRAFT or DRAFTED just in case)
-        if (venue.Status != "DRAFTED" && venue.Status != "DRAFT")
+        if (venue.Status != VenueLocationStatus.DRAFTED.ToString())
         {
              return new VenueSubmissionResult 
              { 
@@ -1296,7 +1296,7 @@ public class VenueLocationService : IVenueLocationService
         }
 
         // 5. Update Status
-        venue.Status = "PENDING";
+        venue.Status = VenueLocationStatus.PENDING.ToString();
         venue.UpdatedAt = DateTime.UtcNow;
         
         _unitOfWork.VenueLocations.Update(venue);
@@ -1347,7 +1347,7 @@ public class VenueLocationService : IVenueLocationService
         }
 
         // 3. Validate venue status
-        if (venue.Status != "DRAFTED" && venue.Status != "DRAFT")
+        if (venue.Status != VenueLocationStatus.DRAFTED.ToString())
         {
             return new SubmitVenueWithPaymentResponse 
             { 
@@ -1423,7 +1423,7 @@ public class VenueLocationService : IVenueLocationService
         // 6. Check if there's already a pending payment
         var existingPending = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
             .Where(vsp => vsp.VenueId == venueId 
-                && vsp.Status == "PENDING_PAYMENT"
+                && vsp.Status == VenueSubscriptionPackageStatus.PENDING_PAYMENT.ToString()
                 && vsp.CreatedAt > DateTime.UtcNow.AddMinutes(-15))
             .FirstOrDefaultAsync();
 
@@ -1453,7 +1453,7 @@ public class VenueLocationService : IVenueLocationService
                 Quantity = request.Quantity,
                 StartDate = null,
                 EndDate = null,
-                Status = "PENDING_PAYMENT",
+                Status = VenueSubscriptionPackageStatus.PENDING_PAYMENT.ToString(),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -1475,7 +1475,7 @@ public class VenueLocationService : IVenueLocationService
                 TransType = 1, // VENUE_SUBSCRIPTION
                 DocNo = subscription.Id,
                 Description = $"Thanh toán gói {package.PackageName} cho {venue.Name} (x{request.Quantity})",
-                Status = "PENDING",
+                Status = TransactionStatus.PENDING.ToString(),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -1632,7 +1632,7 @@ public class VenueLocationService : IVenueLocationService
     public async Task<VenueSubmissionResult> ApproveVenueAsync(VenueApprovalRequest request)
     {
         var status = request.Status?.ToUpper();
-        if (status != "ACTIVE" && status != "DRAFTED")
+        if (status != VenueLocationStatus.ACTIVE.ToString() && status != VenueLocationStatus.DRAFTED.ToString())
         {
             return new VenueSubmissionResult { IsSuccess = false, Message = "Invalid status. Only 'ACTIVE' or 'DRAFTED' are allowed." };
         }
@@ -1644,12 +1644,12 @@ public class VenueLocationService : IVenueLocationService
             return new VenueSubmissionResult { IsSuccess = false, Message = "Venue not found" };
         }
 
-        if (venue.Status != "PENDING")
+        if (venue.Status != VenueLocationStatus.PENDING.ToString())
         {
              return new VenueSubmissionResult { IsSuccess = false, Message = $"Cannot approve/reject venue with status '{venue.Status}'. Only 'PENDING' venues can be processed." };
         }
 
-        if (status == "DRAFTED" && string.IsNullOrWhiteSpace(request.Reason))
+        if (status == VenueLocationStatus.DRAFTED.ToString() && string.IsNullOrWhiteSpace(request.Reason))
         {
             return new VenueSubmissionResult { IsSuccess = false, Message = "Reason is required when rejecting venue to DRAFTED status." };
         }
@@ -1666,13 +1666,13 @@ public class VenueLocationService : IVenueLocationService
 
             string refundMessage = "";
 
-            if (status == "DRAFTED")
+            if (status == VenueLocationStatus.DRAFTED.ToString())
             {
                 // Tìm subscription với status ACTIVE (không phải COMPLETED)
                 var activeSubscription = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
                     .Include(vsp => vsp.Package)
                     .FirstOrDefaultAsync(vsp => vsp.VenueId == request.VenueId 
-                        && vsp.Status == "ACTIVE");
+                        && vsp.Status == VenueSubscriptionPackageStatus.ACTIVE.ToString());
 
                 if (activeSubscription != null)
                 {
@@ -1707,7 +1707,7 @@ public class VenueLocationService : IVenueLocationService
 
                             if (refundResult.IsSuccess)
                             {
-                                activeSubscription.Status = "REFUNDED";
+                                activeSubscription.Status = VenueSubscriptionPackageStatus.REFUNDED.ToString();
                                 activeSubscription.UpdatedAt = DateTime.UtcNow;
                                 _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(activeSubscription);
 
@@ -1726,7 +1726,7 @@ public class VenueLocationService : IVenueLocationService
                         else
                         {
                             // Không tìm thấy venue owner, vẫn cancel subscription
-                            activeSubscription.Status = "CANCELLED";
+                            activeSubscription.Status = VenueSubscriptionPackageStatus.CANCELLED.ToString();
                             activeSubscription.UpdatedAt = DateTime.UtcNow;
                             _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(activeSubscription);
                             _logger.LogWarning("Venue owner not found for venue {VenueId}, subscription cancelled without refund", venue.Id);
@@ -1735,7 +1735,7 @@ public class VenueLocationService : IVenueLocationService
                     else
                     {
                         // Không có transaction hoặc amount = 0, chỉ cancel subscription
-                        activeSubscription.Status = "CANCELLED";
+                        activeSubscription.Status = VenueSubscriptionPackageStatus.CANCELLED.ToString();
                         activeSubscription.UpdatedAt = DateTime.UtcNow;
                         _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(activeSubscription);
                         _logger.LogInformation("No valid transaction found for subscription {SubId}, status updated to CANCELLED", activeSubscription.Id);
@@ -1748,7 +1748,7 @@ public class VenueLocationService : IVenueLocationService
             
             // Tạo STAFF account khi venue được approve
             string staffAccountMessage = "";
-            if (status == "ACTIVE")
+            if (status == VenueLocationStatus.ACTIVE.ToString())
             {
                 try
                 {
@@ -1820,7 +1820,7 @@ public class VenueLocationService : IVenueLocationService
             
             await dbTransaction.CommitAsync();
 
-            if (status == "ACTIVE")
+            if (status == VenueLocationStatus.ACTIVE.ToString())
             {
                 try
                 {
@@ -1936,9 +1936,9 @@ public class VenueLocationService : IVenueLocationService
         var allVenues = await _unitOfWork.VenueLocations.GetAllAsync();
         
         var total = allVenues.Count();
-        var active = allVenues.Count(v => v.Status == "ACTIVE" && v.IsDeleted != true);
-        var pending = allVenues.Count(v => v.Status == "PENDING" && v.IsDeleted != true);
-        var drafted = allVenues.Count(v => v.Status == "DRAFTED" && v.IsDeleted != true);
+        var active = allVenues.Count(v => v.Status == VenueLocationStatus.ACTIVE.ToString() && v.IsDeleted != true);
+        var pending = allVenues.Count(v => v.Status == VenueLocationStatus.PENDING.ToString() && v.IsDeleted != true);
+        var drafted = allVenues.Count(v => v.Status == VenueLocationStatus.DRAFTED.ToString() && v.IsDeleted != true);
         var deleted = allVenues.Count(v => v.IsDeleted == true);
 
         var statusBreakdown = allVenues
@@ -1975,7 +1975,7 @@ public class VenueLocationService : IVenueLocationService
             Id = venue.Id,
             Name = venue.Name,
             WebsiteUrl = venue.WebsiteUrl,
-            Status = venue.Status ?? "DRAFTED",
+            Status = venue.Status ?? VenueLocationStatus.DRAFTED.ToString(),
             Address = venue.VenueOwner.Address,
             BusinessLicenseUrl = venue.BusinessLicenseUrl,
             VenueOwner = new VenueOwnerKycInfo
