@@ -1,5 +1,6 @@
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -58,7 +59,7 @@ public class CoupleProfileRepository : GenericRepository<CoupleProfile>, ICouple
             query = query.Where(c => c.IsDeleted != true);
 
         return await query
-            .Where(c => c.Status == "ACTIVE")
+            .Where(c => c.Status == CoupleProfileStatus.ACTIVE.ToString())
             .ToListAsync(cancellationToken);
     }
 
@@ -67,7 +68,7 @@ public class CoupleProfileRepository : GenericRepository<CoupleProfile>, ICouple
         CancellationToken cancellationToken = default)
     {
         return await _dbSet
-            .Where(c => c.IsDeleted != true && c.Status == "ACTIVE")
+            .Where(c => c.IsDeleted != true && c.Status == CoupleProfileStatus.ACTIVE.ToString())
             .FirstOrDefaultAsync(c => 
                 c.MemberId1 == memberId || c.MemberId2 == memberId, 
                 cancellationToken);
