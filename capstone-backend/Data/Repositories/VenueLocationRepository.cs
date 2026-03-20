@@ -1,5 +1,6 @@
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -134,7 +135,7 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
     {
         var query = _dbSet
             .AsNoTracking()
-            .Where(v => v.IsDeleted != true && v.Status == "ACTIVE");
+            .Where(v => v.IsDeleted != true && v.Status == VenueLocationStatus.ACTIVE.ToString());
 
         bool hasGeoFilter = latitude.HasValue && longitude.HasValue;
 
@@ -312,7 +313,7 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
             .Include(v => v.VenueLocationTags)
                 .ThenInclude(vlt => vlt.LocationTag)
                     .ThenInclude(lt => lt!.CouplePersonalityType)
-            .Where(v => v.Status == "PENDING" && v.IsDeleted != true);
+            .Where(v => v.Status == VenueLocationStatus.PENDING.ToString() && v.IsDeleted != true);
 
         var totalCount = await query.CountAsync();
 
@@ -337,7 +338,7 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
     {
         var query = _dbSet
             .AsNoTracking()
-            .Where(v => venueIds.Contains(v.Id.ToString()) && v.IsDeleted == false && v.Status == "ACTIVE")
+            .Where(v => venueIds.Contains(v.Id.ToString()) && v.IsDeleted == false && v.Status == VenueLocationStatus.ACTIVE.ToString())
             .Select(v => new VenueLocation
             {
                 Id = v.Id,
@@ -354,7 +355,7 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
 
         var validVenueIds = await _dbSet
             .AsNoTracking()
-            .Where(v => venueIds.Contains(v.Id.ToString()) && v.Status == "ACTIVE" && v.IsDeleted == false)
+            .Where(v => venueIds.Contains(v.Id.ToString()) && v.Status == VenueLocationStatus.ACTIVE.ToString() && v.IsDeleted == false)
             .Select(v => v.Id.ToString())
             .ToListAsync();
 
