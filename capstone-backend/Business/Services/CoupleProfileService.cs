@@ -1,5 +1,6 @@
 using capstone_backend.Business.DTOs.CoupleProfile;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -115,7 +116,7 @@ public class CoupleProfileService : ICoupleProfileService
         }
 
         // Edge case: Cannot update if couple is not ACTIVE
-        if (couple.Status != "ACTIVE")
+        if (couple.Status != CoupleProfileStatus.ACTIVE.ToString())
         {
             return (false, $"Không thể cập nhật cặp đôi có trạng thái {couple.Status}", null);
         }
