@@ -4,6 +4,7 @@ using capstone_backend.Business.DTOs.MoodType;
 using capstone_backend.Business.DTOs.Notification;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -186,10 +187,9 @@ public class MoodTypeService : IMoodTypeService
         bool isCouple = false;
         bool hasCoupleMood = false;
 
-        // Lấy couple profile ACTIVE (không lấy couple cũ đã chia tay)
         var coupleProfile = await _unitOfWork.Context.Set<CoupleProfile>()
             .Where(c => (c.MemberId1 == memberProfile.Id || c.MemberId2 == memberProfile.Id)
-                     && c.Status == "ACTIVE"
+                     && c.Status == CoupleProfileStatus.ACTIVE.ToString()
                      && c.IsDeleted != true)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -272,10 +272,9 @@ public class MoodTypeService : IMoodTypeService
     {
         try
         {
-            // Kiểm tra xem member có couple ACTIVE không (không lấy couple cũ)
             var coupleProfile = await _unitOfWork.Context.Set<CoupleProfile>()
                 .Where(c => (c.MemberId1 == memberId || c.MemberId2 == memberId)
-                         && c.Status == "ACTIVE"
+                         && c.Status == CoupleProfileStatus.ACTIVE.ToString()
                          && c.IsDeleted != true)
                 .FirstOrDefaultAsync(cancellationToken);
                 
