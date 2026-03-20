@@ -1,5 +1,6 @@
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,7 +22,7 @@ public class LeaderboardRepository : GenericRepository<Leaderboard>, ILeaderboar
             .Include(l => l.Couple)
             .Where(l => l.PeriodType == periodType 
                      && l.SeasonKey == seasonKey 
-                     && l.Status == "active")
+                     && l.Status == LeaderboardStatus.ACTIVE.ToString())
             .OrderBy(l => l.RankPosition);
 
         var totalCount = await query.CountAsync();
