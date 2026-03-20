@@ -185,11 +185,9 @@ public class SepayWebhookController : ControllerBase
                 return NotFound(new { message = $"Subscription {subscriptionId} not found" });
             }
 
-            // Validate subscription is not already active/completed
-            if (subscription.Status == "ACTIVE" || subscription.Status == "COMPLETED")
+            if (subscription.Status == VenueSubscriptionPackageStatus.ACTIVE.ToString() || subscription.Status == VenueSubscriptionPackageStatus.COMPLETED.ToString())
             {
                 _logger.LogInformation("[{RequestId}] ℹ️ Subscription already {Status}: {Id}", requestId, subscription.Status, subscriptionId);
-                // This is OK - payment may be duplicate webhook, check transaction status below
             }
 
             var transaction = await _unitOfWork.Context.Set<Transaction>()
@@ -218,19 +216,19 @@ public class SepayWebhookController : ControllerBase
             }
 
             // 7. Validate transaction state
-            if (transaction.Status == "EXPIRED")
+            if (transaction.Status == TransactionStatus.EXPIRED.ToString())
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Transaction expired: {Id}", requestId, transaction.Id);
                 return BadRequest(new { message = "Transaction has expired" });
             }
 
-            if (transaction.Status == "CANCELLED")
+            if (transaction.Status == TransactionStatus.CANCELLED.ToString())
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Transaction cancelled: {Id}", requestId, transaction.Id);
                 return BadRequest(new { message = "Transaction has been cancelled" });
             }
 
-            if (transaction.Status != "PENDING")
+            if (transaction.Status != TransactionStatus.PENDING.ToString())
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Unexpected transaction status: {Status} for transaction {Id}", 
                     requestId, transaction.Status, transaction.Id);
@@ -284,7 +282,7 @@ public class SepayWebhookController : ControllerBase
                 
                 transaction.Status = TransactionStatus.FAILED.ToString();
                 transaction.UpdatedAt = DateTime.UtcNow;
-                subscription.Status = "PAYMENT_FAILED";
+                subscription.Status = VenueSubscriptionPackageStatus.PAYMENT_FAILED.ToString();
                 subscription.UpdatedAt = DateTime.UtcNow;
                 
                 _unitOfWork.Context.Set<Transaction>().Update(transaction);
@@ -335,7 +333,7 @@ public class SepayWebhookController : ControllerBase
                 externalRefData["referenceCode"] = webhook.ReferenceCode ?? string.Empty;
                 externalRefData["requestId"] = requestId; // Track which webhook request processed this
 
-                transaction.Status = "SUCCESS";
+                transaction.Status = TransactionStatus.SUCCESS.ToString();
                 transaction.ExternalRefCode = JsonSerializer.Serialize(externalRefData);
                 transaction.UpdatedAt = DateTime.UtcNow;
 
@@ -352,7 +350,7 @@ public class SepayWebhookController : ControllerBase
                     return BadRequest(new { message = "Package is no longer available" });
                 }
 
-                subscription.Status = "ACTIVE";
+                subscription.Status = VenueSubscriptionPackageStatus.ACTIVE.ToString();
                 subscription.StartDate = now;
                 subscription.EndDate = now.AddDays(totalDays);
                 subscription.UpdatedAt = now;
@@ -361,9 +359,9 @@ public class SepayWebhookController : ControllerBase
                 if (subscription.Venue != null)
                 {
                     // Only update if venue is still in valid state
-                    if (subscription.Venue.Status == "DRAFTED" || subscription.Venue.Status == "DRAFT")
+                    if (subscription.Venue.Status == VenueLocationStatus.DRAFTED.ToString())
                     {
-                        subscription.Venue.Status = "PENDING";
+                        subscription.Venue.Status = VenueLocationStatus.PENDING.ToString();
                         subscription.Venue.UpdatedAt = now;
                         _unitOfWork.Context.Set<VenueLocation>().Update(subscription.Venue);
                         _logger.LogInformation("[{RequestId}] Updated venue {VenueId} status to PENDING", requestId, subscription.Venue.Id);
@@ -471,19 +469,19 @@ public class SepayWebhookController : ControllerBase
             }
 
             // 7. Validate transaction state
-            if (transaction.Status == "EXPIRED")
+            if (transaction.Status == TransactionStatus.EXPIRED.ToString())
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Transaction expired: {Id}", requestId, transaction.Id);
                 return BadRequest(new { message = "Transaction has expired" });
             }
 
-            if (transaction.Status == "CANCELLED")
+            if (transaction.Status == TransactionStatus.CANCELLED.ToString())
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Transaction cancelled: {Id}", requestId, transaction.Id);
                 return BadRequest(new { message = "Transaction has been cancelled" });
             }
 
-            if (transaction.Status != "PENDING")
+            if (transaction.Status != TransactionStatus.PENDING.ToString())
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Unexpected transaction status: {Status} for transaction {Id}", 
                     requestId, transaction.Status, transaction.Id);
@@ -496,7 +494,7 @@ public class SepayWebhookController : ControllerBase
                 _logger.LogError("[{RequestId}] ❌ SECURITY ALERT: Amount mismatch - Expected: {Expected}, Received: {Received}",
                     requestId, transaction.Amount, webhook.Amount);
                     
-                transaction.Status = "FAILED";
+                transaction.Status = TransactionStatus.FAILED.ToString();
                 transaction.UpdatedAt = DateTime.UtcNow;
                 _unitOfWork.Context.Set<Transaction>().Update(transaction);
                 await _unitOfWork.SaveChangesAsync();
@@ -513,7 +511,7 @@ public class SepayWebhookController : ControllerBase
                     _logger.LogWarning("[{RequestId}] ⚠️ Transaction created more than 24h ago: {CreatedAt}", 
                         requestId, transaction.CreatedAt);
                     
-                    transaction.Status = "EXPIRED";
+                    transaction.Status = TransactionStatus.EXPIRED.ToString();
                     transaction.UpdatedAt = DateTime.UtcNow;
                     _unitOfWork.Context.Set<Transaction>().Update(transaction);
                     await _unitOfWork.SaveChangesAsync();
@@ -527,9 +525,9 @@ public class SepayWebhookController : ControllerBase
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Payment not successful - Status: {Status}", requestId, webhook.Status);
                 
-                transaction.Status = "FAILED";
+                transaction.Status = TransactionStatus.FAILED.ToString();
                 transaction.UpdatedAt = DateTime.UtcNow;
-                adsOrder.Status = "PAYMENT_FAILED";
+                adsOrder.Status = AdsOrderStatus.PAYMENT_FAILED.ToString();
                 adsOrder.UpdatedAt = DateTime.UtcNow;
                 
                 _unitOfWork.Context.Set<Transaction>().Update(transaction);
@@ -549,7 +547,7 @@ public class SepayWebhookController : ControllerBase
             {
                 // Re-check status after acquiring lock
                 await _unitOfWork.Context.Entry(transaction).ReloadAsync();
-                if (transaction.Status == "SUCCESS")
+                if (transaction.Status == TransactionStatus.SUCCESS.ToString())
                 {
                     _logger.LogInformation("[{RequestId}] ℹ️ Transaction already processed by concurrent request: {Id}", requestId, transaction.Id);
                     await dbTransaction.RollbackAsync();
@@ -580,13 +578,13 @@ public class SepayWebhookController : ControllerBase
                 externalRefData["referenceCode"] = webhook.ReferenceCode ?? string.Empty;
                 externalRefData["requestId"] = requestId;
 
-                transaction.Status = "SUCCESS";
+                transaction.Status = TransactionStatus.SUCCESS.ToString();
                 transaction.ExternalRefCode = JsonSerializer.Serialize(externalRefData);
                 transaction.UpdatedAt = DateTime.UtcNow;
 
                 // 13. Update AdsOrder
                 var now = DateTime.UtcNow;
-                adsOrder.Status = "COMPLETED";
+                adsOrder.Status = AdsOrderStatus.COMPLETED.ToString();
                 adsOrder.PricePaid = webhook.Amount;
                 adsOrder.UpdatedAt = now;
 
@@ -598,8 +596,8 @@ public class SepayWebhookController : ControllerBase
                     _logger.LogInformation("[{RequestId}] 🔍 DEBUG - Advertisement {AdId} current status: '{Status}', checking if can update to PENDING", 
                         requestId, adsOrder.Advertisement.Id, oldStatus);
                     
-                    if (adsOrder.Advertisement.Status == "DRAFTED" 
-                        || adsOrder.Advertisement.Status == "DRAFT"
+                    if (adsOrder.Advertisement.Status == AdvertisementStatus.DRAFTED.ToString() 
+                        || adsOrder.Advertisement.Status == AdvertisementStatus.DRAFT.ToString()
                         || adsOrder.Advertisement.Status == AdvertisementStatus.REJECTED.ToString())
                     {
                         adsOrder.Advertisement.Status = AdvertisementStatus.PENDING.ToString();
@@ -678,3 +676,6 @@ public class SepayWebhookController : ControllerBase
         }
     }
 }
+
+
+
