@@ -148,6 +148,7 @@ public static class ServiceExtensions
         services.AddScoped<IMessageRepository, MessageRepository>();
 
         services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
+        services.AddScoped<IReportRepository, ReportRepository>();
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -253,6 +254,9 @@ public static class ServiceExtensions
 
         // Register Leaderboard Service
         services.AddScoped<ILeaderboardService, LeaderboardService>();
+
+        // Register Report Service
+        services.AddScoped<IReportService, ReportService>();
 
         return services;
     }

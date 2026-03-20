@@ -107,6 +107,8 @@ public interface IUnitOfWork : IDisposable
 
     ILeaderboardRepository Leaderboards { get; }
 
+    IReportRepository Reports { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>
