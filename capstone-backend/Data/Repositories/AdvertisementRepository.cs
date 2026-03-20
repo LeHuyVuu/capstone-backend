@@ -26,7 +26,7 @@ public class AdvertisementRepository : GenericRepository<Advertisement>, IAdvert
                 vla.Advertisement.Status == AdvertisementStatus.APPROVED.ToString() &&
                 vla.Advertisement.IsDeleted == false &&
                 vla.Venue.IsDeleted == false &&
-                vla.Venue.Status == "ACTIVE"
+                vla.Venue.Status == VenueLocationStatus.ACTIVE.ToString()
             )
             .OrderByDescending(vla => vla.PriorityScore)
             .ThenByDescending(vla => vla.Advertisement.CreatedAt)
