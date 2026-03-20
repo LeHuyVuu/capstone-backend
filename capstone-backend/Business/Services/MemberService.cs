@@ -1,6 +1,7 @@
 using capstone_backend.Business.DTOs.Member;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -61,27 +62,24 @@ public class MemberService : IMemberService
         if (currentMemberProfile.Gender == partnerMemberProfile.Gender)
             throw new InvalidOperationException("Can only create couple with different genders");
 
-        // 3.2. Kiểm tra relationship status không đồng bộ
-        if (currentMemberProfile.RelationshipStatus == "IN_RELATIONSHIP")
+        if (currentMemberProfile.RelationshipStatus == RelationshipStatus.IN_RELATIONSHIP.ToString())
             throw new InvalidOperationException("You are already marked as in a relationship");
             
-        if (partnerMemberProfile.RelationshipStatus == "IN_RELATIONSHIP")
+        if (partnerMemberProfile.RelationshipStatus == RelationshipStatus.IN_RELATIONSHIP.ToString())
             throw new InvalidOperationException("The member you are trying to invite is already marked as in a relationship");
 
-        // 4. Kiểm tra xem người gọi API đã có trong couple đang ACTIVE chưa (đã chia tay thì được ghép lại)
         var currentMemberInCouple = await _unitOfWork.Context.CoupleProfiles
             .Where(c => c.IsDeleted != true &&
-                       c.Status == "ACTIVE" &&
+                       c.Status == CoupleProfileStatus.ACTIVE.ToString() &&
                        (c.MemberId1 == currentMemberProfile.Id || c.MemberId2 == currentMemberProfile.Id))
             .FirstOrDefaultAsync();
 
         if (currentMemberInCouple != null)
             throw new InvalidOperationException("You are already in an active couple. Cannot invite another member.");
 
-        // 5. Kiểm tra xem người được mời đã có trong couple đang ACTIVE chưa (đã chia tay thì được ghép lại)
         var partnerInCouple = await _unitOfWork.Context.CoupleProfiles
             .Where(c => c.IsDeleted != true &&
-                       c.Status == "ACTIVE" &&
+                       c.Status == CoupleProfileStatus.ACTIVE.ToString() &&
                        (c.MemberId1 == partnerMemberProfile.Id || c.MemberId2 == partnerMemberProfile.Id))
             .FirstOrDefaultAsync();
 
@@ -104,7 +102,7 @@ public class MemberService : IMemberService
             MemberId2 = largerId,
             CoupleName = coupleName,
             StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            Status = "ACTIVE",
+            Status = CoupleProfileStatus.ACTIVE.ToString(),
             TotalPoints = 0,
             InteractionPoints = 0,
             CreatedAt = DateTime.UtcNow,
@@ -114,11 +112,10 @@ public class MemberService : IMemberService
 
         await _unitOfWork.Context.Set<CoupleProfile>().AddAsync(coupleProfile);
         
-        // 6. Cập nhật relationship_status của cả 2 member về IN_RELATIONSHIP
-        partnerMemberProfile.RelationshipStatus = "IN_RELATIONSHIP";
+        partnerMemberProfile.RelationshipStatus = RelationshipStatus.IN_RELATIONSHIP.ToString();
         partnerMemberProfile.UpdatedAt = DateTime.UtcNow;
         
-        currentMemberProfile.RelationshipStatus = "IN_RELATIONSHIP";
+        currentMemberProfile.RelationshipStatus = RelationshipStatus.IN_RELATIONSHIP.ToString();
         currentMemberProfile.UpdatedAt = DateTime.UtcNow;
         
         await _unitOfWork.SaveChangesAsync();
