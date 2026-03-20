@@ -2,6 +2,7 @@ using capstone_backend.Api.Models;
 using capstone_backend.Business.DTOs.Momo;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -108,7 +109,7 @@ public class PaymentController : BaseController
         var transaction = await _unitOfWork.Context.Set<Transaction>()
             .FirstOrDefaultAsync(t => t.Id == transactionId 
                 && t.UserId == userId.Value
-                && t.Status == "PENDING");
+                && t.Status == TransactionStatus.PENDING.ToString());
 
         if (transaction == null)
         {
@@ -150,32 +151,30 @@ public class PaymentController : BaseController
         var transaction = await _unitOfWork.Context.Set<Transaction>()
             .FirstOrDefaultAsync(t => t.Id == transactionId 
                 && t.UserId == userId.Value
-                && t.Status == "PENDING");
+                && t.Status == TransactionStatus.PENDING.ToString());
 
         if (transaction == null)
         {
             return NotFoundResponse("Transaction not found or already completed");
         }
 
-        // Update transaction and subscription
         using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
 
         try
         {
-            transaction.Status = "CANCELLED";
+            transaction.Status = TransactionStatus.CANCELLED.ToString();
             transaction.UpdatedAt = DateTime.UtcNow;
             _unitOfWork.Context.Set<Transaction>().Update(transaction);
 
-            // Cancel subscription if venue subscription
             if (transaction.TransType == 1)
             {
                 var subscription = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
                     .FirstOrDefaultAsync(s => s.Id == transaction.DocNo 
-                        && s.Status == "PENDING_PAYMENT");
+                        && s.Status == VenueSubscriptionPackageStatus.PENDING_PAYMENT.ToString());
 
                 if (subscription != null)
                 {
-                    subscription.Status = "CANCELLED";
+                    subscription.Status = VenueSubscriptionPackageStatus.CANCELLED.ToString();
                     subscription.UpdatedAt = DateTime.UtcNow;
                     _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(subscription);
                 }
