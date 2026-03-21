@@ -408,8 +408,18 @@ namespace capstone_backend.Business.Services
                     vi => vi.Include(vi => vi.Voucher)
                 );
 
-
             var response = _mapper.Map<List<MemberVoucherItemResponse>>(voucherItems);
+            foreach (var item in response)
+            {
+                var voucher = voucherItems.FirstOrDefault(vi => vi.VoucherId == item.VoucherId)?.Voucher;
+                if (voucher != null)
+                {
+                    item.DiscountType = voucher.DiscountType;
+                    item.DiscountAmount = voucher.DiscountAmount;
+                    item.DiscountPercent = voucher.DiscountPercent;
+                }
+            }
+
             return new PagedResult<MemberVoucherItemResponse>
             {
                 Items = response,

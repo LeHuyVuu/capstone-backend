@@ -1,4 +1,6 @@
-﻿namespace capstone_backend.Business.DTOs.Voucher
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace capstone_backend.Business.DTOs.Voucher
 {
     public class MemberVoucherItemResponse
     {
@@ -11,5 +13,9 @@
         public DateTime? AcquiredAt { get; set; }
         public DateTime? ExpiredAt { get; set; }
         public DateTime? UsedAt { get; set; }
+
+        public string? DiscountType { get; set; }
+        public decimal? DiscountAmount { get; set; }
+        public decimal? DiscountPercent { get; set; }
     }
 }
