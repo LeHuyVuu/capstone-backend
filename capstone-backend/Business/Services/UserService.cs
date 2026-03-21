@@ -1,3 +1,4 @@
+using capstone_backend.Business.Common;
 using capstone_backend.Business.DTOs.Auth;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.User;
@@ -17,13 +18,23 @@ public class UserService : IUserService
     private readonly ILogger<UserService> _logger;
     private readonly IJwtService _jwtService;
     private readonly ICollectionService _collectionService;
+    private readonly IRedisService _redisService;
+    private readonly IEmailService _emailService;
 
-    public UserService(IUnitOfWork unitOfWork, ILogger<UserService> logger, IJwtService jwtService, ICollectionService collectionService)
+    public UserService(
+        IUnitOfWork unitOfWork, 
+        ILogger<UserService> logger, 
+        IJwtService jwtService, 
+        ICollectionService collectionService,
+        IRedisService redisService,
+        IEmailService emailService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _jwtService = jwtService;
         _collectionService = collectionService;
+        _redisService = redisService;
+        _emailService = emailService;
     }
 
     public async Task<LoginResponse?> LoginAsync(LoginRequest request)
@@ -454,5 +465,135 @@ public class UserService : IUserService
         {
             return jsonString; // Return as-is if parsing fails
         }
+    }
+
+    /// <summary>
+    /// Update password cho user đã đăng nhập
+    /// </summary>
+    public async Task<bool> UpdatePasswordAsync(int userId, UpdatePasswordRequest request)
+    {
+        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        if (user == null)
+            throw new InvalidOperationException("Người dùng không tồn tại");
+
+        // Verify current password
+        bool isCurrentPasswordValid = BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash);
+        if (!isCurrentPasswordValid)
+            throw new InvalidOperationException("Mật khẩu hiện tại không đúng");
+
+        // Hash new password
+        string newPasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        
+        user.PasswordHash = newPasswordHash;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        _unitOfWork.Users.Update(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("User {UserId} updated password successfully", userId);
+        return true;
+    }
+
+    /// <summary>
+    /// Gửi OTP qua email để reset password
+    /// </summary>
+    public async Task<bool> SendPasswordResetOtpAsync(ForgotPasswordRequest request)
+    {
+        var user = await _unitOfWork.Users.GetByEmailAsync(request.Email);
+        if (user == null)
+            throw new InvalidOperationException("Email không tồn tại trong hệ thống");
+
+        if (user.IsActive != true)
+            throw new InvalidOperationException("Tài khoản đã bị vô hiệu hóa");
+
+        // Generate 6-digit OTP
+        var random = new Random();
+        string otpCode = random.Next(100000, 999999).ToString();
+
+        // Store OTP in Redis with 10 minutes expiry
+        string redisKey = $"otp:password-reset:{request.Email}";
+        await _redisService.SetAsync(redisKey, otpCode, TimeSpan.FromMinutes(10));
+
+        // Send OTP via email
+        var emailRequest = new DTOs.Email.SendEmailRequest
+        {
+            To = request.Email,
+            Subject = "Mã OTP đặt lại mật khẩu - CoupleMood",
+            FromName = "CoupleMood",
+            HtmlBody = EmailOtpTemplate.GetPasswordResetOtpEmail(otpCode, user.DisplayName ?? "Người dùng"),
+            TextBody = EmailOtpTemplate.GetPasswordResetOtpPlainText(otpCode, user.DisplayName ?? "Người dùng")
+        };
+
+        bool emailSent = await _emailService.SendEmailAsync(emailRequest);
+        if (!emailSent)
+        {
+            await _redisService.RemoveAsync(redisKey);
+            throw new InvalidOperationException("Không thể gửi email. Vui lòng thử lại sau");
+        }
+
+        _logger.LogInformation("OTP sent to email {Email}", request.Email);
+        return true;
+    }
+
+    /// <summary>
+    /// Verify OTP code
+    /// </summary>
+    public async Task<bool> VerifyOtpAsync(VerifyOtpRequest request)
+    {
+        string redisKey = $"otp:password-reset:{request.Email}";
+        var storedOtp = await _redisService.GetAsync<string>(redisKey);
+
+        if (string.IsNullOrEmpty(storedOtp))
+            throw new InvalidOperationException("Mã OTP không hợp lệ hoặc đã hết hạn");
+
+        if (storedOtp != request.OtpCode)
+            throw new InvalidOperationException("Mã OTP không chính xác");
+
+        // Mark OTP as verified (store verified flag for 15 minutes)
+        string verifiedKey = $"otp:verified:{request.Email}";
+        await _redisService.SetAsync(verifiedKey, "true", TimeSpan.FromMinutes(15));
+
+        _logger.LogInformation("OTP verified successfully for email {Email}", request.Email);
+        return true;
+    }
+
+    /// <summary>
+    /// Reset password sau khi verify OTP thành công
+    /// </summary>
+    public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        // Check if OTP was verified
+        string verifiedKey = $"otp:verified:{request.Email}";
+        var isVerified = await _redisService.GetAsync<string>(verifiedKey);
+
+        if (string.IsNullOrEmpty(isVerified))
+        {
+            // Double check OTP one more time
+            string otpKey = $"otp:password-reset:{request.Email}";
+            var storedOtp = await _redisService.GetAsync<string>(otpKey);
+
+            if (string.IsNullOrEmpty(storedOtp) || storedOtp != request.OtpCode)
+                throw new InvalidOperationException("Vui lòng xác thực OTP trước khi đặt lại mật khẩu");
+        }
+
+        var user = await _unitOfWork.Users.GetByEmailAsync(request.Email);
+        if (user == null)
+            throw new InvalidOperationException("Người dùng không tồn tại");
+
+        // Hash new password
+        string newPasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        
+        user.PasswordHash = newPasswordHash;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        _unitOfWork.Users.Update(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        // Clean up Redis keys
+        await _redisService.RemoveAsync($"otp:password-reset:{request.Email}");
+        await _redisService.RemoveAsync(verifiedKey);
+
+        _logger.LogInformation("Password reset successfully for email {Email}", request.Email);
+        return true;
     }
 }

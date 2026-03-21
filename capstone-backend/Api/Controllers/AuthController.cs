@@ -179,4 +179,106 @@ public class AuthController : BaseController
 
         return OkResponse(user);
     }
+
+    /// <summary>
+    /// Update password cho user đã đăng nhập
+    /// </summary>
+    /// <param name="request">Update password request</param>
+    /// <returns>Success response</returns>
+    [HttpPost("update-password")]
+    [Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme + "," + "Bearer")]
+    public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null) return UnauthorizedResponse();
+
+            await _userService.UpdatePasswordAsync(userId.Value, request);
+            return OkResponse<object?>(null, "Cập nhật mật khẩu thành công");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse($"Cập nhật mật khẩu thất bại: {ex.Message}");
+        }
+    }
+
+
+    /// <summary>
+    /// Gửi OTP qua email để reset password
+    /// </summary>
+    /// <param name="request">Forgot password request</param>
+    /// <returns>Success response</returns>
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        try
+        {
+            await _userService.SendPasswordResetOtpAsync(request);
+            return OkResponse<object?>(null, "Mã OTP đã được gửi đến email của bạn");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse($"Gửi OTP thất bại: {ex.Message}");
+        }
+    }
+
+
+    /// <summary>
+    /// Verify OTP code
+    /// </summary>
+    /// <param name="request">Verify OTP request</param>
+    /// <returns>Success response</returns>
+    [HttpPost("verify-otp")]
+    [AllowAnonymous]
+    public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request)
+    {
+        try
+        {
+            await _userService.VerifyOtpAsync(request);
+            return OkResponse<object?>(null, "Xác thực OTP thành công");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse($"Xác thực OTP thất bại: {ex.Message}");
+        }
+    }
+
+
+    /// <summary>
+    /// Reset password sau khi verify OTP thành công
+    /// </summary>
+    /// <param name="request">Reset password request</param>
+    /// <returns>Success response</returns>
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        try
+        {
+            await _userService.ResetPasswordAsync(request);
+            return OkResponse<object?>(null, "Đặt lại mật khẩu thành công");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse($"Đặt lại mật khẩu thất bại: {ex.Message}");
+        }
+    }
 }
