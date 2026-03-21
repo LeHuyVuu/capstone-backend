@@ -19,6 +19,27 @@ namespace capstone_backend.Data.Repositories
                 .CountAsync();
         }
 
+        public async Task<Dictionary<int, int>> CountMemberAcquiredVouchersAsync(int memberId, List<int> voucherIds)
+        {
+            return await _dbSet
+                .Include(vi => vi.VoucherItemMember)
+                .Where(vi => (vi.VoucherItemMember != null && vi.VoucherItemMember.MemberId == memberId) &&
+                       voucherIds.Contains(vi.VoucherId) &&
+                       (
+                            vi.Status == VoucherItemStatus.ACQUIRED.ToString() ||
+                            vi.Status == VoucherItemStatus.USED.ToString() ||
+                            vi.Status == VoucherItemStatus.EXPIRED.ToString()
+                       )
+                )
+                .GroupBy(vi => vi.VoucherId)
+                .Select(g => new
+                {
+                    VoucherId = g.Key,
+                    Count = g.Count()
+                })
+                .ToDictionaryAsync(vi => vi.VoucherId, vi => vi.Count);
+        }
+
         public async Task ExecuteUpdateUnassignedVoucherItemsAsync(int voucherId)
         {
             await _dbSet
@@ -57,6 +78,8 @@ namespace capstone_backend.Data.Repositories
         {
             return await _dbSet
                 .Include(vi => vi.Voucher)
+                    .ThenInclude(v => v.VoucherLocations)
+                        .ThenInclude(vl => vl.VenueLocation)
                 .Include(vi => vi.VoucherItemMember)
                     .ThenInclude(vim => vim.Member)
                         .ThenInclude(m => m.User)
