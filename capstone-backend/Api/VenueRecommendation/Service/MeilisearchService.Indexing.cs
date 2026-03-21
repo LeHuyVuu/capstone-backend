@@ -23,8 +23,9 @@ public partial class MeilisearchService
 
             var document = await MapToQueryResultAsync(venue);
             var index = _meilisearchClient.Index(_indexName);
-await index.AddDocumentsAsync(new[] { document }, "id");
-            _logger.LogInformation("Indexed venue location {VenueId} to Meilisearch", venueId);
+            await index.AddDocumentsAsync(new[] { document }, "id");
+            _logger.LogInformation("Indexed venue location {VenueId} '{VenueName}' to Meilisearch with category: '{Category}'", 
+                venueId, document.Name, document.Category ?? "(null)");
             return true;
         }
         catch (Exception ex)
