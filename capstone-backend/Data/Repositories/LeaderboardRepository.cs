@@ -42,11 +42,12 @@ public class LeaderboardRepository : GenericRepository<Leaderboard>, ILeaderboar
         int pageNumber,
         int pageSize)
     {
+        // Filter: period_start phải nằm trong tháng được query
         var query = _dbSet
             .Include(l => l.Couple)
             .Where(l => l.PeriodType == periodType 
-                     && l.PeriodStart <= periodEnd 
-                     && l.PeriodEnd >= periodStart
+                     && l.PeriodStart >= periodStart 
+                     && l.PeriodStart <= periodEnd
                      && l.Status == LeaderboardStatus.ACTIVE.ToString())
             .OrderBy(l => l.RankPosition);
 

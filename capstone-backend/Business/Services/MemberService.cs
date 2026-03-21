@@ -199,12 +199,21 @@ public class MemberService : IMemberService
         if (memberProfile.IsDeleted == true)
             throw new InvalidOperationException("Member profile is deleted");
 
+        // Check if at least one field is provided
+        bool hasUpdates = false;
+
         // Update fields if provided
         if (!string.IsNullOrWhiteSpace(request.FullName))
+        {
             memberProfile.FullName = request.FullName;
+            hasUpdates = true;
+        }
 
         if (request.DateOfBirth.HasValue)
+        {
             memberProfile.DateOfBirth = request.DateOfBirth.Value;
+            hasUpdates = true;
+        }
 
         if (!string.IsNullOrWhiteSpace(request.Gender))
         {
@@ -221,41 +230,97 @@ public class MemberService : IMemberService
                 throw new InvalidOperationException("Cannot change gender while in a couple");
             
             memberProfile.Gender = request.Gender;
+            hasUpdates = true;
         }
 
         if (request.Bio != null) // Allow empty string to clear bio
+        {
             memberProfile.Bio = request.Bio;
+            hasUpdates = true;
+        }
 
         if (request.HomeLatitude.HasValue)
+        {
             memberProfile.HomeLatitude = request.HomeLatitude.Value;
+            hasUpdates = true;
+        }
 
         if (request.HomeLongitude.HasValue)
+        {
             memberProfile.HomeLongitude = request.HomeLongitude.Value;
+            hasUpdates = true;
+        }
 
         if (request.BudgetMin.HasValue)
+        {
             memberProfile.BudgetMin = request.BudgetMin.Value;
+            hasUpdates = true;
+        }
 
         if (request.BudgetMax.HasValue)
+        {
             memberProfile.BudgetMax = request.BudgetMax.Value;
+            hasUpdates = true;
+        }
 
         if (request.Address != null)
+        {
             memberProfile.address = request.Address;
+            hasUpdates = true;
+        }
 
         if (request.Area != null)
+        {
             memberProfile.area = request.Area;
+            hasUpdates = true;
+        }
 
         // Update UserAccount fields (avatar and phone)
         if (request.AvatarUrl != null && memberProfile.User != null)
         {
             memberProfile.User.AvatarUrl = request.AvatarUrl;
             memberProfile.User.UpdatedAt = DateTime.UtcNow;
+            hasUpdates = true;
         }
 
         if (request.PhoneNumber != null && memberProfile.User != null)
         {
-            memberProfile.User.PhoneNumber = request.PhoneNumber;
+            // Validate phone number format (Vietnamese phone number)
+            if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
+            {
+                // Remove spaces and special characters
+                var cleanPhone = new string(request.PhoneNumber.Where(char.IsDigit).ToArray());
+                
+                // Vietnamese phone: 10 digits starting with 0, or 9 digits without 0
+                if (cleanPhone.Length < 9 || cleanPhone.Length > 11)
+                    throw new ArgumentException("Phone number must be 9-11 digits");
+                
+                // Must start with 0 if 10 digits
+                if (cleanPhone.Length == 10 && !cleanPhone.StartsWith("0"))
+                    throw new ArgumentException("10-digit phone number must start with 0");
+                
+                // Valid prefixes for Vietnamese mobile: 03, 05, 07, 08, 09
+                if (cleanPhone.StartsWith("0"))
+                {
+                    var prefix = cleanPhone.Substring(0, 2);
+                    if (prefix != "03" && prefix != "05" && prefix != "07" && prefix != "08" && prefix != "09")
+                        throw new ArgumentException("Invalid Vietnamese phone number prefix");
+                }
+                
+                memberProfile.User.PhoneNumber = cleanPhone;
+            }
+            else
+            {
+                // Allow empty string to clear phone number
+                memberProfile.User.PhoneNumber = request.PhoneNumber;
+            }
+            
             memberProfile.User.UpdatedAt = DateTime.UtcNow;
+            hasUpdates = true;
         }
+
+        if (!hasUpdates)
+            throw new ArgumentException("Chưa có gì được cập nhật");
 
         memberProfile.UpdatedAt = DateTime.UtcNow;
 
@@ -270,6 +335,7 @@ public class MemberService : IMemberService
             UserId = memberProfile.UserId,
             FullName = memberProfile.FullName,
             AvatarUrl = memberProfile.User?.AvatarUrl,
+            PhoneNumber = memberProfile.User?.PhoneNumber,
             DateOfBirth = memberProfile.DateOfBirth,
             Gender = memberProfile.Gender,
             Bio = memberProfile.Bio,

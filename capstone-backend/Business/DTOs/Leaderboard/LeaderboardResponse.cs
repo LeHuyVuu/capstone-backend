@@ -1,10 +1,19 @@
 namespace capstone_backend.Business.DTOs.Leaderboard;
 
+public class MemberInfo
+{
+    public int MemberId { get; set; }
+    public string? MemberName { get; set; }
+    public string? AvatarUrl { get; set; }
+}
+
 public class LeaderboardResponse
 {
     public int Id { get; set; }
     public int CoupleId { get; set; }
     public string? CoupleName { get; set; }
+    public MemberInfo? Member1 { get; set; }
+    public MemberInfo? Member2 { get; set; }
     public int? TotalPoints { get; set; }
     public int? RankPosition { get; set; }
     public DateTime? UpdatedAt { get; set; }
