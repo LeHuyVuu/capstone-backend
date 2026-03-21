@@ -1,3 +1,4 @@
+using capstone_backend.Business.DTOs.CoupleInvitation;
 using capstone_backend.Business.DTOs.Member;
 
 namespace capstone_backend.Business.Interfaces;
@@ -19,4 +20,12 @@ public interface IMemberService
     /// <param name="currentUserId">ID of the current user</param>
     /// <returns>Invite code and link</returns>
     Task<InviteInfoResponse> GetInviteInfoAsync(int currentUserId);
+
+    /// <summary>
+    /// Update member profile information
+    /// </summary>
+    /// <param name="currentUserId">ID of the current user</param>
+    /// <param name="request">Update request with new values</param>
+    /// <returns>Updated member profile</returns>
+    Task<MemberProfileResponse> UpdateMemberProfileAsync(int currentUserId, UpdateMemberProfileRequest request);
 }

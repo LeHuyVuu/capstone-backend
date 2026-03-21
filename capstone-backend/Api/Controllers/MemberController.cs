@@ -71,4 +71,28 @@ public class MemberController : BaseController
             return BadRequestResponse(ex.Message);
         }
     }
+
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateMemberProfileRequest request)
+    {
+        try
+        {
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+            {
+                return UnauthorizedResponse("User ID not found");
+            }
+
+            var updatedProfile = await _memberService.UpdateMemberProfileAsync(currentUserId.Value, request);
+            return OkResponse(updatedProfile, "Profile updated successfully");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
 }

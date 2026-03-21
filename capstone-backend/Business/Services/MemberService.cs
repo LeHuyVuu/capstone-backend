@@ -1,3 +1,4 @@
+using capstone_backend.Business.DTOs.CoupleInvitation;
 using capstone_backend.Business.DTOs.Member;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
@@ -183,6 +184,105 @@ public class MemberService : IMemberService
         {
             InviteCode = memberProfile.InviteCode,
             InviteLink = deepLink
+        };
+    }
+
+    public async Task<MemberProfileResponse> UpdateMemberProfileAsync(int currentUserId, UpdateMemberProfileRequest request)
+    {
+        var memberProfile = await _unitOfWork.Context.MemberProfiles
+            .Include(m => m.User)
+            .FirstOrDefaultAsync(m => m.UserId == currentUserId);
+            
+        if (memberProfile == null)
+            throw new InvalidOperationException("Member profile not found");
+
+        if (memberProfile.IsDeleted == true)
+            throw new InvalidOperationException("Member profile is deleted");
+
+        // Update fields if provided
+        if (!string.IsNullOrWhiteSpace(request.FullName))
+            memberProfile.FullName = request.FullName;
+
+        if (request.DateOfBirth.HasValue)
+            memberProfile.DateOfBirth = request.DateOfBirth.Value;
+
+        if (!string.IsNullOrWhiteSpace(request.Gender))
+        {
+            if (request.Gender != "MALE" && request.Gender != "FEMALE")
+                throw new ArgumentException("Gender must be MALE or FEMALE");
+            
+            // Check if user is in a couple - cannot change gender if in couple
+            var isInCouple = await _unitOfWork.Context.CoupleProfiles
+                .AnyAsync(c => c.IsDeleted != true &&
+                             c.Status == CoupleProfileStatus.ACTIVE.ToString() &&
+                             (c.MemberId1 == memberProfile.Id || c.MemberId2 == memberProfile.Id));
+            
+            if (isInCouple && memberProfile.Gender != request.Gender)
+                throw new InvalidOperationException("Cannot change gender while in a couple");
+            
+            memberProfile.Gender = request.Gender;
+        }
+
+        if (request.Bio != null) // Allow empty string to clear bio
+            memberProfile.Bio = request.Bio;
+
+        if (request.HomeLatitude.HasValue)
+            memberProfile.HomeLatitude = request.HomeLatitude.Value;
+
+        if (request.HomeLongitude.HasValue)
+            memberProfile.HomeLongitude = request.HomeLongitude.Value;
+
+        if (request.BudgetMin.HasValue)
+            memberProfile.BudgetMin = request.BudgetMin.Value;
+
+        if (request.BudgetMax.HasValue)
+            memberProfile.BudgetMax = request.BudgetMax.Value;
+
+        if (request.Address != null)
+            memberProfile.address = request.Address;
+
+        if (request.Area != null)
+            memberProfile.area = request.Area;
+
+        // Update UserAccount fields (avatar and phone)
+        if (request.AvatarUrl != null && memberProfile.User != null)
+        {
+            memberProfile.User.AvatarUrl = request.AvatarUrl;
+            memberProfile.User.UpdatedAt = DateTime.UtcNow;
+        }
+
+        if (request.PhoneNumber != null && memberProfile.User != null)
+        {
+            memberProfile.User.PhoneNumber = request.PhoneNumber;
+            memberProfile.User.UpdatedAt = DateTime.UtcNow;
+        }
+
+        memberProfile.UpdatedAt = DateTime.UtcNow;
+
+        _unitOfWork.Context.MemberProfiles.Update(memberProfile);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("Updated member profile {MemberId} for user {UserId}", memberProfile.Id, currentUserId);
+
+        return new MemberProfileResponse
+        {
+            MemberProfileId = memberProfile.Id,
+            UserId = memberProfile.UserId,
+            FullName = memberProfile.FullName,
+            AvatarUrl = memberProfile.User?.AvatarUrl,
+            DateOfBirth = memberProfile.DateOfBirth,
+            Gender = memberProfile.Gender,
+            Bio = memberProfile.Bio,
+            RelationshipStatus = memberProfile.RelationshipStatus,
+            HomeLatitude = memberProfile.HomeLatitude,
+            HomeLongitude = memberProfile.HomeLongitude,
+            BudgetMin = memberProfile.BudgetMin,
+            BudgetMax = memberProfile.BudgetMax,
+            Interests = memberProfile.Interests,
+            AvailableTime = memberProfile.AvailableTime,
+            Address = memberProfile.address,
+            Area = memberProfile.area,
+            InviteCode = memberProfile.InviteCode
         };
     }
 }
