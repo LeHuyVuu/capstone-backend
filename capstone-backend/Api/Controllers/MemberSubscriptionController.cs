@@ -87,5 +87,27 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get transaction histories
+        /// </summary>
+        [HttpGet("history")]
+        public async Task<IActionResult> GetTransactionHistory([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("Unauthorized");
+                }
+                var result = await _memberSubscriptionService.GetTransactionHistoryAsync(userId.Value, pageNumber, pageSize);
+                return OkResponse(result, "Lấy lịch sử giao dịch thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
