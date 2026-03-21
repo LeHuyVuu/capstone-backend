@@ -603,6 +603,20 @@ namespace capstone_backend.Business.Services
                 response.ValidationMessage = "Mã voucher không ở trạng thái có thể sử dụng";
                 return response;
             }
+            
+            // Check location
+            var voucherLocations = voucherItem.Voucher.VoucherLocations;
+            if (voucherLocations != null && voucherLocations.Any())
+            {
+                var isValidLocation = voucherLocations.Any(vl => vl.Id == request.VenueLocationId);
+
+                if (!isValidLocation)
+                {
+                    response.IsValid = false;
+                    response.ValidationMessage = "Mã voucher không áp dụng cho địa điểm này";
+                    return response;
+                }
+            }
 
             response.IsValid = true;
             response.ValidationMessage = "Mã voucher hợp lệ";
@@ -662,6 +676,20 @@ namespace capstone_backend.Business.Services
                 response.IsValid = false;
                 response.ValidationMessage = "Mã voucher không ở trạng thái có thể sử dụng";
                 return response;
+            }
+
+            // Check location
+            var voucherLocations = voucherItem.Voucher.VoucherLocations;
+            if (voucherLocations != null && voucherLocations.Any())
+            {
+                var isValidLocation = voucherLocations.Any(vl => vl.Id == request.VenueLocationId);
+
+                if (!isValidLocation)
+                {
+                    response.IsValid = false;
+                    response.ValidationMessage = "Mã voucher không áp dụng cho địa điểm này";
+                    return response;
+                }
             }
 
             // Remove job for auto expire if exist
