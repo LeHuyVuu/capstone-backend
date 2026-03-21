@@ -28,14 +28,13 @@ public class ValidationFilter : IActionFilter
             var traceId = context.HttpContext.Items["TraceId"]?.ToString()
                           ?? context.HttpContext.TraceIdentifier;
 
-            var response = new
-            {
-                message = "Validation failed",
-                code = 400,
-                data = new { errors },
-                traceId,
-                timestamp = DateTime.UtcNow
-            };
+            // Sử dụng ApiResponse.ErrorData để trả về validation errors
+            var response = ApiResponse<object>.ErrorData(
+                errors, 
+                "Validation failed", 
+                400, 
+                traceId
+            );
 
             context.Result = new BadRequestObjectResult(response);
         }
