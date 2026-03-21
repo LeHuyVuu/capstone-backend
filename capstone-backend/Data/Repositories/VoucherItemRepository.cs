@@ -78,6 +78,8 @@ namespace capstone_backend.Data.Repositories
         {
             return await _dbSet
                 .Include(vi => vi.Voucher)
+                    .ThenInclude(v => v.VoucherLocations)
+                        .ThenInclude(vl => vl.VenueLocation)
                 .Include(vi => vi.VoucherItemMember)
                     .ThenInclude(vim => vim.Member)
                         .ThenInclude(m => m.User)
