@@ -217,6 +217,9 @@ public static class ServiceExtensions
         // Register Venue Owner Dashboard Service
         services.AddScoped<IVenueOwnerDashboardService, VenueOwnerDashboardService>();
         
+        // Register Venue Owner Profile Service
+        services.AddScoped<IVenueOwnerProfileService, VenueOwnerProfileService>();
+        
         // Register Hangfire Jobs
         services.AddScoped<IDatePlanWorker, DatePlanWorker>();
         services.AddScoped<IReviewWorker, ReviewWorker>();
