@@ -11,4 +11,9 @@ public class SubmitAdvertisementWithPaymentRequest
     [Required(ErrorMessage = "VenueIds is required")]
     [MinLength(1, ErrorMessage = "At least one VenueId is required")]
     public List<int> VenueIds { get; set; } = new List<int>();
+
+    /// <summary>
+    /// Payment method: VIETQR (default) or WALLET
+    /// </summary>
+    public string PaymentMethod { get; set; } = "VIETQR";
 }

@@ -9,13 +9,17 @@ public class SubmitVenueWithPaymentResponse
     // Payment info
     public int TransactionId { get; set; }
     public int SubscriptionId { get; set; }
-    public string QrCodeUrl { get; set; } = string.Empty;
+    public string? QrCodeUrl { get; set; } // Nullable for wallet payment
     public decimal Amount { get; set; }
-    public BankInfo BankInfo { get; set; } = new();
-    public DateTime ExpireAt { get; set; }
+    public BankInfo? BankInfo { get; set; } // Nullable for wallet payment
+    public DateTime? ExpireAt { get; set; } // Nullable for wallet payment
     public string PaymentContent { get; set; } = string.Empty;
     public string PackageName { get; set; } = string.Empty;
     public int TotalDays { get; set; }
+    
+    // New fields for wallet payment
+    public string PaymentMethod { get; set; } = "VIETQR"; // VIETQR or WALLET
+    public decimal? WalletBalance { get; set; } // Current wallet balance after payment (for WALLET only)
 }
 
 public class BankInfo

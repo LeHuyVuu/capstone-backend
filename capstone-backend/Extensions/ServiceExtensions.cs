@@ -252,6 +252,9 @@ public static class ServiceExtensions
         services.AddScoped<IVoucherCodeGenerator, VoucherCodeGenerator>();
 
         services.AddScoped<WalletService>();
+        
+        // Register Wallet Payment Service (for instant wallet payments)
+        services.AddScoped<WalletPaymentService>();
 
         // Register Leaderboard Service
         services.AddScoped<ILeaderboardService, LeaderboardService>();

@@ -11,4 +11,9 @@ public class SubmitVenueWithPaymentRequest
     [Required(ErrorMessage = "Quantity is required")]
     [Range(1, 12, ErrorMessage = "Quantity must be between 1 and 12")]
     public int Quantity { get; set; } = 1;
+
+    /// <summary>
+    /// Payment method: VIETQR (default) or WALLET
+    /// </summary>
+    public string PaymentMethod { get; set; } = "VIETQR";
 }
