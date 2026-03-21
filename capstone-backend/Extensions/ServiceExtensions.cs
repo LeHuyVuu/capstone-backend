@@ -27,6 +27,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 using OpenAI.Moderations;
+using Resend;
 using StackExchange.Redis;
 using System.Text;
 using System.Text.Json;
@@ -757,6 +758,42 @@ public static class ServiceExtensions
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] OpenAI initialization failed: {ex.Message}");
+        }
+
+        return services;
+    }
+
+    /// <summary>
+    /// Register Resend Email Service
+    /// </summary>
+    public static IServiceCollection AddEmailConfiguration(this IServiceCollection services)
+    {
+        var resendApiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY");
+
+        if (string.IsNullOrWhiteSpace(resendApiKey))
+        {
+            Console.WriteLine("[WARNING] Resend API Key not found. Email Service will not work.");
+            return services;
+        }
+
+        try
+        {
+            services.AddOptions();
+            services.Configure<ResendClientOptions>(o =>
+            {
+                o.ApiToken = resendApiKey;
+            });
+            services.AddHttpClient<ResendClient>();
+            services.AddTransient<IResend, ResendClient>();
+
+            // Inject interface
+            services.AddScoped<IEmailService, EmailService>();
+
+            Console.WriteLine("[INFO] Resend Email Service: Initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Resend Email initialization failed: {ex.Message}");
         }
 
         return services;

@@ -106,6 +106,9 @@ builder.Services.AddSignalR();
 // 16. Add Firebase
 builder.Services.AddFireBaseConfiguration();
 
+// 17. Add Resend Email Service
+builder.Services.AddEmailConfiguration();
+
 var app = builder.Build();
 
 // ========================================
