@@ -25,6 +25,7 @@ public class VenueLocationService : IVenueLocationService
     private readonly SepayService _sepayService;
     private readonly IMeilisearchService _meilisearchService;
     private readonly RefundService _refundService;
+    private readonly IEmailService _emailService;
 
     public VenueLocationService(
         IUnitOfWork unitOfWork, 
@@ -33,7 +34,8 @@ public class VenueLocationService : IVenueLocationService
         ICurrentUser currentUser,
         SepayService sepayService,
         IMeilisearchService meilisearchService,
-        RefundService refundService)
+        RefundService refundService,
+        IEmailService emailService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -42,6 +44,7 @@ public class VenueLocationService : IVenueLocationService
         _sepayService = sepayService;
         _meilisearchService = meilisearchService;
         _refundService = refundService;
+        _emailService = emailService;
     }
 
     #region Category & Image Helpers
@@ -1749,6 +1752,45 @@ public class VenueLocationService : IVenueLocationService
                                 _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(activeSubscription);
 
                                 refundMessage = $" Đã hoàn {refundResult.RefundAmount:N0} VND vào ví (Balance: {refundResult.OldBalance:N0} → {refundResult.NewBalance:N0} VND).";
+                                
+                                // Gửi email thông báo hoàn tiền
+                                try
+                                {
+                                    var emailHtml = EmailRefundTemplate.GetVenueRefundEmailContent(
+                                        venueOwner.BusinessName ?? "Venue Owner",
+                                        venue.Name ?? "Địa điểm",
+                                        activeSubscription.Package?.PackageName ?? "Gói đăng ký",
+                                        refundResult.RefundAmount,
+                                        refundResult.OldBalance,
+                                        refundResult.NewBalance,
+                                        request.Reason ?? "Không đạt yêu cầu"
+                                    );
+
+                                    var emailRequest = new capstone_backend.Business.DTOs.Email.SendEmailRequest
+                                    {
+                                        To = "lehuyvuok@gmail.com",
+                                        Subject = $"[CoupleMood] Thông báo hoàn tiền - Địa điểm {venue.Name} bị từ chối",
+                                        HtmlBody = emailHtml,
+                                        FromName = "CoupleMood"
+                                    };
+
+                                    if (!string.IsNullOrWhiteSpace(emailRequest.To))
+                                    {
+                                        var emailSent = await _emailService.SendEmailAsync(emailRequest);
+                                        if (emailSent)
+                                        {
+                                            _logger.LogInformation("✅ Sent refund notification email to {Email}", emailRequest.To);
+                                        }
+                                        else
+                                        {
+                                            _logger.LogWarning("⚠️ Failed to send refund email to {Email}", emailRequest.To);
+                                        }
+                                    }
+                                }
+                                catch (Exception emailEx)
+                                {
+                                    _logger.LogError(emailEx, "❌ Error sending refund notification email");
+                                }
                             }
                             else
                             {
@@ -1814,9 +1856,6 @@ public class VenueLocationService : IVenueLocationService
                         if (existingUser == null)
                         {
                             var staffPassword = GenerateRandomPassword(12);
-
-                            // send email to owner with staff account info here
-
                             
                             var staffUser = new UserAccount
                             {
@@ -1824,7 +1863,7 @@ public class VenueLocationService : IVenueLocationService
                                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(staffPassword),
                                 DisplayName = $"Staff - {venue.Name}",
                                 PhoneNumber = venue.PhoneNumber,
-                                Role = "STAFF", // Role STAFF đã có trong database constraint
+                                Role = "STAFF",
                                 IsActive = true,
                                 IsVerified = true,
                                 IsDeleted = false,
@@ -1838,7 +1877,49 @@ public class VenueLocationService : IVenueLocationService
                             _logger.LogInformation("✅ Created STAFF account for venue {VenueId}: Email={Email}, UserId={UserId}", 
                                 venue.Id, staffEmail, staffUser.Id);
 
-                            staffAccountMessage = $" | STAFF account created";
+                            // Gửi email thông tin STAFF account cho venue owner
+                            try
+                            {
+                                var emailHtml = EmailAccountInfoTemplate.GetStaffAccountInfoEmailContent(
+                                    venueOwner.BusinessName ?? "Venue Owner",
+                                    venue.Name,
+                                    staffEmail,
+                                    staffPassword
+                                );
+
+                                var emailRequest = new capstone_backend.Business.DTOs.Email.SendEmailRequest
+                                {
+                                    To = "lehuyvuok@gmail.com",
+                                    Subject = $"[CoupleMood] Địa điểm {venue.Name} đã được phê duyệt - Thông tin tài khoản STAFF",
+                                    HtmlBody = emailHtml,
+                                    FromName = "CoupleMood"
+                                };
+
+                                if (!string.IsNullOrWhiteSpace(emailRequest.To))
+                                {
+                                    var emailSent = await _emailService.SendEmailAsync(emailRequest);
+                                    if (emailSent)
+                                    {
+                                        _logger.LogInformation("✅ Sent STAFF account info email to {Email}", emailRequest.To);
+                                        staffAccountMessage = $" | STAFF account created & email sent";
+                                    }
+                                    else
+                                    {
+                                        _logger.LogWarning("⚠️ Failed to send email to {Email}", emailRequest.To);
+                                        staffAccountMessage = $" | STAFF account created but email failed";
+                                    }
+                                }
+                                else
+                                {
+                                    _logger.LogWarning("⚠️ Venue owner has no email address");
+                                    staffAccountMessage = $" | STAFF account created but no owner email";
+                                }
+                            }
+                            catch (Exception emailEx)
+                            {
+                                _logger.LogError(emailEx, "❌ Error sending STAFF account email");
+                                staffAccountMessage = $" | STAFF account created but email error";
+                            }
                         }
                         else
                         {
