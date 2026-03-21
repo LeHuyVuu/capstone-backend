@@ -1201,6 +1201,7 @@ public class VenueLocationService : IVenueLocationService
             Category = v.Category,
             FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
             IsOwnerVerified = v.IsOwnerVerified,
+            RejectionDetails = string.IsNullOrWhiteSpace(v.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(v.RejectReason),
             CreatedAt = v.CreatedAt,
             UpdatedAt = v.UpdatedAt,
             LocationTags = CreateLocationTagsInfo(v)
@@ -1607,6 +1608,7 @@ public class VenueLocationService : IVenueLocationService
             Category = v.Category,
             FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
             IsOwnerVerified = v.IsOwnerVerified,
+            RejectionDetails = string.IsNullOrWhiteSpace(v.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(v.RejectReason),
             CreatedAt = v.CreatedAt,
             UpdatedAt = v.UpdatedAt,
             LocationTags = CreateLocationTagsInfo(v)
@@ -1660,6 +1662,41 @@ public class VenueLocationService : IVenueLocationService
         {
             venue.Status = status;
             venue.UpdatedAt = DateTime.UtcNow;
+            
+            // Lưu rejection details vào JSONB khi reject
+            if (status == VenueLocationStatus.DRAFTED.ToString() && !string.IsNullOrWhiteSpace(request.Reason))
+            {
+                // Parse existing rejections hoặc tạo mới
+                var existingRejections = new List<RejectionRecord>();
+                if (!string.IsNullOrWhiteSpace(venue.RejectReason))
+                {
+                    try
+                    {
+                        existingRejections = System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(venue.RejectReason) ?? new List<RejectionRecord>();
+                    }
+                    catch
+                    {
+                        // Nếu parse fail, bắt đầu mới
+                    }
+                }
+                
+                // Thêm rejection mới vào list
+                existingRejections.Add(new RejectionRecord
+                {
+                    Reason = request.Reason,
+                    RejectedAt = DateTime.UtcNow.ToString("o"),
+                    RejectedBy = "ADMIN"
+                });
+                
+                // Serialize array trực tiếp
+                venue.RejectReason = System.Text.Json.JsonSerializer.Serialize(existingRejections);
+                _logger.LogInformation("Saved rejection details for venue {VenueId}: Total {Count} rejections", venue.Id, existingRejections.Count);
+            }
+            else if (status == VenueLocationStatus.ACTIVE.ToString())
+            {
+                // Clear rejection details khi approve
+                venue.RejectReason = null;
+            }
             
             if (venue.CreatedAt.HasValue && venue.CreatedAt.Value.Kind == DateTimeKind.Unspecified)
                 venue.CreatedAt = DateTime.SpecifyKind(venue.CreatedAt.Value, DateTimeKind.Utc);
