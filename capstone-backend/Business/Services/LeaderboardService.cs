@@ -18,11 +18,13 @@ public class LeaderboardService : ILeaderboardService
         if (month < 1 || month > 12)
             throw new ArgumentException("Tháng phải từ 1 đến 12");
 
-        var seasonKey = $"{year}-{month:D2}";
+        var periodStart = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var periodEnd = periodStart.AddMonths(1).AddSeconds(-1);
 
-        var (leaderboards, totalCount) = await _unitOfWork.Leaderboards.GetLeaderboardWithCoupleAsync(
+        var (leaderboards, totalCount) = await _unitOfWork.Leaderboards.GetLeaderboardByPeriodAsync(
             "monthly",
-            seasonKey,
+            periodStart,
+            periodEnd,
             pageNumber,
             pageSize
         );
@@ -43,7 +45,7 @@ public class LeaderboardService : ILeaderboardService
         return new LeaderboardListResponse
         {
             PeriodType = "monthly",
-            SeasonKey = seasonKey,
+            SeasonKey = firstItem.SeasonKey,
             PeriodStart = firstItem.PeriodStart,
             PeriodEnd = firstItem.PeriodEnd,
             TotalCount = totalCount,

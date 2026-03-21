@@ -34,4 +34,29 @@ public class LeaderboardRepository : GenericRepository<Leaderboard>, ILeaderboar
 
         return (items, totalCount);
     }
+
+    public async Task<(IEnumerable<Leaderboard> Items, int TotalCount)> GetLeaderboardByPeriodAsync(
+        string periodType,
+        DateTime periodStart,
+        DateTime periodEnd,
+        int pageNumber,
+        int pageSize)
+    {
+        var query = _dbSet
+            .Include(l => l.Couple)
+            .Where(l => l.PeriodType == periodType 
+                     && l.PeriodStart <= periodEnd 
+                     && l.PeriodEnd >= periodStart
+                     && l.Status == LeaderboardStatus.ACTIVE.ToString())
+            .OrderBy(l => l.RankPosition);
+
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return (items, totalCount);
+    }
 }
