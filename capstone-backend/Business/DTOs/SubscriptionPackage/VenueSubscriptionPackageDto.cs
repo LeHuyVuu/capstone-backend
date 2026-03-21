@@ -9,6 +9,7 @@ public class VenueSubscriptionPackageDto
     public DateTime? EndDate { get; set; }
     public int? Quantity { get; set; }
     public string? Status { get; set; }
+    public DateTime? CreatedAt { get; set; }
     
     // Venue details
     public string? VenueName { get; set; }

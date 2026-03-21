@@ -147,6 +147,7 @@ public class SubscriptionPackageService : ISubscriptionPackageService
                     EndDate = vsp.EndDate,
                     Quantity = vsp.Quantity,
                     Status = vsp.Status,
+                    CreatedAt = vsp.CreatedAt,
                     Package = vsp.Package != null ? new SubscriptionPackageDto
                     {
                         Id = vsp.Package.Id,
@@ -218,6 +219,7 @@ public class SubscriptionPackageService : ISubscriptionPackageService
                     EndDate = vsp.EndDate,
                     Quantity = vsp.Quantity,
                     Status = vsp.Status,
+                    CreatedAt = vsp.CreatedAt,
                     VenueName = vsp.Venue.Name,
                     Package = vsp.Package != null ? new SubscriptionPackageDto
                     {
