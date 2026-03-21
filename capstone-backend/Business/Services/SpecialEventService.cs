@@ -20,13 +20,15 @@ public class SpecialEventService : ISpecialEventService
 
     public async Task<SpecialEventResponse> CreateSpecialEventAsync(CreateSpecialEventRequest request, CancellationToken cancellationToken = default)
     {
-        // Nếu là sự kiện hằng năm, normalize về năm 2000 để chỉ lưu ngày/tháng
+        // Nếu là sự kiện hằng năm, normalize về năm 2000 nhưng giữ nguyên giờ phút
         var startDate = request.IsYearly 
-            ? new DateTime(2000, request.StartDate.Month, request.StartDate.Day)
+            ? new DateTime(2000, request.StartDate.Month, request.StartDate.Day, 
+                          request.StartDate.Hour, request.StartDate.Minute, request.StartDate.Second)
             : request.StartDate;
         
         var endDate = request.IsYearly 
-            ? new DateTime(2000, request.EndDate.Month, request.EndDate.Day)
+            ? new DateTime(2000, request.EndDate.Month, request.EndDate.Day,
+                          request.EndDate.Hour, request.EndDate.Minute, request.EndDate.Second)
             : request.EndDate;
 
         var specialEvent = new SpecialEvent()
@@ -149,7 +151,8 @@ public class SpecialEventService : ISpecialEventService
         {
             var isYearly = request.IsYearly ?? specialEvent.IsYearly ?? false;
             specialEvent.StartDate = isYearly 
-                ? new DateTime(2000, request.StartDate.Value.Month, request.StartDate.Value.Day)
+                ? new DateTime(2000, request.StartDate.Value.Month, request.StartDate.Value.Day,
+                              request.StartDate.Value.Hour, request.StartDate.Value.Minute, request.StartDate.Value.Second)
                 : request.StartDate.Value;
         }
 
@@ -158,7 +161,8 @@ public class SpecialEventService : ISpecialEventService
         {
             var isYearly = request.IsYearly ?? specialEvent.IsYearly ?? false;
             specialEvent.EndDate = isYearly 
-                ? new DateTime(2000, request.EndDate.Value.Month, request.EndDate.Value.Day)
+                ? new DateTime(2000, request.EndDate.Value.Month, request.EndDate.Value.Day,
+                              request.EndDate.Value.Hour, request.EndDate.Value.Minute, request.EndDate.Value.Second)
                 : request.EndDate.Value;
         }
 
