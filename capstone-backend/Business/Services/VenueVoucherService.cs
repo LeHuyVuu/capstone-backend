@@ -608,7 +608,7 @@ namespace capstone_backend.Business.Services
             var voucherLocations = voucherItem.Voucher.VoucherLocations;
             if (voucherLocations != null && voucherLocations.Any())
             {
-                var isValidLocation = voucherLocations.Any(vl => vl.Id == request.VenueLocationId);
+                var isValidLocation = voucherLocations.Any(vl => vl.VenueLocationId == request.VenueLocationId);
 
                 if (!isValidLocation)
                 {
@@ -682,7 +682,7 @@ namespace capstone_backend.Business.Services
             var voucherLocations = voucherItem.Voucher.VoucherLocations;
             if (voucherLocations != null && voucherLocations.Any())
             {
-                var isValidLocation = voucherLocations.Any(vl => vl.Id == request.VenueLocationId);
+                var isValidLocation = voucherLocations.Any(vl => vl.VenueLocationId == request.VenueLocationId);
 
                 if (!isValidLocation)
                 {
