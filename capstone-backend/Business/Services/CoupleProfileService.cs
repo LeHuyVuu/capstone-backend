@@ -1,7 +1,9 @@
 using capstone_backend.Business.DTOs.CoupleProfile;
+using capstone_backend.Business.Exceptions;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
+using capstone_backend.Extensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Services;
@@ -95,6 +97,9 @@ public class CoupleProfileService : ICoupleProfileService
         int memberId,
         UpdateCoupleProfileRequest request)
     {
+        // Validate basic request
+        ValidateUpdateCoupleProfileRequest(request);
+
         // Check if member exists
         var member = await _unitOfWork.MembersProfile.GetByIdAsync(memberId);
         if (member == null || member.IsDeleted == true)
@@ -127,10 +132,6 @@ public class CoupleProfileService : ICoupleProfileService
             couple.CoupleName = request.CoupleName;
         }
 
-        if (request.StartDate.HasValue)
-        {
-            couple.StartDate = request.StartDate.Value;
-        }
 
         if (request.AniversaryDate.HasValue)
         {
@@ -155,4 +156,62 @@ public class CoupleProfileService : ICoupleProfileService
         // Return updated couple profile
         return await GetCoupleProfileDetailAsync(memberId);
     }
+
+    private void ValidateUpdateCoupleProfileRequest(UpdateCoupleProfileRequest request)
+    {
+        // At least one field must be provided
+        if (string.IsNullOrEmpty(request.CoupleName) &&
+            !request.AniversaryDate.HasValue &&
+            !request.BudgetMin.HasValue &&
+            !request.BudgetMax.HasValue)
+        {
+            throw new BadRequestException(
+                "Phải cung cấp ít nhất một trường để cập nhật",
+                "VALIDATION_ERROR");
+        }
+
+        // CoupleName validation
+        if (!string.IsNullOrEmpty(request.CoupleName) && request.CoupleName.Length > 100)
+        {
+            throw new BadRequestException(
+                "Tên cặp đôi không được vượt quá 100 ký tự",
+                "VALIDATION_ERROR");
+        }
+
+        // StartDate validation
+     
+
+       if (request.AniversaryDate.HasValue && request.AniversaryDate.Value < DateOnly.FromDateTime(DateTime.UtcNow))
+{
+    throw new BadRequestException(
+        "Ngày kỷ niệm lớn hơn ngày hiện tại",
+        "VALIDATION_ERROR");
+}
+
+
+        // Budget validation
+        if (request.BudgetMin.HasValue && request.BudgetMin.Value < 0)
+        {
+            throw new BadRequestException(
+                "Ngân sách tối thiểu phải lớn hơn hoặc bằng 0",
+                "VALIDATION_ERROR");
+        }
+
+        if (request.BudgetMax.HasValue && request.BudgetMax.Value < 0)
+        {
+            throw new BadRequestException(
+                "Ngân sách tối đa phải lớn hơn hoặc bằng 0",
+                "VALIDATION_ERROR");
+        }
+
+        if (request.BudgetMin.HasValue && request.BudgetMax.HasValue &&
+            request.BudgetMax.Value < request.BudgetMin.Value)
+        {
+            throw new BadRequestException(
+                "Ngân sách tối đa phải lớn hơn hoặc bằng ngân sách tối thiểu",
+                "VALIDATION_ERROR");
+        }
+    }
+
+  
 }
