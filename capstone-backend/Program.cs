@@ -1,5 +1,6 @@
 using capstone_backend.Api.Middleware;
 using capstone_backend.Api.Models;
+using capstone_backend.Business.Configurations;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Challenge;
 using capstone_backend.Business.Jobs.DatePlan;
@@ -108,6 +109,9 @@ builder.Services.AddFireBaseConfiguration();
 
 // 17. Add Resend Email Service
 builder.Services.AddEmailConfiguration();
+
+// 18. Point config
+builder.Services.Configure<PointSettings>(builder.Configuration.GetSection("PointSettings"));
 
 var app = builder.Build();
 
