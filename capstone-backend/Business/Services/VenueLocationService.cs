@@ -1002,6 +1002,65 @@ public class VenueLocationService : IVenueLocationService
 
         return responses;
     }
+
+    public async Task<VenueOwnerVenueLocationResponse?> GetVenueLocationByIdForOwnerAsync(int venueId, int userId)
+    {
+        _logger.LogInformation("Getting venue location {VenueId} for user {UserId}", venueId, userId);
+
+        // Find VenueOwnerProfile for the user
+        var venueOwnerProfile = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(userId);
+
+        if (venueOwnerProfile == null)
+        {
+            _logger.LogWarning("User {UserId} does not have a venue owner profile", userId);
+            return null;
+        }
+
+        // Get venue location with LocationTag details
+        var venueLocations = await _unitOfWork.VenueLocations.GetByVenueOwnerIdWithLocationTagAsync(venueOwnerProfile.Id);
+        var venue = venueLocations.FirstOrDefault(v => v.Id == venueId);
+
+        if (venue == null)
+        {
+            _logger.LogWarning("Venue {VenueId} not found or not owned by user {UserId}", venueId, userId);
+            return null;
+        }
+
+        // Map to response DTO
+        var response = new VenueOwnerVenueLocationResponse
+        {
+            Id = venue.Id,
+            Name = venue.Name,
+            Description = venue.Description,
+            Address = venue.Address,
+            Email = venue.Email,
+            PhoneNumber = venue.PhoneNumber,
+            WebsiteUrl = venue.WebsiteUrl,
+            PriceMin = venue.PriceMin,
+            PriceMax = venue.PriceMax,
+            Latitude = venue.Latitude,
+            Longitude = venue.Longitude,
+            Area = venue.Area,
+            AverageRating = venue.AverageRating.HasValue ? Math.Round(venue.AverageRating.Value, 1) : null,
+            AvarageCost = venue.AvarageCost,
+            ReviewCount = venue.ReviewCount,
+            Status = venue.Status,
+            CoverImage = DeserializeImages(venue.CoverImage),
+            InteriorImage = DeserializeImages(venue.InteriorImage),
+            Category = venue.Category,
+            FullPageMenuImage = DeserializeImages(venue.FullPageMenuImage),
+            IsOwnerVerified = venue.IsOwnerVerified,
+            RejectionDetails = string.IsNullOrWhiteSpace(venue.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(venue.RejectReason),
+            CreatedAt = venue.CreatedAt,
+            UpdatedAt = venue.UpdatedAt,
+            LocationTags = CreateLocationTagsInfo(venue)
+        };
+
+        _logger.LogInformation("Retrieved venue location {VenueId} for user {UserId}", venueId, userId);
+
+        return response;
+    }
+
     /// <summary>
     /// Submit venue location to admin for approval
     /// Validates required fields before changing status to PENDING

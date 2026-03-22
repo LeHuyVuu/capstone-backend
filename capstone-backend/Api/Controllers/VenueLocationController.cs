@@ -70,6 +70,36 @@ public class VenueLocationController : BaseController
     }
 
     /// <summary>
+    /// Get venue location detail by ID for the authenticated venue owner.
+    /// Returns same structure as my-venues endpoint.
+    /// </summary>
+    [HttpGet("my-venues/{id}")]
+    [Authorize(Roles = "VENUEOWNER")]
+    [ProducesResponseType(typeof(ApiResponse<VenueOwnerVenueLocationResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> GetMyVenueLocationById(int id)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (!currentUserId.HasValue)
+        {
+            return UnauthorizedResponse("User not authenticated");
+        }
+
+        _logger.LogInformation("User {UserId} requesting venue location detail for ID: {VenueId}", currentUserId.Value, id);
+
+        var venue = await _venueLocationService.GetVenueLocationByIdForOwnerAsync(id, currentUserId.Value);
+
+        if (venue == null)
+        {
+            return NotFoundResponse($"Venue location with ID {id} not found or you don't have permission to access it");
+        }
+
+        return OkResponse(venue, "Venue location retrieved successfully");
+    }
+
+    /// <summary>
     /// Get reviews for a specific venue location with summary statistics.
     /// </summary>
     [HttpGet("{id}/reviews")]

@@ -95,6 +95,15 @@ public interface IVenueLocationService
     Task<List<VenueOwnerVenueLocationResponse>> GetVenueLocationsByVenueOwnerAsync(int userId);
 
     /// <summary>
+    /// Get venue location detail by ID for venue owner
+    /// Returns same structure as my-venues endpoint
+    /// </summary>
+    /// <param name="venueId">Venue location ID</param>
+    /// <param name="userId">User ID (owner)</param>
+    /// <returns>Venue location detail or null if not found or not owned by user</returns>
+    Task<VenueOwnerVenueLocationResponse?> GetVenueLocationByIdForOwnerAsync(int venueId, int userId);
+
+    /// <summary>
     /// Submit venue location to admin for approval
     /// Validates required fields before changing status to PENDING
     /// </summary>
