@@ -61,7 +61,8 @@ public class UnitOfWork : IUnitOfWork
         IMemberSubscriptionPackageRepository memberSubscriptionPackageRepository,
         ILeaderboardRepository leaderboardRepository,
         IReportRepository reportRepository,
-        IVenueSettlementRepository venueSettlementRepository)
+        IVenueSettlementRepository venueSettlementRepository,
+        ISystemConfigRepository systemConfigRepository)
     {
         _context = context;
         Users = userRepository;
@@ -111,6 +112,7 @@ public class UnitOfWork : IUnitOfWork
         Leaderboards = leaderboardRepository;
         Reports = reportRepository;
         VenueSettlements = venueSettlementRepository;
+        SystemConfigs = systemConfigRepository;
     }
 
     public MyDbContext Context => _context;
@@ -208,6 +210,8 @@ public class UnitOfWork : IUnitOfWork
     public IReportRepository Reports { get; }
 
     public IVenueSettlementRepository VenueSettlements { get; }
+
+    public ISystemConfigRepository SystemConfigs { get; }
 
     public async Task<int> SaveChangesAsync()
     {

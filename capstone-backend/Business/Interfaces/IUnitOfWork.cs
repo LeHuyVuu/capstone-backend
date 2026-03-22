@@ -111,6 +111,8 @@ public interface IUnitOfWork : IDisposable
 
     IVenueSettlementRepository VenueSettlements { get; }
 
+    ISystemConfigRepository SystemConfigs { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>
