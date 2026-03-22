@@ -7,5 +7,6 @@ namespace capstone_backend.Business.Interfaces
     public interface ISystemConfigService
     {
         Task<PagedResult<SystemConfigResponse>> GetAllConfigsAsync(int pageNumber, int pageSize);
+        Task<SystemConfigResponse> UpdateConfigAsync(UpdateSystemConfigRequest request);
     }
 }

@@ -5,5 +5,6 @@ namespace capstone_backend.Data.Interfaces
 {
     public interface ISystemConfigRepository : IGenericRepository<SystemConfig>
     {
+        Task<SystemConfig?> GetByKeyAsync(string key);
     }
 }
