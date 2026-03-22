@@ -26,7 +26,7 @@ public class AdvertisementRepository : GenericRepository<Advertisement>, IAdvert
                 vla.Advertisement.Status == AdvertisementStatus.APPROVED.ToString() &&
                 vla.Advertisement.IsDeleted == false &&
                 vla.Venue.IsDeleted == false &&
-                vla.Venue.Status == "ACTIVE"
+                vla.Venue.Status == VenueLocationStatus.ACTIVE.ToString()
             )
             .OrderByDescending(vla => vla.PriorityScore)
             .ThenByDescending(vla => vla.Advertisement.CreatedAt)
@@ -50,8 +50,7 @@ public class AdvertisementRepository : GenericRepository<Advertisement>, IAdvert
     {
         return await _context.Advertisements
             .Include(a => a.VenueOwner)
-            .Include(a => a.VenueLocationAdvertisements
-                .Where(vla => vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString()))
+            .Include(a => a.VenueLocationAdvertisements)
                 .ThenInclude(vla => vla.Venue)
             .Include(a => a.AdsOrders)
                 .ThenInclude(ao => ao.Package)

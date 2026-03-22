@@ -80,18 +80,11 @@ public interface IVenueLocationService
     Task<List<CouplePersonalityTypeInfo>> GetAllCouplePersonalityTypesAsync();
 
     /// <summary>
-    /// Update venue opening hours for a specific day
-    /// Automatically updates is_closed based on current time
+    /// Update venue opening hours for all days of the week
     /// </summary>
-    /// <param name="request">Update venue opening hour request</param>
-    /// <returns>Updated venue opening hour response</returns>
-    Task<VenueOpeningHourResponse?> UpdateVenueOpeningHourAsync(UpdateVenueOpeningHourRequest request);
-
-    /// <summary>
-    /// Automatically update IsClosed status for all venue opening hours based on current time
-    /// This method is called by Hangfire as a recurring job every minute
-    /// </summary>
-    Task UpdateAllVenuesIsClosedStatusAsync();
+    /// <param name="request">Update venue opening hours request with all days</param>
+    /// <returns>True if successful, False if venue not found</returns>
+    Task<bool> UpdateVenueOpeningHoursAsync(UpdateVenueOpeningHoursRequest request);
 
     /// <summary>
     /// Get all venue locations for a venue owner by user ID

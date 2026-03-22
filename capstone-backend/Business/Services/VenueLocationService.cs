@@ -1,5 +1,6 @@
 using AutoMapper;
 using capstone_backend.Api.Models;
+using capstone_backend.Api.VenueRecommendation.Service;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.User;
 using capstone_backend.Business.DTOs.VenueLocation;
@@ -22,19 +23,31 @@ public class VenueLocationService : IVenueLocationService
     private readonly ILogger<VenueLocationService> _logger;
     private readonly ICurrentUser _currentUser;
     private readonly SepayService _sepayService;
+    private readonly IMeilisearchService _meilisearchService;
+    private readonly RefundService _refundService;
+    private readonly IEmailService _emailService;
+    private readonly WalletPaymentService _walletPaymentService;
 
     public VenueLocationService(
         IUnitOfWork unitOfWork, 
         IMapper mapper, 
         ILogger<VenueLocationService> logger, 
         ICurrentUser currentUser,
-        SepayService sepayService)
+        SepayService sepayService,
+        IMeilisearchService meilisearchService,
+        RefundService refundService,
+        IEmailService emailService,
+        WalletPaymentService walletPaymentService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _logger = logger;
         _currentUser = currentUser;
         _sepayService = sepayService;
+        _meilisearchService = meilisearchService;
+        _refundService = refundService;
+        _emailService = emailService;
+        _walletPaymentService = walletPaymentService;
     }
 
     #region Category & Image Helpers
@@ -184,12 +197,9 @@ public class VenueLocationService : IVenueLocationService
         var todayOpeningHour = venue.VenueOpeningHours?.FirstOrDefault();
         if (todayOpeningHour != null)
         {
-            var currentTimeVN = DateTime.UtcNow.AddHours(7);
-            var currentTime = currentTimeVN.TimeOfDay;
-
-            response.TodayDayName = GetDayName(currentTimeVN.DayOfWeek);
+            response.TodayDayName = GetDayName(DateTime.UtcNow.AddHours(7).DayOfWeek);
             response.TodayOpeningHour = _mapper.Map<TodayOpeningHourResponse>(todayOpeningHour);
-            response.TodayOpeningHour.Status = GetVenueStatus(todayOpeningHour, currentTime);
+            response.TodayOpeningHour.Status = todayOpeningHour.IsClosed ? "Đã đóng cửa" : "Đang mở cửa";
         }
 
         // Check checkin status
@@ -215,33 +225,6 @@ public class VenueLocationService : IVenueLocationService
     }
 
     /// <summary>
-    /// Get venue open/close status (Đang mở cửa / Sắp mở cửa / Đã đóng cửa)
-    /// Tính toán real-time, không phụ thuộc vào IsClosed trong DB
-    /// </summary>
-    private string GetVenueStatus(VenueOpeningHour oh, TimeSpan currentTime)
-    {
-        // Check if venue is currently open using helper method
-        bool isCurrentlyOpen = IsVenueCurrentlyOpen(oh.OpenTime, oh.CloseTime, currentTime);
-        
-        // Nếu đang mở cửa
-        if (isCurrentlyOpen)
-            return "Đang mở cửa";
-        
-        // Handle overnight case
-        bool isOpenOvernight = oh.CloseTime < oh.OpenTime;
-        
-        // Nếu chưa mở cửa (trước giờ mở)
-        if (!isOpenOvernight && currentTime < oh.OpenTime)
-            return "Sắp mở cửa";
-        
-        // Nếu qua đêm và đang trong khoảng giữa CloseTime và OpenTime
-        if (isOpenOvernight && currentTime >= oh.CloseTime && currentTime < oh.OpenTime)
-            return "Sắp mở cửa";
-        
-        // Các trường hợp còn lại: Đã đóng cửa
-        return "Đã đóng cửa";
-    }
-
     /// <summary>
     /// Get day name in Vietnamese
     /// </summary>
@@ -597,7 +580,7 @@ public class VenueLocationService : IVenueLocationService
             IsOwnerVerified = request.IsOwnerVerified ?? false,
             BusinessLicenseUrl = request.BusinessLicenseUrl,
             VenueOwnerId = venueOwnerProfile.Id,
-            Status = "DRAFTED",
+            Status = VenueLocationStatus.DRAFTED.ToString(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             IsDeleted = false,
@@ -944,210 +927,6 @@ public class VenueLocationService : IVenueLocationService
     /// 
     /// IsClosed Priority:
     /// 1. Manual override (if request.IsClosed is provided)
-    /// 2. Auto-calculate for TODAY (based on current time vs OpenTime/CloseTime)
-    /// 3. Default to true for other days
-    /// 
-    /// Note: Hangfire job runs every minute and will override manual IsClosed settings
-    /// </summary>
-    public async Task<VenueOpeningHourResponse?> UpdateVenueOpeningHourAsync(UpdateVenueOpeningHourRequest request)
-    {
-        // Validate day range (2-8)
-        if (request.Day < 2 || request.Day > 8)
-        {
-            _logger.LogWarning("Invalid day value {Day}. Must be between 2-8", request.Day);
-            return null;
-        }
-
-        // Parse time strings
-        if (!TimeSpan.TryParse(request.OpenTime, out var openTime))
-        {
-            _logger.LogWarning("Invalid open time format: {OpenTime}", request.OpenTime);
-            return null;
-        }
-
-        if (!TimeSpan.TryParse(request.CloseTime, out var closeTime))
-        {
-            _logger.LogWarning("Invalid close time format: {CloseTime}", request.CloseTime);
-            return null;
-        }
-
-        // Validate time range (allow overnight: 23:00 - 02:00 is valid)
-        // But reject same time (00:00 - 00:00) unless it's for 24/7
-        if (openTime == closeTime)
-        {
-            _logger.LogWarning("OpenTime and CloseTime cannot be the same: {Time}", openTime);
-            return null;
-        }
-
-        try
-        {
-            var venueLocationId = request.VenueLocationId;
-            var day = request.Day; // Keep as integer
-            
-            // Query with integer day
-            var openingHour = await _unitOfWork.Context.Set<VenueOpeningHour>()
-                .Where(x => x.VenueLocationId == venueLocationId && x.Day == day)
-                .FirstOrDefaultAsync();
-
-            if (openingHour == null)
-            {
-                // Create new opening hour record
-                openingHour = new VenueOpeningHour
-                {
-                    VenueLocationId = request.VenueLocationId,
-                    Day = request.Day,
-                    OpenTime = openTime,
-                    CloseTime = closeTime,
-                    // IsClosed will be calculated below based on current time
-                };
-
-                await _unitOfWork.Context.Set<VenueOpeningHour>().AddAsync(openingHour);
-            }
-            else
-            {
-                // Update existing opening hour record
-                openingHour.OpenTime = openTime;
-                openingHour.CloseTime = closeTime;
-                _unitOfWork.Context.Set<VenueOpeningHour>().Update(openingHour);
-            }
-
-            // Auto-update IsClosed based on manual override or current time
-            var currentTimeVN = DateTime.UtcNow.AddHours(7); // Vietnam time (UTC+7)
-            var currentTime = currentTimeVN.TimeOfDay;
-            var todayDbFormat = ConvertDayOfWeekToDbFormat(currentTimeVN.DayOfWeek);
-
-            // Priority 1: Manual override (if provided)
-            if (request.IsClosed.HasValue)
-            {
-                openingHour.IsClosed = request.IsClosed.Value;
-                _logger.LogInformation("Venue {VenueId} IsClosed manually set to {IsClosed}", request.VenueLocationId, request.IsClosed.Value);
-            }
-            // Priority 2: Auto-calculate for TODAY's opening hours
-            else if (day == todayDbFormat)
-            {
-                // Use helper method to check if venue is currently open
-                bool isCurrentlyOpen = IsVenueCurrentlyOpen(openTime, closeTime, currentTime);
-                openingHour.IsClosed = !isCurrentlyOpen;
-                _logger.LogInformation("Venue {VenueId} IsClosed auto-calculated to {IsClosed} based on current time", request.VenueLocationId, openingHour.IsClosed);
-            }
-            // Priority 3: For other days, set IsClosed = true by default
-            else
-            {
-                openingHour.IsClosed = true;
-            }
-
-            await _unitOfWork.SaveChangesAsync();
-
-            _logger.LogInformation("Updated venue opening hour for venue {VenueId}, day {Day}", request.VenueLocationId, request.Day);
-
-            return new VenueOpeningHourResponse
-            {
-                Id = openingHour.Id,
-                VenueLocationId = openingHour.VenueLocationId,
-                Day = request.Day,
-                OpenTime = openingHour.OpenTime,
-                CloseTime = openingHour.CloseTime,
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating venue opening hour for venue {VenueId}", request.VenueLocationId);
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Automatically update IsClosed status for all venue opening hours based on current time
-    /// This method is called by Hangfire as a recurring job every minute
-    /// Only updates opening hours for TODAY
-    /// 
-    /// Note: This will override any manual IsClosed settings. 
-    /// If venue owner wants to manually close, they should update again after this job runs.
-    /// </summary>
-    public async Task UpdateAllVenuesIsClosedStatusAsync()
-    {
-        // DISABLED: Automatic venue opening hours update
-        _logger.LogInformation("Automatic IsClosed status update is DISABLED");
-        await Task.CompletedTask;
-        
-        // var currentTimeVN = DateTime.UtcNow.AddHours(7); // Vietnam time (UTC+7)
-        // var currentTime = currentTimeVN.TimeOfDay;
-        // var todayDbFormat = ConvertDayOfWeekToDbFormat(currentTimeVN.DayOfWeek);
-
-        // // ✨ Chỉ lấy opening_hours của HÔM NAY
-        // var todayOpeningHours = await _unitOfWork.Context.Set<VenueOpeningHour>()
-        //     .Where(oh => oh.Day == todayDbFormat)  // Chỉ ngày hôm nay
-        //     .ToListAsync();
-
-        // _logger.LogInformation($"Today's date: {currentTimeVN:yyyy-MM-dd HH:mm:ss}, Day of week (DB format): {todayDbFormat}, Current time (VN): {currentTime}");
-        // _logger.LogInformation($"Found {todayOpeningHours.Count} opening hour records for today");
-
-        // var updatedCount = 0;
-        // foreach (var openingHour in todayOpeningHours)
-        // {
-        //     // Use helper method to check if venue is currently open
-        //     bool isCurrentlyOpen = IsVenueCurrentlyOpen(
-        //         openingHour.OpenTime, 
-        //         openingHour.CloseTime, 
-        //         currentTime
-        //     );
-            
-        //     // IsClosed phải ngược lại với isCurrentlyOpen
-        //     bool shouldBeClosed = !isCurrentlyOpen;
-            
-        //     // Always update to match current time (override manual settings)
-        //     if (openingHour.IsClosed != shouldBeClosed)
-        //     {
-        //         openingHour.IsClosed = shouldBeClosed;
-        //         bool isOpenOvernight = openingHour.CloseTime < openingHour.OpenTime;
-        //         _logger.LogInformation($"Updated Venue {openingHour.VenueLocationId}: OpenTime={openingHour.OpenTime}, CloseTime={openingHour.CloseTime}, CurrentTime={currentTime}, IsOpenOvernight={isOpenOvernight}, IsClosed={openingHour.IsClosed}, IsOpen={isCurrentlyOpen}");
-        //         updatedCount++;
-        //     }
-        // }
-
-        // _unitOfWork.Context.Set<VenueOpeningHour>().UpdateRange(todayOpeningHours);
-        // await _unitOfWork.SaveChangesAsync();
-
-        // _logger.LogInformation($"Completed automatic IsClosed status update. Updated {updatedCount} out of {todayOpeningHours.Count} opening hour records");
-    }
-
-    private int ConvertDayOfWeekToDbFormat(DayOfWeek dayOfWeek)
-    {
-        return dayOfWeek switch
-        {
-            DayOfWeek.Sunday => 8,
-            DayOfWeek.Monday => 2,
-            DayOfWeek.Tuesday => 3,
-            DayOfWeek.Wednesday => 4,
-            DayOfWeek.Thursday => 5,
-            DayOfWeek.Friday => 6,
-            DayOfWeek.Saturday => 7,
-            _ => 8
-        };
-    }
-
-    /// <summary>
-    /// Helper method: Check if venue is currently open based on opening hours
-    /// Handles overnight case (e.g., 23:00 - 02:00)
-    /// </summary>
-    private bool IsVenueCurrentlyOpen(TimeSpan openTime, TimeSpan closeTime, TimeSpan currentTime)
-    {
-        bool isOpenOvernight = closeTime < openTime;
-        
-        if (isOpenOvernight)
-        {
-            // Overnight: Open if currentTime >= openTime OR currentTime < closeTime
-            // Example: Open 23:00-02:00, current 01:00 → TRUE
-            return currentTime >= openTime || currentTime < closeTime;
-        }
-        else
-        {
-            // Normal: Open if currentTime >= openTime AND currentTime < closeTime
-            // Example: Open 09:00-22:00, current 15:00 → TRUE
-            return currentTime >= openTime && currentTime < closeTime;
-        }
-    }
-
     /// <summary>
     /// Get all venue locations for a venue owner by user ID
     /// Includes LocationTag details with CoupleMoodType and CouplePersonalityType
@@ -1194,6 +973,7 @@ public class VenueLocationService : IVenueLocationService
             Category = v.Category,
             FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
             IsOwnerVerified = v.IsOwnerVerified,
+            RejectionDetails = string.IsNullOrWhiteSpace(v.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(v.RejectReason),
             CreatedAt = v.CreatedAt,
             UpdatedAt = v.UpdatedAt,
             LocationTags = CreateLocationTagsInfo(v)
@@ -1236,7 +1016,7 @@ public class VenueLocationService : IVenueLocationService
         }
 
         // 3. Check Status (Allow DRAFT or DRAFTED just in case)
-        if (venue.Status != "DRAFTED" && venue.Status != "DRAFT")
+        if (venue.Status != VenueLocationStatus.DRAFTED.ToString())
         {
              return new VenueSubmissionResult 
              { 
@@ -1289,7 +1069,7 @@ public class VenueLocationService : IVenueLocationService
         }
 
         // 5. Update Status
-        venue.Status = "PENDING";
+        venue.Status = VenueLocationStatus.PENDING.ToString();
         venue.UpdatedAt = DateTime.UtcNow;
         
         _unitOfWork.VenueLocations.Update(venue);
@@ -1340,7 +1120,7 @@ public class VenueLocationService : IVenueLocationService
         }
 
         // 3. Validate venue status
-        if (venue.Status != "DRAFTED" && venue.Status != "DRAFT")
+        if (venue.Status != VenueLocationStatus.DRAFTED.ToString())
         {
             return new SubmitVenueWithPaymentResponse 
             { 
@@ -1416,7 +1196,7 @@ public class VenueLocationService : IVenueLocationService
         // 6. Check if there's already a pending payment
         var existingPending = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
             .Where(vsp => vsp.VenueId == venueId 
-                && vsp.Status == "PENDING_PAYMENT"
+                && vsp.Status == VenueSubscriptionPackageStatus.PENDING_PAYMENT.ToString()
                 && vsp.CreatedAt > DateTime.UtcNow.AddMinutes(-15))
             .FirstOrDefaultAsync();
 
@@ -1433,8 +1213,34 @@ public class VenueLocationService : IVenueLocationService
         var totalAmount = package.Price.Value * request.Quantity;
         var totalDays = package.DurationDays.Value * request.Quantity;
 
-        // 8. Start transaction
-        using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
+        // 7.5. Validate payment method
+        var paymentMethod = request.PaymentMethod?.ToUpper() ?? "VIETQR";
+        if (paymentMethod != "VIETQR" && paymentMethod != "WALLET")
+        {
+            return new SubmitVenueWithPaymentResponse 
+            { 
+                IsSuccess = false, 
+                Message = "Invalid payment method. Must be VIETQR or WALLET" 
+            };
+        }
+
+        // 7.6. If WALLET, check balance first
+        if (paymentMethod == "WALLET")
+        {
+            var (hasSufficient, currentBalance) = await _walletPaymentService.CheckWalletBalanceAsync(userId, totalAmount);
+            if (!hasSufficient)
+            {
+                return new SubmitVenueWithPaymentResponse 
+                { 
+                    IsSuccess = false, 
+                    Message = $"Insufficient wallet balance. Available: {currentBalance:N0} VND, Required: {totalAmount:N0} VND"
+                };
+            }
+        }
+
+        // 8. Start transaction with SERIALIZABLE isolation (prevent race condition)
+        using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable);
         
         try
         {
@@ -1446,7 +1252,7 @@ public class VenueLocationService : IVenueLocationService
                 Quantity = request.Quantity,
                 StartDate = null,
                 EndDate = null,
-                Status = "PENDING_PAYMENT",
+                Status = VenueSubscriptionPackageStatus.PENDING_PAYMENT.ToString(),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -1464,11 +1270,11 @@ public class VenueLocationService : IVenueLocationService
                 UserId = userId,
                 Amount = totalAmount,
                 Currency = "VND",
-                PaymentMethod = "VIETQR",
+                PaymentMethod = paymentMethod,
                 TransType = 1, // VENUE_SUBSCRIPTION
                 DocNo = subscription.Id,
                 Description = $"Thanh toán gói {package.PackageName} cho {venue.Name} (x{request.Quantity})",
-                Status = "PENDING",
+                Status = TransactionStatus.PENDING.ToString(),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -1476,8 +1282,66 @@ public class VenueLocationService : IVenueLocationService
             await _unitOfWork.Context.Set<Transaction>().AddAsync(transaction);
             await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("✅ Created transaction ID: {TxId}", transaction.Id);
+            _logger.LogInformation("✅ Created transaction ID: {TxId}, PaymentMethod: {Method}", transaction.Id, paymentMethod);
 
+            // ========== WALLET PAYMENT FLOW ==========
+            if (paymentMethod == "WALLET")
+            {
+                // Process wallet payment immediately
+                var walletResult = await _walletPaymentService.ProcessWalletPaymentAsync(
+                    userId, 
+                    totalAmount, 
+                    transaction.Id, 
+                    transaction.Description ?? "Venue subscription payment");
+
+                if (!walletResult.IsSuccess)
+                {
+                    await dbTransaction.RollbackAsync();
+                    return new SubmitVenueWithPaymentResponse 
+                    { 
+                        IsSuccess = false, 
+                        Message = walletResult.Message 
+                    };
+                }
+
+                // Activate subscription immediately
+                var now = DateTime.UtcNow;
+                subscription.Status = VenueSubscriptionPackageStatus.ACTIVE.ToString();
+                subscription.StartDate = now;
+                subscription.EndDate = now.AddDays(totalDays);
+                subscription.UpdatedAt = now;
+                _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(subscription);
+
+                // Update venue status to PENDING for admin approval
+                venue.Status = VenueLocationStatus.PENDING.ToString();
+                venue.UpdatedAt = now;
+                _unitOfWork.Context.Set<VenueLocation>().Update(venue);
+
+                await _unitOfWork.SaveChangesAsync();
+                await dbTransaction.CommitAsync();
+
+                _logger.LogInformation("✅ WALLET payment completed - TxId: {TxId}, SubId: {SubId}, VenueStatus: PENDING, Balance: {OldBalance} → {NewBalance}",
+                    transaction.Id, subscription.Id, walletResult.OldBalance, walletResult.NewBalance);
+
+                return new SubmitVenueWithPaymentResponse
+                {
+                    IsSuccess = true,
+                    Message = $"Payment successful via Wallet. Venue submitted for admin approval. Balance: {walletResult.OldBalance:N0} → {walletResult.NewBalance:N0} VND",
+                    TransactionId = transaction.Id,
+                    SubscriptionId = subscription.Id,
+                    QrCodeUrl = null, // No QR for wallet payment
+                    Amount = totalAmount,
+                    BankInfo = null,
+                    ExpireAt = null,
+                    PaymentContent = paymentContent,
+                    PackageName = package.PackageName ?? "Unknown",
+                    TotalDays = totalDays,
+                    PaymentMethod = "WALLET",
+                    WalletBalance = walletResult.NewBalance
+                };
+            }
+
+            // ========== VIETQR PAYMENT FLOW (ORIGINAL LOGIC) ==========
             // 11. Create Sepay transaction
             SepayTransactionResponse sepayResponse;
             try
@@ -1532,7 +1396,7 @@ public class VenueLocationService : IVenueLocationService
 
             await dbTransaction.CommitAsync();
 
-            _logger.LogInformation("✅ Payment initiated - TxId: {TxId}, SubId: {SubId}, SepayId: {SepayId}", 
+            _logger.LogInformation("✅ VIETQR payment initiated - TxId: {TxId}, SubId: {SubId}, SepayId: {SepayId}", 
                 transaction.Id, subscription.Id, sepayResponse.Data.Id);
 
             // 13. Return response with QR code
@@ -1553,7 +1417,8 @@ public class VenueLocationService : IVenueLocationService
                 ExpireAt = expireAt,
                 PaymentContent = paymentContent,
                 PackageName = package.PackageName ?? "Unknown",
-                TotalDays = totalDays
+                TotalDays = totalDays,
+                PaymentMethod = "VIETQR"
             };
         }
         catch (Exception ex)
@@ -1600,6 +1465,7 @@ public class VenueLocationService : IVenueLocationService
             Category = v.Category,
             FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
             IsOwnerVerified = v.IsOwnerVerified,
+            RejectionDetails = string.IsNullOrWhiteSpace(v.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(v.RejectReason),
             CreatedAt = v.CreatedAt,
             UpdatedAt = v.UpdatedAt,
             LocationTags = CreateLocationTagsInfo(v)
@@ -1624,11 +1490,8 @@ public class VenueLocationService : IVenueLocationService
     /// </summary>
     public async Task<VenueSubmissionResult> ApproveVenueAsync(VenueApprovalRequest request)
     {
-        _logger.LogInformation("Processing venue approval request for Venue {VenueId}, Status: {Status}", request.VenueId, request.Status);
-
-        // Validate Status
         var status = request.Status?.ToUpper();
-        if (status != "ACTIVE" && status != "DRAFTED")
+        if (status != VenueLocationStatus.ACTIVE.ToString() && status != VenueLocationStatus.DRAFTED.ToString())
         {
             return new VenueSubmissionResult { IsSuccess = false, Message = "Invalid status. Only 'ACTIVE' or 'DRAFTED' are allowed." };
         }
@@ -1640,33 +1503,321 @@ public class VenueLocationService : IVenueLocationService
             return new VenueSubmissionResult { IsSuccess = false, Message = "Venue not found" };
         }
 
-        // Only allow PENDING venues to be approved/rejected
-        // Wait, user might want to ban an ACTIVE venue back to DRAFTED? 
-        // User request: "approve location" implies pending -> active. "reject" implies pending -> drafted.
-        // Let's strict check PENDING for now, unless user specified otherwise.
-        if (venue.Status != "PENDING")
+        if (venue.Status != VenueLocationStatus.PENDING.ToString())
         {
              return new VenueSubmissionResult { IsSuccess = false, Message = $"Cannot approve/reject venue with status '{venue.Status}'. Only 'PENDING' venues can be processed." };
         }
 
-        venue.Status = status;
-        venue.UpdatedAt = DateTime.UtcNow;
-        
-        // Fix DateTime fields for PostgreSQL
-        if (venue.CreatedAt.HasValue && venue.CreatedAt.Value.Kind == DateTimeKind.Unspecified)
-            venue.CreatedAt = DateTime.SpecifyKind(venue.CreatedAt.Value, DateTimeKind.Utc);
-        // If rejected, maybe append reason to description or send notification (out of scope for now)
-        if (status == "DRAFTED" && !string.IsNullOrEmpty(request.Reason))
+        if (status == VenueLocationStatus.DRAFTED.ToString() && string.IsNullOrWhiteSpace(request.Reason))
         {
-            _logger.LogInformation("Venue {VenueId} rejected. Reason: {Reason}", request.VenueId, request.Reason);
+            return new VenueSubmissionResult { IsSuccess = false, Message = "Reason is required when rejecting venue to DRAFTED status." };
         }
 
-        _unitOfWork.VenueLocations.Update(venue);
-        await _unitOfWork.SaveChangesAsync();
+        using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
+        
+        try
+        {
+            venue.Status = status;
+            venue.UpdatedAt = DateTime.UtcNow;
+            
+            // Lưu rejection details vào JSONB khi reject
+            if (status == VenueLocationStatus.DRAFTED.ToString() && !string.IsNullOrWhiteSpace(request.Reason))
+            {
+                // Parse existing rejections hoặc tạo mới
+                var existingRejections = new List<RejectionRecord>();
+                if (!string.IsNullOrWhiteSpace(venue.RejectReason))
+                {
+                    try
+                    {
+                        existingRejections = System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(venue.RejectReason) ?? new List<RejectionRecord>();
+                    }
+                    catch
+                    {
+                        // Nếu parse fail, bắt đầu mới
+                    }
+                }
+                
+                // Thêm rejection mới vào list
+                existingRejections.Add(new RejectionRecord
+                {
+                    Reason = request.Reason,
+                    RejectedAt = DateTime.UtcNow.ToString("o"),
+                    RejectedBy = "ADMIN"
+                });
+                
+                // Serialize array trực tiếp
+                venue.RejectReason = System.Text.Json.JsonSerializer.Serialize(existingRejections);
+                _logger.LogInformation("Saved rejection details for venue {VenueId}: Total {Count} rejections", venue.Id, existingRejections.Count);
+            }
+            else if (status == VenueLocationStatus.ACTIVE.ToString())
+            {
+                // Clear rejection details khi approve
+                venue.RejectReason = null;
+            }
+            
+            if (venue.CreatedAt.HasValue && venue.CreatedAt.Value.Kind == DateTimeKind.Unspecified)
+                venue.CreatedAt = DateTime.SpecifyKind(venue.CreatedAt.Value, DateTimeKind.Utc);
 
-        _logger.LogInformation("Venue {VenueId} status updated to {Status}", request.VenueId, status);
+            string refundMessage = "";
 
-        return new VenueSubmissionResult { IsSuccess = true, Message = $"Venue {status} successfully" };
+            if (status == VenueLocationStatus.DRAFTED.ToString())
+            {
+                // Tìm subscription với status ACTIVE (không phải COMPLETED)
+                var activeSubscription = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
+                    .Include(vsp => vsp.Package)
+                    .FirstOrDefaultAsync(vsp => vsp.VenueId == request.VenueId 
+                        && vsp.Status == VenueSubscriptionPackageStatus.ACTIVE.ToString());
+
+                if (activeSubscription != null)
+                {
+                    var successfulTransaction = await _unitOfWork.Context.Set<Transaction>()
+                        .FirstOrDefaultAsync(t => t.TransType == (int)TransactionType.VENUE_SUBSCRIPTION 
+                            && t.DocNo == activeSubscription.Id
+                            && t.Status == TransactionStatus.SUCCESS.ToString());
+
+                    if (successfulTransaction != null && successfulTransaction.Amount > 0)
+                    {
+                        var venueOwner = await _unitOfWork.Context.Set<VenueOwnerProfile>()
+                            .FirstOrDefaultAsync(vop => vop.Id == venue.VenueOwnerId);
+
+                        if (venueOwner != null)
+                        {
+                            var refundMetadata = new Dictionary<string, object>
+                            {
+                                { "venueId", venue.Id },
+                                { "venueName", venue.Name ?? "" },
+                                { "rejectionReason", request.Reason ?? "Venue rejected by admin" }
+                            };
+
+                            var refundResult = await _refundService.ProcessRefundAsync(
+                                userId: venueOwner.UserId,
+                                amount: successfulTransaction.Amount,
+                                transType: (int)TransactionType.VENUE_SUBSCRIPTION,
+                                docNo: activeSubscription.Id,
+                                reason: $"Địa điểm '{venue.Name}' bị từ chối. Lý do: {request.Reason}",
+                                originalTransactionId: successfulTransaction.Id,
+                                metadata: refundMetadata
+                            );
+
+                            if (refundResult.IsSuccess)
+                            {
+                                activeSubscription.Status = VenueSubscriptionPackageStatus.REFUNDED.ToString();
+                                activeSubscription.UpdatedAt = DateTime.UtcNow;
+                                _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(activeSubscription);
+
+                                refundMessage = $" Đã hoàn {refundResult.RefundAmount:N0} VND vào ví (Balance: {refundResult.OldBalance:N0} → {refundResult.NewBalance:N0} VND).";
+                                
+                                // Gửi email thông báo hoàn tiền
+                                try
+                                {
+                                    var emailHtml = EmailRefundTemplate.GetVenueRefundEmailContent(
+                                        venueOwner.BusinessName ?? "Venue Owner",
+                                        venue.Name ?? "Địa điểm",
+                                        activeSubscription.Package?.PackageName ?? "Gói đăng ký",
+                                        refundResult.RefundAmount,
+                                        refundResult.OldBalance,
+                                        refundResult.NewBalance,
+                                        request.Reason ?? "Không đạt yêu cầu"
+                                    );
+
+                                    var emailRequest = new capstone_backend.Business.DTOs.Email.SendEmailRequest
+                                    {
+                                        To = "lehuyvuok@gmail.com",
+                                        Subject = $"[CoupleMood] Thông báo hoàn tiền - Địa điểm {venue.Name} bị từ chối",
+                                        HtmlBody = emailHtml,
+                                        FromName = "CoupleMood"
+                                    };
+
+                                    if (!string.IsNullOrWhiteSpace(emailRequest.To))
+                                    {
+                                        var emailSent = await _emailService.SendEmailAsync(emailRequest);
+                                        if (emailSent)
+                                        {
+                                            _logger.LogInformation("✅ Sent refund notification email to {Email}", emailRequest.To);
+                                        }
+                                        else
+                                        {
+                                            _logger.LogWarning("⚠️ Failed to send refund email to {Email}", emailRequest.To);
+                                        }
+                                    }
+                                }
+                                catch (Exception emailEx)
+                                {
+                                    _logger.LogError(emailEx, "❌ Error sending refund notification email");
+                                }
+                            }
+                            else
+                            {
+                                await dbTransaction.RollbackAsync();
+                                return new VenueSubmissionResult 
+                                { 
+                                    IsSuccess = false, 
+                                    Message = $"Failed to process refund: {refundResult.Message}" 
+                                };
+                            }
+                        }
+                        else
+                        {
+                            // Không tìm thấy venue owner, vẫn cancel subscription
+                            activeSubscription.Status = VenueSubscriptionPackageStatus.CANCELLED.ToString();
+                            activeSubscription.UpdatedAt = DateTime.UtcNow;
+                            _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(activeSubscription);
+                            _logger.LogWarning("Venue owner not found for venue {VenueId}, subscription cancelled without refund", venue.Id);
+                        }
+                    }
+                    else
+                    {
+                        // Không có transaction hoặc amount = 0, chỉ cancel subscription
+                        activeSubscription.Status = VenueSubscriptionPackageStatus.CANCELLED.ToString();
+                        activeSubscription.UpdatedAt = DateTime.UtcNow;
+                        _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(activeSubscription);
+                        _logger.LogInformation("No valid transaction found for subscription {SubId}, status updated to CANCELLED", activeSubscription.Id);
+                    }
+                }
+            }
+
+            _unitOfWork.VenueLocations.Update(venue);
+            await _unitOfWork.SaveChangesAsync();
+            
+            // Tạo STAFF account khi venue được approve
+            string staffAccountMessage = "";
+            if (status == VenueLocationStatus.ACTIVE.ToString())
+            {
+                try
+                {
+                    // Lấy thông tin venue owner
+                    var venueOwner = await _unitOfWork.Context.Set<VenueOwnerProfile>()
+                        .Include(vop => vop.User)
+                        .FirstOrDefaultAsync(vop => vop.Id == venue.VenueOwnerId);
+
+                    if (venueOwner != null)
+                    {
+                        // Tạo email an toàn cho STAFF (loại bỏ ký tự đặc biệt)
+                        var businessNameSafe = System.Text.RegularExpressions.Regex.Replace(
+                            venueOwner.BusinessName?.ToLower() ?? "venue", 
+                            @"[^a-z0-9]", 
+                            ""
+                        );
+                        if (string.IsNullOrEmpty(businessNameSafe))
+                            businessNameSafe = "venue";
+                        
+                        var staffEmail = $"staff.venue{venue.Id}.{businessNameSafe}@system.com";
+                        
+                        // Kiểm tra email đã tồn tại chưa
+                        var existingUser = await _unitOfWork.Context.Set<UserAccount>()
+                            .FirstOrDefaultAsync(u => u.Email == staffEmail);
+                        
+                        if (existingUser == null)
+                        {
+                            var staffPassword = GenerateRandomPassword(12);
+                            
+                            var staffUser = new UserAccount
+                            {
+                                Email = staffEmail,
+                                PasswordHash = BCrypt.Net.BCrypt.HashPassword(staffPassword),
+                                DisplayName = $"Staff - {venue.Name}",
+                                PhoneNumber = venue.PhoneNumber,
+                                Role = "STAFF",
+                                IsActive = true,
+                                IsVerified = true,
+                                IsDeleted = false,
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow
+                            };
+
+                            await _unitOfWork.Context.Set<UserAccount>().AddAsync(staffUser);
+                            await _unitOfWork.SaveChangesAsync();
+
+                            _logger.LogInformation("✅ Created STAFF account for venue {VenueId}: Email={Email}, UserId={UserId}", 
+                                venue.Id, staffEmail, staffUser.Id);
+
+                            // Gửi email thông tin STAFF account cho venue owner
+                            try
+                            {
+                                var emailHtml = EmailAccountInfoTemplate.GetStaffAccountInfoEmailContent(
+                                    venueOwner.BusinessName ?? "Venue Owner",
+                                    venue.Name,
+                                    staffEmail,
+                                    staffPassword
+                                );
+
+                                var emailRequest = new capstone_backend.Business.DTOs.Email.SendEmailRequest
+                                {
+                                    To = "lehuyvuok@gmail.com",
+                                    Subject = $"[CoupleMood] Địa điểm {venue.Name} đã được phê duyệt - Thông tin tài khoản STAFF",
+                                    HtmlBody = emailHtml,
+                                    FromName = "CoupleMood"
+                                };
+
+                                if (!string.IsNullOrWhiteSpace(emailRequest.To))
+                                {
+                                    var emailSent = await _emailService.SendEmailAsync(emailRequest);
+                                    if (emailSent)
+                                    {
+                                        _logger.LogInformation("✅ Sent STAFF account info email to {Email}", emailRequest.To);
+                                        staffAccountMessage = $" | STAFF account created & email sent";
+                                    }
+                                    else
+                                    {
+                                        _logger.LogWarning("⚠️ Failed to send email to {Email}", emailRequest.To);
+                                        staffAccountMessage = $" | STAFF account created but email failed";
+                                    }
+                                }
+                                else
+                                {
+                                    _logger.LogWarning("⚠️ Venue owner has no email address");
+                                    staffAccountMessage = $" | STAFF account created but no owner email";
+                                }
+                            }
+                            catch (Exception emailEx)
+                            {
+                                _logger.LogError(emailEx, "❌ Error sending STAFF account email");
+                                staffAccountMessage = $" | STAFF account created but email error";
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogInformation("ℹ️ STAFF account already exists for venue {VenueId}: {Email}", venue.Id, staffEmail);
+                            staffAccountMessage = $" | STAFF account already exists: {staffEmail}";
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "❌ Failed to create STAFF account for venue {VenueId}", venue.Id);
+                    staffAccountMessage = " | Failed to create STAFF account (check logs)";
+                    // Không rollback transaction, chỉ log lỗi
+                }
+            }
+            
+            await dbTransaction.CommitAsync();
+
+            if (status == VenueLocationStatus.ACTIVE.ToString())
+            {
+                try
+                {
+                    await _meilisearchService.IndexVenueLocationAsync(request.VenueId);
+                }
+                catch
+                {
+                }
+            }
+
+            return new VenueSubmissionResult 
+            { 
+                IsSuccess = true, 
+                Message = $"Venue {status} successfully{refundMessage}{staffAccountMessage}" 
+            };
+        }
+        catch
+        {
+            await dbTransaction.RollbackAsync();
+            return new VenueSubmissionResult 
+            { 
+                IsSuccess = false, 
+                Message = "Failed to process venue approval/rejection" 
+            };
+        }
     }
 
     /// <summary>
@@ -1757,9 +1908,9 @@ public class VenueLocationService : IVenueLocationService
         var allVenues = await _unitOfWork.VenueLocations.GetAllAsync();
         
         var total = allVenues.Count();
-        var active = allVenues.Count(v => v.Status == "ACTIVE" && v.IsDeleted != true);
-        var pending = allVenues.Count(v => v.Status == "PENDING" && v.IsDeleted != true);
-        var drafted = allVenues.Count(v => v.Status == "DRAFTED" && v.IsDeleted != true);
+        var active = allVenues.Count(v => v.Status == VenueLocationStatus.ACTIVE.ToString() && v.IsDeleted != true);
+        var pending = allVenues.Count(v => v.Status == VenueLocationStatus.PENDING.ToString() && v.IsDeleted != true);
+        var drafted = allVenues.Count(v => v.Status == VenueLocationStatus.DRAFTED.ToString() && v.IsDeleted != true);
         var deleted = allVenues.Count(v => v.IsDeleted == true);
 
         var statusBreakdown = allVenues
@@ -1796,7 +1947,7 @@ public class VenueLocationService : IVenueLocationService
             Id = venue.Id,
             Name = venue.Name,
             WebsiteUrl = venue.WebsiteUrl,
-            Status = venue.Status ?? "DRAFTED",
+            Status = venue.Status ?? VenueLocationStatus.DRAFTED.ToString(),
             Address = venue.VenueOwner.Address,
             BusinessLicenseUrl = venue.BusinessLicenseUrl,
             VenueOwner = new VenueOwnerKycInfo
@@ -1814,5 +1965,78 @@ public class VenueLocationService : IVenueLocationService
 
         _logger.LogInformation("Retrieved venue location with KYC for ID {VenueId}", venueId);
         return response;
+    }
+
+    /// <summary>
+    /// Generate random password for STAFF account
+    /// </summary>
+    private string GenerateRandomPassword(int length)
+    {
+        const string upperChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const string lowerChars = "abcdefghijklmnopqrstuvwxyz";
+        const string digitChars = "0123456789";
+        const string specialChars = "!@#$%^&*";
+        const string allChars = upperChars + lowerChars + digitChars + specialChars;
+
+        var random = new Random();
+        var password = new char[length];
+
+        // Đảm bảo có ít nhất 1 ký tự mỗi loại
+        password[0] = upperChars[random.Next(upperChars.Length)];
+        password[1] = lowerChars[random.Next(lowerChars.Length)];
+        password[2] = digitChars[random.Next(digitChars.Length)];
+        password[3] = specialChars[random.Next(specialChars.Length)];
+
+        // Fill phần còn lại với random characters
+        for (int i = 4; i < length; i++)
+        {
+            password[i] = allChars[random.Next(allChars.Length)];
+        }
+
+        // Shuffle password
+        return new string(password.OrderBy(x => random.Next()).ToArray());
+    }
+
+    /// <summary>
+    /// Update venue opening hours for all days of the week
+    /// </summary>
+    public async Task<bool> UpdateVenueOpeningHoursAsync(UpdateVenueOpeningHoursRequest request)
+    {
+        _logger.LogInformation("Updating opening hours for venue {VenueId}", request.VenueLocationId);
+
+        var venue = await _unitOfWork.VenueLocations.GetByIdAsync(request.VenueLocationId);
+        if (venue == null || venue.IsDeleted == true)
+        {
+            _logger.LogWarning("Venue {VenueId} not found or deleted", request.VenueLocationId);
+            return false;
+        }
+
+        // Get existing opening hours
+        var existingHours = await _unitOfWork.Context.Set<VenueOpeningHour>()
+            .Where(oh => oh.VenueLocationId == request.VenueLocationId)
+            .ToListAsync();
+
+        // Delete all existing hours
+        _unitOfWork.Context.Set<VenueOpeningHour>().RemoveRange(existingHours);
+
+        // Add new opening hours
+        foreach (var hourDto in request.OpeningHours)
+        {
+            var openingHour = new VenueOpeningHour
+            {
+                VenueLocationId = request.VenueLocationId,
+                Day = hourDto.Day,
+                OpenTime = hourDto.IsClosed ? TimeSpan.Zero : TimeSpan.Parse(hourDto.OpenTime!),
+                CloseTime = hourDto.IsClosed ? TimeSpan.Zero : TimeSpan.Parse(hourDto.CloseTime!),
+                IsClosed = hourDto.IsClosed
+            };
+
+            await _unitOfWork.Context.Set<VenueOpeningHour>().AddAsync(openingHour);
+        }
+
+        await _unitOfWork.SaveChangesAsync();
+        _logger.LogInformation("Successfully updated opening hours for venue {VenueId}", request.VenueLocationId);
+
+        return true;
     }
 }

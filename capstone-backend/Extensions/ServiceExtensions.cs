@@ -27,6 +27,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 using OpenAI.Moderations;
+using Resend;
 using StackExchange.Redis;
 using System.Text;
 using System.Text.Json;
@@ -147,6 +148,9 @@ public static class ServiceExtensions
         services.AddScoped<IConversationMemberRepository, ConversationMemberRepository>();
         services.AddScoped<IMessageRepository, MessageRepository>();
 
+        services.AddScoped<ILeaderboardRepository, LeaderboardRepository>();
+        services.AddScoped<IReportRepository, ReportRepository>();
+
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
@@ -161,6 +165,7 @@ public static class ServiceExtensions
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IMemberService, MemberService>();
+        services.AddScoped<IGoogleAuthService, GoogleAuthService>();
 
         // Register AI Recommendation Services
         services.AddScoped<IMoodMappingService, MoodMappingService>();
@@ -213,6 +218,9 @@ public static class ServiceExtensions
         // Register Venue Owner Dashboard Service
         services.AddScoped<IVenueOwnerDashboardService, VenueOwnerDashboardService>();
         
+        // Register Venue Owner Profile Service
+        services.AddScoped<IVenueOwnerProfileService, VenueOwnerProfileService>();
+        
         // Register Hangfire Jobs
         services.AddScoped<IDatePlanWorker, DatePlanWorker>();
         services.AddScoped<IReviewWorker, ReviewWorker>();
@@ -248,6 +256,15 @@ public static class ServiceExtensions
         services.AddScoped<IVoucherCodeGenerator, VoucherCodeGenerator>();
 
         services.AddScoped<WalletService>();
+        
+        // Register Wallet Payment Service (for instant wallet payments)
+        services.AddScoped<WalletPaymentService>();
+
+        // Register Leaderboard Service
+        services.AddScoped<ILeaderboardService, LeaderboardService>();
+
+        // Register Report Service
+        services.AddScoped<IReportService, ReportService>();
 
         return services;
     }
@@ -748,6 +765,42 @@ public static class ServiceExtensions
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] OpenAI initialization failed: {ex.Message}");
+        }
+
+        return services;
+    }
+
+    /// <summary>
+    /// Register Resend Email Service
+    /// </summary>
+    public static IServiceCollection AddEmailConfiguration(this IServiceCollection services)
+    {
+        var resendApiKey = Environment.GetEnvironmentVariable("RESEND_API_KEY");
+
+        if (string.IsNullOrWhiteSpace(resendApiKey))
+        {
+            Console.WriteLine("[WARNING] Resend API Key not found. Email Service will not work.");
+            return services;
+        }
+
+        try
+        {
+            services.AddOptions();
+            services.Configure<ResendClientOptions>(o =>
+            {
+                o.ApiToken = resendApiKey;
+            });
+            services.AddHttpClient<ResendClient>();
+            services.AddTransient<IResend, ResendClient>();
+
+            // Inject interface
+            services.AddScoped<IEmailService, EmailService>();
+
+            Console.WriteLine("[INFO] Resend Email Service: Initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Resend Email initialization failed: {ex.Message}");
         }
 
         return services;

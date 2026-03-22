@@ -1,5 +1,6 @@
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -70,7 +71,7 @@ public class CoupleInvitationRepository : ICoupleInvitationRepository
             .AnyAsync(ci =>
                 ((ci.SenderMemberId == memberId1 && ci.ReceiverMemberId == memberId2) ||
                  (ci.SenderMemberId == memberId2 && ci.ReceiverMemberId == memberId1)) &&
-                ci.Status == "PENDING" &&
+                ci.Status == CoupleInvitationStatus.PENDING.ToString() &&
                 ci.IsDeleted == false);
     }
 
@@ -116,13 +117,13 @@ public class CoupleInvitationRepository : ICoupleInvitationRepository
         var pendingInvitations = await _context.CoupleInvitations
             .Where(ci =>
                 (ci.SenderMemberId == memberId || ci.ReceiverMemberId == memberId) &&
-                ci.Status == "PENDING" &&
+                ci.Status == CoupleInvitationStatus.PENDING.ToString() &&
                 ci.IsDeleted == false)
             .ToListAsync();
 
         foreach (var invitation in pendingInvitations)
         {
-            invitation.Status = "CANCELLED";
+            invitation.Status = CoupleInvitationStatus.CANCELLED.ToString();
             invitation.RespondedAt = DateTime.UtcNow;
             invitation.UpdatedAt = DateTime.UtcNow;
         }

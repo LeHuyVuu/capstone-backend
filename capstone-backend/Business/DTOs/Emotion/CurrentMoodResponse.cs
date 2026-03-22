@@ -69,4 +69,9 @@ public class CurrentMoodResponse
     /// Liệu có tâm trạng cặp đôi không
     /// </summary>
     public bool HasCoupleMood { get; set; }
+
+    /// <summary>
+    /// ID của couple profile (nếu có)
+    /// </summary>
+    public int? CoupleProfileId { get; set; }
 }

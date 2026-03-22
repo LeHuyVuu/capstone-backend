@@ -19,8 +19,21 @@ public class SearchHistoryService : ISearchHistoryService
         _logger = logger;
     }
 
-    public async Task<PagedResult<SearchHistoryResponse>> GetSearchHistoriesByMemberAsync(int memberId, int page, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<PagedResult<SearchHistoryResponse>> GetSearchHistoriesByMemberAsync(int userId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
+        var memberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+        if (memberProfile == null)
+        {
+            _logger.LogWarning("No member profile found for user ID {UserId} when fetching search history", userId);
+            return new PagedResult<SearchHistoryResponse>
+            {
+                Items = new List<SearchHistoryResponse>(),
+                PageNumber = page,
+                PageSize = pageSize,
+                TotalCount = 0
+            };
+        }
+        var memberId = memberProfile.Id;
         var query = _unitOfWork.Context.Set<SearchHistory>()
             .Where(h => h.MemberId == memberId && h.IsDeleted != true);
 
@@ -117,7 +130,6 @@ public class SearchHistoryService : ISearchHistoryService
             Id = history.Id,
             MemberId = history.MemberId,
             Keyword = history.Keyword,
-            FilterCriteria = filterCriteria,
             ResultCount = history.ResultCount,
             SearchedAt = history.SearchedAt
         };

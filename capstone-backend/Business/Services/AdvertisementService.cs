@@ -13,6 +13,7 @@ public class AdvertisementService : IAdvertisementService
     private readonly ILogger<AdvertisementService> _logger;
     private readonly SepayService _sepayService;
     private readonly RefundService _refundService;
+    private readonly WalletPaymentService _walletPaymentService;
     private static int _rotationIndex = 0;
     private static readonly object _lock = new object();
     private static readonly Random _random = new Random();
@@ -21,12 +22,14 @@ public class AdvertisementService : IAdvertisementService
         IUnitOfWork unitOfWork, 
         ILogger<AdvertisementService> logger,
         SepayService sepayService,
-        RefundService refundService)
+        RefundService refundService,
+        WalletPaymentService walletPaymentService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _sepayService = sepayService;
         _refundService = refundService;
+        _walletPaymentService = walletPaymentService;
     }
 
     public async Task<List<AdvertisementResponse>> GetRotatingAdvertisementsAsync(string? placementType = null)
@@ -554,8 +557,34 @@ public class AdvertisementService : IAdvertisementService
         // 8. Calculate amount (same price for all venues in the package)
         var totalAmount = package.Price;
 
-        // 9. Start transaction
-        using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
+        // 8.5. Validate payment method
+        var paymentMethod = request.PaymentMethod?.ToUpper() ?? "VIETQR";
+        if (paymentMethod != "VIETQR" && paymentMethod != "WALLET")
+        {
+            return new SubmitAdvertisementWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "Invalid payment method. Must be VIETQR or WALLET"
+            };
+        }
+
+        // 8.6. If WALLET, check balance first
+        if (paymentMethod == "WALLET")
+        {
+            var (hasSufficient, currentBalance) = await _walletPaymentService.CheckWalletBalanceAsync(userId, totalAmount);
+            if (!hasSufficient)
+            {
+                return new SubmitAdvertisementWithPaymentResponse
+                {
+                    IsSuccess = false,
+                    Message = $"Insufficient wallet balance. Available: {currentBalance:N0} VND, Required: {totalAmount:N0} VND"
+                };
+            }
+        }
+
+        // 9. Start transaction with SERIALIZABLE isolation (prevent race condition)
+        using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable);
 
         try
         {
@@ -610,7 +639,7 @@ public class AdvertisementService : IAdvertisementService
                 UserId = userId,
                 Amount = totalAmount,
                 Currency = "VND",
-                PaymentMethod = "VIETQR",
+                PaymentMethod = paymentMethod,
                 TransType = (int)TransactionType.ADS_ORDER,
                 DocNo = adsOrder.Id,
                 Description = $"Thanh toán quảng cáo {package.Name} cho {venues.Count} địa điểm: {venueNames}",
@@ -622,8 +651,73 @@ public class AdvertisementService : IAdvertisementService
             await _unitOfWork.Context.Set<Transaction>().AddAsync(transaction);
             await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("✅ Created transaction ID: {TxId} for {Count} venue(s)", transaction.Id, venues.Count);
+            _logger.LogInformation("✅ Created transaction ID: {TxId} for {Count} venue(s), PaymentMethod: {Method}", 
+                transaction.Id, venues.Count, paymentMethod);
 
+            // ========== WALLET PAYMENT FLOW ==========
+            if (paymentMethod == "WALLET")
+            {
+                // Process wallet payment immediately
+                var walletResult = await _walletPaymentService.ProcessWalletPaymentAsync(
+                    userId,
+                    totalAmount,
+                    transaction.Id,
+                    transaction.Description ?? "Advertisement payment");
+
+                if (!walletResult.IsSuccess)
+                {
+                    await dbTransaction.RollbackAsync();
+                    return new SubmitAdvertisementWithPaymentResponse
+                    {
+                        IsSuccess = false,
+                        Message = walletResult.Message
+                    };
+                }
+
+                // Update AdsOrder to COMPLETED
+                var now = DateTime.UtcNow;
+                adsOrder.Status = AdsOrderStatus.COMPLETED.ToString();
+                adsOrder.PricePaid = totalAmount;
+                adsOrder.UpdatedAt = now;
+                _unitOfWork.Context.Set<AdsOrder>().Update(adsOrder);
+
+                // Update Advertisement status to PENDING
+                advertisement.Status = AdvertisementStatus.PENDING.ToString();
+                advertisement.UpdatedAt = now;
+                _unitOfWork.Context.Set<Advertisement>().Update(advertisement);
+
+                // Update VenueLocationAdvertisement status to PENDING
+                foreach (var vla in venueLocationAds)
+                {
+                    vla.Status = VenueLocationAdvertisementStatus.PENDING.ToString();
+                    vla.UpdatedAt = now;
+                    _unitOfWork.Context.Set<VenueLocationAdvertisement>().Update(vla);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await dbTransaction.CommitAsync();
+
+
+
+                return new SubmitAdvertisementWithPaymentResponse
+                {
+                    IsSuccess = true,
+                    Message = $"Payment successful via Wallet. Advertisement submitted for admin approval. Balance: {walletResult.OldBalance:N0} → {walletResult.NewBalance:N0} VND",
+                    TransactionId = transaction.Id,
+                    AdsOrderId = adsOrder.Id,
+                    QrCodeUrl = null, // No QR for wallet payment
+                    Amount = totalAmount,
+                    BankInfo = null,
+                    ExpireAt = null,
+                    PaymentContent = paymentContent,
+                    PackageName = package.Name,
+                    DurationDays = package.DurationDays,
+                    PaymentMethod = "WALLET",
+                    WalletBalance = walletResult.NewBalance
+                };
+            }
+
+            // ========== VIETQR PAYMENT FLOW (ORIGINAL LOGIC) ==========
             // 12. Create Sepay transaction
             SepayTransactionResponse sepayResponse;
             try
@@ -680,7 +774,7 @@ public class AdvertisementService : IAdvertisementService
             // 14. Commit transaction
             await dbTransaction.CommitAsync();
 
-            _logger.LogInformation("✅ Payment initiated - TxId: {TxId}, AdsOrderId: {AdsOrderId}, SepayId: {SepayId}, VenueCount: {Count}, VenueIds: {VenueIds}", 
+            _logger.LogInformation("✅ VIETQR payment initiated - TxId: {TxId}, AdsOrderId: {AdsOrderId}, SepayId: {SepayId}, VenueCount: {Count}, VenueIds: {VenueIds}", 
                 transaction.Id, adsOrder.Id, sepayResponse.Data.Id, venues.Count, string.Join(", ", uniqueVenueIds));
 
             // 15. Return response with QR code
@@ -701,7 +795,8 @@ public class AdvertisementService : IAdvertisementService
                 ExpireAt = expireAt,
                 PaymentContent = paymentContent,
                 PackageName = package.Name,
-                DurationDays = package.DurationDays
+                DurationDays = package.DurationDays,
+                PaymentMethod = "VIETQR"
             };
         }
         catch (Exception ex)
@@ -890,10 +985,9 @@ public class AdvertisementService : IAdvertisementService
         
         if (advertisement.VenueLocationAdvertisements != null && advertisement.VenueLocationAdvertisements.Any())
         {
-            // Process both PENDING and PENDING_APPROVAL status
+            // Process PENDING status
             foreach (var vla in advertisement.VenueLocationAdvertisements
-                .Where(v => v.Status == VenueLocationAdvertisementStatus.PENDING.ToString() || 
-                           v.Status == VenueLocationAdvertisementStatus.PENDING_APPROVAL.ToString()))
+                .Where(v => v.Status == VenueLocationAdvertisementStatus.PENDING.ToString()))
             {
                 // Auto-adjust dates if admin approves after desired start date
                 if (approvalDate > vla.StartDate)
@@ -1331,6 +1425,94 @@ public class AdvertisementService : IAdvertisementService
 
         // Single category string
         return new List<string> { trimmed };
+    }
+
+    public async Task<List<AdsOrderResponse>> GetMyAdsOrdersAsync(int userId, string? status = null)
+    {
+        _logger.LogInformation("Getting ads orders for user {UserId} with status filter: {Status}", userId, status ?? "all");
+
+        // Find VenueOwnerProfile from userId
+        var venueOwnerProfile = await _unitOfWork.Context.Set<VenueOwnerProfile>()
+            .FirstOrDefaultAsync(vop => vop.UserId == userId && vop.IsDeleted != true);
+
+        if (venueOwnerProfile == null)
+        {
+            _logger.LogWarning("User {UserId} does not have a venue owner profile", userId);
+            return new List<AdsOrderResponse>();
+        }
+
+        // Query directly from AdsOrder table
+        var query = _unitOfWork.Context.Set<AdsOrder>()
+            .Include(ao => ao.Package)
+            .Include(ao => ao.Advertisement)
+                .ThenInclude(ad => ad.VenueLocationAdvertisements)
+                    .ThenInclude(vla => vla.Venue)
+            .Where(ao => ao.Advertisement.VenueOwnerId == venueOwnerProfile.Id 
+                      && ao.Advertisement.IsDeleted != true)
+            .AsQueryable();
+
+        // Filter by ads order status if provided
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            var normalizedStatus = status.Trim().ToUpper();
+            query = query.Where(ao => ao.Status == normalizedStatus);
+        }
+
+        var adsOrders = await query
+            .OrderByDescending(ao => ao.CreatedAt)
+            .ToListAsync();
+
+        var responses = adsOrders.Select(ao =>
+        {
+            return new AdsOrderResponse
+            {
+                Id = ao.Id,
+                Status = ao.Status ?? "PENDING",
+                CreatedAt = ao.CreatedAt ?? DateTime.UtcNow,
+                UpdatedAt = ao.UpdatedAt,
+                Payment = new PaymentInfo
+                {
+                    TransactionId = ao.Id,
+                    Amount = ao.PricePaid ?? 0,
+                    PaymentStatus = ao.Status ?? "PENDING",
+                    PaymentMethod = "VIETQR",
+                    PaidAt = ao.UpdatedAt,
+                    TransactionCode = null
+                },
+                Package = ao.Package != null ? new PackageInfo
+                {
+                    Id = ao.Package.Id,
+                    Name = ao.Package.Name ?? "Unknown Package",
+                    Price = ao.Package.Price,
+                    DurationDays = ao.Package.DurationDays,
+                    PlacementType = ao.Package.Placement ?? string.Empty
+                } : null,
+                Advertisement = ao.Advertisement != null ? new AdvertisementInfo
+                {
+                    Id = ao.Advertisement.Id,
+                    Title = ao.Advertisement.Title ?? string.Empty,
+                    Content = ao.Advertisement.Content,
+                    BannerUrl = ao.Advertisement.BannerUrl ?? string.Empty,
+                    TargetUrl = ao.Advertisement.TargetUrl,
+                    PlacementType = ao.Advertisement.PlacementType ?? string.Empty,
+                    Status = ao.Advertisement.Status ?? string.Empty,
+                    DesiredStartDate = ao.Advertisement.DesiredStartDate
+                } : null,
+                VenueLocationAds = ao.Advertisement?.VenueLocationAdvertisements?
+                    .Select(vla => new VenueLocationAdInfo
+                    {
+                        Id = vla.Id,
+                        VenueId = vla.VenueId,
+                        VenueName = vla.Venue?.Name ?? "Unknown",
+                        StartDate = vla.StartDate,
+                        EndDate = vla.EndDate,
+                        PriorityScore = vla.PriorityScore,
+                        Status = vla.Status ?? string.Empty
+                    }).ToList()
+            };
+        }).ToList();
+
+        return responses;
     }
 
     #endregion

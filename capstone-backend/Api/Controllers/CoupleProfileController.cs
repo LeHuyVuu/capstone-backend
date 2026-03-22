@@ -98,6 +98,10 @@ public class CoupleProfileController : BaseController
 
             return OkResponse(data, message);
         }
+        catch (Business.Exceptions.BadRequestException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
         catch (UnauthorizedAccessException ex)
         {
             return UnauthorizedResponse(ex.Message);

@@ -96,7 +96,12 @@ namespace capstone_backend.Business.Mappings
                 .ForMember(dest => dest.VoucherDescription, opt => opt.MapFrom(src => src.Voucher.Description))
                 .ForMember(dest => dest.DiscountType, opt => opt.MapFrom(src => src.Voucher.DiscountType))
                 .ForMember(dest => dest.DiscountAmount, opt => opt.MapFrom(src => src.Voucher.DiscountAmount))
-                .ForMember(dest => dest.DiscountPercent, opt => opt.MapFrom(src => src.Voucher.DiscountPercent));
+                .ForMember(dest => dest.DiscountPercent, opt => opt.MapFrom(src => src.Voucher.DiscountPercent))
+                .ForMember(dest => dest.Locations, opt => opt.MapFrom(src => src.Voucher.VoucherLocations.Select(vl => new MemberVoucherLocationItemResponse
+                {
+                    VenueLocationId = vl.VenueLocationId,
+                    VenueLocationName = vl.VenueLocation.Name
+                }).ToList()));
 
             CreateMap<VoucherItemMember, MemberVoucherTransactionListItemResponse>()
                 .ForMember(dest => dest.VoucherItemMemberId, opt => opt.MapFrom(src => src.Id))

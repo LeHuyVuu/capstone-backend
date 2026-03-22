@@ -127,4 +127,127 @@ public class SubscriptionPackageService : ISubscriptionPackageService
             throw;
         }
     }
+
+    public async Task<List<VenueSubscriptionPackageDto>> GetVenueSubscriptionPackagesByVenueIdAsync(int venueId)
+    {
+        try
+        {
+            _logger.LogInformation("Getting venue subscription packages for venue ID: {VenueId}", venueId);
+
+            var venueSubscriptions = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
+                .Include(vsp => vsp.Package)
+                .Where(vsp => vsp.VenueId == venueId)
+                .OrderByDescending(vsp => vsp.CreatedAt)
+                .Select(vsp => new VenueSubscriptionPackageDto
+                {
+                    Id = vsp.Id,
+                    VenueId = vsp.VenueId,
+                    PackageId = vsp.PackageId,
+                    StartDate = vsp.StartDate,
+                    EndDate = vsp.EndDate,
+                    Quantity = vsp.Quantity,
+                    Status = vsp.Status,
+                    CreatedAt = vsp.CreatedAt,
+                    Package = vsp.Package != null ? new SubscriptionPackageDto
+                    {
+                        Id = vsp.Package.Id,
+                        PackageName = vsp.Package.PackageName,
+                        Price = vsp.Package.Price,
+                        DurationDays = vsp.Package.DurationDays,
+                        Type = vsp.Package.Type,
+                        Description = vsp.Package.Description,
+                        IsActive = vsp.Package.IsActive,
+                        CreatedAt = vsp.Package.CreatedAt,
+                        UpdatedAt = vsp.Package.UpdatedAt
+                    } : null
+                })
+                .ToListAsync();
+
+            _logger.LogInformation(
+                "Found {Count} venue subscription packages for venue ID {VenueId}", 
+                venueSubscriptions.Count, 
+                venueId);
+
+            return venueSubscriptions;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting venue subscription packages for venue ID: {VenueId}", venueId);
+            throw;
+        }
+    }
+
+    public async Task<List<VenueSubscriptionPackageDto>> GetVenueSubscriptionPackagesByOwnerUserIdAsync(int userId)
+    {
+        try
+        {
+            _logger.LogInformation("Getting venue subscription packages for venue owner user ID: {UserId}", userId);
+
+            // Get venue owner profile by user ID
+            var venueOwner = await _unitOfWork.Context.Set<VenueOwnerProfile>()
+                .FirstOrDefaultAsync(vo => vo.UserId == userId && vo.IsDeleted != true);
+
+            if (venueOwner == null)
+            {
+                throw new InvalidOperationException($"Venue owner profile not found for user ID {userId}");
+            }
+
+            // Get all venues owned by this venue owner
+            var venueIds = await _unitOfWork.Context.Set<VenueLocation>()
+                .Where(v => v.VenueOwnerId == venueOwner.Id && v.IsDeleted != true)
+                .Select(v => v.Id)
+                .ToListAsync();
+
+            if (!venueIds.Any())
+            {
+                _logger.LogInformation("No venues found for venue owner user ID: {UserId}", userId);
+                return new List<VenueSubscriptionPackageDto>();
+            }
+
+            // Get all subscription packages for these venues
+            var venueSubscriptions = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
+                .Include(vsp => vsp.Package)
+                .Include(vsp => vsp.Venue)
+                .Where(vsp => venueIds.Contains(vsp.VenueId))
+                .OrderByDescending(vsp => vsp.CreatedAt)
+                .Select(vsp => new VenueSubscriptionPackageDto
+                {
+                    Id = vsp.Id,
+                    VenueId = vsp.VenueId,
+                    PackageId = vsp.PackageId,
+                    StartDate = vsp.StartDate,
+                    EndDate = vsp.EndDate,
+                    Quantity = vsp.Quantity,
+                    Status = vsp.Status,
+                    CreatedAt = vsp.CreatedAt,
+                    VenueName = vsp.Venue.Name,
+                    Package = vsp.Package != null ? new SubscriptionPackageDto
+                    {
+                        Id = vsp.Package.Id,
+                        PackageName = vsp.Package.PackageName,
+                        Price = vsp.Package.Price,
+                        DurationDays = vsp.Package.DurationDays,
+                        Type = vsp.Package.Type,
+                        Description = vsp.Package.Description,
+                        IsActive = vsp.Package.IsActive,
+                        CreatedAt = vsp.Package.CreatedAt,
+                        UpdatedAt = vsp.Package.UpdatedAt
+                    } : null
+                })
+                .ToListAsync();
+
+            _logger.LogInformation(
+                "Found {Count} venue subscription packages for venue owner user ID {UserId} across {VenueCount} venues", 
+                venueSubscriptions.Count, 
+                userId,
+                venueIds.Count);
+
+            return venueSubscriptions;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting venue subscription packages for venue owner user ID: {UserId}", userId);
+            throw;
+        }
+    }
 }

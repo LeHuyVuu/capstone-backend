@@ -15,5 +15,7 @@
         public string? DiscountType { get; set; }
         public decimal? DiscountAmount { get; set; }
         public decimal? DiscountPercent { get; set; }
+
+        public List<MemberVoucherLocationItemResponse> Locations { get; set; } = new();
     }
 }

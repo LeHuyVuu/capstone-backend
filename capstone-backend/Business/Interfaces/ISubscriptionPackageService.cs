@@ -18,4 +18,18 @@ public interface ISubscriptionPackageService
     /// <param name="request">Update request data</param>
     /// <returns>Updated subscription package</returns>
     Task<SubscriptionPackageDto> UpdateSubscriptionPackageAsync(int id, UpdateSubscriptionPackageRequest request);
+
+    /// <summary>
+    /// Get venue subscription packages by venue ID
+    /// </summary>
+    /// <param name="venueId">Venue ID</param>
+    /// <returns>List of venue subscription packages</returns>
+    Task<List<VenueSubscriptionPackageDto>> GetVenueSubscriptionPackagesByVenueIdAsync(int venueId);
+
+    /// <summary>
+    /// Get all venue subscription packages for a venue owner by user ID
+    /// </summary>
+    /// <param name="userId">User ID of the venue owner</param>
+    /// <returns>List of venue subscription packages for all venues owned by the user</returns>
+    Task<List<VenueSubscriptionPackageDto>> GetVenueSubscriptionPackagesByOwnerUserIdAsync(int userId);
 }

@@ -100,14 +100,14 @@ namespace capstone_backend.Api.Controllers
                 .CountAsync();
 
             var activeCouples = await _unitOfWork.Context.Set<Data.Entities.CoupleProfile>()
-                .Where(c => c.IsDeleted != true && c.Status == "ACTIVE")
+                .Where(c => c.IsDeleted != true && c.Status == CoupleProfileStatus.ACTIVE.ToString())
                 .CountAsync();
 
             var totalTransactions = await _unitOfWork.Context.Set<Data.Entities.Transaction>()
                 .CountAsync();
 
             var totalRevenue = await _unitOfWork.Context.Set<Data.Entities.Transaction>()
-                .Where(t => t.Status == "SUCCESS")
+                .Where(t => t.Status == TransactionStatus.SUCCESS.ToString())
                 .SumAsync(t => (decimal?)t.Amount) ?? 0;
 
             var totalReports = await _unitOfWork.Context.Set<Data.Entities.Report>()
@@ -121,21 +121,21 @@ namespace capstone_backend.Api.Controllers
                 .CountAsync();
 
             var activeAdsOrders = await _unitOfWork.Context.Set<Data.Entities.AdsOrder>()
-                .Where(a => a.Status == "ACTIVE")
+                .Where(a => a.Status == AdsOrderStatus.COMPLETED.ToString())
                 .CountAsync();
 
             var totalMemberSubscriptions = await _unitOfWork.Context.Set<Data.Entities.MemberSubscriptionPackage>()
                 .CountAsync();
 
             var activeMemberSubscriptions = await _unitOfWork.Context.Set<Data.Entities.MemberSubscriptionPackage>()
-                .Where(m => m.Status == "ACTIVE" && m.EndDate >= DateTime.UtcNow)
+                .Where(m => m.Status == MemberSubscriptionPackageStatus.ACTIVE.ToString() && m.EndDate >= DateTime.UtcNow)
                 .CountAsync();
 
             var totalVenueSubscriptions = await _unitOfWork.Context.Set<Data.Entities.VenueSubscriptionPackage>()
                 .CountAsync();
 
             var activeVenueSubscriptions = await _unitOfWork.Context.Set<Data.Entities.VenueSubscriptionPackage>()
-                .Where(v => v.Status == "ACTIVE" && v.EndDate >= DateTime.UtcNow)
+                .Where(v => v.Status == VenueSubscriptionPackageStatus.ACTIVE.ToString() && v.EndDate >= DateTime.UtcNow)
                 .CountAsync();
 
             // Group data theo period
@@ -146,7 +146,7 @@ namespace capstone_backend.Api.Controllers
 
             var revenueByPeriod = await GroupTransactionsByPeriod(
                 _unitOfWork.Context.Set<Data.Entities.Transaction>()
-                    .Where(t => t.CreatedAt >= calculatedStartDate && t.CreatedAt <= calculatedEndDate && t.Status == "SUCCESS"),
+                    .Where(t => t.CreatedAt >= calculatedStartDate && t.CreatedAt <= calculatedEndDate && t.Status == TransactionStatus.SUCCESS.ToString()),
                 period);
 
             var transactionsByPeriod = await GroupDataByPeriod(

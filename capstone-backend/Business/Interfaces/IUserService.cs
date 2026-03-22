@@ -110,4 +110,40 @@ public interface IUserService
     Task<UserResponse?> UpdateDocumentVenueOwnerAsync(
         int userId,
         UpdateDocumentVenueOwnerRequest request);
+
+    /// <summary>
+    /// Update password cho user đã đăng nhập (yêu cầu password cũ)
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <param name="request">Update password request</param>
+    /// <returns>True nếu thành công</returns>
+    Task<bool> UpdatePasswordAsync(int userId, UpdatePasswordRequest request);
+
+    /// <summary>
+    /// Gửi OTP qua email để reset password
+    /// </summary>
+    /// <param name="request">Forgot password request</param>
+    /// <returns>True nếu gửi thành công</returns>
+    Task<bool> SendPasswordResetOtpAsync(ForgotPasswordRequest request);
+
+    /// <summary>
+    /// Verify OTP code
+    /// </summary>
+    /// <param name="request">Verify OTP request</param>
+    /// <returns>True nếu OTP hợp lệ</returns>
+    Task<bool> VerifyOtpAsync(VerifyOtpRequest request);
+
+    /// <summary>
+    /// Reset password sau khi verify OTP thành công
+    /// </summary>
+    /// <param name="request">Reset password request</param>
+    /// <returns>True nếu reset thành công</returns>
+    Task<bool> ResetPasswordAsync(ResetPasswordRequest request);
+
+    /// <summary>
+    /// Login hoặc register bằng Google (cho Flutter mobile)
+    /// </summary>
+    /// <param name="request">Google login request với ID token</param>
+    /// <returns>Login response với JWT tokens</returns>
+    Task<LoginResponse?> GoogleLoginAsync(GoogleLoginRequest request);
 }

@@ -9,6 +9,7 @@ namespace capstone_backend.Business.DTOs.Voucher
         public string Code { get; set; } = null!;
         public string Title { get; set; } = null!;
         public string Description { get; set; } = null!;
+        public decimal VoucherPrice { get; set; }
         public int PointPrice { get; set; }
         public string DiscountType { get; set; } = null!;
         public decimal? DiscountAmount { get; set; }
@@ -16,7 +17,7 @@ namespace capstone_backend.Business.DTOs.Voucher
         public int Quantity { get; set; }
         public int? RemainingQuantity { get; set; }
         public int? UsageLimitPerMember { get; set; }
-        public int? UsageValiDays { get; set; }
+        public int? UsageValidDays { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public string Status { get; set; } = null!;

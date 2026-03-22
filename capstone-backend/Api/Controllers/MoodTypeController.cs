@@ -50,29 +50,29 @@ public class MoodTypeController : BaseController
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
     public async Task<IActionResult> UpdateMoodType([FromBody] UpdateMoodTypeRequest request)
+{
+    var userId = GetCurrentUserId();
+    if (!userId.HasValue)
     {
-        var userId = GetCurrentUserId();
-        if (!userId.HasValue)
-        {
-            return UnauthorizedResponse("Vui lÃ²ng Ä‘Äƒng nháº­p Ä‘á»ƒ sá»­ dá»¥ng tÃ­nh nÄƒng nÃ y");
-        }
-
-        try
-        {
-            var result = await _moodTypeService.UpdateMoodTypeForUserAsync(userId.Value, request.MoodTypeId);
-
-            if (result == null)
-            {
-                return NotFoundResponse("KhÃ´ng tÃ¬m tháº¥y mood type hoáº·c member profile");
-            }
-
-            return OkResponse(result, "Cáº­p nháº­t mood type thÃ nh cÃ´ng");
-        }
-        catch
-        {
-            return InternalServerErrorResponse("Có lỗi xảy ra khi cập nhật mood type. Vui lòng thử lại.");
-        }
+        return UnauthorizedResponse("Vui lòng đăng nhập để sử dụng tính năng này");
     }
+
+    try
+    {
+        var result = await _moodTypeService.UpdateMoodTypeForUserAsync(userId.Value, request.MoodTypeId);
+
+        if (result == null)
+        {
+            return NotFoundResponse("Không tìm thấy mood type hoặc member profile");
+        }
+
+        return OkResponse(result, "Cập nhật mood type thành công");
+    }
+    catch
+    {
+        return InternalServerErrorResponse("Có lỗi xảy ra khi cập nhật mood type. Vui lòng thử lại.");
+    }
+}
 
 
     [HttpGet("current-mood")]

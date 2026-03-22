@@ -50,6 +50,27 @@ public partial class MeilisearchService
 
         var (isOpenNow, todayOpenTime, todayCloseTime) = GetTodayOpeningStatus(venue.VenueOpeningHours);
 
+        // Get category from VenueLocationCategories if available, otherwise use Category field
+        string? categoryValue = venue.Category;
+        if (venue.VenueLocationCategories?.Any() == true)
+        {
+            var firstCategory = venue.VenueLocationCategories
+                .Where(vlc => vlc.IsDeleted != true)
+                .Select(vlc => vlc.Category?.Name)
+                .FirstOrDefault(name => !string.IsNullOrWhiteSpace(name));
+            
+            if (!string.IsNullOrWhiteSpace(firstCategory))
+            {
+                categoryValue = firstCategory;
+            }
+        }
+        
+        if (string.IsNullOrWhiteSpace(categoryValue))
+        {
+            _logger.LogWarning("[CATEGORY MAPPING] Venue {VenueId} '{VenueName}' has no category", 
+                venue.Id, venue.Name);
+        }
+
         return new VenueLocationQueryResult
         {
             Id = venue.Id,
@@ -78,7 +99,7 @@ public partial class MeilisearchService
             Status = venue.Status,
             CoverImage = coverImages,
             InteriorImage = interiorImages,
-            Category = venue.Category,
+            Category = categoryValue,
             FullPageMenuImage = menuImages,
             IsOwnerVerified = venue.IsOwnerVerified,
             CreatedAt = venue.CreatedAt.HasValue ? new DateTimeOffset(venue.CreatedAt.Value).ToUnixTimeSeconds() : null,

@@ -12,12 +12,16 @@ namespace capstone_backend.Api.Controllers;
 public class VenueLocationController : BaseController
 {
     private readonly IVenueLocationService _venueLocationService;
+    private readonly ISubscriptionPackageService _subscriptionPackageService;
+
     private readonly ILogger<VenueLocationController> _logger;
 
     public VenueLocationController(
         IVenueLocationService venueLocationService,
+        ISubscriptionPackageService subscriptionPackageService,
         ILogger<VenueLocationController> logger)
     {
+        _subscriptionPackageService = subscriptionPackageService;
         _venueLocationService = venueLocationService;
         _logger = logger;
     }
@@ -250,32 +254,32 @@ public class VenueLocationController : BaseController
         return OkResponse(personalityTypes, $"Retrieved {personalityTypes.Count} couple personality types");
     }
 
-    [HttpPost("opening-hours/update")]
+    [HttpPost("opening-hours/update-all")]
     [Authorize]
-    [ProducesResponseType(typeof(ApiResponse<VenueOpeningHourResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
-    public async Task<IActionResult> UpdateVenueOpeningHour([FromBody] UpdateVenueOpeningHourRequest request)
+    public async Task<IActionResult> UpdateVenueOpeningHours([FromBody] UpdateVenueOpeningHoursRequest request)
     {
-        _logger.LogInformation("User updating venue opening hours for venue {VenueId}, day {Day}", request.VenueLocationId, request.Day);
+        _logger.LogInformation("User updating all opening hours for venue {VenueId}", request.VenueLocationId);
 
         if (!ModelState.IsValid)
         {
             return BadRequestResponse("Invalid request data");
         }
 
-        var result = await _venueLocationService.UpdateVenueOpeningHourAsync(request);
+        var result = await _venueLocationService.UpdateVenueOpeningHoursAsync(request);
 
-        if (result == null)
+        if (!result)
         {
-            return BadRequestResponse("Failed to update venue opening hours");
+            return NotFoundResponse("Venue not found");
         }
 
-        return OkResponse(result, "Venue opening hours updated successfully");
+        return OkResponse<object>(null, "Cập nhật giờ mở cửa thành công");
     }
 
-   /// <summary>Deprecated !!!! </summary>
+    /// <summary>Deprecated !!!! </summary>
     [HttpPost("{id}/submit")]
     [Authorize]
     [ProducesResponseType(typeof(ApiResponse<VenueSubmissionResult>), 200)]
@@ -443,5 +447,33 @@ public class VenueLocationController : BaseController
         }
 
         return OkResponse(venue, "Venue location with KYC retrieved successfully");
+    }
+
+     [HttpGet("my-subscriptions")]
+    [Authorize(Roles = "VENUEOWNER")]
+    public async Task<IActionResult> GetMyVenueSubscriptions()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
+            {
+                return UnauthorizedResponse("User not authenticated");
+            }
+
+            var packages = await _subscriptionPackageService.GetVenueSubscriptionPackagesByOwnerUserIdAsync(userId.Value);
+            
+            return OkResponse(packages, $"Successfully retrieved {packages.Count} venue subscription packages");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Venue owner not found for user ID: {UserId}", GetCurrentUserId());
+            return NotFoundResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting venue subscription packages for current user");
+            return InternalServerErrorResponse("An error occurred while retrieving venue subscription packages");
+        }
     }
 }

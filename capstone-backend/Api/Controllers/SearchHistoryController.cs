@@ -22,11 +22,11 @@ public class SearchHistoryController : BaseController
     [HttpGet("my-history")]
     public async Task<IActionResult> GetMySearchHistory([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var memberId = GetCurrentUserId();
-        if (memberId == null)
+        var userId = GetCurrentUserId();
+        if (userId == null)
             return UnauthorizedResponse();
 
-        var histories = await _searchHistoryService.GetSearchHistoriesByMemberAsync(memberId.Value, page, pageSize);
+        var histories = await _searchHistoryService.GetSearchHistoriesByMemberAsync(userId.Value, page, pageSize);
         return OkResponse(histories);
     }
 

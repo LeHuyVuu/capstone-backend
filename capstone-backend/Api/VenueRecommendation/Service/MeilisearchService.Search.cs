@@ -10,20 +10,30 @@ public partial class MeilisearchService
 {
     public async Task<VenueLocationQueryResponse> SearchVenueLocationsAsync(VenueLocationQueryRequest request, string? coupleMoodTypeName, string? memberMoodTypeName, string? couplePersonalityTypeName, string? memberMbtiType, int? memberId = null)
     {
+        _logger.LogInformation("[MEILI START] SearchVenueLocationsAsync called");
+        var startTime = DateTime.UtcNow;
         
         if(memberMoodTypeName != null)
             memberMoodTypeName = FaceEmotionService.MapEmotionToVietnamese(memberMoodTypeName);
+        
         try
         {
+            _logger.LogInformation("[MEILI] Getting index: {IndexName}", _indexName);
             var index = _meilisearchClient.Index(_indexName);
+            _logger.LogInformation("[MEILI] Index retrieved successfully");
             
+            _logger.LogInformation("[MEILI] Validating filter parameters");
             var (validatedMood, validatedPersonality, _, _) = ValidateFilterParameters(
                 coupleMoodTypeName, memberMoodTypeName, couplePersonalityTypeName, memberMbtiType);
             
+            _logger.LogInformation("[MEILI] Building filter string");
             var filters = BuildFilterString(request, validatedMood, null, validatedPersonality, null);
             var sort = BuildSortString(request);
             var offset = (request.Page - 1) * request.PageSize;
             var filterString = filters.Any() ? string.Join(" AND ", filters) : null;
+            
+            _logger.LogInformation("[MEILI] Filter: {Filter}, Sort: {Sort}, Offset: {Offset}, Limit: {Limit}", 
+                filterString ?? "none", sort.Any() ? string.Join(", ", sort) : "none", offset, request.PageSize);
 
 
 
@@ -49,11 +59,16 @@ public partial class MeilisearchService
 
             if (string.IsNullOrWhiteSpace(query))
             {
-                
                 query = $"{validatedMood} {validatedPersonality}";
             }
+            
+            _logger.LogInformation("[MEILI] Performing hybrid search with query: '{Query}'", query);
+            var searchStartTime = DateTime.UtcNow;
 
             searchResult = await PerformHybridSearchAsync(query, searchQuery);
+            
+            var searchDuration = (DateTime.UtcNow - searchStartTime).TotalMilliseconds;
+            _logger.LogInformation("[MEILI] Hybrid search completed in {Duration}ms", searchDuration);
 
             var hits = searchResult.Hits?.ToList() ?? new List<VenueLocationQueryResult>();
             
@@ -219,19 +234,51 @@ public partial class MeilisearchService
                 Query = request.Query
             };
         }
+        catch (MeilisearchApiError ex)
+        {
+            var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+            _logger.LogError(ex, 
+                "[MEILI ERROR] MeilisearchApiError after {Duration}ms - " +
+                "Message: {Message}, Code: {Code}, " +
+                "Request: Query='{Query}', Page={Page}, PageSize={PageSize}, " +
+                "CoupleMood='{CoupleMood}', CouplePersonality='{CouplePersonality}'", 
+                duration, ex.Message, ex.Code,
+                request.Query, request.Page, request.PageSize,
+                coupleMoodTypeName, couplePersonalityTypeName);
+            throw; 
+        }
+        catch (HttpRequestException ex)
+        {
+            var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+            _logger.LogError(ex, 
+                "[MEILI ERROR] HttpRequestException after {Duration}ms - " +
+                "Message: {Message}, StatusCode: {StatusCode}, " +
+                "Request: Query='{Query}', Page={Page}, PageSize={PageSize}", 
+                duration, ex.Message, ex.StatusCode,
+                request.Query, request.Page, request.PageSize);
+            throw;
+        }
+        catch (TaskCanceledException ex)
+        {
+            var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+            _logger.LogError(ex, 
+                "[MEILI ERROR] TaskCanceledException (Timeout) after {Duration}ms - " +
+                "Message: {Message}, " +
+                "Request: Query='{Query}', Page={Page}, PageSize={PageSize}", 
+                duration, ex.Message,
+                request.Query, request.Page, request.PageSize);
+            throw;
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error querying venue locations in Meilisearch");
-            
-            return new VenueLocationQueryResponse
-            {
-                Recommendations = new PagedResult<VenueLocationQueryResult>(
-                    new List<VenueLocationQueryResult>(),
-                    request.Page, request.PageSize, 0),
-                Explanation = "An error occurred while querying.",
-                ProcessingTimeMs = 0,
-                Query = request.Query
-            };
+            var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+            _logger.LogError(ex, 
+                "[MEILI ERROR] Unexpected error after {Duration}ms - " +
+                "Type: {ExceptionType}, Message: {Message}, " +
+                "Request: Query='{Query}', Page={Page}, PageSize={PageSize}", 
+                duration, ex.GetType().Name, ex.Message,
+                request.Query, request.Page, request.PageSize);
+            throw;
         }
     }
 
@@ -454,58 +501,113 @@ public partial class MeilisearchService
         string query,
         SearchQuery searchQuery)
     {
+        var startTime = DateTime.UtcNow;
+        
         var host = Environment.GetEnvironmentVariable("MEILISEARCH_HOST") 
            ?? "http://167.99.68.193:7700";
 
-var apiKey = Environment.GetEnvironmentVariable("MEILI_MASTER_KEY") 
+        var apiKey = Environment.GetEnvironmentVariable("MEILI_MASTER_KEY") 
            ?? "couplemood123";
 
-var client = new MeilisearchClient(host, apiKey);
-
-        using var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-
-        // Lower semantic ratio when sorting by distance to prioritize geo sort
-        var hasGeoSort = searchQuery.Sort?.Any(s => s.Contains("_geoPoint")) ?? false;
-        var semanticRatio = hasGeoSort ? 0.05 : 0.2;
-
-        var requestBody = new
-        {
-            q = query,
-            offset = searchQuery.Offset,
-            limit = searchQuery.Limit,
-            filter = searchQuery.Filter,
-            sort = searchQuery.Sort,
-            attributesToRetrieve = searchQuery.AttributesToRetrieve,
-            hybrid = new
-            {
-                embedder = "venue-ai",
-                semanticRatio
-            }
-        };
-
-        var jsonContent = System.Text.Json.JsonSerializer.Serialize(requestBody);
-        _logger.LogInformation("[AI SEARCH] Query: '{Query}', SemanticRatio: {SemanticRatio}, Embedder: venue-ai", query, semanticRatio);
-        var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-
-        var response = await httpClient.PostAsync($"{host}/indexes/{_indexName}/search", content);
-        response.EnsureSuccessStatusCode();
-
-        var responseBody = await response.Content.ReadAsStringAsync();
+        var client = new MeilisearchClient(host, apiKey);
         
-        var searchResult = System.Text.Json.JsonSerializer.Deserialize<Meilisearch.SearchResult<VenueLocationQueryResult>>(
-            responseBody,
-            new System.Text.Json.JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+        _logger.LogInformation("[HYBRID SEARCH] Connecting to Meilisearch at: {Host}", host);
 
-        if (searchResult == null)
+        try
         {
-            throw new InvalidOperationException("Failed to deserialize Meilisearch hybrid search response");
-        }
+            using var httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(60); // Set explicit timeout
+            httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
-        return searchResult;
+            // Lower semantic ratio when sorting by distance to prioritize geo sort
+            var hasGeoSort = searchQuery.Sort?.Any(s => s.Contains("_geoPoint")) ?? false;
+            var semanticRatio = hasGeoSort ? 0.05 : 0.2;
+
+            var requestBody = new
+            {
+                q = query,
+                offset = searchQuery.Offset,
+                limit = searchQuery.Limit,
+                filter = searchQuery.Filter,
+                sort = searchQuery.Sort,
+                attributesToRetrieve = searchQuery.AttributesToRetrieve,
+                hybrid = new
+                {
+                    embedder = "venue-ai",
+                    semanticRatio
+                }
+            };
+
+            var jsonContent = System.Text.Json.JsonSerializer.Serialize(requestBody);
+            _logger.LogInformation("[HYBRID SEARCH] Request body: {RequestBody}", jsonContent);
+            _logger.LogInformation("[HYBRID SEARCH] Query: '{Query}', SemanticRatio: {SemanticRatio}, Embedder: venue-ai", query, semanticRatio);
+            
+            var content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+            var url = $"{host}/indexes/{_indexName}/search";
+            
+            _logger.LogInformation("[HYBRID SEARCH] Sending POST request to: {Url}", url);
+            var httpStartTime = DateTime.UtcNow;
+            
+            var response = await httpClient.PostAsync(url, content);
+            
+            var httpDuration = (DateTime.UtcNow - httpStartTime).TotalMilliseconds;
+            _logger.LogInformation("[HYBRID SEARCH] HTTP request completed in {Duration}ms, Status: {StatusCode}", 
+                httpDuration, response.StatusCode);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                _logger.LogError("[HYBRID SEARCH] Error response: Status={Status}, Body={Body}", 
+                    response.StatusCode, errorBody);
+            }
+            
+            response.EnsureSuccessStatusCode();
+
+            _logger.LogInformation("[HYBRID SEARCH] Reading response body");
+            var responseBody = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("[HYBRID SEARCH] Response body length: {Length} characters", responseBody.Length);
+            
+            _logger.LogInformation("[HYBRID SEARCH] Deserializing response");
+            var searchResult = System.Text.Json.JsonSerializer.Deserialize<Meilisearch.SearchResult<VenueLocationQueryResult>>(
+                responseBody,
+                new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+            if (searchResult == null)
+            {
+                _logger.LogError("[HYBRID SEARCH] Deserialization returned null");
+                throw new InvalidOperationException("Failed to deserialize Meilisearch hybrid search response");
+            }
+            
+            var totalDuration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+            _logger.LogInformation("[HYBRID SEARCH] Completed successfully in {Duration}ms, Results: {Count}", 
+                totalDuration, searchResult.Hits?.Count() ?? 0);
+
+            return searchResult;
+        }
+        catch (HttpRequestException ex)
+        {
+            var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+            _logger.LogError(ex, "[HYBRID SEARCH] HttpRequestException after {Duration}ms: {Message}, StatusCode: {StatusCode}", 
+                duration, ex.Message, ex.StatusCode);
+            throw;
+        }
+        catch (TaskCanceledException ex)
+        {
+            var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+            _logger.LogError(ex, "[HYBRID SEARCH] TaskCanceledException (Timeout) after {Duration}ms: {Message}", 
+                duration, ex.Message);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+            _logger.LogError(ex, "[HYBRID SEARCH] Unexpected error after {Duration}ms: {Type} - {Message}", 
+                duration, ex.GetType().Name, ex.Message);
+            throw;
+        }
     }
 
     #endregion

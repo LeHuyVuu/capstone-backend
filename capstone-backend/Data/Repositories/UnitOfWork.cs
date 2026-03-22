@@ -58,7 +58,9 @@ public class UnitOfWork : IUnitOfWork
         IWithdrawRequestRepository withdrawRequestRepository,
         ITransactionRepository transactionRepository,
         ISubscriptionPackageRepository subscriptionPackageRepository,
-        IMemberSubscriptionPackageRepository memberSubscriptionPackageRepository)
+        IMemberSubscriptionPackageRepository memberSubscriptionPackageRepository,
+        ILeaderboardRepository leaderboardRepository,
+        IReportRepository reportRepository)
     {
         _context = context;
         Users = userRepository;
@@ -105,6 +107,8 @@ public class UnitOfWork : IUnitOfWork
         Transactions = transactionRepository;
         SubscriptionPackages = subscriptionPackageRepository;
         MemberSubscriptionPackages = memberSubscriptionPackageRepository;
+        Leaderboards = leaderboardRepository;
+        Reports = reportRepository;
     }
 
     public MyDbContext Context => _context;
@@ -196,6 +200,10 @@ public class UnitOfWork : IUnitOfWork
     public ISubscriptionPackageRepository SubscriptionPackages { get; set; }
 
     public IMemberSubscriptionPackageRepository MemberSubscriptionPackages { get; set; }
+
+    public ILeaderboardRepository Leaderboards { get; }
+
+    public IReportRepository Reports { get; }
 
     public async Task<int> SaveChangesAsync()
     {

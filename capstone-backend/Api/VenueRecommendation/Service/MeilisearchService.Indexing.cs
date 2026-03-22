@@ -1,4 +1,5 @@
 using capstone_backend.Api.VenueRecommendation.Api.DTOs;
+using capstone_backend.Data.Enums;
 
 namespace capstone_backend.Api.VenueRecommendation.Service;
 
@@ -22,8 +23,9 @@ public partial class MeilisearchService
 
             var document = await MapToQueryResultAsync(venue);
             var index = _meilisearchClient.Index(_indexName);
-await index.AddDocumentsAsync(new[] { document }, "id");
-            _logger.LogInformation("Indexed venue location {VenueId} to Meilisearch", venueId);
+            await index.AddDocumentsAsync(new[] { document }, "id");
+            _logger.LogInformation("Indexed venue location {VenueId} '{VenueName}' to Meilisearch with category: '{Category}'", 
+                venueId, document.Name, document.Category ?? "(null)");
             return true;
         }
         catch (Exception ex)
@@ -39,7 +41,7 @@ await index.AddDocumentsAsync(new[] { document }, "id");
         try
         {
             var allVenues = await _venueLocationRepository.GetAllAsync();
-            var venues = allVenues.Where(v => v.IsDeleted != true && v.Status == "ACTIVE").ToList();
+            var venues = allVenues.Where(v => v.IsDeleted != true && v.Status == VenueLocationStatus.ACTIVE.ToString()).ToList();
 
             var documents = new List<VenueLocationQueryResult>();
 

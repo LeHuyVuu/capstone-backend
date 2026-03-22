@@ -1,8 +1,10 @@
 using System.Text.Json;
 using capstone_backend.Business.DTOs.Emotion;
 using capstone_backend.Business.DTOs.MoodType;
+using capstone_backend.Business.DTOs.Notification;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -14,13 +16,23 @@ public class MoodTypeService : IMoodTypeService
     private readonly ILogger<MoodTypeService> _logger;
     private readonly IMoodMappingService _moodMappingService;
     private readonly IChallengeService _challengeService;
+    private readonly IFcmService? _fcmService;
+    private readonly IConversationRepository _conversationRepository;
 
-    public MoodTypeService(IUnitOfWork unitOfWork, ILogger<MoodTypeService> logger, IMoodMappingService moodMappingService, IChallengeService challengeService)
+    public MoodTypeService(
+        IUnitOfWork unitOfWork, 
+        ILogger<MoodTypeService> logger, 
+        IMoodMappingService moodMappingService, 
+        IChallengeService challengeService,
+        IFcmService? fcmService,
+        IConversationRepository conversationRepository)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _moodMappingService = moodMappingService;
         _challengeService = challengeService;
+        _fcmService = fcmService;
+        _conversationRepository = conversationRepository;
     }
 
     public async Task<List<MoodTypeResponse>> GetAllMoodTypesAsync(string? gender, CancellationToken cancellationToken = default)
@@ -175,10 +187,9 @@ public class MoodTypeService : IMoodTypeService
         bool isCouple = false;
         bool hasCoupleMood = false;
 
-        // Lấy couple profile ACTIVE (không lấy couple cũ đã chia tay)
         var coupleProfile = await _unitOfWork.Context.Set<CoupleProfile>()
             .Where(c => (c.MemberId1 == memberProfile.Id || c.MemberId2 == memberProfile.Id)
-                     && c.Status == "ACTIVE"
+                     && c.Status == CoupleProfileStatus.ACTIVE.ToString()
                      && c.IsDeleted != true)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -252,7 +263,8 @@ public class MoodTypeService : IMoodTypeService
             CoupleMood = coupleMood,
             Description = description,
             IsCouple = isCouple,
-            HasCoupleMood = hasCoupleMood
+            HasCoupleMood = hasCoupleMood,
+            CoupleProfileId = coupleProfile?.id
         };
     }
 
@@ -260,10 +272,9 @@ public class MoodTypeService : IMoodTypeService
     {
         try
         {
-            // Kiểm tra xem member có couple ACTIVE không (không lấy couple cũ)
             var coupleProfile = await _unitOfWork.Context.Set<CoupleProfile>()
                 .Where(c => (c.MemberId1 == memberId || c.MemberId2 == memberId)
-                         && c.Status == "ACTIVE"
+                         && c.Status == CoupleProfileStatus.ACTIVE.ToString()
                          && c.IsDeleted != true)
                 .FirstOrDefaultAsync(cancellationToken);
                 
@@ -324,6 +335,20 @@ public class MoodTypeService : IMoodTypeService
             await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation($"💑 Đã cập nhật couple mood '{coupleMoodName}' (ID: {coupleMoodType.Id}) cho CoupleId={coupleProfile.id}");
+
+            // Lấy thông tin member vừa đổi mood để gửi notification
+            var currentMember = await _unitOfWork.MembersProfile.GetByIdAsync(memberId);
+            var currentMoodType = await _unitOfWork.MoodTypes.GetByIdAsync(moodTypeId);
+            
+            // Gửi notification cho partner
+            await SendCoupleMoodNotificationAsync(
+                partnerId, 
+                currentMember?.FullName, 
+                TranslateMoodToVietnamese(currentMoodType?.Name),
+                coupleMoodName, 
+                coupleMoodType.Description,
+                coupleProfile.id, 
+                cancellationToken);
         }
         catch (Exception ex)
         {
@@ -331,6 +356,106 @@ public class MoodTypeService : IMoodTypeService
             // Không throw exception để không ảnh hưởng đến flow chính
         }
     }
+
+    private async Task SendCoupleMoodNotificationAsync(
+        int partnerMemberId, 
+        string? senderName,
+        string? senderMood,
+        string coupleMoodName, 
+        string? coupleMoodDescription,
+        int coupleId, 
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (_fcmService == null)
+            {
+                _logger.LogWarning("FCM Service không khả dụng, bỏ qua gửi notification");
+                return;
+            }
+
+            // Lấy partner profile với UserId (query trực tiếp để đảm bảo có UserId)
+            var partnerProfile = await _unitOfWork.Context.Set<MemberProfile>()
+                .Where(m => m.Id == partnerMemberId && m.IsDeleted != true)
+                .Select(m => new { m.UserId, m.FullName })
+                .FirstOrDefaultAsync(cancellationToken);
+                
+            if (partnerProfile == null)
+            {
+                _logger.LogWarning($"Không tìm thấy partner profile với MemberId={partnerMemberId}");
+                return;
+            }
+
+            // Lấy device tokens của partner
+            var tokens = await _unitOfWork.DeviceTokens.GetTokensByUserId(partnerProfile.UserId);
+            if (tokens == null || !tokens.Any())
+            {
+                _logger.LogInformation($"Không có device tokens cho user ID {partnerProfile.UserId}");
+                return;
+            }
+
+            // Lấy couple profile để lấy member IDs
+            var coupleProfile = await _unitOfWork.Context.Set<CoupleProfile>()
+                .Where(c => c.id == coupleId && c.IsDeleted != true)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (coupleProfile == null)
+            {
+                _logger.LogWarning($"Không tìm thấy couple profile với ID={coupleId}");
+                return;
+            }
+
+            // Lấy userId của cả 2 members
+            var memberUserIds = await _unitOfWork.Context.Set<MemberProfile>()
+                .Where(m => (m.Id == coupleProfile.MemberId1 || m.Id == coupleProfile.MemberId2) && m.IsDeleted != true)
+                .Select(m => m.UserId)
+                .ToListAsync(cancellationToken);
+
+            if (memberUserIds.Count != 2)
+            {
+                _logger.LogWarning($"Không tìm thấy đủ member profiles cho couple {coupleId}");
+                return;
+            }
+
+         
+         
+            // Tạo notification request với gợi ý hành động
+            var actionSuggestion = GetActionSuggestionFromCoupleMood(coupleMoodName, coupleMoodDescription);
+            var notificationRequest = new SendNotificationRequest
+            {
+                Title = $"Mood tụi mình vừa thay đổi 💕",
+                Body = $"{senderName} đang {senderMood} nè!\nMood của tụi mình giờ là \"{coupleMoodName}\" đó, {actionSuggestion}"
+            };
+
+            await _fcmService.SendMultiNotificationAsync(tokens, notificationRequest);
+            _logger.LogInformation($"✅ Đã gửi notification couple mood cho partner (UserId: {partnerProfile.UserId})");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"❌ Lỗi khi gửi notification cho partner MemberId={partnerMemberId}");
+            // Không throw exception để không ảnh hưởng đến flow chính
+        }
+    }
+
+    private string GetActionSuggestionFromCoupleMood(string coupleMoodName, string? description)
+{
+    return coupleMoodName switch
+    {
+        "Vui vẻ" => "cùng nhau đi chơi thôiii 🎉",
+        "Yên tĩnh" => "tìm chỗ yên tĩnh ngồi cạnh nhau nha 🌿",
+        "Cần an ủi" => "ở bên nhau và quan tâm nhau nhiều hơn nhé 🤗",
+        "Cân bằng" => "mọi thứ đang ổn, tận hưởng khoảnh khắc này nha 🌼",
+        "Hòa hợp" => "quá hợp vibe rồi, làm gì cùng nhau cũng vui 💞",
+        "Khám phá" => "cùng nhau khám phá địa điểm mới thôi 🗺️",
+        "Tình cảm" => "dành cho nhau chút ngọt ngào đi nè 💕",
+        "An tâm" => "chỉ cần ở cạnh nhau là đủ rồi 💝",
+        "Động lực" => "cùng nhau cố gắng và phát triển nha 💪",
+        "Trung lập" => "rủ nhau làm gì đó nhẹ nhàng thôi 💭",
+        "Thư giãn" => "cùng nghỉ ngơi và thư giãn nha 🌙",
+        "Hòa giải" => "nhẹ nhàng nói chuyện và hiểu nhau hơn nha 💗",
+        _ => "ở cạnh nhau là được rồi đó 💬"
+    };
+}
 
     /// <summary>
     /// Translate mood name to Vietnamese using the reusable translation function

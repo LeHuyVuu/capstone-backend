@@ -1,5 +1,6 @@
 using capstone_backend.Business.DTOs.VenueOwner;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -97,8 +98,8 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
 
         // Voucher metrics
         var totalVoucherItems = allVouchers.SelectMany(v => v.VoucherItems).ToList();
-        var exchangedVouchers = totalVoucherItems.Count(vi => vi.Status != "AVAILABLE");
-        var usedVouchers = totalVoucherItems.Count(vi => vi.Status == "USED");
+        var exchangedVouchers = totalVoucherItems.Count(vi => vi.Status != VoucherItemStatus.AVAILABLE.ToString());
+        var usedVouchers = totalVoucherItems.Count(vi => vi.Status == VoucherItemStatus.USED.ToString());
         
         var exchangeRate = totalVoucherItems.Count > 0 
             ? (decimal)exchangedVouchers / totalVoucherItems.Count * 100 
@@ -150,8 +151,8 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
         {
             // Overview
             TotalVenues = venues.Count,
-            ActiveVenues = venues.Count(v => v.Status == "ACTIVE"),
-            InactiveVenues = venues.Count(v => v.Status != "ACTIVE"),
+            ActiveVenues = venues.Count(v => v.Status == VenueLocationStatus.ACTIVE.ToString()),
+            InactiveVenues = venues.Count(v => v.Status != VenueLocationStatus.ACTIVE.ToString()),
             AverageRating = (decimal)averageRating,
             TotalReviews = totalReviews,
             TotalCheckIns = totalCheckIns,
@@ -159,7 +160,7 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
 
             // Voucher
             TotalVouchers = allVouchers.Count,
-            ActiveVouchers = allVouchers.Count(v => v.Status == "ACTIVE"),
+            ActiveVouchers = allVouchers.Count(v => v.Status == VoucherStatus.ACTIVE.ToString()),
             TotalVoucherExchanged = exchangedVouchers,
             TotalVoucherUsed = usedVouchers,
             VoucherExchangeRate = exchangeRate,
@@ -315,16 +316,16 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
             .ToListAsync();
 
         var voucherItems = venueVouchers.SelectMany(v => v.VoucherItems).ToList();
-        var exchanged = voucherItems.Count(vi => vi.Status != "AVAILABLE");
-        var used = voucherItems.Count(vi => vi.Status == "USED");
+        var exchanged = voucherItems.Count(vi => vi.Status != VoucherItemStatus.AVAILABLE.ToString());
+        var used = voucherItems.Count(vi => vi.Status == VoucherItemStatus.USED.ToString());
 
         var topVouchers = venueVouchers
             .Select(v => new TopVoucherSummary
             {
                 VoucherId = v.Id,
                 Title = v.Title ?? v.Code,
-                ExchangedCount = v.VoucherItems.Count(vi => vi.Status != "AVAILABLE"),
-                UsedCount = v.VoucherItems.Count(vi => vi.Status == "USED"),
+                ExchangedCount = v.VoucherItems.Count(vi => vi.Status != VoucherItemStatus.AVAILABLE.ToString()),
+                UsedCount = v.VoucherItems.Count(vi => vi.Status == VoucherItemStatus.USED.ToString()),
                 Status = v.Status ?? "UNKNOWN"
             })
             .OrderByDescending(v => v.ExchangedCount)
@@ -334,7 +335,7 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
         var voucherStats = new VoucherPerformance
         {
             TotalVouchers = venueVouchers.Count,
-            ActiveVouchers = venueVouchers.Count(v => v.Status == "ACTIVE"),
+            ActiveVouchers = venueVouchers.Count(v => v.Status == VoucherStatus.ACTIVE.ToString()),
             TotalExchanged = exchanged,
             TotalUsed = used,
             ExchangeRate = voucherItems.Count > 0 ? (decimal)exchanged / voucherItems.Count * 100 : 0,
@@ -358,3 +359,5 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
         };
     }
 }
+
+

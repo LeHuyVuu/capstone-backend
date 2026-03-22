@@ -1,6 +1,7 @@
 using capstone_backend.Business.DTOs.CoupleInvitation;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using capstone_backend.Data.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -77,7 +78,7 @@ public class CoupleInvitationService : ICoupleInvitationService
             SenderMemberId = senderMemberId,
             ReceiverMemberId = receiverMemberId,
             InviteCodeUsed = inviteCodeUsed,
-            Status = "PENDING",
+            Status = CoupleInvitationStatus.PENDING.ToString(),
             Message = message,
             SentAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,
@@ -127,13 +128,13 @@ public class CoupleInvitationService : ICoupleInvitationService
         }
 
         // Edge case 2: Cannot accept if already accepted
-        if (invitation.Status == "ACCEPTED")
+        if (invitation.Status == CoupleInvitationStatus.ACCEPTED.ToString())
         {
             return (false, "Lời mời này đã được chấp nhận rồi", null);
         }
 
         // Edge case 3: Must be PENDING
-        if (invitation.Status != "PENDING")
+        if (invitation.Status != CoupleInvitationStatus.PENDING.ToString())
         {
             return (false, $"Lời mời này đã {invitation.Status.ToLower()}, không thể chấp nhận", null);
         }
@@ -150,12 +151,12 @@ public class CoupleInvitationService : ICoupleInvitationService
         }
 
         // Edge case 5: Both must still be SINGLE
-        if (invitation.SenderMember.RelationshipStatus != "SINGLE")
+        if (invitation.SenderMember.RelationshipStatus != RelationshipStatus.SINGLE.ToString())
         {
             return (false, $"{invitation.SenderMember.FullName} không còn SINGLE nữa", null);
         }
 
-        if (invitation.ReceiverMember.RelationshipStatus != "SINGLE")
+        if (invitation.ReceiverMember.RelationshipStatus != RelationshipStatus.SINGLE.ToString())
         {
             return (false, "Bạn không còn SINGLE nữa", null);
         }
@@ -174,7 +175,7 @@ public class CoupleInvitationService : ICoupleInvitationService
         }
 
         // Update invitation status and timestamps
-        invitation.Status = "ACCEPTED";
+        invitation.Status = CoupleInvitationStatus.ACCEPTED.ToString();
         invitation.RespondedAt = DateTime.UtcNow;
         invitation.UpdatedAt = DateTime.UtcNow;
         await _unitOfWork.CoupleInvitations.UpdateAsync(invitation);
@@ -195,12 +196,12 @@ public class CoupleInvitationService : ICoupleInvitationService
         if (existingCouple != null)
         {
             // Reactivate existing couple profile only if not already ACTIVE
-            if (existingCouple.Status == "ACTIVE")
+            if (existingCouple.Status == CoupleProfileStatus.ACTIVE.ToString())
             {
                 return (false, "Cặp đôi này đã tồn tại và đang hoạt động", null);
             }
             
-            existingCouple.Status = "ACTIVE";
+            existingCouple.Status = CoupleProfileStatus.ACTIVE.ToString();
             existingCouple.StartDate = DateOnly.FromDateTime(DateTime.UtcNow);
             existingCouple.UpdatedAt = DateTime.UtcNow;
             existingCouple.IsDeleted = false;
@@ -219,7 +220,7 @@ public class CoupleInvitationService : ICoupleInvitationService
             {
                 MemberId1 = smallerId,
                 MemberId2 = largerId,
-                Status = "ACTIVE",
+                Status = CoupleProfileStatus.ACTIVE.ToString(),
                 StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
@@ -230,10 +231,10 @@ public class CoupleInvitationService : ICoupleInvitationService
         }
 
         // Update relationship status for both members
-        invitation.SenderMember.RelationshipStatus = "IN_RELATIONSHIP";
+        invitation.SenderMember.RelationshipStatus = RelationshipStatus.IN_RELATIONSHIP.ToString();
         _unitOfWork.MembersProfile.Update(invitation.SenderMember);
 
-        invitation.ReceiverMember.RelationshipStatus = "IN_RELATIONSHIP";
+        invitation.ReceiverMember.RelationshipStatus = RelationshipStatus.IN_RELATIONSHIP.ToString();
         _unitOfWork.MembersProfile.Update(invitation.ReceiverMember);
 
         // NOTE: Keep other pending invitations as PENDING (not cancelled)
@@ -279,7 +280,7 @@ public class CoupleInvitationService : ICoupleInvitationService
                 Member1Name = member1.FullName ?? "Unknown",
                 MemberId2 = coupleProfile.MemberId2,
                 Member2Name = member2.FullName ?? "Unknown",
-                Status = coupleProfile.Status ?? "ACTIVE",
+                Status = coupleProfile.Status ?? CoupleProfileStatus.ACTIVE.ToString(),
                 CreatedAt = coupleProfile.CreatedAt ?? DateTime.UtcNow
             }
         };
@@ -302,7 +303,7 @@ public class CoupleInvitationService : ICoupleInvitationService
         }
 
         // Edge case 2: Cannot reject if already accepted
-        if (invitation.Status == "ACCEPTED")
+        if (invitation.Status == CoupleInvitationStatus.ACCEPTED.ToString())
         {
             return (false, "Không thể từ chối lời mời đã được chấp nhận");
         }
@@ -310,13 +311,13 @@ public class CoupleInvitationService : ICoupleInvitationService
         // NOTE: Removed check for active couple - allow rejecting even if in a relationship
 
         // Edge case 3: Must be PENDING
-        if (invitation.Status != "PENDING")
+        if (invitation.Status != CoupleInvitationStatus.PENDING.ToString())
         {
             return (false, $"Lời mời này đã được {invitation.Status.ToLower()}");
         }
 
         // Update invitation status and timestamps
-        invitation.Status = "REJECTED";
+        invitation.Status = CoupleInvitationStatus.REJECTED.ToString();
         invitation.RespondedAt = DateTime.UtcNow;
         invitation.UpdatedAt = DateTime.UtcNow;
 
@@ -343,7 +344,7 @@ public class CoupleInvitationService : ICoupleInvitationService
         }
 
         // Edge case 2: Cannot cancel if already accepted
-        if (invitation.Status == "ACCEPTED")
+        if (invitation.Status == CoupleInvitationStatus.ACCEPTED.ToString())
         {
             return (false, "Không thể hủy lời mời đã được chấp nhận");
         }
@@ -351,13 +352,13 @@ public class CoupleInvitationService : ICoupleInvitationService
         // NOTE: Removed check for active couple - allow cancelling even if in a relationship
 
         // Edge case 3: Must be PENDING
-        if (invitation.Status != "PENDING")
+        if (invitation.Status != CoupleInvitationStatus.PENDING.ToString())
         {
             return (false, $"Lời mời này đã được {invitation.Status.ToLower()}");
         }
 
         // Update status and timestamps
-        invitation.Status = "CANCELLED";
+        invitation.Status = CoupleInvitationStatus.CANCELLED.ToString();
         invitation.RespondedAt = DateTime.UtcNow;
         invitation.UpdatedAt = DateTime.UtcNow;
 
@@ -377,7 +378,7 @@ public class CoupleInvitationService : ICoupleInvitationService
         }
 
         // Edge case 2: Couple must be ACTIVE
-        if (couple.Status != "ACTIVE")
+        if (couple.Status != CoupleProfileStatus.ACTIVE.ToString())
         {
             return (false, $"Cặp đôi đã {couple.Status?.ToLower()}, không thể chia tay");
         }
@@ -393,18 +394,18 @@ public class CoupleInvitationService : ICoupleInvitationService
         }
 
         // Update couple profile status to SEPARATED
-        couple.Status = "SEPARATED";
+        couple.Status = CoupleProfileStatus.SEPARATED.ToString();
         couple.UpdatedAt = DateTime.UtcNow;
         couple.IsDeleted = false; // Keep record for history
 
         _unitOfWork.CoupleProfiles.Update(couple);
 
         // Update both members' relationship status back to SINGLE
-        member1.RelationshipStatus = "SINGLE";
+        member1.RelationshipStatus = RelationshipStatus.SINGLE.ToString();
         member1.UpdatedAt = DateTime.UtcNow;
         _unitOfWork.MembersProfile.Update(member1);
 
-        member2.RelationshipStatus = "SINGLE";
+        member2.RelationshipStatus = RelationshipStatus.SINGLE.ToString();
         member2.UpdatedAt = DateTime.UtcNow;
         _unitOfWork.MembersProfile.Update(member2);
 
@@ -502,7 +503,7 @@ public class CoupleInvitationService : ICoupleInvitationService
             // Lấy personality của current member (1 query riêng nhỏ)
             var currentPersonality = await _unitOfWork.Context.PersonalityTests
                 .Where(pt => pt.MemberId == currentMemberId && pt.IsDeleted != true && 
-                           pt.Status == "COMPLETED" && pt.ResultCode != null)
+                           pt.Status == PersonalityTestStatus.COMPLETED.ToString() && pt.ResultCode != null)
                 .OrderByDescending(pt => pt.TakenAt)
                 .Select(pt => pt.ResultCode)
                 .FirstOrDefaultAsync();
@@ -510,7 +511,7 @@ public class CoupleInvitationService : ICoupleInvitationService
             // Filter chỉ gender (bắt buộc) và area (bắt buộc phải bằng nhau)
             var matchingMembers = await baseQuery
                 .Where(m => m.Gender == targetGender && m.area == currentMember.area)
-                .Include(m => m.PersonalityTests.Where(pt => pt.IsDeleted != true && pt.Status == "COMPLETED"))
+                .Include(m => m.PersonalityTests.Where(pt => pt.IsDeleted != true && pt.Status == PersonalityTestStatus.COMPLETED.ToString()))
                 .ToListAsync();
 
             // Sắp xếp theo độ ưu tiên (không loại bỏ, chỉ ưu tiên): Mood > Personality > Interests > Name
@@ -564,7 +565,7 @@ public class CoupleInvitationService : ICoupleInvitationService
         var memberIds = pagedMembers.Select(m => m.Id).ToList();
         
         var pendingInvitations = await _unitOfWork.Context.CoupleInvitations
-            .Where(i => i.Status == "PENDING" && i.IsDeleted == false &&
+            .Where(i => i.Status == CoupleInvitationStatus.PENDING.ToString() && i.IsDeleted == false &&
                        ((i.SenderMemberId == currentMemberId && memberIds.Contains(i.ReceiverMemberId)) ||
                         (i.ReceiverMemberId == currentMemberId && memberIds.Contains(i.SenderMemberId))))
             .Select(i => new { i.SenderMemberId, i.ReceiverMemberId })
@@ -593,7 +594,7 @@ public class CoupleInvitationService : ICoupleInvitationService
                 DateOfBirth = member.DateOfBirth,
                 Gender = member.Gender,
                 Bio = member.Bio,
-                RelationshipStatus = member.RelationshipStatus ?? "SINGLE",
+                RelationshipStatus = member.RelationshipStatus ?? RelationshipStatus.SINGLE.ToString(),
                 HomeLatitude = member.HomeLatitude,
                 HomeLongitude = member.HomeLongitude,
                 BudgetMin = member.BudgetMin,

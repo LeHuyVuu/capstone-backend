@@ -286,8 +286,12 @@ namespace capstone_backend.Business.Services
             return response;
         }
 
-        public async Task<PagedResult<MemberVoucherListItemResponse>> GetMemberVouchersAsync(GetMemberVouchersRequest request)
+        public async Task<PagedResult<MemberVoucherListItemResponse>> GetMemberVouchersAsync(int userId, GetMemberVouchersRequest request)
         {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Không tìm thấy hồ sơ thành viên");
+
             var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
             var pageSize = request.PageSize < 1 ? 10 : request.PageSize;
 
@@ -326,7 +330,20 @@ namespace capstone_backend.Business.Services
                     v => v.Include(v => v.VoucherLocations).ThenInclude(vl => vl.VenueLocation)
                 );
 
+            var voucherIds = vouchers.Select(v => v.Id).ToList();
+            var memberVoucherAcquiredCounts = await _unitOfWork.VoucherItems.CountMemberAcquiredVouchersAsync(member.Id, voucherIds);
+
             var response = _mapper.Map<List<MemberVoucherListItemResponse>>(vouchers);
+
+            foreach (var item in response)
+            {
+                var usedCount = memberVoucherAcquiredCounts.TryGetValue(item.Id, out var count) ? count : 0;
+
+                if (item.UsageLimitPerMember.HasValue)
+                    item.RemainingUsagePerMember = Math.Max(0, item.UsageLimitPerMember.Value - usedCount);
+                else
+                    item.RemainingUsagePerMember = null;
+            }
 
             return new PagedResult<MemberVoucherListItemResponse>
             {
@@ -391,8 +408,18 @@ namespace capstone_backend.Business.Services
                     vi => vi.Include(vi => vi.Voucher)
                 );
 
-
             var response = _mapper.Map<List<MemberVoucherItemResponse>>(voucherItems);
+            foreach (var item in response)
+            {
+                var voucher = voucherItems.FirstOrDefault(vi => vi.VoucherId == item.VoucherId)?.Voucher;
+                if (voucher != null)
+                {
+                    item.DiscountType = voucher.DiscountType;
+                    item.DiscountAmount = voucher.DiscountAmount;
+                    item.DiscountPercent = voucher.DiscountPercent;
+                }
+            }
+
             return new PagedResult<MemberVoucherItemResponse>
             {
                 Items = response,
