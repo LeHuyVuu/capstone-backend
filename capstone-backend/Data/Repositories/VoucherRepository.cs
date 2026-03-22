@@ -20,6 +20,13 @@ namespace capstone_backend.Data.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<Voucher>> GetByVenueOwnerIdAsync(int venueOwnerId)
+        {
+            return await _dbSet
+                .Where(v => v.VenueOwnerId == venueOwnerId && v.IsDeleted == false)
+                .ToListAsync();
+        }
+
         public async Task<Voucher?> GetIncludeByIdAsync(int voucherId)
         {
             return await _dbSet

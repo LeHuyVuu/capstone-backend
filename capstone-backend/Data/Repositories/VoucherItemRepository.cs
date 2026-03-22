@@ -12,6 +12,14 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<VoucherItem?> GetByIdAsync(int id)
+        {
+            return await _dbSet
+                .Include(vi => vi.VoucherItemMember)
+                    .ThenInclude(vim => vim.Member)
+                .FirstOrDefaultAsync(vi => vi.Id == id && vi.IsDeleted == false);
+        }
+
         public async Task<int> CountMemberAcquiredVoucherAsync(int memberId, int voucherId)
         {
             return await _dbSet
@@ -72,6 +80,13 @@ namespace capstone_backend.Data.Repositories
                     .ThenInclude(vim => vim.Member)
                         .ThenInclude(m => m.User)
                 .FirstOrDefaultAsync(vi => vi.ItemCode.ToLower() == itemCode.ToLower() && vi.IsDeleted == false);
+        }
+
+        public async Task<IEnumerable<VoucherItem>> GetByVoucherIdsAsync(List<int> voucherIds)
+        {
+            return await _dbSet
+                .Where(vi => voucherIds.Contains(vi.VoucherId) && vi.IsDeleted == false)
+                .ToListAsync();
         }
 
         public async Task<VoucherItem?> GetIncludeByIdAsync(int id)
