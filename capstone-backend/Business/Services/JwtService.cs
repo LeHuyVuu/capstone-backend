@@ -21,7 +21,7 @@ public class JwtService : IJwtService
         _logger = logger;
     }
 
-    public string GenerateAccessToken(int userId, string email, string role, string fullName)
+    public string GenerateAccessToken(int userId, string email, string role, string fullName, int? assignedVenueLocationId = null)
     {
         var jwtKey = Environment.GetEnvironmentVariable("JWT_SECRET_KEY") 
                      ?? _configuration["Jwt:SecretKey"] 
@@ -42,7 +42,7 @@ public class JwtService : IJwtService
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[]
+        var claimsList = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, email),
@@ -52,10 +52,16 @@ public class JwtService : IJwtService
             new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
         };
 
+        // Thêm assigned venue location id nếu có (cho staff account)
+        if (assignedVenueLocationId.HasValue)
+        {
+            claimsList.Add(new Claim("assigned_venue_location_id", assignedVenueLocationId.Value.ToString()));
+        }
+
         var token = new JwtSecurityToken(
             issuer: jwtIssuer,
             audience: jwtAudience,
-            claims: claims,
+            claims: claimsList,
             expires: DateTime.UtcNow.AddDays(expiryMinutes),
             signingCredentials: credentials
         );

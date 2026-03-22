@@ -67,7 +67,7 @@ public class UserService : IUserService
         // Generate  JWT tokens
         var role = user.Role ?? "MEMBER";
         var fullName = user.DisplayName ?? string.Empty;
-        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, role, fullName);
+        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, role, fullName, user.AssignedVenueLocationId);
         var refreshToken = _jwtService.GenerateRefreshToken();
         var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
 
@@ -130,7 +130,7 @@ public class UserService : IUserService
             await _unitOfWork.CommitTransactionAsync();
 
             // Generate JWT tokens
-            var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, "MEMBER", request.FullName);
+            var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, "MEMBER", request.FullName, null);
             var refreshToken = _jwtService.GenerateRefreshToken();
             var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
 
@@ -246,7 +246,7 @@ public class UserService : IUserService
         await CreateVenueOwnerProfileAsync(user.Id, request);
 
         // Generate JWT tokens
-        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, "venueowner", request.BusinessName);
+        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, "venueowner", request.BusinessName, null);
         var refreshToken = _jwtService.GenerateRefreshToken();
         var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
 
@@ -728,7 +728,7 @@ public class UserService : IUserService
 
         var role = user.Role ?? "MEMBER";
         var fullName = user.DisplayName ?? string.Empty;
-        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, role, fullName);
+        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, role, fullName, user.AssignedVenueLocationId);
         var refreshToken = _jwtService.GenerateRefreshToken();
         var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
 

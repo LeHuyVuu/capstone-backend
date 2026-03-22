@@ -42,6 +42,8 @@ public partial class UserAccount
 
     public bool? IsDeleted { get; set; }
 
+    public int? AssignedVenueLocationId { get; set; }
+
     [InverseProperty("User")]
     public virtual ICollection<DeviceToken> DeviceTokens { get; set; } = new List<DeviceToken>();
 

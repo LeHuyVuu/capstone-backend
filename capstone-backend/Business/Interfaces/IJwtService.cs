@@ -8,7 +8,7 @@ public interface IJwtService
     /// <summary>
     /// Generate access token for user
     /// </summary>
-    string GenerateAccessToken(int userId, string email, string role, string fullName);
+    string GenerateAccessToken(int userId, string email, string role, string fullName, int? assignedVenueLocationId = null);
 
     /// <summary>
     /// Generate refresh token for user
