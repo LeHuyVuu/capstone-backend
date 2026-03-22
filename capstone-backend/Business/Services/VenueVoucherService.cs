@@ -9,7 +9,6 @@ using Hangfire;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
-using System.Transactions;
 using static Microsoft.Extensions.Logging.EventSource.LoggingEventSource;
 
 namespace capstone_backend.Business.Services
@@ -623,7 +622,7 @@ namespace capstone_backend.Business.Services
             return response;
         }
 
-        public async Task<VoucherItemValidationAndRedemptionResponse> RedeemVoucherCodeAsync(int userId, ValidateAndRedeemVoucherItemRequest request)
+        public async Task<VoucherItemValidationAndRedemptionResponse?> RedeemVoucherCodeAsync(int userId, ValidateAndRedeemVoucherItemRequest request)
         {
             var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
             if (venueOwner == null)
@@ -700,13 +699,45 @@ namespace capstone_backend.Business.Services
                 _unitOfWork.VoucherItemJobs.Delete(expireJob);
             }
 
-            // Update status to USED
-            voucherItem.Status = VoucherItemStatus.USED.ToString();
-            voucherItem.UsedAt = now;
-            voucherItem.UpdatedAt = now;
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                // Update status to USED
+                voucherItem.Status = VoucherItemStatus.USED.ToString();
+                voucherItem.UsedAt = now;
+                voucherItem.UpdatedAt = now;
 
-            _unitOfWork.VoucherItems.Update(voucherItem);
-            await _unitOfWork.SaveChangesAsync();
+                _unitOfWork.VoucherItems.Update(voucherItem);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Create pending settlement
+                var grossAmount = voucherItem.Voucher?.VoucherPrice ?? 0;
+                var commissionAmount = grossAmount * 0.10m;
+                var netAmount = grossAmount - commissionAmount;
+
+                await _unitOfWork.VenueSettlements.AddAsync(new VenueSettlement
+                {
+                    VoucherItemId = voucherItem.Id,
+                    VoucherItemMemberId = voucherItem.VoucherItemMemberId,
+                    VenueOwnerId = venueOwner.Id,
+
+                    GrossAmount = grossAmount,
+                    CommissionAmount = commissionAmount,
+                    NetAmount = netAmount,
+
+                    Status = VenueSettlementStatus.PENDING.ToString(),
+                    AvailableAt = DateTime.UtcNow.AddDays(3),
+                    Note = $"Settlement for voucher item {voucherItem.ItemCode}"
+                });
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return null;
+            }
 
             var redeemedResponse = _mapper.Map<VoucherItemValidationAndRedemptionResponse>(voucherItem);
             redeemedResponse.IsValid = true;

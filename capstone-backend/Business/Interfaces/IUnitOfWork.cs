@@ -109,6 +109,8 @@ public interface IUnitOfWork : IDisposable
 
     IReportRepository Reports { get; }
 
+    IVenueSettlementRepository VenueSettlements { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>
