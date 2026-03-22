@@ -75,5 +75,44 @@ namespace capstone_backend.Business.Services
                     throw new Exception("Config key không hợp lệ");
             }
         }
+
+        public async Task<string> GetValueAsync(string key)
+        {
+            var config = await _unitOfWork.SystemConfigs.GetByKeyAsync(key);
+            if (config == null)
+                throw new Exception($"Không tìm thấy config: {key}");
+
+            return config.ConfigValue;
+        }
+
+        public async Task<int> GetIntValueAsync(string key)
+        {
+            var value = await GetValueAsync(key);
+
+            if (!int.TryParse(value, out var result))
+                throw new Exception($"Config {key} không phải số nguyên hợp lệ");
+
+            return result;
+        }
+
+        public async Task<decimal> GetDecimalValueAsync(string key)
+        {
+            var value = await GetValueAsync(key);
+
+            if (!decimal.TryParse(value, out var result))
+                throw new Exception($"Config {key} không phải số hợp lệ");
+
+            return result;
+        }
+
+        public async Task<SystemConfigResponse> GetByKeyAsync(string key)
+        {
+            var config = await _unitOfWork.SystemConfigs.GetByKeyAsync(key);
+            if (config == null)
+                throw new Exception("Không tìm thấy config");
+
+            var response = _mapper.Map<SystemConfigResponse>(config);
+            return response;
+        }
     }
 }

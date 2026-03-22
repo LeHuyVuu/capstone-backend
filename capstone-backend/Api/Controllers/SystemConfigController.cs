@@ -1,5 +1,6 @@
 ﻿using capstone_backend.Business.DTOs.SystemConfig;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +17,21 @@ namespace capstone_backend.Api.Controllers
         public SystemConfigController(ISystemConfigService systemConfigService)
         {
             _systemConfigService = systemConfigService;
+        }
+
+        /// <summary>
+        /// Get a system configuration by key
+        /// </summary>
+        [HttpGet("keys")]
+        public async Task<IActionResult> GetByKey([FromQuery] SystemConfigKeys key)
+        {
+            if (!Enum.IsDefined(typeof(SystemConfigKeys), key))
+            {
+                return BadRequestResponse("Invalid key");
+            }
+
+            var result = await _systemConfigService.GetByKeyAsync(key.ToString());
+            return OkResponse(result);
         }
 
         /// <summary>
