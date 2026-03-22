@@ -18,12 +18,14 @@ namespace capstone_backend.Business.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IVoucherItemService _voucherItemService;
+        private readonly ISystemConfigService _systemConfigService;
 
-        public VenueVoucherService(IUnitOfWork unitOfWork, IMapper mapper, IVoucherItemService voucherItemService)
+        public VenueVoucherService(IUnitOfWork unitOfWork, IMapper mapper, IVoucherItemService voucherItemService, ISystemConfigService systemConfigService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _voucherItemService = voucherItemService;
+            _systemConfigService = systemConfigService;
         }
 
         public async Task<PagedResult<VoucherDetailResponse>> GetVenueVouchersAsync(int userId, GetVenueVouchersRequest query)
@@ -711,8 +713,11 @@ namespace capstone_backend.Business.Services
                 await _unitOfWork.SaveChangesAsync();
 
                 // Create pending settlement
+                var commissionPercent = await _systemConfigService.GetIntValueAsync(SystemConfigKeys.VENUE_COMMISSION_PERCENT.ToString());
+
                 var grossAmount = voucherItem.Voucher?.VoucherPrice ?? 0;
-                var commissionAmount = grossAmount * 0.10m;
+                var commissionRate = commissionPercent / 100m;
+                var commissionAmount = grossAmount * commissionRate;
                 var netAmount = grossAmount - commissionAmount;
 
                 await _unitOfWork.VenueSettlements.AddAsync(new VenueSettlement

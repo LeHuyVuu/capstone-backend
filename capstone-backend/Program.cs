@@ -114,9 +114,6 @@ builder.Services.AddFireBaseConfiguration();
 // 17. Add Resend Email Service
 builder.Services.AddEmailConfiguration();
 
-// 18. Point config
-builder.Services.Configure<PointSettings>(builder.Configuration.GetSection("PointSettings"));
-
 var app = builder.Build();
 
 // ========================================
