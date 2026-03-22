@@ -1799,6 +1799,7 @@ public class VenueLocationService : IVenueLocationService
                                 IsActive = true,
                                 IsVerified = true,
                                 IsDeleted = false,
+                                AssignedVenueLocationId = venue.Id,
                                 CreatedAt = DateTime.UtcNow,
                                 UpdatedAt = DateTime.UtcNow
                             };
@@ -1806,8 +1807,8 @@ public class VenueLocationService : IVenueLocationService
                             await _unitOfWork.Context.Set<UserAccount>().AddAsync(staffUser);
                             await _unitOfWork.SaveChangesAsync();
 
-                            _logger.LogInformation("✅ Created STAFF account for venue {VenueId}: Email={Email}, UserId={UserId}", 
-                                venue.Id, staffEmail, staffUser.Id);
+                            _logger.LogInformation("✅ Created STAFF account for venue {VenueId}: Email={Email}, UserId={UserId}, AssignedVenueLocationId={AssignedVenueLocationId}", 
+                                venue.Id, staffEmail, staffUser.Id, staffUser.AssignedVenueLocationId);
 
                             // Gửi email thông tin STAFF account cho venue owner
                             try
@@ -1855,8 +1856,23 @@ public class VenueLocationService : IVenueLocationService
                         }
                         else
                         {
-                            _logger.LogInformation("ℹ️ STAFF account already exists for venue {VenueId}: {Email}", venue.Id, staffEmail);
-                            staffAccountMessage = $" | STAFF account already exists: {staffEmail}";
+                            // Update AssignedVenueLocationId nếu staff account đã tồn tại
+                            if (existingUser.AssignedVenueLocationId != venue.Id)
+                            {
+                                existingUser.AssignedVenueLocationId = venue.Id;
+                                existingUser.UpdatedAt = DateTime.UtcNow;
+                                _unitOfWork.Context.Set<UserAccount>().Update(existingUser);
+                                await _unitOfWork.SaveChangesAsync();
+                                
+                                _logger.LogInformation("✅ Updated STAFF account for venue {VenueId}: Email={Email}, AssignedVenueLocationId={AssignedVenueLocationId}", 
+                                    venue.Id, staffEmail, existingUser.AssignedVenueLocationId);
+                                staffAccountMessage = $" | STAFF account updated: {staffEmail}";
+                            }
+                            else
+                            {
+                                _logger.LogInformation("ℹ️ STAFF account already exists for venue {VenueId}: {Email}", venue.Id, staffEmail);
+                                staffAccountMessage = $" | STAFF account already exists: {staffEmail}";
+                            }
                         }
                     }
                 }
