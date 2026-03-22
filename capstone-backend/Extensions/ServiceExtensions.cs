@@ -143,6 +143,7 @@ public static class ServiceExtensions
         services.AddScoped<ISubscriptionPackageRepository, SubscriptionPackageRepository>();
         services.AddScoped<IMemberSubscriptionPackageRepository, MemberSubscriptionPackageRepository>();
         services.AddScoped<IVenueSettlementRepository, VenueSettlementRepository>();
+        services.AddScoped<ISystemConfigRepository, SystemConfigRepository>();
 
         // Messaging repositories
         services.AddScoped<IConversationRepository, ConversationRepository>();
@@ -207,6 +208,7 @@ public static class ServiceExtensions
         services.AddScoped<IMomoService, MomoService>();
         services.AddScoped<IMemberSubscriptionService, MemberSubscriptionService>();
         services.AddScoped<IVenueSettlementService, VenueSettlementService>();
+        services.AddScoped<ISystemConfigService, SystemConfigService>();
 
         // Register Subscription Package Service
         services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
