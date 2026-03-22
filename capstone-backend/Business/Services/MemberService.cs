@@ -14,12 +14,14 @@ public class MemberService : IMemberService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<MemberService> _logger;
     private readonly IConfiguration _configuration;
+    private readonly ILeaderboardService _leaderboardService;
 
-    public MemberService(IUnitOfWork unitOfWork, ILogger<MemberService> logger, IConfiguration configuration)
+    public MemberService(IUnitOfWork unitOfWork, ILogger<MemberService> logger, IConfiguration configuration, ILeaderboardService leaderboardService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _configuration = configuration;
+        _leaderboardService = leaderboardService;
     }
 
     public async Task<CoupleProfileResponse> InviteMemberAsync(
@@ -121,6 +123,9 @@ public class MemberService : IMemberService
         
         await _unitOfWork.SaveChangesAsync();
         await transaction.CommitAsync();
+
+        // Thêm couple vào leaderboard ngay
+        await _leaderboardService.AddCoupleToLeaderboardAsync(coupleProfile.id);
 
         _logger.LogInformation(
             "Created couple profile {CoupleId} for partner member {PartnerId} (invite code owner) and current member {CurrentId} (invite code sender). Updated both members' relationship status to IN_RELATIONSHIP",

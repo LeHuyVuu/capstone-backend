@@ -1,5 +1,6 @@
 using capstone_backend.Business.DTOs.Leaderboard;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Services;
@@ -81,5 +82,50 @@ public class LeaderboardService : ILeaderboardService
                 };
             }).ToList()
         };
+    }
+
+    public async Task AddCoupleToLeaderboardAsync(int coupleId)
+    {
+        var now = DateTime.UtcNow;
+        var currentSeasonKey = $"{now.Year}-{now.Month:D2}";
+
+        // Check xem couple đã có trong leaderboard tháng này chưa
+        var exists = await _unitOfWork.Context.Leaderboards
+            .AnyAsync(l => l.CoupleId == coupleId 
+                        && l.SeasonKey == currentSeasonKey);
+
+        if (exists)
+            return; // Đã có rồi, không thêm nữa
+
+        var leaderboard = new Data.Entities.Leaderboard
+        {
+            CoupleId = coupleId,
+            PeriodType = "monthly",
+            PeriodStart = now,
+            PeriodEnd = now.AddMonths(1),
+            SeasonKey = currentSeasonKey,
+            TotalPoints = 0,
+            RankPosition = 0,
+            Status = LeaderboardStatus.ACTIVE.ToString(),
+            UpdatedAt = now
+        };
+
+        await _unitOfWork.Context.Leaderboards.AddAsync(leaderboard);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    public async Task RemoveCoupleFromLeaderboardAsync(int coupleId)
+    {
+        var leaderboards = await _unitOfWork.Context.Leaderboards
+            .Where(l => l.CoupleId == coupleId && l.Status == LeaderboardStatus.ACTIVE.ToString())
+            .ToListAsync();
+
+        foreach (var leaderboard in leaderboards)
+        {
+            leaderboard.Status = LeaderboardStatus.INACTIVE.ToString();
+            leaderboard.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await _unitOfWork.SaveChangesAsync();
     }
 }
