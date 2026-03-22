@@ -99,4 +99,37 @@ public class ReportService : IReportService
         await _unitOfWork.SaveChangesAsync();
         return true;
     }
+
+    public async Task<ReportDto> CreateReportAsync(CreateReportRequest request, int reporterId)
+    {
+        var report = new Data.Entities.Report
+        {
+            ReporterId = reporterId,
+            TargetType = request.TargetType.ToString(),
+            TargetId = request.TargetId,
+            Reason = request.Reason,
+            Status = ReportStatus.PENDING.ToString(),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+
+        await _unitOfWork.Reports.AddAsync(report);
+        await _unitOfWork.SaveChangesAsync();
+
+        var reporter = await _unitOfWork.MembersProfile.GetByIdAsync(reporterId);
+
+        return new ReportDto
+        {
+            Id = report.Id,
+            ReporterId = report.ReporterId,
+            ReporterName = reporter?.FullName,
+            TargetType = request.TargetType,
+            TargetId = report.TargetId,
+            Reason = report.Reason,
+            Status = ReportStatus.PENDING,
+            CreatedAt = report.CreatedAt,
+            UpdatedAt = report.UpdatedAt
+        };
+    }
 }
