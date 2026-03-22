@@ -12,6 +12,14 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<VoucherItem?> GetByIdAsync(int id)
+        {
+            return await _dbSet
+                .Include(vi => vi.VoucherItemMember)
+                    .ThenInclude(vim => vim.Member)
+                .FirstOrDefaultAsync(vi => vi.Id == id && vi.IsDeleted == false);
+        }
+
         public async Task<int> CountMemberAcquiredVoucherAsync(int memberId, int voucherId)
         {
             return await _dbSet

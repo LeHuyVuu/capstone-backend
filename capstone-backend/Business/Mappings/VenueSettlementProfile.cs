@@ -10,6 +10,8 @@ namespace capstone_backend.Business.Mappings
         {
             CreateMap<VenueSettlement, VenueSettlementListItemResponse>()
                 .ForMember(dest => dest.SettlementId, opt => opt.MapFrom(src => src.Id));
+            CreateMap<VenueSettlement, VenueSettlementDetailResponse>()
+                .ForMember(dest => dest.SettlementId, opt => opt.MapFrom(src => src.Id));
         }
     }
 }

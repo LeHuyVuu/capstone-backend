@@ -21,9 +21,26 @@ namespace capstone_backend.Business.Services
             _mapper = mapper;
         }
 
-        public Task<VenueSettlementDetailResponse> GetSettlementDetailAsync(int userId, int settlementId)
+        public async Task<VenueSettlementDetailResponse> GetSettlementDetailAsync(int userId, int settlementId)
         {
-            throw new NotImplementedException();
+            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
+            if (venueOwner == null)
+                throw new Exception("Không tìm thấy chủ địa điểm");
+
+            var settlement = await _unitOfWork.VenueSettlements.GetByIdAsync(settlementId);
+            if (settlement == null || settlement.IsDeleted || settlement.VenueOwnerId != venueOwner.Id)
+                throw new Exception("Không tìm thấy đối soát");
+
+            var voucherItem = await _unitOfWork.VoucherItems.GetByIdAsync(settlement.VoucherItemId);
+
+            var voucher = voucherItem != null ? await _unitOfWork.Vouchers.GetByIdAsync(voucherItem.VoucherId) : null;
+
+            var response = _mapper.Map<VenueSettlementDetailResponse>(settlement);
+            response.VoucherItemCode = voucherItem?.ItemCode;
+            response.VoucherTitle = voucher?.Title;
+            response.MemberName = voucherItem?.VoucherItemMember?.Member?.FullName;
+            response.UsedAt = voucherItem?.UsedAt;
+            return response;
         }
 
         public async Task<PagedResult<VenueSettlementListItemResponse>> GetSettlementsAsync(int userId, GetVenueSettlementsRequest request)
@@ -82,6 +99,7 @@ namespace capstone_backend.Business.Services
 
                 r.VoucherItemCode = vItem?.ItemCode;
                 r.VoucherTitle = voucher?.Title;
+                r.UsedAt = vItem?.UsedAt;
 
                 return r;
             }).ToList();

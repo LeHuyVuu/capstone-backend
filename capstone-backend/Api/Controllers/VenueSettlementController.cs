@@ -59,5 +59,26 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get settlement detail for venue owner
+        /// </summary>
+        [HttpGet("{settlementId}")]
+        public async Task<IActionResult> GetSettlementDetail(int settlementId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse();
+
+                var result = await _venueSettlementService.GetSettlementDetailAsync(userId.Value, settlementId);
+                return OkResponse(result, "Lấy chi tiết đối soát thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
