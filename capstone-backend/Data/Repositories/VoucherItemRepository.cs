@@ -74,6 +74,13 @@ namespace capstone_backend.Data.Repositories
                 .FirstOrDefaultAsync(vi => vi.ItemCode.ToLower() == itemCode.ToLower() && vi.IsDeleted == false);
         }
 
+        public async Task<IEnumerable<VoucherItem>> GetByVoucherIdsAsync(List<int> voucherIds)
+        {
+            return await _dbSet
+                .Where(vi => voucherIds.Contains(vi.VoucherId) && vi.IsDeleted == false)
+                .ToListAsync();
+        }
+
         public async Task<VoucherItem?> GetIncludeByIdAsync(int id)
         {
             return await _dbSet

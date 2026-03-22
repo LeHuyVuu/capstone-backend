@@ -1,4 +1,6 @@
-﻿namespace capstone_backend.Business.DTOs.VenueSettlement
+﻿using capstone_backend.Data.Enums;
+
+namespace capstone_backend.Business.DTOs.VenueSettlement
 {
     public class GetVenueSettlementsRequest
     {
@@ -8,7 +10,7 @@
         public int PageSize { get; set; } = 10;
 
         /// <example>PENDING</example>
-        public string? Status { get; set; }
+        public VenueSettlementStatus Status { get; set; } = VenueSettlementStatus.PENDING;
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
 

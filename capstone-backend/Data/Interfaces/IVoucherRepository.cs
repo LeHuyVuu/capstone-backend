@@ -8,5 +8,6 @@ namespace capstone_backend.Data.Interfaces
         Task<bool> IsDuplicateCodeAsync(string code);
         Task<Voucher?> GetIncludeByIdAsync(int voucherId);
         Task<IEnumerable<Voucher>> GetByIdsWithItemsAsync(List<int> voucherIds);
+        Task<IEnumerable<Voucher>> GetByVenueOwnerIdAsync(int venueOwnerId);
     }
 }
