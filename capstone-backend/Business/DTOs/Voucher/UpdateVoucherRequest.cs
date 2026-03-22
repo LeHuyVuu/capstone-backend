@@ -8,8 +8,8 @@
         /// <example>Giảm ngay 70k cho đơn hàng từ 300k trở lên, áp dụng khung giờ tối.</example>
         public string? Description { get; set; }
 
-        /// <example>10000</example>
-        public int PointPrice { get; set; }
+        /// <example>30000</example>
+        public decimal VoucherPrice { get; set; }
 
         /// <example>FIXED_AMOUNT</example>
         public string? DiscountType { get; set; }
