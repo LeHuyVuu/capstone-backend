@@ -13,12 +13,14 @@ public class CoupleInvitationService : ICoupleInvitationService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IChallengeService _challengeService;
     private readonly IMessagingService _messagingService;
+    private readonly ILeaderboardService _leaderboardService;
 
-    public CoupleInvitationService(IUnitOfWork unitOfWork, IChallengeService challengeService, IMessagingService messagingService)
+    public CoupleInvitationService(IUnitOfWork unitOfWork, IChallengeService challengeService, IMessagingService messagingService, ILeaderboardService leaderboardService)
     {
         _unitOfWork = unitOfWork;
         _messagingService = messagingService;
         _challengeService = challengeService;
+        _leaderboardService = leaderboardService;
     }
 
     public async Task<(bool Success, string Message, CoupleInvitationResponse? Data)> SendInvitationDirectAsync(
@@ -243,6 +245,9 @@ public class CoupleInvitationService : ICoupleInvitationService
 
         await _unitOfWork.SaveChangesAsync();
 
+        // Thêm couple vào leaderboard ngay
+        await _leaderboardService.AddCoupleToLeaderboardAsync(coupleProfile.id);
+
         // Create conversation between couple members
         try
         {
@@ -411,6 +416,9 @@ public class CoupleInvitationService : ICoupleInvitationService
 
         // Save all changes
         await _unitOfWork.SaveChangesAsync();
+
+        // Xóa couple khỏi leaderboard
+        await _leaderboardService.RemoveCoupleFromLeaderboardAsync(couple.id);
 
         // Determine who initiated the breakup for messaging
         var partnerName = currentMemberId == couple.MemberId1 ? member2.FullName : member1.FullName;

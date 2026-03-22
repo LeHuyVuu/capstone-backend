@@ -1,5 +1,5 @@
-﻿using Amazon.Rekognition.Model;
-using AutoMapper;
+﻿using AutoMapper;
+using capstone_backend.Business.Configurations;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Voucher;
 using capstone_backend.Business.Interfaces;
@@ -8,6 +8,7 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace capstone_backend.Business.Services
 {
@@ -16,12 +17,14 @@ namespace capstone_backend.Business.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IVoucherItemService _voucherItemService;
+        private readonly ISystemConfigService _systemConfigService;
 
-        public AdminVoucherService(IUnitOfWork unitOfWork, IMapper mapper, IVoucherItemService voucherItemService)
+        public AdminVoucherService(IUnitOfWork unitOfWork, IMapper mapper, IVoucherItemService voucherItemService, ISystemConfigService systemConfigService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _voucherItemService = voucherItemService;
+            _systemConfigService = systemConfigService;
         }
 
         public async Task<PagedResult<AdminVoucherDetailResponse>> GetAdminVouchersAsync(GetAdminVouchersRequest query)
@@ -166,6 +169,11 @@ namespace capstone_backend.Business.Services
 
             voucher.UpdatedAt = now;
             voucher.RejectReason = null; // clear reject reason if any
+
+            // Update point price
+            var vndPerPoint = await _systemConfigService.GetIntValueAsync(SystemConfigKeys.MONEY_TO_POINT_RATE.ToString());
+            voucher.PointPrice = (int)Math.Floor(voucher.VoucherPrice / vndPerPoint);
+
             _unitOfWork.Vouchers.Update(voucher);
             await _unitOfWork.SaveChangesAsync();
 

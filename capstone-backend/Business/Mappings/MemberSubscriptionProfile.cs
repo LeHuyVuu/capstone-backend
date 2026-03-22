@@ -9,6 +9,7 @@ namespace capstone_backend.Business.Mappings
         public MemberSubscriptionProfile()
         {
             CreateMap<Transaction, TransactionResponse>();
+            CreateMap<MemberSubscriptionPackage, MemberSubscriptionResponse>();
         }
     }
 }

@@ -19,6 +19,7 @@ public partial class Voucher
 
     public string? Description { get; set; }
 
+    public decimal VoucherPrice { get; set; } = 0;
     public int PointPrice { get; set; } = 0;
 
     public string? DiscountType { get; set; }

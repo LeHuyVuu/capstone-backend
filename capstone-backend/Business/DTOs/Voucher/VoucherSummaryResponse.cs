@@ -48,6 +48,7 @@
         /// </summary>
         public decimal UsageRate { get; set; }
 
+        public decimal VoucherPrice { get; set; }
         public int PointPrice { get; set; }
         public int TotalPointsExchanged { get; set; }
 

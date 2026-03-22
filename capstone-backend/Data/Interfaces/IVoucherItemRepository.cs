@@ -12,5 +12,6 @@ namespace capstone_backend.Data.Interfaces
         Task<int> CountMemberAcquiredVoucherAsync(int memberId, int voucherId);
         Task<IEnumerable<VoucherItem>> GetAvailableVoucherItemsForExchangeAsync(int voucherId, int quantity);
         Task<Dictionary<int, int>> CountMemberAcquiredVouchersAsync(int memberId, List<int> voucherIds);
+        Task<IEnumerable<VoucherItem>> GetByVoucherIdsAsync(List<int> voucherIds);
     }
 }

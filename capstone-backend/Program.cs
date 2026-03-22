@@ -1,8 +1,10 @@
 using capstone_backend.Api.Middleware;
 using capstone_backend.Api.Models;
+using capstone_backend.Business.Configurations;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Challenge;
 using capstone_backend.Business.Jobs.DatePlan;
+using capstone_backend.Business.Jobs.Leaderboard;
 using capstone_backend.Business.Jobs.Media;
 using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Business.Mappings;
@@ -93,7 +95,11 @@ builder.Services.AddAutoMapper(
     typeof(ReviewProfile),
     typeof(ChallengeProfile),
     typeof(PostProfile),
-    typeof(MemberSubscriptionProfile)
+    typeof(MemberSubscriptionProfile),
+    typeof(SubscriptionPackageProfile),
+    typeof(SystemConfigProfile),
+    typeof(VenueSettlementProfile),
+    typeof(VoucherProfile)
 );
 
 // 14. Add HttpContextAccessor
@@ -216,6 +222,24 @@ using (var scope = serviceProvider.CreateScope())
         "daily-renew-checkin-challenges",
         job => job.RenewDailyCheckinChallengesAsync(),
         "1 0 * * *",
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
+    recurringJobManager.AddOrUpdate<ILeaderboardWorker>(
+        "monthly-move-couple-to-leaderboard",
+        job => job.MoveActiveCoupleToLeaderboardAsync(),
+        Cron.Monthly(1, 0),
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
+    recurringJobManager.AddOrUpdate<ILeaderboardWorker>(
+        "quarterly-reset-interaction-points",
+        job => job.ResetInteractionPointsAsync(),
+        "0 0 1 */3 *",
         new RecurringJobOptions
         {
             TimeZone = vnTz

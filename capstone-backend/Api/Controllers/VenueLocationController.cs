@@ -254,32 +254,32 @@ public class VenueLocationController : BaseController
         return OkResponse(personalityTypes, $"Retrieved {personalityTypes.Count} couple personality types");
     }
 
-    [HttpPost("opening-hours/update")]
+    [HttpPost("opening-hours/update-all")]
     [Authorize]
-    [ProducesResponseType(typeof(ApiResponse<VenueOpeningHourResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 400)]
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]
     [ProducesResponseType(typeof(ApiResponse<object>), 404)]
-    public async Task<IActionResult> UpdateVenueOpeningHour([FromBody] UpdateVenueOpeningHourRequest request)
+    public async Task<IActionResult> UpdateVenueOpeningHours([FromBody] UpdateVenueOpeningHoursRequest request)
     {
-        _logger.LogInformation("User updating venue opening hours for venue {VenueId}, day {Day}", request.VenueLocationId, request.Day);
+        _logger.LogInformation("User updating all opening hours for venue {VenueId}", request.VenueLocationId);
 
         if (!ModelState.IsValid)
         {
             return BadRequestResponse("Invalid request data");
         }
 
-        var result = await _venueLocationService.UpdateVenueOpeningHourAsync(request);
+        var result = await _venueLocationService.UpdateVenueOpeningHoursAsync(request);
 
-        if (result == null)
+        if (!result)
         {
-            return BadRequestResponse("Failed to update venue opening hours");
+            return NotFoundResponse("Venue not found");
         }
 
-        return OkResponse(result, "Venue opening hours updated successfully");
+        return OkResponse<object>(null, "Cập nhật giờ mở cửa thành công");
     }
 
-   /// <summary>Deprecated !!!! </summary>
+    /// <summary>Deprecated !!!! </summary>
     [HttpPost("{id}/submit")]
     [Authorize]
     [ProducesResponseType(typeof(ApiResponse<VenueSubmissionResult>), 200)]
