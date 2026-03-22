@@ -5,5 +5,6 @@ namespace capstone_backend.Data.Interfaces
 {
     public interface IMemberSubscriptionPackageRepository : IGenericRepository<MemberSubscriptionPackage>
     {
+        Task<MemberSubscriptionPackage?> GetCurrentActiveSubscriptionAsync(int id);
     }
 }
