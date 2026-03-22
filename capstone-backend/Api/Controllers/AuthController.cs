@@ -13,10 +13,12 @@ namespace capstone_backend.Api.Controllers;
 public class AuthController : BaseController
 {
     private readonly IUserService _userService;
+    private readonly ILogger<AuthController> _logger;
 
-    public AuthController(IUserService userService)
+    public AuthController(IUserService userService, ILogger<AuthController> logger)
     {
         _userService = userService;
+        _logger = logger;
     }
 
 
@@ -279,6 +281,32 @@ public class AuthController : BaseController
         catch (Exception ex)
         {
             return InternalServerErrorResponse($"Đặt lại mật khẩu thất bại: {ex.Message}");
+        }
+    }
+
+
+    /// <summary>
+    /// Login hoặc register bằng Google (KHÔNG HỖ TRỢ CHO WEB)
+    /// </summary>
+    /// <param name="request">Google login request với ID token</param>
+    /// <returns>Login response với JWT tokens</returns>
+    [HttpPost("google-login")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+    {
+        try
+        {
+            var loginResponse = await _userService.GoogleLoginAsync(request);
+
+            if (loginResponse == null)
+                return UnauthorizedResponse("Google authentication failed");
+
+            return OkResponse(loginResponse, "Login successful");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Google login error");
+            return InternalServerErrorResponse($"Google login failed: {ex.Message}");
         }
     }
 }

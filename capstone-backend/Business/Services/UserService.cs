@@ -20,6 +20,7 @@ public class UserService : IUserService
     private readonly ICollectionService _collectionService;
     private readonly IRedisService _redisService;
     private readonly IEmailService _emailService;
+    private readonly IGoogleAuthService _googleAuthService;
 
     public UserService(
         IUnitOfWork unitOfWork, 
@@ -27,7 +28,8 @@ public class UserService : IUserService
         IJwtService jwtService, 
         ICollectionService collectionService,
         IRedisService redisService,
-        IEmailService emailService)
+        IEmailService emailService,
+        IGoogleAuthService googleAuthService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -35,6 +37,7 @@ public class UserService : IUserService
         _collectionService = collectionService;
         _redisService = redisService;
         _emailService = emailService;
+        _googleAuthService = googleAuthService;
     }
 
     public async Task<LoginResponse?> LoginAsync(LoginRequest request)
@@ -595,5 +598,150 @@ public class UserService : IUserService
 
         _logger.LogInformation("Password reset successfully for email {Email}", request.Email);
         return true;
+    }
+
+    /// <summary>
+    /// Login hoặc register bằng Google (cho Flutter mobile)
+    /// </summary>
+    public async Task<LoginResponse?> GoogleLoginAsync(GoogleLoginRequest request)
+    {
+        // 1. Verify Google ID Token
+        var googlePayload = await _googleAuthService.VerifyGoogleTokenAsync(request.IdToken);
+        if (googlePayload == null)
+        {
+            _logger.LogWarning("Invalid Google ID Token");
+            return null;
+        }
+
+        var email = googlePayload.Email;
+        var fullName = googlePayload.Name;
+        var avatarUrl = googlePayload.Picture;
+
+        // 2. Kiểm tra user đã tồn tại chưa
+        var existingUser = await _unitOfWork.Users.GetByEmailAsync(email);
+
+        if (existingUser != null)
+        {
+            // User đã tồn tại - Login
+            if (existingUser.IsActive != true)
+            {
+                _logger.LogWarning("User account is inactive: {Email}", email);
+                return null;
+            }
+
+            // Update last login và avatar nếu có thay đổi
+            existingUser.LastLoginAt = DateTime.UtcNow;
+            if (!string.IsNullOrEmpty(avatarUrl) && existingUser.AvatarUrl != avatarUrl)
+            {
+                existingUser.AvatarUrl = avatarUrl;
+            }
+            _unitOfWork.Users.Update(existingUser);
+            await _unitOfWork.SaveChangesAsync();
+
+            return await GenerateLoginResponse(existingUser);
+        }
+
+        // 3. User chưa tồn tại - Auto Register
+        await _unitOfWork.BeginTransactionAsync();
+        try
+        {
+            var newUser = new UserAccount
+            {
+                Email = email,
+                DisplayName = fullName,
+                AvatarUrl = avatarUrl,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString()), // Random password
+                Role = "MEMBER",
+                IsActive = true,
+                IsVerified = true, // Google account đã verified
+                IsDeleted = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                LastLoginAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.Users.AddAsync(newUser);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Generate wallet for new member
+            await _unitOfWork.Wallets.AddAsync(new Wallet
+            {
+                UserId = newUser.Id,
+                Balance = 0,
+                Points = 0,
+                IsActive = true,
+            });
+
+            // Tạo member profile với thông tin cơ bản
+            var memberProfile = new MemberProfile
+            {
+                UserId = newUser.Id,
+                FullName = fullName,
+                RelationshipStatus = "SINGLE",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                IsDeleted = false,
+                InviteCode = await GenerateInviteCode()
+            };
+
+            await _unitOfWork.Context.Set<MemberProfile>().AddAsync(memberProfile);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Tạo collection mặc định
+            await _collectionService.CreateDefaultCollectionForMemberAsync(memberProfile.Id);
+
+            await _unitOfWork.CommitTransactionAsync();
+
+            _logger.LogInformation("New user registered via Google: {Email}", email);
+
+            // Return response với memberProfile vừa tạo (không cần query lại)
+            return GenerateLoginResponseFromData(newUser, memberProfile);
+        }
+        catch (Exception ex)
+        {
+            await _unitOfWork.RollbackTransactionAsync();
+            _logger.LogError(ex, "Error during Google registration for {Email}", email);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Generate login response với JWT tokens (query member profile từ DB)
+    /// </summary>
+    private async Task<LoginResponse> GenerateLoginResponse(UserAccount user)
+    {
+        var memberProfile = user.MemberProfiles?.FirstOrDefault() 
+                           ?? await _unitOfWork.Context.Set<MemberProfile>()
+                               .FirstOrDefaultAsync(mp => mp.UserId == user.Id && mp.IsDeleted != true);
+
+        return GenerateLoginResponseFromData(user, memberProfile);
+    }
+
+    /// <summary>
+    /// Generate login response với JWT tokens (từ data có sẵn)
+    /// </summary>
+    private LoginResponse GenerateLoginResponseFromData(UserAccount user, MemberProfile? memberProfile)
+    {
+        var gender = memberProfile?.Gender ?? string.Empty;
+        var dateOfBirth = memberProfile?.DateOfBirth;
+        var inviteCode = memberProfile?.InviteCode;
+
+        var role = user.Role ?? "MEMBER";
+        var fullName = user.DisplayName ?? string.Empty;
+        var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, role, fullName);
+        var refreshToken = _jwtService.GenerateRefreshToken();
+        var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
+
+        return new LoginResponse
+        {
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes),
+            Gender = gender,
+            AvatarUrl = user.AvatarUrl,
+            FullName = fullName,
+            DateOfBirth = dateOfBirth,
+            InviteCode = inviteCode
+        };
     }
 }

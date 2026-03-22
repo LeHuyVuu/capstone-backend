@@ -139,4 +139,11 @@ public interface IUserService
     /// <param name="request">Reset password request</param>
     /// <returns>True nếu reset thành công</returns>
     Task<bool> ResetPasswordAsync(ResetPasswordRequest request);
+
+    /// <summary>
+    /// Login hoặc register bằng Google (cho Flutter mobile)
+    /// </summary>
+    /// <param name="request">Google login request với ID token</param>
+    /// <returns>Login response với JWT tokens</returns>
+    Task<LoginResponse?> GoogleLoginAsync(GoogleLoginRequest request);
 }

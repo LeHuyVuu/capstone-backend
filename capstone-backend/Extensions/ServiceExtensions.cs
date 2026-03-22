@@ -165,6 +165,7 @@ public static class ServiceExtensions
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IMemberService, MemberService>();
+        services.AddScoped<IGoogleAuthService, GoogleAuthService>();
 
         // Register AI Recommendation Services
         services.AddScoped<IMoodMappingService, MoodMappingService>();
