@@ -17,14 +17,14 @@ namespace capstone_backend.Business.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IVoucherItemService _voucherItemService;
-        private readonly decimal _vndPerPoint;
+        private readonly ISystemConfigService _systemConfigService;
 
-        public AdminVoucherService(IUnitOfWork unitOfWork, IMapper mapper, IVoucherItemService voucherItemService, IOptions<PointSettings> pointSettings)
+        public AdminVoucherService(IUnitOfWork unitOfWork, IMapper mapper, IVoucherItemService voucherItemService, ISystemConfigService systemConfigService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _voucherItemService = voucherItemService;
-            _vndPerPoint = pointSettings.Value.VndPerPoint;
+            _systemConfigService = systemConfigService;
         }
 
         public async Task<PagedResult<AdminVoucherDetailResponse>> GetAdminVouchersAsync(GetAdminVouchersRequest query)
@@ -171,7 +171,8 @@ namespace capstone_backend.Business.Services
             voucher.RejectReason = null; // clear reject reason if any
 
             // Update point price
-            voucher.PointPrice = (int)Math.Floor(voucher.VoucherPrice / _vndPerPoint);
+            var vndPerPoint = await _systemConfigService.GetIntValueAsync(SystemConfigKeys.MONEY_TO_POINT_RATE.ToString());
+            voucher.PointPrice = (int)Math.Floor(voucher.VoucherPrice / vndPerPoint);
 
             _unitOfWork.Vouchers.Update(voucher);
             await _unitOfWork.SaveChangesAsync();

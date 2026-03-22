@@ -96,7 +96,10 @@ builder.Services.AddAutoMapper(
     typeof(ChallengeProfile),
     typeof(PostProfile),
     typeof(MemberSubscriptionProfile),
-    typeof(SubscriptionPackageProfile)
+    typeof(SubscriptionPackageProfile),
+    typeof(SystemConfigProfile),
+    typeof(VenueSettlementProfile),
+    typeof(VoucherProfile)
 );
 
 // 14. Add HttpContextAccessor
@@ -111,9 +114,6 @@ builder.Services.AddFireBaseConfiguration();
 
 // 17. Add Resend Email Service
 builder.Services.AddEmailConfiguration();
-
-// 18. Point config
-builder.Services.Configure<PointSettings>(builder.Configuration.GetSection("PointSettings"));
 
 var app = builder.Build();
 

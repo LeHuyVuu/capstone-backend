@@ -147,6 +147,8 @@ public partial class MyDbContext : DbContext
 
     public DbSet<VenueSettlement> VenueSettlements { get; set; }
 
+    public DbSet<SystemConfig> SystemConfigs { get; set; }
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -1233,6 +1235,44 @@ public partial class MyDbContext : DbContext
             entity.HasIndex(e => e.VoucherItemId)
                 .IsUnique()
                 .HasDatabaseName("uq_venue_settlements_voucher_item_id");
+        });
+
+        modelBuilder.Entity<SystemConfig>(entity =>
+        {
+            entity.ToTable("system_configs");
+
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id)
+                .HasColumnName("id");
+
+            entity.Property(e => e.ConfigKey)
+                .HasColumnName("config_key")
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(e => e.ConfigValue)
+                .HasColumnName("config_value")
+                .HasMaxLength(255)
+                .IsRequired();
+
+            entity.Property(e => e.Description)
+                .HasColumnName("description");
+
+            entity.Property(e => e.CreatedAt)
+                .HasColumnName("created_at")
+                .HasDefaultValueSql("now()");
+
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnName("updated_at")
+                .HasDefaultValueSql("now()");
+
+            entity.Property(e => e.IsDeleted)
+                .HasColumnName("is_deleted")
+                .HasDefaultValue(false);
+
+            entity.HasIndex(e => e.ConfigKey)
+                .IsUnique();
         });
 
         OnModelCreatingPartial(modelBuilder);
