@@ -197,9 +197,28 @@ public class VenueLocationService : IVenueLocationService
         var todayOpeningHour = venue.VenueOpeningHours?.FirstOrDefault();
         if (todayOpeningHour != null)
         {
-            response.TodayDayName = GetDayName(DateTime.UtcNow.AddHours(7).DayOfWeek);
+            var currentTimeVN = DateTime.UtcNow.AddHours(7);
+            response.TodayDayName = GetDayName(currentTimeVN.DayOfWeek);
             response.TodayOpeningHour = _mapper.Map<TodayOpeningHourResponse>(todayOpeningHour);
-            response.TodayOpeningHour.Status = todayOpeningHour.IsClosed ? "Đã đóng cửa" : "Đang mở cửa";
+            
+            // Tính status: Ưu tiên IsClosed, sau đó mới tính theo giờ
+            if (todayOpeningHour.IsClosed)
+            {
+                response.TodayOpeningHour.Status = "Đã đóng cửa";
+            }
+            else
+            {
+                var currentTime = currentTimeVN.TimeOfDay;
+                var openTime = todayOpeningHour.OpenTime;
+                var closeTime = todayOpeningHour.CloseTime;
+                
+                // Check nếu đang trong giờ mở cửa
+                bool isOpen = closeTime < openTime 
+                    ? (currentTime >= openTime || currentTime < closeTime)  // Qua đêm (VD: 23:00-02:00)
+                    : (currentTime >= openTime && currentTime < closeTime); // Bình thường (VD: 08:00-22:00)
+                
+                response.TodayOpeningHour.Status = isOpen ? "Đang mở cửa" : "Đã đóng cửa";
+            }
         }
 
         // Check checkin status
