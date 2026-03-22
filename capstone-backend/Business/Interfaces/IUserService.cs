@@ -102,16 +102,6 @@ public interface IUserService
         int userId);
 
     /// <summary>
-    /// Update venue owner specific profile information (CCCD, Business License)
-    /// </summary>
-    /// <param name="userId">User ID to update</param>
-    /// <param name="request">Update data</param>
-    /// <returns>Updated user response</returns>
-    Task<UserResponse?> UpdateDocumentVenueOwnerAsync(
-        int userId,
-        UpdateDocumentVenueOwnerRequest request);
-
-    /// <summary>
     /// Update password cho user đã đăng nhập (yêu cầu password cũ)
     /// </summary>
     /// <param name="userId">User ID</param>

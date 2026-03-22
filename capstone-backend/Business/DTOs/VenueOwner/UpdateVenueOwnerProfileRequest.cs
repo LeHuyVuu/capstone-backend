@@ -14,4 +14,8 @@ public class UpdateVenueOwnerProfileRequest
     [EmailAddress]
     [MaxLength(100)]
     public string? Email { get; set; }
+
+    public string? CitizenIdFrontUrl { get; set; }
+
+    public string? CitizenIdBackUrl { get; set; }
 }

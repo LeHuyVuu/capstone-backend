@@ -38,7 +38,14 @@ public class VenueOwnerProfileService : IVenueOwnerProfileService
         if (!string.IsNullOrWhiteSpace(request.Email))
             venueOwnerProfile.Email = request.Email;
 
+        if (!string.IsNullOrWhiteSpace(request.CitizenIdFrontUrl))
+            user.CitizenIdFrontUrl = request.CitizenIdFrontUrl;
+
+        if (!string.IsNullOrWhiteSpace(request.CitizenIdBackUrl))
+            user.CitizenIdBackUrl = request.CitizenIdBackUrl;
+
         venueOwnerProfile.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTime.UtcNow;
 
         await _unitOfWork.SaveChangesAsync();
 
