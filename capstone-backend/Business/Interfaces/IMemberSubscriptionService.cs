@@ -10,5 +10,6 @@ namespace capstone_backend.Business.Interfaces
         Task<TransactionResponse> CheckPaymentStatusAsync(int userId, string orderId);
         Task<PagedResult<SubscriptionPackageDto>> GetAvailablePackagesAsync(int pageNumber, int pageSize);
         Task<MemberSubscriptionResponse?> GetCurrentSubscriptionAsync(int userId);
+        Task<PagedResult<TransactionResponse>> GetTransactionHistoryAsync(int userId, int pageNumber, int pageSize);
     }
 }

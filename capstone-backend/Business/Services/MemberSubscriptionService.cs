@@ -4,6 +4,7 @@ using capstone_backend.Business.DTOs.MemberSubscription;
 using capstone_backend.Business.DTOs.Momo;
 using capstone_backend.Business.DTOs.SubscriptionPackage;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 
@@ -90,6 +91,72 @@ namespace capstone_backend.Business.Services
 
             var response = _mapper.Map<MemberSubscriptionResponse>(sub);
             return response;
+        }
+
+        public async Task<PagedResult<TransactionResponse>> GetTransactionHistoryAsync(int userId, int pageNumber, int pageSize)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            pageNumber = pageNumber < 1 ? 1 : pageNumber;
+            pageSize = pageSize < 1 ? 10 : pageSize;
+
+            var (transactions, totalCount) = await _unitOfWork.Transactions.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                tx => tx.UserId == userId && tx.TransType == 3,
+                q => q.OrderByDescending(tx => tx.CreatedAt).ThenByDescending(tx => tx.Id)
+            );
+
+            var transactionList = transactions.ToList();
+            var subscriptionIds = transactionList
+                .Select(t => t.DocNo)
+                .Distinct()
+                .ToList();
+
+            var subscriptionById = new Dictionary<int, MemberSubscriptionPackage>();
+            if (subscriptionIds.Count > 0)
+            {
+                var subscriptions = await _unitOfWork.MemberSubscriptionPackages.GetAsync(s => subscriptionIds.Contains(s.Id));
+                subscriptionById = subscriptions.ToDictionary(s => s.Id);
+            }
+
+            var responseItems = new List<TransactionResponse>(transactionList.Count);
+            foreach (var tx in transactionList)
+            {
+                var metadata = JsonConverterUtil.DeserializeOrDefault<MomoTransactionMetadata>(tx.ExternalRefCode);
+
+                var item = _mapper.Map<TransactionResponse>(tx);
+                item.TransType = "MEMBER_SUBSCRIPTION";
+
+                item.PayUrl = metadata?.PayUrl;
+                item.QrCodeUrl = metadata?.QrCodeUrl;
+                item.DeepLink = metadata?.DeepLink;
+                item.DeeplinkMiniApp = metadata?.DeeplinkMiniApp;
+
+                if (subscriptionById.TryGetValue(tx.DocNo, out var sub))
+                {
+                    item.MemberSubscriptionId = sub.Id;
+                    item.StartDate = sub.StartDate;
+                    item.EndDate = sub.EndDate;
+                    item.IsActive = sub.Status == MemberSubscriptionPackageStatus.ACTIVE.ToString();
+                }
+                else
+                {
+                    item.MemberSubscriptionId = tx.DocNo;
+                }
+
+                responseItems.Add(item);
+            }
+
+            return new PagedResult<TransactionResponse>
+            {
+                Items = responseItems,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
         }
     }
 }
