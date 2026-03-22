@@ -145,6 +145,8 @@ public partial class MyDbContext : DbContext
     public virtual DbSet<Category> Categories { get; set; }
     public virtual DbSet<VenueLocationCategory> VenueLocationCategories { get; set; }
 
+    public DbSet<VenueSettlement> VenueSettlements { get; set; }
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -1151,6 +1153,86 @@ public partial class MyDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(d => d.SenderId)
                 .HasConstraintName("fk_messages_sender");
+        });
+
+        modelBuilder.Entity<VenueSettlement>(entity =>
+        {
+            entity.ToTable("venue_settlements");
+
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id)
+                .HasColumnName("id");
+
+            entity.Property(e => e.VoucherItemId)
+                .HasColumnName("voucher_item_id")
+                .IsRequired();
+
+            entity.Property(e => e.VoucherItemMemberId)
+                .HasColumnName("voucher_item_member_id");
+
+            entity.Property(e => e.VenueOwnerId)
+                .HasColumnName("venue_owner_id")
+                .IsRequired();
+
+            entity.Property(e => e.GrossAmount)
+                .HasColumnName("gross_amount")
+                .HasColumnType("numeric(18,2)")
+                .HasDefaultValue(0);
+
+            entity.Property(e => e.CommissionAmount)
+                .HasColumnName("commission_amount")
+                .HasColumnType("numeric(18,2)")
+                .HasDefaultValue(0);
+
+            entity.Property(e => e.NetAmount)
+                .HasColumnName("net_amount")
+                .HasColumnType("numeric(18,2)")
+                .HasDefaultValue(0);
+
+            entity.Property(e => e.Status)
+                .HasColumnName("status")
+                .IsRequired();
+
+            entity.Property(e => e.AvailableAt)
+                .HasColumnName("available_at");
+
+            entity.Property(e => e.PaidAt)
+                .HasColumnName("paid_at");
+
+            entity.Property(e => e.Note)
+                .HasColumnName("note");
+
+            entity.Property(e => e.CreatedAt)
+                .HasColumnName("created_at")
+                .HasDefaultValueSql("now()");
+
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnName("updated_at")
+                .HasDefaultValueSql("now()");
+
+            entity.Property(e => e.IsDeleted)
+                .HasColumnName("is_deleted")
+                .HasDefaultValue(false);
+
+            entity.HasIndex(e => e.VenueOwnerId)
+                .HasDatabaseName("idx_venue_settlements_venue_owner_id");
+
+            entity.HasIndex(e => e.VoucherItemId)
+                .HasDatabaseName("idx_venue_settlements_voucher_item_id");
+
+            entity.HasIndex(e => e.VoucherItemMemberId)
+                .HasDatabaseName("idx_venue_settlements_voucher_item_member_id");
+
+            entity.HasIndex(e => e.Status)
+                .HasDatabaseName("idx_venue_settlements_status");
+
+            entity.HasIndex(e => e.AvailableAt)
+                .HasDatabaseName("idx_venue_settlements_available_at");
+
+            entity.HasIndex(e => e.VoucherItemId)
+                .IsUnique()
+                .HasDatabaseName("uq_venue_settlements_voucher_item_id");
         });
 
         OnModelCreatingPartial(modelBuilder);
