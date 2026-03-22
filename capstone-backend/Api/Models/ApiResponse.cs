@@ -13,7 +13,7 @@ public class ApiResponse<T>
     /// <summary>
     /// Human-readable message describing the response
     /// </summary>
-    /// <example>User created successfully</example>
+    /// <example>Message successfully</example>
     public string Message { get; set; } = string.Empty;
 
     /// <summary>

@@ -12,12 +12,16 @@ namespace capstone_backend.Api.Controllers;
 public class VenueLocationController : BaseController
 {
     private readonly IVenueLocationService _venueLocationService;
+    private readonly ISubscriptionPackageService _subscriptionPackageService;
+
     private readonly ILogger<VenueLocationController> _logger;
 
     public VenueLocationController(
         IVenueLocationService venueLocationService,
+        ISubscriptionPackageService subscriptionPackageService,
         ILogger<VenueLocationController> logger)
     {
+        _subscriptionPackageService = subscriptionPackageService;
         _venueLocationService = venueLocationService;
         _logger = logger;
     }
@@ -443,5 +447,33 @@ public class VenueLocationController : BaseController
         }
 
         return OkResponse(venue, "Venue location with KYC retrieved successfully");
+    }
+
+     [HttpGet("my-subscriptions")]
+    [Authorize(Roles = "VENUEOWNER")]
+    public async Task<IActionResult> GetMyVenueSubscriptions()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
+            {
+                return UnauthorizedResponse("User not authenticated");
+            }
+
+            var packages = await _subscriptionPackageService.GetVenueSubscriptionPackagesByOwnerUserIdAsync(userId.Value);
+            
+            return OkResponse(packages, $"Successfully retrieved {packages.Count} venue subscription packages");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Venue owner not found for user ID: {UserId}", GetCurrentUserId());
+            return NotFoundResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting venue subscription packages for current user");
+            return InternalServerErrorResponse("An error occurred while retrieving venue subscription packages");
+        }
     }
 }

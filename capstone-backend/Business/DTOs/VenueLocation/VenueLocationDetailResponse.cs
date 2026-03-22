@@ -30,6 +30,7 @@ public class VenueLocationDetailResponse
     public List<string>? FullPageMenuImage { get; set; }
     public bool? IsOwnerVerified { get; set; }
     public string? BusinessLicenseUrl { get; set; }
+    public List<RejectionRecord>? RejectionDetails { get; set; }  // ✅ Đổi thành List trực tiếp
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 

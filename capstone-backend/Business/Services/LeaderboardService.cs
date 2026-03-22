@@ -18,11 +18,15 @@ public class LeaderboardService : ILeaderboardService
         if (month < 1 || month > 12)
             throw new ArgumentException("Tháng phải từ 1 đến 12");
 
-        var seasonKey = $"{year}-{month:D2}";
+        // Tính ngày đầu và cuối tháng chính xác
+        var periodStart = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var nextMonth = periodStart.AddMonths(1);
+        var periodEnd = nextMonth.AddTicks(-1); // Giây cuối cùng của tháng
 
-        var (leaderboards, totalCount) = await _unitOfWork.Leaderboards.GetLeaderboardWithCoupleAsync(
+        var (leaderboards, totalCount) = await _unitOfWork.Leaderboards.GetLeaderboardByPeriodAsync(
             "monthly",
-            seasonKey,
+            periodStart,
+            periodEnd,
             pageNumber,
             pageSize
         );
@@ -32,29 +36,49 @@ public class LeaderboardService : ILeaderboardService
 
         var firstItem = leaderboards.First();
 
-        // Query couple names riêng
+        // Query couple với member info
         var coupleIds = leaderboards.Select(l => l.CoupleId).ToList();
-        var couples = await _unitOfWork.CoupleProfiles.GetAsync(
-            c => coupleIds.Contains(c.id),
-            null
-        );
-        var coupleDict = couples.ToDictionary(c => c.id, c => c.CoupleName);
+        var couples = await _unitOfWork.Context.CoupleProfiles
+            .Include(c => c.MemberId1Navigation)
+                .ThenInclude(m => m.User)
+            .Include(c => c.MemberId2Navigation)
+                .ThenInclude(m => m.User)
+            .Where(c => coupleIds.Contains(c.id))
+            .ToListAsync();
+
+        var coupleDict = couples.ToDictionary(c => c.id);
 
         return new LeaderboardListResponse
         {
             PeriodType = "monthly",
-            SeasonKey = seasonKey,
+            SeasonKey = firstItem.SeasonKey,
             PeriodStart = firstItem.PeriodStart,
             PeriodEnd = firstItem.PeriodEnd,
             TotalCount = totalCount,
-            Rankings = leaderboards.Select(l => new LeaderboardResponse
+            Rankings = leaderboards.Select(l =>
             {
-                Id = l.Id,
-                CoupleId = l.CoupleId,
-                CoupleName = coupleDict.GetValueOrDefault(l.CoupleId, "Unknown"),
-                TotalPoints = l.TotalPoints,
-                RankPosition = l.RankPosition,
-                UpdatedAt = l.UpdatedAt
+                var couple = coupleDict.GetValueOrDefault(l.CoupleId);
+                return new LeaderboardResponse
+                {
+                    Id = l.Id,
+                    CoupleId = l.CoupleId,
+                    CoupleName = couple?.CoupleName ?? "Unknown",
+                    Member1 = couple?.MemberId1Navigation != null ? new MemberInfo
+                    {
+                        MemberId = couple.MemberId1Navigation.Id,
+                        MemberName = couple.MemberId1Navigation.FullName,
+                        AvatarUrl = couple.MemberId1Navigation.User?.AvatarUrl
+                    } : null,
+                    Member2 = couple?.MemberId2Navigation != null ? new MemberInfo
+                    {
+                        MemberId = couple.MemberId2Navigation.Id,
+                        MemberName = couple.MemberId2Navigation.FullName,
+                        AvatarUrl = couple.MemberId2Navigation.User?.AvatarUrl
+                    } : null,
+                    TotalPoints = l.TotalPoints,
+                    RankPosition = l.RankPosition,
+                    UpdatedAt = l.UpdatedAt
+                };
             }).ToList()
         };
     }

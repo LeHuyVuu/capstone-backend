@@ -10,4 +10,11 @@ public interface ILeaderboardRepository : IGenericRepository<Leaderboard>
         string seasonKey,
         int pageNumber,
         int pageSize);
+    
+    Task<(IEnumerable<Leaderboard> Items, int TotalCount)> GetLeaderboardByPeriodAsync(
+        string periodType,
+        DateTime periodStart,
+        DateTime periodEnd,
+        int pageNumber,
+        int pageSize);
 }

@@ -107,7 +107,10 @@ builder.Services.AddSignalR();
 // 16. Add Firebase
 builder.Services.AddFireBaseConfiguration();
 
-// 17. Point config
+// 17. Add Resend Email Service
+builder.Services.AddEmailConfiguration();
+
+// 18. Point config
 builder.Services.Configure<PointSettings>(builder.Configuration.GetSection("PointSettings"));
 
 var app = builder.Build();

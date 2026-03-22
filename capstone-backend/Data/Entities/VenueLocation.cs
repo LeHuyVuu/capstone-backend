@@ -71,6 +71,13 @@ public partial class VenueLocation
 
     public bool? IsDeleted { get; set; }
 
+    /// <summary>
+    /// JSONB field to store rejection details when venue is rejected
+    /// Format: { "reason": "...", "rejectedAt": "...", "rejectedBy": "..." }
+    /// </summary>
+    [Column("reject_reason", TypeName = "jsonb")]
+    public string? RejectReason { get; set; }
+
     [InverseProperty("Venue")]
     public virtual ICollection<CheckInHistory> CheckInHistories { get; set; } = new List<CheckInHistory>();
 

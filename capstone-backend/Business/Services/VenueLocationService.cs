@@ -25,6 +25,8 @@ public class VenueLocationService : IVenueLocationService
     private readonly SepayService _sepayService;
     private readonly IMeilisearchService _meilisearchService;
     private readonly RefundService _refundService;
+    private readonly IEmailService _emailService;
+    private readonly WalletPaymentService _walletPaymentService;
 
     public VenueLocationService(
         IUnitOfWork unitOfWork, 
@@ -33,7 +35,9 @@ public class VenueLocationService : IVenueLocationService
         ICurrentUser currentUser,
         SepayService sepayService,
         IMeilisearchService meilisearchService,
-        RefundService refundService)
+        RefundService refundService,
+        IEmailService emailService,
+        WalletPaymentService walletPaymentService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -42,6 +46,8 @@ public class VenueLocationService : IVenueLocationService
         _sepayService = sepayService;
         _meilisearchService = meilisearchService;
         _refundService = refundService;
+        _emailService = emailService;
+        _walletPaymentService = walletPaymentService;
     }
 
     #region Category & Image Helpers
@@ -1201,6 +1207,7 @@ public class VenueLocationService : IVenueLocationService
             Category = v.Category,
             FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
             IsOwnerVerified = v.IsOwnerVerified,
+            RejectionDetails = string.IsNullOrWhiteSpace(v.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(v.RejectReason),
             CreatedAt = v.CreatedAt,
             UpdatedAt = v.UpdatedAt,
             LocationTags = CreateLocationTagsInfo(v)
@@ -1440,8 +1447,34 @@ public class VenueLocationService : IVenueLocationService
         var totalAmount = package.Price.Value * request.Quantity;
         var totalDays = package.DurationDays.Value * request.Quantity;
 
-        // 8. Start transaction
-        using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
+        // 7.5. Validate payment method
+        var paymentMethod = request.PaymentMethod?.ToUpper() ?? "VIETQR";
+        if (paymentMethod != "VIETQR" && paymentMethod != "WALLET")
+        {
+            return new SubmitVenueWithPaymentResponse 
+            { 
+                IsSuccess = false, 
+                Message = "Invalid payment method. Must be VIETQR or WALLET" 
+            };
+        }
+
+        // 7.6. If WALLET, check balance first
+        if (paymentMethod == "WALLET")
+        {
+            var (hasSufficient, currentBalance) = await _walletPaymentService.CheckWalletBalanceAsync(userId, totalAmount);
+            if (!hasSufficient)
+            {
+                return new SubmitVenueWithPaymentResponse 
+                { 
+                    IsSuccess = false, 
+                    Message = $"Insufficient wallet balance. Available: {currentBalance:N0} VND, Required: {totalAmount:N0} VND"
+                };
+            }
+        }
+
+        // 8. Start transaction with SERIALIZABLE isolation (prevent race condition)
+        using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable);
         
         try
         {
@@ -1471,7 +1504,7 @@ public class VenueLocationService : IVenueLocationService
                 UserId = userId,
                 Amount = totalAmount,
                 Currency = "VND",
-                PaymentMethod = "VIETQR",
+                PaymentMethod = paymentMethod,
                 TransType = 1, // VENUE_SUBSCRIPTION
                 DocNo = subscription.Id,
                 Description = $"Thanh toán gói {package.PackageName} cho {venue.Name} (x{request.Quantity})",
@@ -1483,8 +1516,66 @@ public class VenueLocationService : IVenueLocationService
             await _unitOfWork.Context.Set<Transaction>().AddAsync(transaction);
             await _unitOfWork.SaveChangesAsync();
 
-            _logger.LogInformation("✅ Created transaction ID: {TxId}", transaction.Id);
+            _logger.LogInformation("✅ Created transaction ID: {TxId}, PaymentMethod: {Method}", transaction.Id, paymentMethod);
 
+            // ========== WALLET PAYMENT FLOW ==========
+            if (paymentMethod == "WALLET")
+            {
+                // Process wallet payment immediately
+                var walletResult = await _walletPaymentService.ProcessWalletPaymentAsync(
+                    userId, 
+                    totalAmount, 
+                    transaction.Id, 
+                    transaction.Description ?? "Venue subscription payment");
+
+                if (!walletResult.IsSuccess)
+                {
+                    await dbTransaction.RollbackAsync();
+                    return new SubmitVenueWithPaymentResponse 
+                    { 
+                        IsSuccess = false, 
+                        Message = walletResult.Message 
+                    };
+                }
+
+                // Activate subscription immediately
+                var now = DateTime.UtcNow;
+                subscription.Status = VenueSubscriptionPackageStatus.ACTIVE.ToString();
+                subscription.StartDate = now;
+                subscription.EndDate = now.AddDays(totalDays);
+                subscription.UpdatedAt = now;
+                _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(subscription);
+
+                // Update venue status to PENDING for admin approval
+                venue.Status = VenueLocationStatus.PENDING.ToString();
+                venue.UpdatedAt = now;
+                _unitOfWork.Context.Set<VenueLocation>().Update(venue);
+
+                await _unitOfWork.SaveChangesAsync();
+                await dbTransaction.CommitAsync();
+
+                _logger.LogInformation("✅ WALLET payment completed - TxId: {TxId}, SubId: {SubId}, VenueStatus: PENDING, Balance: {OldBalance} → {NewBalance}",
+                    transaction.Id, subscription.Id, walletResult.OldBalance, walletResult.NewBalance);
+
+                return new SubmitVenueWithPaymentResponse
+                {
+                    IsSuccess = true,
+                    Message = $"Payment successful via Wallet. Venue submitted for admin approval. Balance: {walletResult.OldBalance:N0} → {walletResult.NewBalance:N0} VND",
+                    TransactionId = transaction.Id,
+                    SubscriptionId = subscription.Id,
+                    QrCodeUrl = null, // No QR for wallet payment
+                    Amount = totalAmount,
+                    BankInfo = null,
+                    ExpireAt = null,
+                    PaymentContent = paymentContent,
+                    PackageName = package.PackageName ?? "Unknown",
+                    TotalDays = totalDays,
+                    PaymentMethod = "WALLET",
+                    WalletBalance = walletResult.NewBalance
+                };
+            }
+
+            // ========== VIETQR PAYMENT FLOW (ORIGINAL LOGIC) ==========
             // 11. Create Sepay transaction
             SepayTransactionResponse sepayResponse;
             try
@@ -1539,7 +1630,7 @@ public class VenueLocationService : IVenueLocationService
 
             await dbTransaction.CommitAsync();
 
-            _logger.LogInformation("✅ Payment initiated - TxId: {TxId}, SubId: {SubId}, SepayId: {SepayId}", 
+            _logger.LogInformation("✅ VIETQR payment initiated - TxId: {TxId}, SubId: {SubId}, SepayId: {SepayId}", 
                 transaction.Id, subscription.Id, sepayResponse.Data.Id);
 
             // 13. Return response with QR code
@@ -1560,7 +1651,8 @@ public class VenueLocationService : IVenueLocationService
                 ExpireAt = expireAt,
                 PaymentContent = paymentContent,
                 PackageName = package.PackageName ?? "Unknown",
-                TotalDays = totalDays
+                TotalDays = totalDays,
+                PaymentMethod = "VIETQR"
             };
         }
         catch (Exception ex)
@@ -1607,6 +1699,7 @@ public class VenueLocationService : IVenueLocationService
             Category = v.Category,
             FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
             IsOwnerVerified = v.IsOwnerVerified,
+            RejectionDetails = string.IsNullOrWhiteSpace(v.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(v.RejectReason),
             CreatedAt = v.CreatedAt,
             UpdatedAt = v.UpdatedAt,
             LocationTags = CreateLocationTagsInfo(v)
@@ -1661,6 +1754,41 @@ public class VenueLocationService : IVenueLocationService
             venue.Status = status;
             venue.UpdatedAt = DateTime.UtcNow;
             
+            // Lưu rejection details vào JSONB khi reject
+            if (status == VenueLocationStatus.DRAFTED.ToString() && !string.IsNullOrWhiteSpace(request.Reason))
+            {
+                // Parse existing rejections hoặc tạo mới
+                var existingRejections = new List<RejectionRecord>();
+                if (!string.IsNullOrWhiteSpace(venue.RejectReason))
+                {
+                    try
+                    {
+                        existingRejections = System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(venue.RejectReason) ?? new List<RejectionRecord>();
+                    }
+                    catch
+                    {
+                        // Nếu parse fail, bắt đầu mới
+                    }
+                }
+                
+                // Thêm rejection mới vào list
+                existingRejections.Add(new RejectionRecord
+                {
+                    Reason = request.Reason,
+                    RejectedAt = DateTime.UtcNow.ToString("o"),
+                    RejectedBy = "ADMIN"
+                });
+                
+                // Serialize array trực tiếp
+                venue.RejectReason = System.Text.Json.JsonSerializer.Serialize(existingRejections);
+                _logger.LogInformation("Saved rejection details for venue {VenueId}: Total {Count} rejections", venue.Id, existingRejections.Count);
+            }
+            else if (status == VenueLocationStatus.ACTIVE.ToString())
+            {
+                // Clear rejection details khi approve
+                venue.RejectReason = null;
+            }
+            
             if (venue.CreatedAt.HasValue && venue.CreatedAt.Value.Kind == DateTimeKind.Unspecified)
                 venue.CreatedAt = DateTime.SpecifyKind(venue.CreatedAt.Value, DateTimeKind.Utc);
 
@@ -1712,6 +1840,45 @@ public class VenueLocationService : IVenueLocationService
                                 _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(activeSubscription);
 
                                 refundMessage = $" Đã hoàn {refundResult.RefundAmount:N0} VND vào ví (Balance: {refundResult.OldBalance:N0} → {refundResult.NewBalance:N0} VND).";
+                                
+                                // Gửi email thông báo hoàn tiền
+                                try
+                                {
+                                    var emailHtml = EmailRefundTemplate.GetVenueRefundEmailContent(
+                                        venueOwner.BusinessName ?? "Venue Owner",
+                                        venue.Name ?? "Địa điểm",
+                                        activeSubscription.Package?.PackageName ?? "Gói đăng ký",
+                                        refundResult.RefundAmount,
+                                        refundResult.OldBalance,
+                                        refundResult.NewBalance,
+                                        request.Reason ?? "Không đạt yêu cầu"
+                                    );
+
+                                    var emailRequest = new capstone_backend.Business.DTOs.Email.SendEmailRequest
+                                    {
+                                        To = "lehuyvuok@gmail.com",
+                                        Subject = $"[CoupleMood] Thông báo hoàn tiền - Địa điểm {venue.Name} bị từ chối",
+                                        HtmlBody = emailHtml,
+                                        FromName = "CoupleMood"
+                                    };
+
+                                    if (!string.IsNullOrWhiteSpace(emailRequest.To))
+                                    {
+                                        var emailSent = await _emailService.SendEmailAsync(emailRequest);
+                                        if (emailSent)
+                                        {
+                                            _logger.LogInformation("✅ Sent refund notification email to {Email}", emailRequest.To);
+                                        }
+                                        else
+                                        {
+                                            _logger.LogWarning("⚠️ Failed to send refund email to {Email}", emailRequest.To);
+                                        }
+                                    }
+                                }
+                                catch (Exception emailEx)
+                                {
+                                    _logger.LogError(emailEx, "❌ Error sending refund notification email");
+                                }
                             }
                             else
                             {
@@ -1777,9 +1944,6 @@ public class VenueLocationService : IVenueLocationService
                         if (existingUser == null)
                         {
                             var staffPassword = GenerateRandomPassword(12);
-
-                            // send email to owner with staff account info here
-
                             
                             var staffUser = new UserAccount
                             {
@@ -1787,7 +1951,7 @@ public class VenueLocationService : IVenueLocationService
                                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(staffPassword),
                                 DisplayName = $"Staff - {venue.Name}",
                                 PhoneNumber = venue.PhoneNumber,
-                                Role = "STAFF", // Role STAFF đã có trong database constraint
+                                Role = "STAFF",
                                 IsActive = true,
                                 IsVerified = true,
                                 IsDeleted = false,
@@ -1801,7 +1965,49 @@ public class VenueLocationService : IVenueLocationService
                             _logger.LogInformation("✅ Created STAFF account for venue {VenueId}: Email={Email}, UserId={UserId}", 
                                 venue.Id, staffEmail, staffUser.Id);
 
-                            staffAccountMessage = $" | STAFF account created";
+                            // Gửi email thông tin STAFF account cho venue owner
+                            try
+                            {
+                                var emailHtml = EmailAccountInfoTemplate.GetStaffAccountInfoEmailContent(
+                                    venueOwner.BusinessName ?? "Venue Owner",
+                                    venue.Name,
+                                    staffEmail,
+                                    staffPassword
+                                );
+
+                                var emailRequest = new capstone_backend.Business.DTOs.Email.SendEmailRequest
+                                {
+                                    To = "lehuyvuok@gmail.com",
+                                    Subject = $"[CoupleMood] Địa điểm {venue.Name} đã được phê duyệt - Thông tin tài khoản STAFF",
+                                    HtmlBody = emailHtml,
+                                    FromName = "CoupleMood"
+                                };
+
+                                if (!string.IsNullOrWhiteSpace(emailRequest.To))
+                                {
+                                    var emailSent = await _emailService.SendEmailAsync(emailRequest);
+                                    if (emailSent)
+                                    {
+                                        _logger.LogInformation("✅ Sent STAFF account info email to {Email}", emailRequest.To);
+                                        staffAccountMessage = $" | STAFF account created & email sent";
+                                    }
+                                    else
+                                    {
+                                        _logger.LogWarning("⚠️ Failed to send email to {Email}", emailRequest.To);
+                                        staffAccountMessage = $" | STAFF account created but email failed";
+                                    }
+                                }
+                                else
+                                {
+                                    _logger.LogWarning("⚠️ Venue owner has no email address");
+                                    staffAccountMessage = $" | STAFF account created but no owner email";
+                                }
+                            }
+                            catch (Exception emailEx)
+                            {
+                                _logger.LogError(emailEx, "❌ Error sending STAFF account email");
+                                staffAccountMessage = $" | STAFF account created but email error";
+                            }
                         }
                         else
                         {

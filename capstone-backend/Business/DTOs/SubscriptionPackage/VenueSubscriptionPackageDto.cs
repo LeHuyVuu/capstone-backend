@@ -10,7 +10,9 @@ public class VenueSubscriptionPackageDto
     public int? Quantity { get; set; }
     public string? Status { get; set; }
     public DateTime? CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
+    
+    // Venue details
+    public string? VenueName { get; set; }
     
     // Package details
     public SubscriptionPackageDto? Package { get; set; }
