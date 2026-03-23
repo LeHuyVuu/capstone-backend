@@ -492,6 +492,7 @@ namespace capstone_backend.Business.Services
             }
 
             voucher.Status = VoucherStatus.ACTIVE.ToString();
+            voucher.StartDate = now;
             voucher.UpdatedAt = now;
 
             _unitOfWork.Vouchers.Update(voucher);          
