@@ -224,6 +224,7 @@ public class PaymentController : BaseController
     /// <summary>
     /// Process wallet top-up payment (For Members)
     /// </summary>
+    [HttpPost("member/momo-topup")]
     public async Task<IActionResult> ProcessMemberWalletTopup([FromBody] CreateWalletTopupRequest request)
     {
         try
