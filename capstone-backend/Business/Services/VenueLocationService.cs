@@ -894,6 +894,7 @@ public class VenueLocationService : IVenueLocationService
             {
                 Id = mt.Id,
                 Name = mt.Name,
+                Description = mt.Description,
             })
             .ToList();
     }
@@ -916,6 +917,7 @@ public class VenueLocationService : IVenueLocationService
             {
                 Id = pt.Id,
                 Name = pt.Name,
+                Description = pt.Description,
             })
             .ToList();
     }
