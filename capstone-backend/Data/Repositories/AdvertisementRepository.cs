@@ -21,8 +21,8 @@ public class AdvertisementRepository : GenericRepository<Advertisement>, IAdvert
             .Include(vla => vla.Venue)
             .Where(vla =>
                 vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString() &&
-                // vla.StartDate <= now &&
-                // vla.EndDate >= now &&
+                vla.StartDate <= now &&
+                vla.EndDate >= now &&
                 vla.Advertisement.Status == AdvertisementStatus.APPROVED.ToString() &&
                 vla.Advertisement.IsDeleted == false &&
                 vla.Venue.IsDeleted == false &&
