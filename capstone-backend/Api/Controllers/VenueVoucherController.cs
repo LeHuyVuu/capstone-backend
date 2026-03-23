@@ -8,7 +8,7 @@ namespace capstone_backend.Api.Controllers
 {
     [Route("api/venue-vouchers")]
     [ApiController]
-    [Authorize(Roles = "VENUEOWNER, venueowner")]
+    [Authorize(Roles = "VENUEOWNER, venueowner, STAFF, staff")]
     public class VenueVoucherController : BaseController
     {
         private readonly IVenueVoucherService _venueVoucherService;
