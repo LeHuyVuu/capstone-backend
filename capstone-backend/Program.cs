@@ -7,6 +7,7 @@ using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Business.Jobs.Leaderboard;
 using capstone_backend.Business.Jobs.Media;
 using capstone_backend.Business.Jobs.Review;
+using capstone_backend.Business.Jobs.VenueSettlement;
 using capstone_backend.Business.Mappings;
 using capstone_backend.Extensions;
 using capstone_backend.Hubs;
@@ -240,6 +241,15 @@ using (var scope = serviceProvider.CreateScope())
         "quarterly-reset-interaction-points",
         job => job.ResetInteractionPointsAsync(),
         "0 0 1 */3 *",
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
+    recurringJobManager.AddOrUpdate<IVenueSettlementWorker>(
+        "process-venue-settlements",
+        job => job.ProcessPendingSettlementsAsync(),
+        Cron.Hourly(),
         new RecurringJobOptions
         {
             TimeZone = vnTz

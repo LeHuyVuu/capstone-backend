@@ -2,6 +2,7 @@
 {
     public enum PaymentMethod
     {
-        MOMO
+        MOMO,
+        SYSTEM
     }
 }
