@@ -1,5 +1,6 @@
 using capstone_backend.Api.Models;
 using capstone_backend.Business.DTOs.Momo;
+using capstone_backend.Business.DTOs.Wallet;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
@@ -86,8 +87,8 @@ public class PaymentController : BaseController
                 }
             },
             // Parse external ref for QR info
-            externalInfo = string.IsNullOrEmpty(transaction.ExternalRefCode) 
-                ? null 
+            externalInfo = string.IsNullOrEmpty(transaction.ExternalRefCode)
+                ? null
                 : JsonSerializer.Deserialize<Dictionary<string, object>>(transaction.ExternalRefCode)
         };
 
@@ -107,7 +108,7 @@ public class PaymentController : BaseController
         }
 
         var transaction = await _unitOfWork.Context.Set<Transaction>()
-            .FirstOrDefaultAsync(t => t.Id == transactionId 
+            .FirstOrDefaultAsync(t => t.Id == transactionId
                 && t.UserId == userId.Value
                 && t.Status == TransactionStatus.PENDING.ToString());
 
@@ -122,7 +123,7 @@ public class PaymentController : BaseController
         }
 
         var externalRef = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(transaction.ExternalRefCode);
-        
+
         var response = new
         {
             transactionId = transaction.Id,
@@ -149,7 +150,7 @@ public class PaymentController : BaseController
         }
 
         var transaction = await _unitOfWork.Context.Set<Transaction>()
-            .FirstOrDefaultAsync(t => t.Id == transactionId 
+            .FirstOrDefaultAsync(t => t.Id == transactionId
                 && t.UserId == userId.Value
                 && t.Status == TransactionStatus.PENDING.ToString());
 
@@ -169,7 +170,7 @@ public class PaymentController : BaseController
             if (transaction.TransType == 1)
             {
                 var subscription = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
-                    .FirstOrDefaultAsync(s => s.Id == transaction.DocNo 
+                    .FirstOrDefaultAsync(s => s.Id == transaction.DocNo
                         && s.Status == VenueSubscriptionPackageStatus.PENDING_PAYMENT.ToString());
 
                 if (subscription != null)
@@ -212,6 +213,29 @@ public class PaymentController : BaseController
             if (result == null)
                 return BadRequestResponse("Lấy link thanh toán thất bại");
 
+            return OkResponse(result, "Lấy link thanh toán thành công");
+        }
+        catch (Exception ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Process wallet top-up payment (For Members)
+    /// </summary>
+    public async Task<IActionResult> ProcessMemberWalletTopup([FromBody] CreateWalletTopupRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return UnauthorizedResponse("Unauthorized");
+            }
+            var result = await _momoService.ProcessMemberWalletTopupAsync(userId.Value, request);
+            if (result == null)
+                return BadRequestResponse("Lấy link thanh toán thất bại");
             return OkResponse(result, "Lấy link thanh toán thành công");
         }
         catch (Exception ex)
