@@ -8,6 +8,8 @@ namespace capstone_backend.Data.Interfaces;
 /// </summary>
 public interface IVenueOwnerProfileRepository : IGenericRepository<VenueOwnerProfile>
 {
+    Task<IEnumerable<VenueOwnerProfile>> GetByIdsAsync(List<int> venueOwnerIds);
+
     /// <summary>
     /// Get venue owner profile by user ID
     /// </summary>
