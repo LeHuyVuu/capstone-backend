@@ -29,7 +29,7 @@ public partial class MemberSubscriptionPackage
     [InverseProperty("MemberSubscriptionPackages")]
     public virtual MemberProfile Member { get; set; } = null!;
 
-    [ForeignKey("MemberId")]
+    [ForeignKey("PackageId")]
     [InverseProperty("MemberSubscriptionPackages")]
     public virtual SubscriptionPackage Package { get; set; } = null!;
 }
