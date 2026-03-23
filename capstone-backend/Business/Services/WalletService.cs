@@ -1,8 +1,10 @@
 using capstone_backend.Business.DTOs.Wallet;
+using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace capstone_backend.Business.Services;
 
@@ -103,5 +105,84 @@ public class WalletService
                 RequestedAt = wr.RequestedAt ?? DateTime.UtcNow
             };
         }).ToList();
+    }
+
+    public async Task<PagedResult<WalletTransactionHistoryResponse>> GetWalletTransactionHistoryAsync(
+        int userId, 
+        int pageNumber = 1, 
+        int pageSize = 20)
+    {
+        // Validate pagination parameters
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100; // Max 100 items per page
+
+        // Lấy tất cả giao dịch liên quan đến wallet của user
+        // Các trường hợp làm thay đổi số dư wallet:
+        // 1. TĂNG SỐ DƯ (+):
+        //    - TransType = 4 (WALLET_TOPUP): Nạp tiền vào wallet qua MoMo
+        //    - PaymentMethod = "REFUND": Hoàn tiền vào wallet (khi hủy subscription/ads)
+        // 2. GIẢM SỐ DƯ (-):
+        //    - PaymentMethod = "WALLET": Thanh toán subscription/ads bằng wallet
+        // CHỈ LẤY GIAO DỊCH THÀNH CÔNG (SUCCESS) vì chỉ có giao dịch này mới thực sự thay đổi số dư
+        var query = _unitOfWork.Context.Set<Transaction>()
+            .Where(t => t.UserId == userId && 
+                       t.Status == TransactionStatus.SUCCESS.ToString() &&
+                       (t.TransType == (int)TransactionType.WALLET_TOPUP || 
+                        t.PaymentMethod == "WALLET" ||
+                        t.PaymentMethod == "REFUND"));
+
+        // Get total count
+        var totalCount = await query.CountAsync();
+
+        // Get paginated data
+        var transactions = await query
+            .OrderByDescending(t => t.CreatedAt)
+            .ThenByDescending(t => t.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var items = transactions.Select(t =>
+        {
+            // Xác định hướng giao dịch
+            // Tăng số dư (IN):
+            //   - WALLET_TOPUP: Nạp tiền vào wallet
+            //   - REFUND: Hoàn tiền vào wallet
+            // Giảm số dư (OUT):
+            //   - PaymentMethod = WALLET: Thanh toán bằng wallet
+            bool isIncoming = t.TransType == (int)TransactionType.WALLET_TOPUP || 
+                             t.PaymentMethod == "REFUND";
+            string direction = isIncoming ? "IN" : "OUT";
+            decimal balanceChange = isIncoming ? t.Amount : -t.Amount;
+
+            return new WalletTransactionHistoryResponse
+            {
+                TransactionId = t.Id,
+                Amount = t.Amount,
+                Currency = t.Currency,
+                PaymentMethod = t.PaymentMethod,
+                TransactionType = GetTransactionTypeName(t.TransType),
+                Description = t.Description,
+                Status = t.Status ?? "UNKNOWN",
+                CreatedAt = t.CreatedAt ?? DateTime.UtcNow,
+                Direction = direction,
+                BalanceChange = balanceChange
+            };
+        }).ToList();
+
+        return new PagedResult<WalletTransactionHistoryResponse>(items, pageNumber, pageSize, totalCount);
+    }
+
+    private string GetTransactionTypeName(int transType)
+    {
+        return transType switch
+        {
+            1 => "VENUE_SUBSCRIPTION",
+            2 => "ADS_ORDER",
+            3 => "MEMBER_SUBSCRIPTION",
+            4 => "WALLET_TOPUP",
+            _ => "UNKNOWN"
+        };
     }
 }

@@ -64,4 +64,18 @@ public class WalletController : BaseController
         var requests = await _walletService.GetMyWithdrawRequestsAsync(userId.Value);
         return OkResponse(requests, $"Retrieved {requests.Count} withdraw request(s)");
     }
+
+    /// <summary>VENUE OWNER - Lấy lịch sử giao dịch biến động số dư wallet</summary>
+    [HttpGet("transaction-history")]
+    public async Task<IActionResult> GetTransactionHistory(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var userId = GetCurrentUserId();
+        if (!userId.HasValue)
+            return UnauthorizedResponse("User not authenticated");
+
+        var history = await _walletService.GetWalletTransactionHistoryAsync(userId.Value, pageNumber, pageSize);
+        return OkResponse(history, $"Retrieved {history.Items.Count()} transaction(s) from page {pageNumber}");
+    }
 }
