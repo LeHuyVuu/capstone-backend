@@ -60,7 +60,7 @@ public partial class UserAccount
     public virtual ICollection<VenueOwnerProfile> VenueOwnerProfiles { get; set; } = new List<VenueOwnerProfile>();
 
     [InverseProperty("User")]
-    public virtual ICollection<Wallet> Wallets { get; set; } = new List<Wallet>();
+    public virtual Wallet? Wallet { get; set; }
 
     [InverseProperty("User")]
     public virtual ICollection<ReviewReply> ReviewReplies { get; set; } = new List<ReviewReply>();

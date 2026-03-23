@@ -58,6 +58,7 @@ public class UserRepository : GenericRepository<UserAccount>, IUserRepository
         CancellationToken cancellationToken = default)
     {
         var query = _dbSet
+            .Include(u => u.Wallet)
             .Include(u => u.MemberProfiles)
             .Include(u => u.VenueOwnerProfiles)
             .AsQueryable();

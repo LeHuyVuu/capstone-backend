@@ -25,7 +25,7 @@ public partial class Wallet
     public DateTime? UpdatedAt { get; set; }
 
     [ForeignKey("UserId")]
-    [InverseProperty("Wallets")]
+    [InverseProperty("Wallet")]
     public virtual UserAccount User { get; set; } = null!;
 
     [InverseProperty("Wallet")]
