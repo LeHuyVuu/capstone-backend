@@ -27,5 +27,17 @@ namespace capstone_backend.Data.Repositories
 
             return await query.FirstOrDefaultAsync();
         }
+
+        public async Task<Transaction?> GetWalletTopupPendingAsync(int userId, DateTime timeLimit)
+        {
+            return await _dbSet
+                .Where(t => t.UserId == userId
+                            && t.TransType == 4
+                            && t.PaymentMethod == PaymentMethod.MOMO.ToString()
+                            && t.Status == TransactionStatus.PENDING.ToString()
+                            && t.CreatedAt >= timeLimit)
+                .OrderByDescending(t => t.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
     }
 }
