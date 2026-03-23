@@ -559,9 +559,9 @@ namespace capstone_backend.Business.Services
         {
             var validationMessage = string.Empty;
 
-            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
-            if (venueOwner == null)
-                throw new Exception("Không tìm thấy chủ địa điểm");
+            //var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
+            //if (venueOwner == null)
+            //    throw new Exception("Không tìm thấy chủ địa điểm");
 
             var voucherItem = await _unitOfWork.VoucherItems.GetByItemCodeWithDetailsAsync(request.ItemCode);
             if (voucherItem == null)
@@ -570,8 +570,8 @@ namespace capstone_backend.Business.Services
             if (voucherItem.Voucher == null)
                 throw new Exception("Mã voucher không hợp lệ");
 
-            if (voucherItem.Voucher.VenueOwnerId != venueOwner.Id)
-                throw new Exception("Bạn không có quyền xác thực voucher này");
+            //if (voucherItem.Voucher.VenueOwnerId != venueOwner.Id)
+            //    throw new Exception("Bạn không có quyền xác thực voucher này");
 
             var response = _mapper.Map<VoucherItemValidationAndRedemptionResponse>(voucherItem);
 
@@ -627,9 +627,9 @@ namespace capstone_backend.Business.Services
 
         public async Task<VoucherItemValidationAndRedemptionResponse?> RedeemVoucherCodeAsync(int userId, ValidateAndRedeemVoucherItemRequest request)
         {
-            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
-            if (venueOwner == null)
-                throw new Exception("Không tìm thấy chủ địa điểm");
+            //var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
+            //if (venueOwner == null)
+            //    throw new Exception("Không tìm thấy chủ địa điểm");
 
             var voucherItem = await _unitOfWork.VoucherItems.GetByItemCodeWithDetailsAsync(request.ItemCode);
             if (voucherItem == null)
@@ -638,8 +638,8 @@ namespace capstone_backend.Business.Services
             if (voucherItem.Voucher == null)
                 throw new Exception("Mã voucher không hợp lệ");
 
-            if (voucherItem.Voucher.VenueOwnerId != venueOwner.Id)
-                throw new Exception("Bạn không có quyền xác thực voucher này");
+            //if (voucherItem.Voucher.VenueOwnerId != venueOwner.Id)
+            //    throw new Exception("Bạn không có quyền xác thực voucher này");
 
             var response = _mapper.Map<VoucherItemValidationAndRedemptionResponse>(voucherItem);
             var now = DateTime.UtcNow;
@@ -725,7 +725,7 @@ namespace capstone_backend.Business.Services
                 {
                     VoucherItemId = voucherItem.Id,
                     VoucherItemMemberId = voucherItem.VoucherItemMemberId,
-                    VenueOwnerId = venueOwner.Id,
+                    VenueOwnerId = voucherItem.Voucher.VenueOwnerId.Value,
 
                     GrossAmount = grossAmount,
                     CommissionAmount = commissionAmount,
