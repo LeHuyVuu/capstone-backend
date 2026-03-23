@@ -21,6 +21,22 @@ namespace capstone_backend.Business.Services
             _mapper = mapper;
         }
 
+        public async Task<bool> CancelSubscriptionAsync(int userId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var sub = await _unitOfWork.MemberSubscriptionPackages.GetCurrentActiveSubscriptionAsync(member.Id);
+            if (sub == null)
+                throw new Exception("Không tìm thấy gói đăng ký đang hoạt động");
+
+            sub.Status = MemberSubscriptionPackageStatus.CANCELED.ToString();
+            _unitOfWork.MemberSubscriptionPackages.Update(sub);
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<TransactionResponse> CheckPaymentStatusAsync(int userId, string orderId)
         {
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);

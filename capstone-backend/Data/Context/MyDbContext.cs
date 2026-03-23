@@ -1086,7 +1086,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.Points).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasOne(d => d.User).WithMany(p => p.Wallets)
+            entity.HasOne(d => d.User).WithOne(p => p.Wallet)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("wallets_user_id_fkey");
         });

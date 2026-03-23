@@ -395,6 +395,8 @@ public class UserService : IUserService
             LastLoginAt = user.LastLoginAt,
             CreatedAt = user.CreatedAt ?? DateTime.MinValue,
             UpdatedAt = user.UpdatedAt,
+            Balance = user.Wallet?.IsActive == true ? user.Wallet.Balance.Value : 0,
+            Points = user.Wallet?.IsActive == true ? user.Wallet.Points.Value : 0,
             MemberProfile = memberProfile != null ? new MemberProfileResponse
             {
                 Id = memberProfile.Id,

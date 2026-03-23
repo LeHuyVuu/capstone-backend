@@ -15,6 +15,7 @@ namespace capstone_backend.Data.Repositories
         public async Task<MemberSubscriptionPackage?> GetCurrentActiveSubscriptionAsync(int id)
         {
             return await _dbSet
+                .Include(ms => ms.Package)
                 .FirstOrDefaultAsync(s => s.MemberId == id && s.Status == MemberSubscriptionPackageStatus.ACTIVE.ToString());
         }
     }
