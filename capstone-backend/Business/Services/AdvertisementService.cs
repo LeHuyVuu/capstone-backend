@@ -517,7 +517,9 @@ public class AdvertisementService : IAdvertisementService
         var uniqueVenueIds = request.VenueIds.Distinct().ToList();
 
         var venues = await _unitOfWork.Context.Set<VenueLocation>()
-            .Where(v => uniqueVenueIds.Contains(v.Id) && v.IsDeleted != true)
+            .Where(v => uniqueVenueIds.Contains(v.Id) 
+                && v.IsDeleted != true
+                && v.Status == VenueLocationStatus.ACTIVE.ToString())
             .ToListAsync();
 
         if (venues.Count != uniqueVenueIds.Count)
@@ -527,7 +529,7 @@ public class AdvertisementService : IAdvertisementService
             return new SubmitAdvertisementWithPaymentResponse
             {
                 IsSuccess = false,
-                Message = $"Venue(s) not found: {string.Join(", ", missingIds)}"
+                Message = $"Venue(s) not found or not active: {string.Join(", ", missingIds)}"
             };
         }
 
@@ -553,6 +555,28 @@ public class AdvertisementService : IAdvertisementService
         }
 
         var desiredStartDate = advertisement.DesiredStartDate.Value;
+
+        // 7.6. Validate desired start date
+        var minStartDate = DateTime.UtcNow.Date; // Must be at least today
+        var maxStartDate = DateTime.UtcNow.AddMonths(6); // Maximum 6 months in advance
+
+        if (desiredStartDate.Date < minStartDate)
+        {
+            return new SubmitAdvertisementWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = $"Desired start date cannot be in the past. Minimum date: {minStartDate:yyyy-MM-dd}"
+            };
+        }
+
+        if (desiredStartDate > maxStartDate)
+        {
+            return new SubmitAdvertisementWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = $"Desired start date is too far in the future. Maximum date: {maxStartDate:yyyy-MM-dd}"
+            };
+        }
 
         // 8. Calculate amount (same price for all venues in the package)
         var totalAmount = package.Price;
@@ -604,7 +628,20 @@ public class AdvertisementService : IAdvertisementService
 
             _logger.LogInformation("✅ Created AdsOrder ID: {OrderId}", adsOrder.Id);
 
-            // 10.5 Create VenueLocationAdvertisement for each venue with desired start date
+            // 10.5 Remove existing VenueLocationAdvertisement records for this advertisement to prevent duplicates
+            var existingVenueLocationAds = await _unitOfWork.Context.Set<VenueLocationAdvertisement>()
+                .Where(vla => vla.AdvertisementId == advertisementId)
+                .ToListAsync();
+
+            if (existingVenueLocationAds.Any())
+            {
+                _logger.LogInformation("Removing {Count} existing VenueLocationAdvertisement(s) for Advertisement {AdId} to prevent duplicates",
+                    existingVenueLocationAds.Count, advertisementId);
+                _unitOfWork.Context.Set<VenueLocationAdvertisement>().RemoveRange(existingVenueLocationAds);
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            // 10.6 Create VenueLocationAdvertisement for each venue with desired start date
             var venueLocationAds = new List<VenueLocationAdvertisement>();
             
             foreach (var venue in venues)
