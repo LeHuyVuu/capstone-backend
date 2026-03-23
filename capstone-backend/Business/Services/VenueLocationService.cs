@@ -1391,9 +1391,13 @@ public class VenueLocationService : IVenueLocationService
                 _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(subscription);
 
                 // Update venue status to PENDING for admin approval
-                venue.Status = VenueLocationStatus.PENDING.ToString();
-                venue.UpdatedAt = now;
-                _unitOfWork.Context.Set<VenueLocation>().Update(venue);
+                // Use Attach + modify only specific properties to avoid tracking conflicts
+                var venueToUpdate = new VenueLocation { Id = venueId };
+                _unitOfWork.Context.Set<VenueLocation>().Attach(venueToUpdate);
+                venueToUpdate.Status = VenueLocationStatus.PENDING.ToString();
+                venueToUpdate.UpdatedAt = now;
+                _unitOfWork.Context.Entry(venueToUpdate).Property(v => v.Status).IsModified = true;
+                _unitOfWork.Context.Entry(venueToUpdate).Property(v => v.UpdatedAt).IsModified = true;
 
                 await _unitOfWork.SaveChangesAsync();
                 await dbTransaction.CommitAsync();
