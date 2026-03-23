@@ -7,6 +7,7 @@ namespace capstone_backend.Business.Interfaces
 {
     public interface IMemberSubscriptionService
     {
+        Task<bool> CancelSubscriptionAsync(int userId);
         Task<TransactionResponse> CheckPaymentStatusAsync(int userId, string orderId);
         Task<PagedResult<SubscriptionPackageDto>> GetAvailablePackagesAsync(int pageNumber, int pageSize);
         Task<MemberSubscriptionResponse?> GetCurrentSubscriptionAsync(int userId);

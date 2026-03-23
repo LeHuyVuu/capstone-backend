@@ -109,5 +109,31 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        ///// <summary>
+        ///// Cancel subscription
+        ///// </summary>
+        //[HttpPost("cancel")]
+        //public async Task<IActionResult> CancelSubscription()
+        //{
+        //    try
+        //    {
+        //        var userId = GetCurrentUserId();
+        //        if (userId == null)
+        //        {
+        //            return UnauthorizedResponse("Unauthorized");
+        //        }
+        //        var result = await _memberSubscriptionService.CancelSubscriptionAsync(userId.Value);
+        //        if (!result)
+        //        {
+        //            return BadRequestResponse("Hủy gói đăng ký thất bại");
+        //        }
+        //        return OkResponse(result, "Hủy gói đăng ký thành công");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequestResponse(ex.Message);
+        //    }
+        //}
     }
 }
