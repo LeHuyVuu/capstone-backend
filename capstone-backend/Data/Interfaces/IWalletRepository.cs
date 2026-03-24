@@ -6,4 +6,5 @@ namespace capstone_backend.Data.Interfaces;
 public interface IWalletRepository : IGenericRepository<Wallet>
 {
     Task<Wallet?> GetByUserIdAsync(int userId);
+    Task<IEnumerable<Wallet>> GetByUserIdsAsync(List<int> userId);
 }

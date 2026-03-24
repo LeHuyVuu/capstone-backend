@@ -11,6 +11,7 @@ using capstone_backend.Business.Jobs.Like;
 using capstone_backend.Business.Jobs.Media;
 using capstone_backend.Business.Jobs.Moderation;
 using capstone_backend.Business.Jobs.Review;
+using capstone_backend.Business.Jobs.VenueSettlement;
 using capstone_backend.Business.Jobs.Voucher;
 using capstone_backend.Business.Services;
 using capstone_backend.Data.Context;
@@ -145,6 +146,9 @@ public static class ServiceExtensions
         services.AddScoped<IMemberSubscriptionPackageRepository, MemberSubscriptionPackageRepository>();
         services.AddScoped<IVenueSettlementRepository, VenueSettlementRepository>();
         services.AddScoped<ISystemConfigRepository, SystemConfigRepository>();
+        services.AddScoped<IAccessoryRepository, AccessoryRepository>();
+        services.AddScoped<IAccessoryPurchaseRepository, AccessoryPurchaseRepository>();
+        services.AddScoped<IMemberAccessoryRepository, MemberAccessoryRepository>();
 
         // Messaging repositories
         services.AddScoped<IConversationRepository, ConversationRepository>();
@@ -210,6 +214,7 @@ public static class ServiceExtensions
         services.AddScoped<IMemberSubscriptionService, MemberSubscriptionService>();
         services.AddScoped<IVenueSettlementService, VenueSettlementService>();
         services.AddScoped<ISystemConfigService, SystemConfigService>();
+        services.AddScoped<IAccessoryService, AccessoryService>();
 
         // Register Subscription Package Service
         services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
@@ -236,6 +241,7 @@ public static class ServiceExtensions
         services.AddScoped<IChallengeWorker, ChallengeWorker>();
         services.AddScoped<IVoucherWorker, VoucherWorker>();
         services.AddScoped<ILeaderboardWorker, LeaderboardWorker>();
+        services.AddScoped<IVenueSettlementWorker, VenueSettlementWorker>();
 
         // Register Messaging Service
         services.AddScoped<IMessagingService, MessagingService>();     

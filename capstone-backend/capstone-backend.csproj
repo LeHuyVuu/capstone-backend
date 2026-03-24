@@ -76,6 +76,7 @@
 
     <ItemGroup>
       <Folder Include="Business\Entities\" />
+      <Folder Include="Business\Jobs\Subscription\" />
     </ItemGroup>
 
     <ItemGroup>

@@ -149,6 +149,8 @@ public partial class MyDbContext : DbContext
 
     public DbSet<SystemConfig> SystemConfigs { get; set; }
 
+    public virtual DbSet<AccessoryPurchase> AccessoryPurchases { get; set; }
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -189,7 +191,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.Type).HasColumnName("type");
             entity.Property(e => e.ThumbnailUrl).HasColumnName("thumbnail_url");
             entity.Property(e => e.ResourceUrl).HasColumnName("resource_url");
-            entity.Property(e => e.AvailableQuantity).HasColumnName("available_quantity");
+            entity.Property(e => e.TotalQuantity).HasColumnName("total_quantity");
             entity.Property(e => e.AvailableFrom).HasColumnName("available_from");
             entity.Property(e => e.AvailableTo).HasColumnName("available_to");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()").HasColumnName("created_at");
@@ -606,6 +608,10 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.AcquiredAt).HasDefaultValueSql("now()");
             entity.Property(e => e.IsEquipped).HasDefaultValue(false);
 
+            entity.HasIndex(e => new { e.MemberId, e.AccessoryId })
+                .IsUnique()
+                .HasDatabaseName("uq_member_accessories_member_accessory");
+
             entity.HasOne(d => d.Accessory).WithMany(p => p.MemberAccessories)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("member_accessories_accessory_id_fkey");
@@ -613,6 +619,12 @@ public partial class MyDbContext : DbContext
             entity.HasOne(d => d.Member).WithMany(p => p.MemberAccessories)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("member_accessories_member_id_fkey");
+
+            entity.HasOne(d => d.Purchase)
+                .WithMany(p => p.MemberAccessories)
+                .HasForeignKey(d => d.PurchaseId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_member_accessories_purchase");
         });
 
         modelBuilder.Entity<MemberMoodLog>(entity =>
@@ -1274,6 +1286,46 @@ public partial class MyDbContext : DbContext
 
             entity.HasIndex(e => e.ConfigKey)
                 .IsUnique();
+        });
+
+        modelBuilder.Entity<AccessoryPurchase>(entity =>
+        {
+            entity.ToTable("accessory_purchases");
+
+            entity.HasKey(e => e.Id).HasName("accessory_purchases_pkey");
+
+            entity.HasIndex(e => e.CoupleId).HasDatabaseName("idx_accessory_purchases_couple_id");
+            entity.HasIndex(e => e.AccessoryId).HasDatabaseName("idx_accessory_purchases_accessory_id");
+            entity.HasIndex(e => e.PurchasedByMemberId).HasDatabaseName("idx_accessory_purchases_purchased_by_member_id");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.CoupleId).HasColumnName("couple_id");
+            entity.Property(e => e.AccessoryId).HasColumnName("accessory_id");
+            entity.Property(e => e.PurchasedByMemberId).HasColumnName("purchased_by_member_id");
+            entity.Property(e => e.PricePoint).HasColumnName("price_point");
+            entity.Property(e => e.Status).HasColumnName("status");
+            entity.Property(e => e.CreatedAt)
+                .HasColumnType("timestamp with time zone")
+                .HasColumnName("created_at")
+                .HasDefaultValueSql("now()");
+
+            entity.HasOne(d => d.Couple)
+                .WithMany(p => p.AccessoryPurchases)
+                .HasForeignKey(d => d.CoupleId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("accessory_purchases_couple_id_fkey");
+
+            entity.HasOne(d => d.Accessory)
+                .WithMany(p => p.AccessoryPurchases)
+                .HasForeignKey(d => d.AccessoryId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("accessory_purchases_accessory_id_fkey");
+
+            entity.HasOne(d => d.PurchasedByMember)
+                .WithMany(p => p.AccessoryPurchases)
+                .HasForeignKey(d => d.PurchasedByMemberId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("accessory_purchases_purchased_by_member_id_fkey");
         });
 
         OnModelCreatingPartial(modelBuilder);

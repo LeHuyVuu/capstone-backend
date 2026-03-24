@@ -16,4 +16,11 @@ public class WalletRepository : GenericRepository<Wallet>, IWalletRepository
         return await _dbSet
             .FirstOrDefaultAsync(w => w.UserId == userId);
     }
+
+    public async Task<IEnumerable<Wallet>> GetByUserIdsAsync(List<int> userId)
+    {
+        return await _dbSet
+            .Where(w => userId.Contains(w.UserId) && w.IsActive == true)
+            .ToListAsync();
+    }
 }

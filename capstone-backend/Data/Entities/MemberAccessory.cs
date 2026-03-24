@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
 
+[Index("MemberId", "AccessoryId", IsUnique = true)]
 public partial class MemberAccessory
 {
     [Key]
@@ -15,11 +16,13 @@ public partial class MemberAccessory
 
     public int? AccessoryId { get; set; }
 
+    public int? PurchaseId { get; set; }
+
     public bool? IsEquipped { get; set; }
 
     public DateTime? AcquiredAt { get; set; }
 
-    public DateTime? ExpiryAt { get; set; }
+    public DateTime? ExpiredAt { get; set; }
 
     [ForeignKey("AccessoryId")]
     [InverseProperty("MemberAccessories")]
@@ -28,4 +31,8 @@ public partial class MemberAccessory
     [ForeignKey("MemberId")]
     [InverseProperty("MemberAccessories")]
     public virtual MemberProfile? Member { get; set; }
+
+    [ForeignKey("PurchaseId")]
+    [InverseProperty("MemberAccessories")]
+    public virtual AccessoryPurchase? Purchase { get; set; }
 }

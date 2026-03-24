@@ -14,6 +14,13 @@ public class VenueOwnerProfileRepository : GenericRepository<VenueOwnerProfile>,
     {
     }
 
+    public async Task<IEnumerable<VenueOwnerProfile>> GetByIdsAsync(List<int> venueOwnerIds)
+    {
+        return await _dbSet
+            .Where(vop => venueOwnerIds.Contains(vop.Id) && vop.IsDeleted == false)
+            .ToListAsync();
+    }
+
     /// <summary>
     /// Get venue owner profile by user ID
     /// </summary>
