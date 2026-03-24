@@ -7,5 +7,6 @@ namespace capstone_backend.Business.Interfaces
     {
         Task<AccessoryDetailResponse?> GetDetailAsync(int userId, int accessoryId);
         Task<PagedResult<AccessoryResponse>> GetShopAsync(int userId, GetAccessoryShopRequest query);
+        Task<PurchaseResponse> PurchaseAccessoryAsync(int userId, int accessoryId);
     }
 }
