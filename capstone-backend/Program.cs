@@ -256,6 +256,15 @@ using (var scope = serviceProvider.CreateScope())
             TimeZone = vnTz
         });
 
+    recurringJobManager.AddOrUpdate<IPaymentWorker>(
+        "auto-expire-pending-payments",
+        job => job.AutoExpirePendingPaymentsAsync(),
+        "*/5 * * * *", // Every 5 minutes
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
     app.Logger.LogInformation("[INFO] Hangfire recurring jobs configured");
 }
 
