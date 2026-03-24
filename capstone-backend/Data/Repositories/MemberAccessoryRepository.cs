@@ -11,6 +11,21 @@ namespace capstone_backend.Data.Repositories
         {
         }
 
+        public async Task<MemberAccessory?> GetByIdAsync(int id)
+        {
+            return await _dbSet
+                .Include(ma => ma.Accessory)
+                .FirstOrDefaultAsync(ma => ma.Id == id);
+        }
+
+        public async Task<IEnumerable<MemberAccessory>> GetEquippedByMemberIdAndTypeAsync(int memberId, string type, int id)
+        {
+            return await _dbSet
+                .Include(ma => ma.Accessory)
+                .Where(ma => ma.MemberId == memberId && ma.IsEquipped == true && ma.Accessory.Type == type && ma.Id != id)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<MemberAccessory>> GetOwnerAsync(int memberId, int partnerId, List<int> accessoryIds)
         {
             return await _dbSet

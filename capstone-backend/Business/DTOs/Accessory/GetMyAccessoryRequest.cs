@@ -19,7 +19,7 @@ namespace capstone_backend.Business.DTOs.Accessory
         /// - acquiredAt
         /// - name
         /// </summary>
-        /// <example>createdAt</example>
+        /// <example>acquiredAt</example>
         public string? SortBy { get; set; } = "acquiredAt";
 
         /// <summary>
