@@ -167,6 +167,7 @@ public class PaymentController : BaseController
             transaction.UpdatedAt = DateTime.UtcNow;
             _unitOfWork.Context.Set<Transaction>().Update(transaction);
 
+            // Handle VENUE_SUBSCRIPTION (TransType = 1)
             if (transaction.TransType == 1)
             {
                 var subscription = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
@@ -178,6 +179,33 @@ public class PaymentController : BaseController
                     subscription.Status = VenueSubscriptionPackageStatus.CANCELLED.ToString();
                     subscription.UpdatedAt = DateTime.UtcNow;
                     _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(subscription);
+                }
+            }
+            // Handle ADS_ORDER (TransType = 2)
+            else if (transaction.TransType == 2)
+            {
+                var adsOrder = await _unitOfWork.Context.Set<AdsOrder>()
+                    .FirstOrDefaultAsync(ao => ao.Id == transaction.DocNo
+                        && ao.Status == AdsOrderStatus.PENDING.ToString());
+
+                if (adsOrder != null)
+                {
+                    adsOrder.Status = AdsOrderStatus.CANCELLED.ToString();
+                    adsOrder.UpdatedAt = DateTime.UtcNow;
+                    _unitOfWork.Context.Set<AdsOrder>().Update(adsOrder);
+
+                    // Cancel related VenueLocationAdvertisements
+                    var venueAds = await _unitOfWork.Context.Set<VenueLocationAdvertisement>()
+                        .Where(vla => vla.AdvertisementId == adsOrder.AdvertisementId
+                            && vla.Status == VenueLocationAdvertisementStatus.PENDING_PAYMENT.ToString())
+                        .ToListAsync();
+
+                    foreach (var vla in venueAds)
+                    {
+                        vla.Status = VenueLocationAdvertisementStatus.CANCELLED.ToString();
+                        vla.UpdatedAt = DateTime.UtcNow;
+                        _unitOfWork.Context.Set<VenueLocationAdvertisement>().Update(vla);
+                    }
                 }
             }
 
