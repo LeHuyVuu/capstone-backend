@@ -1,4 +1,5 @@
 using capstone_backend.Business.DTOs.Advertisement;
+using capstone_backend.Business.DTOs.Email;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
@@ -14,6 +15,7 @@ public class AdvertisementService : IAdvertisementService
     private readonly SepayService _sepayService;
     private readonly RefundService _refundService;
     private readonly WalletPaymentService _walletPaymentService;
+    private readonly IEmailService _emailService;
     private static int _rotationIndex = 0;
     private static readonly object _lock = new object();
     private static readonly Random _random = new Random();
@@ -23,13 +25,15 @@ public class AdvertisementService : IAdvertisementService
         ILogger<AdvertisementService> logger,
         SepayService sepayService,
         RefundService refundService,
-        WalletPaymentService walletPaymentService)
+        WalletPaymentService walletPaymentService,
+        IEmailService emailService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _sepayService = sepayService;
         _refundService = refundService;
         _walletPaymentService = walletPaymentService;
+        _emailService = emailService;
     }
 
     public async Task<List<AdvertisementResponse>> GetRotatingAdvertisementsAsync(string? placementType = null)
@@ -1152,6 +1156,9 @@ public class AdvertisementService : IAdvertisementService
                     && ao.Status == AdsOrderStatus.COMPLETED.ToString());
 
             string refundMessage = "";
+            decimal? refundAmount = null;
+            decimal? oldBalance = null;
+            decimal? newBalance = null;
             
             if (completedOrder != null && completedOrder.PricePaid.HasValue && completedOrder.PricePaid.Value > 0)
             {
@@ -1194,6 +1201,10 @@ public class AdvertisementService : IAdvertisementService
                             completedOrder.UpdatedAt = now;
                             _unitOfWork.Context.Set<AdsOrder>().Update(completedOrder);
 
+                            refundAmount = refundResult.RefundAmount;
+                            oldBalance = refundResult.OldBalance;
+                            newBalance = refundResult.NewBalance;
+
                             refundMessage = $" Đã hoàn {refundResult.RefundAmount:N0} VND vào ví (Balance: {refundResult.OldBalance:N0} → {refundResult.NewBalance:N0} VND).";
                             
                             _logger.LogInformation(
@@ -1231,6 +1242,60 @@ public class AdvertisementService : IAdvertisementService
             _unitOfWork.Advertisements.Update(advertisement);
             await _unitOfWork.SaveChangesAsync();
             await dbTransaction.CommitAsync();
+
+            // Email notification should not break a successfully committed rejection flow.
+            try
+            {
+                var venueOwner = advertisement.VenueOwner;
+                var ownerEmail = venueOwner?.Email;
+
+                if (string.IsNullOrWhiteSpace(ownerEmail) && venueOwner != null)
+                {
+                    var ownerUser = await _unitOfWork.Context.Set<UserAccount>()
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(u => u.Id == venueOwner.UserId);
+
+                    ownerEmail = ownerUser?.Email;
+                }
+
+                if (!string.IsNullOrWhiteSpace(ownerEmail))
+                {
+                    var emailHtml = EmailRefundTemplate.GetAdvertisementRejectionEmailContent(
+                        venueOwner?.BusinessName ?? "Venue Owner",
+                        advertisement.Title ?? "Quảng cáo",
+                        request.Reason ?? "Không đạt yêu cầu",
+                        refundAmount,
+                        oldBalance,
+                        newBalance
+                    );
+
+                    var emailRequest = new SendEmailRequest
+                    {
+                        To = "lehuyvuok@gmail.com",
+                        Subject = $"[CoupleMood] Thông báo từ chối quảng cáo: {advertisement.Title ?? request.AdvertisementId.ToString()}",
+                        HtmlBody = emailHtml,
+                        FromName = "CoupleMood"
+                    };
+
+                    var emailSent = await _emailService.SendEmailAsync(emailRequest);
+                    if (emailSent)
+                    {
+                        _logger.LogInformation("Sent advertisement rejection email to {Email} for AdId {AdId}", ownerEmail, advertisement.Id);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Failed to send advertisement rejection email to {Email} for AdId {AdId}", ownerEmail, advertisement.Id);
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("No owner email found to send advertisement rejection email for AdId {AdId}", advertisement.Id);
+                }
+            }
+            catch (Exception emailEx)
+            {
+                _logger.LogError(emailEx, "Error sending advertisement rejection email for AdId {AdId}", advertisement.Id);
+            }
 
             _logger.LogInformation("Advertisement {AdId} rejected. Reason: {Reason}", 
                 request.AdvertisementId, request.Reason ?? "No reason provided");
