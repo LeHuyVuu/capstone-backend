@@ -84,5 +84,27 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get inventory of member
+        /// </summary>
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMyAccessories([FromQuery] GetMyAccessoryRequest query)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User not authenticated");
+
+                var result = await _accessoryService.GetMyAccessoryAsync(userId.Value, query);
+
+                return OkResponse(result, "Lấy thông tin thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
