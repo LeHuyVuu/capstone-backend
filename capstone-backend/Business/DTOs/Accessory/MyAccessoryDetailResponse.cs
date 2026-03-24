@@ -1,7 +1,6 @@
-﻿
-namespace capstone_backend.Business.DTOs.Accessory
+﻿namespace capstone_backend.Business.DTOs.Accessory
 {
-    public class MyAccessoryResponse
+    public class MyAccessoryDetailResponse
     {
         public int MemberAccessoryId { get; set; }
         public int AccessoryId { get; set; }
@@ -12,5 +11,6 @@ namespace capstone_backend.Business.DTOs.Accessory
         public string? ResourceUrl { get; set; }
         public bool IsEquipped { get; set; }
         public DateTime? AcquiredAt { get; set; }
+        public DateTime? ExpiredAt { get; set; }
     }
 }

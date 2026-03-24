@@ -108,6 +108,28 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Get inventory detail of member
+        /// </summary>
+        [HttpGet("me/{memberAccessoryId:int}")]
+        public async Task<IActionResult> GetMyAccessoryDetail(int memberAccessoryId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User not authenticated");
+                var result = await _accessoryService.GetMyAccessoryDetailAsync(userId.Value, memberAccessoryId);
+                if (result == null)
+                    return NotFoundResponse("Không tìm thấy phụ kiện trong kho của bạn");
+                return OkResponse(result, "Lấy thông tin thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Equip accessory for member
         /// </summary>
         [HttpPost("me/{memberAccessoryId:int}/equip")]

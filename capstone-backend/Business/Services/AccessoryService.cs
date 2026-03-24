@@ -410,5 +410,22 @@ namespace capstone_backend.Business.Services
                 IsEquipped = false
             };
         }
+
+        public async Task<MyAccessoryDetailResponse> GetMyAccessoryDetailAsync(int value, int memberAccessoryId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(value);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var memberAccessory = await _unitOfWork.MemberAccessories.GetByIdAsync(memberAccessoryId);
+            if (memberAccessory == null || memberAccessory.MemberId != member.Id)
+                throw new Exception("Phụ kiện của thành viên không tồn tại");
+
+            if (memberAccessory.Accessory == null || memberAccessory.Accessory.IsDeleted == true)
+                throw new Exception("Phụ kiện không tồn tại");
+
+            var response = _mapper.Map<MyAccessoryDetailResponse>(memberAccessory);
+            return response;
+        }
     }
 }
