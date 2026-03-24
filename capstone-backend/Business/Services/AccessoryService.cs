@@ -411,9 +411,9 @@ namespace capstone_backend.Business.Services
             };
         }
 
-        public async Task<MyAccessoryDetailResponse> GetMyAccessoryDetailAsync(int value, int memberAccessoryId)
+        public async Task<MyAccessoryDetailResponse> GetMyAccessoryDetailAsync(int userId, int memberAccessoryId)
         {
-            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(value);
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Hồ sơ thành viên không tồn tại");
 
@@ -426,6 +426,57 @@ namespace capstone_backend.Business.Services
 
             var response = _mapper.Map<MyAccessoryDetailResponse>(memberAccessory);
             return response;
+        }
+
+        public async Task<PagedResult<PurchaseHistoryResponse>> GetPurchaseHistoriesAsync(int userId, GetPurchaseHistoryRequest query)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Member không ở trong couple nào");
+
+            int pageNumber = query.PageNumber <= 0 ? 1 : query.PageNumber;
+            int pageSize = query.PageSize <= 0 ? 10 : query.PageSize;
+            var keyword = query.Keyword?.Trim().ToLower();
+
+            Func<IQueryable<AccessoryPurchase>, IOrderedQueryable<AccessoryPurchase>> orderBy = q => q.OrderByDescending(x => x.CreatedAt);
+            if (!string.IsNullOrWhiteSpace(query.SortBy))
+            {
+                var sortBy = query.SortBy.Trim().ToLower();
+                var order = query.OrderBy?.Trim().ToLower() ?? "desc";
+                orderBy = (sortBy, order) switch
+                {
+                    ("createdat", "asc") => q => q.OrderBy(x => x.CreatedAt),
+                    ("createdat", "desc") => q => q.OrderByDescending(x => x.CreatedAt),
+                    _ => q => q.OrderByDescending(x => x.CreatedAt)
+                };
+            }
+            var (purchases, totalCount) = await _unitOfWork.AccessoryPurchases.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                ap => (ap.PurchasedByMemberId == member.Id &&
+                    (query.FromDate == null || ap.CreatedAt >= query.FromDate) &&
+                    (query.ToDate == null || ap.CreatedAt <= query.ToDate) &&
+                    (
+                        string.IsNullOrEmpty(keyword) ||
+                        ap.Accessory.Code.ToLower().Contains(keyword) ||
+                        ap.Accessory.Name.ToLower().Contains(keyword) ||
+                        (ap.Accessory.Description != null && ap.Accessory.Description.ToLower().Contains(keyword))
+                    )),
+                orderBy,
+                ap => ap.Include(ap => ap.Accessory).Include(ap => ap.PurchasedByMember)
+            );
+            var response = _mapper.Map<List<PurchaseHistoryResponse>>(purchases);
+            return new PagedResult<PurchaseHistoryResponse>
+            {
+                Items = response,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalCount = totalCount
+            };
         }
     }
 }

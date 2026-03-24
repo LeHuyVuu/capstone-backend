@@ -11,6 +11,7 @@ namespace capstone_backend.Business.Interfaces
         Task<PagedResult<MyAccessoryResponse>> GetMyAccessoryAsync(int userId, GetMyAccessoryRequest query);
         Task<EquipAccessoryResponse> EquipAccessoryAsync(int userId, int memberAccessoryId);
         Task<EquipAccessoryResponse> UnequipAccessoryAsync(int userId, int memberAccessoryId);
-        Task<MyAccessoryDetailResponse> GetMyAccessoryDetailAsync(int value, int memberAccessoryId);
+        Task<MyAccessoryDetailResponse> GetMyAccessoryDetailAsync(int userId, int memberAccessoryId);
+        Task<PagedResult<PurchaseHistoryResponse>> GetPurchaseHistoriesAsync(int userId, GetPurchaseHistoryRequest query);
     }
 }

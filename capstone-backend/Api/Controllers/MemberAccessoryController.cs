@@ -175,5 +175,26 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Get purchase history of member
+        /// </summary>
+        [HttpGet("purchases")]
+        public async Task<IActionResult> GetPurchaseHistory([FromQuery] GetPurchaseHistoryRequest query)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User not authenticated");
+
+                var result = await _accessoryService.GetPurchaseHistoriesAsync(userId.Value, query);
+                return OkResponse(result, "Lấy thông tin thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
