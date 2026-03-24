@@ -10,13 +10,16 @@ public class VenueOwnerDashboardController : BaseController
 {
     private readonly IVenueOwnerDashboardService _dashboardService;
     private readonly ILogger<VenueOwnerDashboardController> _logger;
+    private readonly IRedisService _redisService;
 
     public VenueOwnerDashboardController(
         IVenueOwnerDashboardService dashboardService,
-        ILogger<VenueOwnerDashboardController> logger)
+        ILogger<VenueOwnerDashboardController> logger,
+        IRedisService redisService)
     {
         _dashboardService = dashboardService;
         _logger = logger;
+        _redisService = redisService;
     }
 
     /// <summary>
@@ -72,7 +75,16 @@ public class VenueOwnerDashboardController : BaseController
                 return UnauthorizedResponse("User không xác thực");
             }
 
-            var dashboard = await _dashboardService.GetDashboardOverviewAsync(userId.Value);
+            // Cache key dựa trên userId
+            var cacheKey = $"venue_owner:dashboard:overview:{userId.Value}";
+
+            // Sử dụng Redis cache với GetOrSetAsync - tự động handle cache miss
+            var dashboard = await _redisService.GetOrSetAsync(
+                cacheKey,
+                async () => await _dashboardService.GetDashboardOverviewAsync(userId.Value),
+                TimeSpan.FromMinutes(5) 
+            );
+
             return OkResponse(dashboard, "Lấy dashboard overview thành công");
         }
         catch (UnauthorizedAccessException ex)
@@ -143,7 +155,16 @@ public class VenueOwnerDashboardController : BaseController
                 return BadRequestResponse("Days phải từ 1 đến 365");
             }
 
-            var analytics = await _dashboardService.GetVenueAnalyticsAsync(userId.Value, venueId, days);
+            // Cache key bao gồm userId, venueId và days
+            var cacheKey = $"venue_owner:venue:analytics:{userId.Value}:{venueId}:{days}";
+
+            // Sử dụng Redis cache với GetOrSetAsync
+            var analytics = await _redisService.GetOrSetAsync(
+                cacheKey,
+                async () => await _dashboardService.GetVenueAnalyticsAsync(userId.Value, venueId, days),
+                TimeSpan.FromMinutes(5) // Cache 5 phút
+            );
+
             return OkResponse(analytics, "Lấy venue analytics thành công");
         }
         catch (UnauthorizedAccessException ex)
