@@ -130,5 +130,28 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Unequip accessory for member
+        /// </summary>
+        [HttpPost("me/{memberAccessoryId:int}/unequip")]
+        public async Task<IActionResult> UnequipAccessory(int memberAccessoryId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User not authenticated");
+                var result = await _accessoryService.UnequipAccessoryAsync(userId.Value, memberAccessoryId);
+
+                if (result == null)
+                    return BadRequestResponse("Không thể tháo phụ kiện này");
+                return OkResponse(result, "Tháo phụ kiện thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

@@ -376,5 +376,39 @@ namespace capstone_backend.Business.Services
                 IsEquipped = true
             };
         }
+
+        public async Task<EquipAccessoryResponse> UnequipAccessoryAsync(int userId, int memberAccessoryId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var memberAccessory = await _unitOfWork.MemberAccessories.GetByIdAsync(memberAccessoryId);
+            if (memberAccessory == null || memberAccessory.MemberId != member.Id)
+                throw new Exception("Phụ kiện của thành viên không tồn tại");
+
+            if (memberAccessory.Accessory == null || memberAccessory.Accessory.IsDeleted == true)
+                throw new Exception("Phụ kiện không tồn tại");
+
+            if (!memberAccessory.AccessoryId.HasValue)
+                throw new Exception("Phụ kiện không hợp lệ");
+
+            if (memberAccessory.IsEquipped != true)
+                throw new Exception("Phụ kiện chưa được trang bị");
+
+            memberAccessory.IsEquipped = false;
+            _unitOfWork.MemberAccessories.Update(memberAccessory);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new EquipAccessoryResponse
+            {
+                MemberAccessoryId = memberAccessory.Id,
+                AccessoryId = memberAccessory.AccessoryId.Value,
+                Code = memberAccessory.Accessory.Code,
+                Name = memberAccessory.Accessory.Name,
+                Type = memberAccessory.Accessory.Type,
+                IsEquipped = false
+            };
+        }
     }
 }
