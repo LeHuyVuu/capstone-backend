@@ -16,6 +16,8 @@ public partial class Accessory
 
     public string Name { get; set; } = null!;
 
+    public string? Description { get; set; }
+
     public string Type { get; set; } = null!;
 
     public string? ThumbnailUrl { get; set; }
@@ -27,6 +29,8 @@ public partial class Accessory
     public bool? IsLimited { get; set; }
 
     public int? TotalQuantity { get; set; }
+
+    public int? RemainingQuantity { get; set; }
 
     public DateTime? AvailableFrom { get; set; }
 

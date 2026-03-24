@@ -100,7 +100,8 @@ builder.Services.AddAutoMapper(
     typeof(SubscriptionPackageProfile),
     typeof(SystemConfigProfile),
     typeof(VenueSettlementProfile),
-    typeof(VoucherProfile)
+    typeof(VoucherProfile),
+    typeof(AccessoryProfile)
 );
 
 // 14. Add HttpContextAccessor

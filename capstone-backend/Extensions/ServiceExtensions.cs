@@ -214,6 +214,7 @@ public static class ServiceExtensions
         services.AddScoped<IMemberSubscriptionService, MemberSubscriptionService>();
         services.AddScoped<IVenueSettlementService, VenueSettlementService>();
         services.AddScoped<ISystemConfigService, SystemConfigService>();
+        services.AddScoped<IAccessoryService, AccessoryService>();
 
         // Register Subscription Package Service
         services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
