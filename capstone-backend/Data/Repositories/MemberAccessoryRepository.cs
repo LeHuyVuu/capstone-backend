@@ -18,6 +18,14 @@ namespace capstone_backend.Data.Repositories
                 .FirstOrDefaultAsync(ma => ma.Id == id);
         }
 
+        public async Task<IEnumerable<MemberAccessory>> GetEquippedByMemberIdAsync(int memberId)
+        {
+            return await _dbSet
+                .Include(ma => ma.Accessory)
+                .Where(ma => ma.MemberId == memberId && ma.IsEquipped == true)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<MemberAccessory>> GetEquippedByMemberIdAndTypeAsync(int memberId, string type, int id)
         {
             return await _dbSet

@@ -1,4 +1,5 @@
 using capstone_backend.Business.Common;
+using capstone_backend.Business.DTOs.Accessory;
 using capstone_backend.Business.DTOs.Auth;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.User;
@@ -6,6 +7,7 @@ using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace capstone_backend.Business.Services;
 
@@ -21,15 +23,17 @@ public class UserService : IUserService
     private readonly IRedisService _redisService;
     private readonly IEmailService _emailService;
     private readonly IGoogleAuthService _googleAuthService;
+    private readonly IAccessoryService _accessoryService;
 
     public UserService(
-        IUnitOfWork unitOfWork, 
-        ILogger<UserService> logger, 
-        IJwtService jwtService, 
+        IUnitOfWork unitOfWork,
+        ILogger<UserService> logger,
+        IJwtService jwtService,
         ICollectionService collectionService,
         IRedisService redisService,
         IEmailService emailService,
-        IGoogleAuthService googleAuthService)
+        IGoogleAuthService googleAuthService,
+        IAccessoryService accessoryService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -38,6 +42,7 @@ public class UserService : IUserService
         _redisService = redisService;
         _emailService = emailService;
         _googleAuthService = googleAuthService;
+        _accessoryService = accessoryService;
     }
 
     public async Task<LoginResponse?> LoginAsync(LoginRequest request)
@@ -287,13 +292,13 @@ public class UserService : IUserService
     public async Task<UserResponse?> GetCurrentUserAsync(int userId)
     {
         var user = await _unitOfWork.Users.GetByIdWithProfilesAsync(userId);
-        return user == null ? null : MapToUserResponse(user);
+        return user == null ? null : await MapToUserResponse(user);
     }
 
     public async Task<UserResponse?> GetUserByIdAsync(int userId)
     {
         var user = await _unitOfWork.Users.GetByIdWithProfilesAsync(userId); // Reuse the same method since it already includes profiles
-        return user == null ? null : MapToUserResponse(user);
+        return user == null ? null : await MapToUserResponse(user);
     }
 
     public async Task<PagedResult<UserResponse>> GetUsersAsync(
@@ -307,8 +312,14 @@ public class UserService : IUserService
                 : u => u.IsDeleted != true && (u.Email.Contains(searchTerm) || (u.DisplayName != null && u.DisplayName.Contains(searchTerm))),
             orderBy: query => query.OrderByDescending(u => u.CreatedAt));
 
+        var items = new List<UserResponse>();
+        foreach (var user in users)
+        {
+            items.Add(await MapToUserResponse(user));
+        }
+
         return new PagedResult<UserResponse>(
-            users.Select(MapToUserResponse),
+            items,
             pageNumber,
             pageSize,
             totalCount);
@@ -340,7 +351,7 @@ public class UserService : IUserService
         await _unitOfWork.Users.AddAsync(user);
         await _unitOfWork.SaveChangesAsync();
 
-        return MapToUserResponse(user);
+        return await MapToUserResponse(user);
     }
 
     public async Task<UserResponse?> UpdateUserAsync(
@@ -360,7 +371,7 @@ public class UserService : IUserService
         _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync();
 
-        return MapToUserResponse(user);
+        return await MapToUserResponse(user);
     }
 
     public async Task<bool> DeleteUserAsync(
@@ -378,10 +389,14 @@ public class UserService : IUserService
     /// <summary>
     /// Convert user_account entity to UserResponse DTO
     /// </summary>
-    private static UserResponse MapToUserResponse(UserAccount user)
+    private async Task<UserResponse> MapToUserResponse(UserAccount user)
     {
         var memberProfile = user.MemberProfiles?.FirstOrDefault(p => p.IsDeleted != true);
         var venueOwnerProfile = user.VenueOwnerProfiles?.FirstOrDefault(p => p.IsDeleted != true);
+
+        var equippedAccessories = new List<EquippedAccessoryBriefResponse>();
+        if (memberProfile != null)
+            equippedAccessories = await _accessoryService.GetEquippedAccessoryForMemberAsync(memberProfile.Id);
 
         return new UserResponse
         {
@@ -411,7 +426,9 @@ public class UserService : IUserService
                 BudgetMax = memberProfile.BudgetMax,
                 Interests = TryParseJson(memberProfile.Interests),
                 AvailableTime = TryParseJson(memberProfile.AvailableTime),
-                InviteCode = memberProfile.InviteCode
+                InviteCode = memberProfile.InviteCode,
+
+                EquippedAccessories = equippedAccessories
             } : null,
             VenueOwnerProfile = venueOwnerProfile != null ? new VenueOwnerProfileResponse
             {
