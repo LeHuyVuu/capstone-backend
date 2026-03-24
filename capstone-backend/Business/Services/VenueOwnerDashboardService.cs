@@ -114,6 +114,29 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
             .GroupBy(c => c.MemberId)
             .Count(g => g.Count() > 1);
 
+        // Advertisement metrics
+        var allAdvertisements = await _unitOfWork.Context.Set<Data.Entities.Advertisement>()
+            .Include(a => a.VenueLocationAdvertisements)
+            .Where(a => a.VenueOwnerId == venueOwner.Id && a.IsDeleted != true)
+            .OrderByDescending(a => a.CreatedAt)
+            .ToListAsync();
+
+        var recentAds = allAdvertisements
+            .Take(5)
+            .Select(a => new AdvertisementSummary
+            {
+                Id = a.Id,
+                Title = a.Title,
+                BannerUrl = a.BannerUrl,
+                PlacementType = a.PlacementType,
+                Status = a.Status,
+                Category = a.Category,
+                DesiredStartDate = a.DesiredStartDate,
+                CreatedAt = a.CreatedAt,
+                VenueCount = a.VenueLocationAdvertisements.Count
+            })
+            .ToList();
+
         // Build venue performance summaries
         var venuePerformances = new List<VenuePerformanceSummary>();
         foreach (var venue in venues)
@@ -182,6 +205,13 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
             ReviewGrowthRate = reviewGrowth,
             CheckInGrowthRate = checkInGrowth,
             RatingTrend = 0, // TODO: Calculate rating trend
+
+            // Advertisement
+            TotalAdvertisements = allAdvertisements.Count,
+            ActiveAdvertisements = allAdvertisements.Count(a => a.Status == "ACTIVE"),
+            PendingAdvertisements = allAdvertisements.Count(a => a.Status == "PENDING"),
+            RejectedAdvertisements = allAdvertisements.Count(a => a.Status == "REJECTED"),
+            RecentAdvertisements = recentAds,
 
             // Top venue
             TopPerformingVenue = topVenue,

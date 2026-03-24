@@ -39,11 +39,31 @@ public class VenueOwnerDashboardResponse
     public decimal CheckInGrowthRate { get; set; }
     public decimal RatingTrend { get; set; }
     
+    // Advertisement Metrics
+    public int TotalAdvertisements { get; set; }
+    public int ActiveAdvertisements { get; set; }
+    public int PendingAdvertisements { get; set; }
+    public int RejectedAdvertisements { get; set; }
+    public List<AdvertisementSummary> RecentAdvertisements { get; set; } = new();
+    
     // Top Performing Venue
     public VenuePerformanceSummary? TopPerformingVenue { get; set; }
     
     // Venues List
     public List<VenuePerformanceSummary> Venues { get; set; } = new();
+}
+
+public class AdvertisementSummary
+{
+    public int Id { get; set; }
+    public string? Title { get; set; }
+    public string? BannerUrl { get; set; }
+    public string? PlacementType { get; set; }
+    public string? Status { get; set; }
+    public string? Category { get; set; }
+    public DateTime? DesiredStartDate { get; set; }
+    public DateTime? CreatedAt { get; set; }
+    public int VenueCount { get; set; }
 }
 
 public class VenuePerformanceSummary

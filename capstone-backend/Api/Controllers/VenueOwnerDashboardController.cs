@@ -34,6 +34,10 @@ public class VenueOwnerDashboardController : BaseController
     /// - Voucher exchange rate và usage rate
     /// - Số lượng vouchers đã đổi và đã dùng
     /// 
+    /// **Advertisement Metrics:**
+    /// - Tổng số advertisements, active/pending/rejected ads
+    /// - Danh sách 5 advertisements gần nhất với thông tin chi tiết
+    /// 
     /// **Engagement Metrics:**
     /// - Số lần được thêm vào date plans
     /// - Số lần được lưu vào collections
