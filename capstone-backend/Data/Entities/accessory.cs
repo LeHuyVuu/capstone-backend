@@ -26,7 +26,7 @@ public partial class Accessory
 
     public bool? IsLimited { get; set; }
 
-    public int? AvailableQuantity { get; set; }
+    public int? TotalQuantity { get; set; }
 
     public DateTime? AvailableFrom { get; set; }
 
@@ -42,4 +42,7 @@ public partial class Accessory
 
     [InverseProperty("Accessory")]
     public virtual ICollection<MemberAccessory> MemberAccessories { get; set; } = new List<MemberAccessory>();
+
+    [InverseProperty("Accessory")]
+    public virtual ICollection<AccessoryPurchase> AccessoryPurchases { get; set; } = new List<AccessoryPurchase>();
 }

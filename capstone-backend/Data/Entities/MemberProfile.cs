@@ -131,4 +131,7 @@ public partial class MemberProfile
 
     [InverseProperty("TargetMember")]
     public virtual ICollection<Comment> TargetedComments { get; set; } = new List<Comment>();
+
+    [InverseProperty("PurchasedByMember")]
+    public virtual ICollection<AccessoryPurchase> AccessoryPurchases { get; set; } = new List<AccessoryPurchase>();
 }
