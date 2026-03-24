@@ -13,9 +13,14 @@ public partial class Report
 
     public int? ReporterId { get; set; }
 
+    public int? ReportTypeId { get; set; }
+
     public string? TargetType { get; set; }
 
     public int? TargetId { get; set; }
+
+    [Column("evidence_snapshot", TypeName = "jsonb")]
+    public string? EvidenceSnapshot { get; set; }
 
     public string? Reason { get; set; }
 
@@ -30,4 +35,8 @@ public partial class Report
     [ForeignKey("ReporterId")]
     [InverseProperty("Reports")]
     public virtual MemberProfile? Reporter { get; set; }
+
+    [ForeignKey("ReportTypeId")]
+    [InverseProperty("Reports")]
+    public virtual ReportType? ReportType { get; set; }
 }

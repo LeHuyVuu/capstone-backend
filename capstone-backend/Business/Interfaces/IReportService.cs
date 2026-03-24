@@ -9,4 +9,5 @@ public interface IReportService
     Task<bool> ApproveReportAsync(int id);
     Task<bool> RejectReportAsync(int id);
     Task<ReportDto> CreateReportAsync(CreateReportRequest request, int reporterId);
+    Task<IEnumerable<ReportTypeDto>> GetAllReportTypesAsync();
 }

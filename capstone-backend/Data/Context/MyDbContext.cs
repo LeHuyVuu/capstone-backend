@@ -746,6 +746,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
             entity.HasOne(d => d.Reporter).WithMany(p => p.Reports).HasConstraintName("reports_reporter_id_fkey");
+            entity.HasOne(d => d.ReportType).WithMany(p => p.Reports).HasConstraintName("reports_report_type_id_fkey");
         });
 
         modelBuilder.Entity<ReportType>(entity =>

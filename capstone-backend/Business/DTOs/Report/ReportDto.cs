@@ -7,8 +7,11 @@ public class ReportDto
     public int Id { get; set; }
     public int? ReporterId { get; set; }
     public string? ReporterName { get; set; }
+    public int? ReportTypeId { get; set; }
+    public string? ReportTypeName { get; set; }
     public ReportTargetType? TargetType { get; set; }
     public int? TargetId { get; set; }
+    public object? EvidenceSnapshot { get; set; }
     public string? Reason { get; set; }
     public ReportStatus? Status { get; set; }
     public DateTime? CreatedAt { get; set; }

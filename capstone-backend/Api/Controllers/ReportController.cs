@@ -17,18 +17,34 @@ public class ReportController : BaseController
     }
 
     /// <summary>
+    /// Lấy tất cả report types đang active
+    /// </summary>
+    [HttpGet("types")]
+    public async Task<IActionResult> GetAllReportTypes()
+    {
+        var reportTypes = await _reportService.GetAllReportTypesAsync();
+        return OkResponse(reportTypes);
+    }
+
+    /// <summary>
     /// Member tạo report mới
     /// </summary>
     [HttpPost]
-    [Authorize(Roles = "MEMBER")]
     public async Task<IActionResult> CreateReport([FromBody] CreateReportRequest request)
     {
         var currentUserId = GetCurrentUserId();
         if (currentUserId == null)
             return UnauthorizedResponse("Không thể xác định người dùng");
 
-        var report = await _reportService.CreateReportAsync(request, currentUserId.Value);
-        return CreatedResponse(report, "Report đã được tạo thành công và đang chờ admin kiểm duyệt");
+        try
+        {
+            var report = await _reportService.CreateReportAsync(request, currentUserId.Value);
+            return CreatedResponse(report, "Report đã được tạo thành công và đang chờ admin kiểm duyệt");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
     }
 
     /// <summary>

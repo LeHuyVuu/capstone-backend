@@ -22,4 +22,7 @@ public partial class ReportType
     public bool? IsDeleted { get; set; }
 
     public bool? IsActive { get; set; }
+
+    [InverseProperty("ReportType")]
+    public virtual ICollection<Report> Reports { get; set; } = new List<Report>();
 }
