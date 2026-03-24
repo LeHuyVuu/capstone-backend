@@ -6,6 +6,7 @@ using capstone_backend.Business.Jobs.Challenge;
 using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Business.Jobs.Leaderboard;
 using capstone_backend.Business.Jobs.Media;
+using capstone_backend.Business.Jobs.Payment;
 using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Business.Jobs.VenueSettlement;
 using capstone_backend.Business.Mappings;
