@@ -61,6 +61,7 @@ public class UnitOfWork : IUnitOfWork
         IMemberSubscriptionPackageRepository memberSubscriptionPackageRepository,
         ILeaderboardRepository leaderboardRepository,
         IReportRepository reportRepository,
+        IReportTypeRepository reportTypeRepository,
         IVenueSettlementRepository venueSettlementRepository,
         ISystemConfigRepository systemConfigRepository,
         IAccessoryRepository accessoryRepository,
@@ -114,6 +115,7 @@ public class UnitOfWork : IUnitOfWork
         MemberSubscriptionPackages = memberSubscriptionPackageRepository;
         Leaderboards = leaderboardRepository;
         Reports = reportRepository;
+        ReportTypes = reportTypeRepository;
         VenueSettlements = venueSettlementRepository;
         SystemConfigs = systemConfigRepository;
         Accessories = accessoryRepository;
@@ -214,6 +216,8 @@ public class UnitOfWork : IUnitOfWork
     public ILeaderboardRepository Leaderboards { get; }
 
     public IReportRepository Reports { get; }
+
+    public IReportTypeRepository ReportTypes { get; }
 
     public IVenueSettlementRepository VenueSettlements { get; }
 

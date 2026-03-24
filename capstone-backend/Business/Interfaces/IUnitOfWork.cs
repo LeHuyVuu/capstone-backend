@@ -109,6 +109,8 @@ public interface IUnitOfWork : IDisposable
 
     IReportRepository Reports { get; }
 
+    IReportTypeRepository ReportTypes { get; }
+
     IVenueSettlementRepository VenueSettlements { get; }
 
     ISystemConfigRepository SystemConfigs { get; }
