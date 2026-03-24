@@ -1,4 +1,5 @@
 using capstone_backend.Api.Models;
+using capstone_backend.Business.DTOs.MoneyToPoint;
 using capstone_backend.Business.DTOs.Wallet;
 using capstone_backend.Business.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -8,7 +9,6 @@ namespace capstone_backend.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "VENUEOWNER")]
 public class WalletController : BaseController
 {
     private readonly WalletService _walletService;
@@ -20,6 +20,7 @@ public class WalletController : BaseController
 
     /// <summary>VENUE OWNER</summary>
     [HttpGet("balance")]
+    [Authorize(Roles = "VENUEOWNER")]
     public async Task<IActionResult> GetBalance()
     {
         var userId = GetCurrentUserId();
@@ -36,6 +37,7 @@ public class WalletController : BaseController
 
     /// <summary>VENUE OWNER</summary>
     [HttpPost("withdraw")]
+    [Authorize(Roles = "VENUEOWNER")]
     public async Task<IActionResult> CreateWithdrawRequest([FromBody] CreateWithdrawRequestRequest request)
     {
         var userId = GetCurrentUserId();
@@ -55,6 +57,7 @@ public class WalletController : BaseController
     
     /// <summary>VENUE OWNER</summary>
     [HttpGet("withdraw-requests")]
+    [Authorize(Roles = "VENUEOWNER")]
     public async Task<IActionResult> GetMyWithdrawRequests()
     {
         var userId = GetCurrentUserId();
@@ -67,6 +70,7 @@ public class WalletController : BaseController
 
     /// <summary>VENUE OWNER - Lấy lịch sử giao dịch biến động số dư wallet</summary>
     [HttpGet("transaction-history")]
+    [Authorize(Roles = "VENUEOWNER")]
     public async Task<IActionResult> GetTransactionHistory(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20)
@@ -77,5 +81,25 @@ public class WalletController : BaseController
 
         var history = await _walletService.GetWalletTransactionHistoryAsync(userId.Value, pageNumber, pageSize);
         return OkResponse(history, $"Retrieved {history.Items.Count()} transaction(s) from page {pageNumber}");
+    }
+
+    /// <summary>
+    /// MEMBER - Chuyển đổi tiền thành điểm
+    /// </summary>
+    [HttpPost("convert-money-to-point")]
+    public async Task<IActionResult> ConvertMoneyToPoint([FromBody] ConvertMoneyToPointRequest request)
+    {
+        var userId = GetCurrentUserId();
+        if (!userId.HasValue)
+            return UnauthorizedResponse("User not authenticated");
+        try
+        {
+            var result = await _walletService.ConvertMoneyToPointAsync(userId.Value, request);
+            return OkResponse(result, "Money converted to points successfully");
+        }
+        catch (Exception ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
     }
 }

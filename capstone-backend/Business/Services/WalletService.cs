@@ -5,16 +5,19 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using capstone_backend.Business.DTOs.MoneyToPoint;
 
 namespace capstone_backend.Business.Services;
 
 public class WalletService
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISystemConfigService _systemConfigService;
 
-    public WalletService(IUnitOfWork unitOfWork)
+    public WalletService(IUnitOfWork unitOfWork, ISystemConfigService systemConfigService)
     {
         _unitOfWork = unitOfWork;
+        _systemConfigService = systemConfigService;
     }
 
     public async Task<WalletBalanceResponse?> GetWalletBalanceAsync(int userId)
@@ -183,6 +186,76 @@ public class WalletService
             3 => "MEMBER_SUBSCRIPTION",
             4 => "WALLET_TOPUP",
             _ => "UNKNOWN"
+        };
+    }
+
+    public async Task<ConvertMoneyToPointResponse> ConvertMoneyToPointAsync(int userId, ConvertMoneyToPointRequest request)
+    {
+        if (request == null)
+            throw new Exception("Dữ liệu không hợp lệ");
+
+        if (request.Amount <= 0)
+            throw new Exception("Số tiền đổi phải lớn hơn 0");
+
+        var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+        if (member == null)
+            throw new Exception("Thành viên không tồn tại");
+
+        var wallet = await _unitOfWork.Wallets.GetByUserIdAsync(userId);
+        if (wallet == null)
+            throw new Exception("Ví không tồn tại");
+
+        if (wallet.IsActive == false)
+            throw new Exception("Ví không hoạt động");
+
+        var rate = await _systemConfigService.GetIntValueAsync(SystemConfigKeys.MONEY_TO_POINT_RATE.ToString());
+        if (rate <= 0)
+            throw new Exception("Cấu hình tỉ lệ đổi point không hợp lệ");
+
+        if (request.Amount % rate != 0)
+            throw new Exception($"Số tiền đổi phải là bội số của {rate}");
+
+        if (wallet.Balance < request.Amount)
+            throw new Exception("Số dư ví không đủ");
+
+        var pointsToAdd = (int)(request.Amount / rate);
+        if (pointsToAdd <= 0)
+            throw new Exception("Số point quy đổi không hợp lệ");
+
+        var balanceBefore = wallet.Balance;
+        var pointsBefore = wallet.Points ?? 0;
+
+        wallet.Balance = Math.Max(0, wallet.Balance.Value - request.Amount);
+        wallet.Points = pointsBefore + pointsToAdd;
+        wallet.UpdatedAt = DateTime.UtcNow;
+
+        _unitOfWork.Wallets.Update(wallet);
+
+        var transaction = new Transaction
+        {
+            Amount = request.Amount,
+            Currency = "VND",
+            UserId = userId,
+            Description = $"Convert {request.Amount} VND to {pointsToAdd} points",
+            PaymentMethod = PaymentMethod.SYSTEM.ToString(),
+            TransType = 6,
+            DocNo = wallet.Id,
+            ExternalRefCode = null,
+            Status = TransactionStatus.SUCCESS.ToString()
+        };
+
+        await _unitOfWork.Transactions.AddAsync(transaction);
+        await _unitOfWork.SaveChangesAsync();
+
+        return new ConvertMoneyToPointResponse
+        {
+            ConvertedMoney = request.Amount,
+            ConvertedPoints = pointsToAdd,
+            BalanceBefore = balanceBefore,
+            BalanceAfter = wallet.Balance,
+            PointsBefore = pointsBefore,
+            PointsAfter = wallet.Points ?? 0,
+            Rate = rate
         };
     }
 }
