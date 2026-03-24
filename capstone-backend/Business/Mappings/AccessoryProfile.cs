@@ -8,7 +8,10 @@ namespace capstone_backend.Business.Mappings
     {
         public AccessoryProfile()
         {
-            CreateMap<Accessory, AccessoryResponse>();
+            CreateMap<Accessory, AccessoryResponse>()
+                .ForMember(dest => dest.AccessoryId, opt => opt.MapFrom(src => src.Id));
+            CreateMap<Accessory, AccessoryDetailResponse>()
+                .ForMember(dest => dest.AccessoryId, opt => opt.MapFrom(src => src.Id));
         }
     }
 }

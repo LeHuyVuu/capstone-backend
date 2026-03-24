@@ -31,7 +31,29 @@ namespace capstone_backend.Api.Controllers
                     return UnauthorizedResponse("User not authenticated");
 
                 var result = await _accessoryService.GetShopAsync(userId.Value, query);
-                return OkResponse(result);
+                return OkResponse(result, "Lấy thông tin thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get accessory detail
+        /// </summary>
+        [HttpGet("shop/{accessoryId}")]
+        public async Task<IActionResult> GetAccessoryDetail(int accessoryId)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("User not authenticated");
+                var result = await _accessoryService.GetDetailAsync(userId.Value, accessoryId);
+                if (result == null)
+                    return NotFoundResponse("Không tìm thấy phụ kiện");
+                return OkResponse(result, "Lấy thông tin thành công");
             }
             catch (Exception ex)
             {

@@ -116,5 +116,41 @@ namespace capstone_backend.Business.Services
                 TotalCount = totalCount
             };
         }
+
+        public async Task<AccessoryDetailResponse?> GetDetailAsync(int userId, int accessoryId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Member không ở trong couple nào");
+
+            var partnerId = couple.MemberId1 == member.Id ? couple.MemberId2 : couple.MemberId1;
+
+            var accessory = await _unitOfWork.Accessories.GetByIdAsync(accessoryId);
+            if (accessory == null || accessory.IsDeleted == true || accessory.Status != AccessoryStatus.ACTIVE.ToString())
+                return null;
+
+            var response = _mapper.Map<AccessoryDetailResponse>(accessory);
+
+            var ownerRecords = await _unitOfWork.MemberAccessories.GetOwnerAsync(member.Id, partnerId, new List<int> { accessoryId });
+            response.IsOwnedByMe = ownerRecords.Any(x => x.MemberId == member.Id);
+            response.IsOwnedByPartner = ownerRecords.Any(x => x.MemberId == partnerId);
+
+            var isInStock = !accessory.IsLimited.GetValueOrDefault()
+                            || accessory.RemainingQuantity == null
+                            || accessory.RemainingQuantity > 0;
+
+            response.CanPurchase =
+                !response.IsOwnedByMe &&
+                isInStock &&
+                accessory.Status == AccessoryStatus.ACTIVE.ToString() &&
+                (accessory.AvailableFrom == null || accessory.AvailableFrom <= DateTime.UtcNow) &&
+                (accessory.AvailableTo == null || accessory.AvailableTo >= DateTime.UtcNow);
+
+            return response;
+        }
     }
 }
