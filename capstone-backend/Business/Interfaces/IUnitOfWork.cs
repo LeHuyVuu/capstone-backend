@@ -113,6 +113,12 @@ public interface IUnitOfWork : IDisposable
 
     ISystemConfigRepository SystemConfigs { get; }
 
+    IAccessoryRepository Accessories { get; }
+
+    IAccessoryPurchaseRepository AccessoryPurchases { get; }
+
+    IMemberAccessoryRepository MemberAccessories { get; }
+
     /// <summary>
     /// Save all changes to database
     /// </summary>
