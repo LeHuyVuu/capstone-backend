@@ -478,5 +478,13 @@ namespace capstone_backend.Business.Services
                 TotalCount = totalCount
             };
         }
+
+        public async Task<List<EquippedAccessoryBriefResponse>> GetEquippedAccessoryForMemberAsync(int memberId)
+        {
+            var equippedAccessories = await _unitOfWork.MemberAccessories.GetEquippedByMemberIdAsync(memberId);
+
+            var response = _mapper.Map<List<EquippedAccessoryBriefResponse>>(equippedAccessories);
+            return response;
+        }
     }
 }

@@ -1,3 +1,5 @@
+using capstone_backend.Business.DTOs.Accessory;
+
 namespace capstone_backend.Business.DTOs.User;
 
 /// <summary>
@@ -18,4 +20,6 @@ public class MemberProfileResponse
     public object? Interests { get; set; }
     public object? AvailableTime { get; set; }
     public string? InviteCode { get; set; }
+
+    public List<EquippedAccessoryBriefResponse> EquippedAccessories { get; set; } = new List<EquippedAccessoryBriefResponse>();
 }
