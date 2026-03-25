@@ -54,7 +54,7 @@ public class WalletController : BaseController
             return BadRequestResponse(ex.Message);
         }
     }
-    
+
     /// <summary>VENUE OWNER</summary>
     [HttpGet("withdraw-requests")]
     [Authorize(Roles = "VENUEOWNER")]
@@ -86,6 +86,7 @@ public class WalletController : BaseController
     /// <summary>
     /// MEMBER - Chuyển đổi tiền thành điểm
     /// </summary>
+    [Authorize(Roles = "MEMBER, member")]
     [HttpPost("convert-money-to-point")]
     public async Task<IActionResult> ConvertMoneyToPoint([FromBody] ConvertMoneyToPointRequest request)
     {
@@ -101,5 +102,35 @@ public class WalletController : BaseController
         {
             return BadRequestResponse(ex.Message);
         }
+    }
+
+    /// <summary>
+    /// MEMBER - Lấy lịch sử giao dịch biến động số dư cho member
+    /// </summary>
+    [Authorize(Roles = "MEMBER, member")]
+    [HttpGet("member/transactions")]
+    public async Task<IActionResult> GetMemberTransactionHistory(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        var userId = GetCurrentUserId();
+        if (!userId.HasValue)
+            return UnauthorizedResponse("User not authenticated");
+        var history = await _walletService.GetMemberWalletTransactionHistoryAsync(userId.Value, pageNumber, pageSize);
+        return OkResponse(history, $"Retrieved {history.Items.Count()} transaction(s) from page {pageNumber}");
+    }
+
+    /// <summary>
+    /// MEMBER - Lấy tỉ lệ quy đổi tiền thành điểm
+    /// </summary>
+    [Authorize(Roles = "MEMBER, member")]
+    [HttpGet("member/exchange-rate")]
+    public async Task<IActionResult> GetMoneyToPointExchangeRate()
+    {
+        var userId = GetCurrentUserId();
+        if (!userId.HasValue)
+            return UnauthorizedResponse("User not authenticated");
+        var exchangeRate = await _walletService.GetMoneyToPointExchangeRateAsync(userId.Value);
+        return OkResponse(exchangeRate, "Retrieved money to point exchange rate successfully");
     }
 }
