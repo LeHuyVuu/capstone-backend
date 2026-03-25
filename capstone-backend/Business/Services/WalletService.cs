@@ -121,20 +121,15 @@ public class WalletService
         // Validate pagination parameters
         if (pageNumber < 1) pageNumber = 1;
         if (pageSize < 1) pageSize = 20;
-        if (pageSize > 100) pageSize = 100; // Max 100 items per page
+        if (pageSize > 100) pageSize = 100; 
 
-        // Lấy tất cả giao dịch liên quan đến wallet của user
-        // Các trường hợp làm thay đổi số dư wallet:
-        // 1. TĂNG SỐ DƯ (+):
-        //    - TransType = 4 (WALLET_TOPUP): Nạp tiền vào wallet qua MoMo
-        //    - PaymentMethod = "REFUND": Hoàn tiền vào wallet (khi hủy subscription/ads)
-        // 2. GIẢM SỐ DƯ (-):
-        //    - PaymentMethod = "WALLET": Thanh toán subscription/ads bằng wallet
-        // CHỈ LẤY GIAO DỊCH THÀNH CÔNG (SUCCESS) vì chỉ có giao dịch này mới thực sự thay đổi số dư
         var query = _unitOfWork.Context.Set<Transaction>()
             .Where(t => t.UserId == userId && 
                        t.Status == TransactionStatus.SUCCESS.ToString() &&
                        (t.TransType == (int)TransactionType.WALLET_TOPUP || 
+                        t.TransType == (int)TransactionType.VENUE_SETTLEMENT_PAYOUT ||
+                        t.TransType == (int)TransactionType.VENUE_SUBSCRIPTION ||
+                        t.TransType == (int)TransactionType.ADS_ORDER ||
                         t.PaymentMethod == "WALLET" ||
                         t.PaymentMethod == "REFUND"));
 
@@ -151,13 +146,17 @@ public class WalletService
 
         var items = transactions.Select(t =>
         {
-            // Xác định hướng giao dịch
+            // Xác định hướng giao dịch cho VENUE OWNER
             // Tăng số dư (IN):
             //   - WALLET_TOPUP: Nạp tiền vào wallet
+            //   - VENUE_SETTLEMENT_PAYOUT: Thanh toán từ admin cho venue owner
             //   - REFUND: Hoàn tiền vào wallet
             // Giảm số dư (OUT):
+            //   - VENUE_SUBSCRIPTION: Thanh toán subscription cho venue
+            //   - ADS_ORDER: Thanh toán quảng cáo
             //   - PaymentMethod = WALLET: Thanh toán bằng wallet
             bool isIncoming = t.TransType == (int)TransactionType.WALLET_TOPUP || 
+                             t.TransType == (int)TransactionType.VENUE_SETTLEMENT_PAYOUT ||
                              t.PaymentMethod == "REFUND";
             string direction = isIncoming ? "IN" : "OUT";
             decimal balanceChange = isIncoming ? t.Amount : -t.Amount;
@@ -188,6 +187,7 @@ public class WalletService
             2 => "ADS_ORDER",
             3 => "MEMBER_SUBSCRIPTION",
             4 => "WALLET_TOPUP",
+            5 => "VENUE_SETTLEMENT_PAYOUT",
             6 => "MONEY_TO_POINT",
             _ => "UNKNOWN"
         };
@@ -261,6 +261,89 @@ public class WalletService
             PointsAfter = wallet.Points ?? 0,
             Rate = rate
         };
+    }
+
+    public async Task<PagedResult<AdminTransactionResponse>> GetAllTransactionsForAdminAsync(
+        int pageNumber = 1, 
+        int pageSize = 20,
+        string? status = null,
+        int? transType = null,
+        int? userId = null)
+    {
+        // Validate pagination parameters
+        if (pageNumber < 1) pageNumber = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        var query = _unitOfWork.Context.Set<Transaction>().AsQueryable();
+
+        // Apply filters
+        if (!string.IsNullOrEmpty(status))
+        {
+            query = query.Where(t => t.Status == status);
+        }
+
+        if (transType.HasValue)
+        {
+            query = query.Where(t => t.TransType == transType.Value);
+        }
+
+        if (userId.HasValue)
+        {
+            query = query.Where(t => t.UserId == userId.Value);
+        }
+
+        // Get total count
+        var totalCount = await query.CountAsync();
+
+        // Get paginated data with user info
+        var transactions = await query
+            .OrderByDescending(t => t.CreatedAt)
+            .ThenByDescending(t => t.Id)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Select(t => new
+            {
+                Transaction = t,
+                User = _unitOfWork.Context.Set<UserAccount>().FirstOrDefault(u => u.Id == t.UserId)
+            })
+            .ToListAsync();
+
+        var items = transactions.Select(t =>
+        {
+            ExternalRefCodeDto? externalRefCode = null;
+            if (!string.IsNullOrEmpty(t.Transaction.ExternalRefCode))
+            {
+                try
+                {
+                    externalRefCode = System.Text.Json.JsonSerializer.Deserialize<ExternalRefCodeDto>(t.Transaction.ExternalRefCode);
+                }
+                catch
+                {
+                    // If parsing fails, leave it as null
+                }
+            }
+
+            return new AdminTransactionResponse
+            {
+                TransactionId = t.Transaction.Id,
+                UserId = t.Transaction.UserId,
+                UserName = t.User != null ? t.User.DisplayName : null,
+                UserEmail = t.User != null ? t.User.Email : null,
+                Amount = t.Transaction.Amount,
+                Currency = t.Transaction.Currency,
+                PaymentMethod = t.Transaction.PaymentMethod,
+                TransactionType = GetTransactionTypeName(t.Transaction.TransType),
+                DocNo = t.Transaction.DocNo,
+                Description = t.Transaction.Description,
+                ExternalRefCode = externalRefCode,
+                Status = t.Transaction.Status ?? "UNKNOWN",
+                CreatedAt = t.Transaction.CreatedAt ?? DateTime.UtcNow,
+                UpdatedAt = t.Transaction.UpdatedAt
+            };
+        }).ToList();
+
+        return new PagedResult<AdminTransactionResponse>(items, pageNumber, pageSize, totalCount);
     }
 
     public async Task<PagedResult<WalletTransactionHistoryResponse>> GetMemberWalletTransactionHistoryAsync(int userId, int pageNumber, int pageSize)

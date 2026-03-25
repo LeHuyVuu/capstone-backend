@@ -1,5 +1,6 @@
 ﻿using capstone_backend.Business.DTOs.Admin;
 using capstone_backend.Business.DTOs.TestType;
+using capstone_backend.Business.DTOs.Wallet;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Services;
 using capstone_backend.Data.Enums;
@@ -18,10 +19,12 @@ namespace capstone_backend.Api.Controllers
     public class AdminController : BaseController
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly WalletService _walletService;
 
-        public AdminController(IUnitOfWork unitOfWork)
+        public AdminController(IUnitOfWork unitOfWork, WalletService walletService)
         {
             _unitOfWork = unitOfWork;
+            _walletService = walletService;
         }
 
         [HttpGet]
@@ -291,6 +294,35 @@ namespace capstone_backend.Api.Controllers
             };
 
             return grouped;
+        }
+        
+        /// <summary>
+        /// Lấy tất cả transactions cho admin với pagination và filters
+        /// </summary>
+        [HttpGet("transactions")]
+        [Authorize(Roles = "ADMIN")]
+        public async Task<IActionResult> GetAllTransactions(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] string? status = null,
+            [FromQuery] int? transType = null,
+            [FromQuery] int? userId = null)
+        {
+            try
+            {
+                var result = await _walletService.GetAllTransactionsForAdminAsync(
+                    pageNumber, 
+                    pageSize, 
+                    status, 
+                    transType, 
+                    userId);
+
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse($"Error retrieving transactions: {ex.Message}");
+            }
         }
     }
 }

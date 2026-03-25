@@ -76,6 +76,9 @@ public class UserService : IUserService
         var refreshToken = _jwtService.GenerateRefreshToken();
         var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
 
+        var balance = user.Wallet?.IsActive == true ? user.Wallet.Balance.Value : 0;
+        var points = user.Wallet?.IsActive == true ? user.Wallet.Points.Value : 0;
+
         return new LoginResponse
         {
             AccessToken = accessToken,
@@ -85,7 +88,9 @@ public class UserService : IUserService
             AvatarUrl = user.AvatarUrl,
             FullName = fullName,
             DateOfBirth = dateOfBirth,
-            InviteCode = inviteCode
+            InviteCode = inviteCode,
+            Balance = balance,
+            Points = points
         };
     }
 

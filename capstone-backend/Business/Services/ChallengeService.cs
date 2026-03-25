@@ -1350,6 +1350,22 @@ namespace capstone_backend.Business.Services
                 isNew = true;
                 // Lazy create couple challenge if not exist
                 var initProgress = CreateInitialCheckinProgressData(couple);
+
+                var now = DateTime.UtcNow;
+                var memberIds = new[]
+                {
+                    couple.MemberId1.ToString(),
+                    couple.MemberId2.ToString()
+                };
+
+                foreach (var id in memberIds)
+                {
+                    initProgress.MemberState[id].IsJoined = true;
+                    initProgress.MemberState[id].JoinedAt ??= now;
+                    initProgress.MemberState[id].IsActive = true;
+                    initProgress.MemberState[id].LeftAt = null;
+                }
+
                 coupleChallenge = new CoupleProfileChallenge
                 {
                     CoupleId = couple.id,

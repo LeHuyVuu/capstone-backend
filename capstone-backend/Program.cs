@@ -6,6 +6,7 @@ using capstone_backend.Business.Jobs.Challenge;
 using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Business.Jobs.Leaderboard;
 using capstone_backend.Business.Jobs.Media;
+using capstone_backend.Business.Jobs.Payment;
 using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Business.Jobs.VenueSettlement;
 using capstone_backend.Business.Mappings;
@@ -251,6 +252,15 @@ using (var scope = serviceProvider.CreateScope())
         "process-venue-settlements",
         job => job.ProcessPendingSettlementsAsync(),
         Cron.Hourly(),
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
+    recurringJobManager.AddOrUpdate<IPaymentWorker>(
+        "auto-expire-pending-payments",
+        job => job.AutoExpirePendingPaymentsAsync(),
+        "*/5 * * * *", // Every 5 minutes
         new RecurringJobOptions
         {
             TimeZone = vnTz
