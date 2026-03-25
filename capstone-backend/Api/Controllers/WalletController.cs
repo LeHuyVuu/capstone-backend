@@ -119,4 +119,18 @@ public class WalletController : BaseController
         var history = await _walletService.GetMemberWalletTransactionHistoryAsync(userId.Value, pageNumber, pageSize);
         return OkResponse(history, $"Retrieved {history.Items.Count()} transaction(s) from page {pageNumber}");
     }
+
+    /// <summary>
+    /// MEMBER - Lấy tỉ lệ quy đổi tiền thành điểm
+    /// </summary>
+    [Authorize(Roles = "MEMBER, member")]
+    [HttpGet("member/exchange-rate")]
+    public async Task<IActionResult> GetMoneyToPointExchangeRate()
+    {
+        var userId = GetCurrentUserId();
+        if (!userId.HasValue)
+            return UnauthorizedResponse("User not authenticated");
+        var exchangeRate = await _walletService.GetMoneyToPointExchangeRateAsync(userId.Value);
+        return OkResponse(exchangeRate, "Retrieved money to point exchange rate successfully");
+    }
 }

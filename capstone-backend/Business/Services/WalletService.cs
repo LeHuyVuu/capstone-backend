@@ -311,4 +311,22 @@ public class WalletService
             PageSize = pageSize
         };
     }
+
+    public async Task<WalletExchangeRateResponse> GetMoneyToPointExchangeRateAsync(int userId)
+    {
+        var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+        if (member == null)
+            throw new Exception("Thành viên không tồn tại");
+
+        var rate = await _systemConfigService.GetIntValueAsync(SystemConfigKeys.MONEY_TO_POINT_RATE.ToString());
+        if (rate <= 0)
+            throw new Exception("Cấu hình tỉ lệ đổi point không hợp lệ");
+
+        return new WalletExchangeRateResponse
+        {
+            MoneyAmount = rate,
+            PointAmount = 1,
+            Description = $"Tỉ lệ đổi: {rate} VND = 1 point"
+        };
+    }
 }
