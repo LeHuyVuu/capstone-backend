@@ -9,7 +9,6 @@ namespace capstone_backend.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "ADMIN")]
 public class ReportTypeController : BaseController
 {
     private readonly IReportTypeService _reportTypeService;
@@ -48,6 +47,7 @@ public class ReportTypeController : BaseController
 
         return OkResponse(reportType, "Report type retrieved successfully");
     }
+    [Authorize(Roles = "ADMIN")]
 
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<ReportTypeResponse>), 201)]
@@ -60,6 +60,7 @@ public class ReportTypeController : BaseController
         var reportType = await _reportTypeService.CreateReportTypeAsync(request);
         return CreatedResponse(reportType, "Report type created successfully");
     }
+[Authorize(Roles = "ADMIN")]
 
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(ApiResponse<ReportTypeResponse>), 200)]
@@ -77,6 +78,7 @@ public class ReportTypeController : BaseController
 
         return OkResponse(reportType, "Report type updated successfully");
     }
+[Authorize(Roles = "ADMIN")]
 
     [HttpDelete("{id}")]
     [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
