@@ -17,7 +17,7 @@ namespace capstone_backend.Business.DTOs.DatePlan
         public DateTime PlannedEndAt { get; set; }
         public decimal EstimatedBudget { get; set; } = 0m;
 
-        /// <example>SINGLE_DAY</example>
+        /// <example>SAME_DAY</example>
         public DatePlanDurationMode DurationMode { get; set; } = DatePlanDurationMode.SAME_DAY;
     }
 }
