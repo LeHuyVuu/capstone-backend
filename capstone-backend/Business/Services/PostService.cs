@@ -255,7 +255,7 @@ namespace capstone_backend.Business.Services
                          c.Post.Status == PostStatus.PUBLISHED.ToString() && 
                          c.ParentId == null && c.RootId == null,
                     c => c.OrderByDescending(c => c.CreatedAt),
-                    c => c.Include(c => c.Author).Include(c => c.CommentLikes)
+                    c => c.Include(c => c.Author).ThenInclude(a => a.User).Include(c => c.CommentLikes)
                 );
 
             var items = _mapper.Map<List<CommentResponse>>(comments);

@@ -186,7 +186,7 @@ namespace capstone_backend.Business.Services
                 pageSize,
                 c => c.ParentId == commentId && c.IsDeleted == false && c.Status == CommentStatus.PUBLISHED.ToString(),
                 c => c.OrderBy(c => c.CreatedAt),
-                c => c.Include(c => c.Author).Include(c => c.TargetMember).Include(c => c.CommentLikes)
+                c => c.Include(c => c.Author).ThenInclude(a => a.User).Include(c => c.TargetMember).ThenInclude(tm => tm.User).Include(c => c.CommentLikes)
             );
 
             var items = _mapper.Map<List<CommentResponse>>(comments);
