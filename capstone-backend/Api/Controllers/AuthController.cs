@@ -303,10 +303,39 @@ public class AuthController : BaseController
 
             return OkResponse(loginResponse, "Login successful");
         }
+        catch (InvalidOperationException ex)
+        {
+            return ForbiddenResponse(ex.Message);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Google login error");
             return InternalServerErrorResponse($"Google login failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Login hoặc register bằng Google cho mobile app
+    /// </summary>
+    /// <param name="request">Google login request với ID token</param>
+    /// <returns>Login response với JWT tokens</returns>
+    [HttpPost("google-login-mobile")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GoogleLoginMobile([FromBody] GoogleLoginRequest request)
+    {
+        try
+        {
+            var loginResponse = await _userService.GoogleMobileLoginAsync(request);
+
+            if (loginResponse == null)
+                return UnauthorizedResponse("Google mobile authentication failed");
+
+            return OkResponse(loginResponse, "Mobile login successful");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Google mobile login error");
+            return InternalServerErrorResponse($"Google mobile login failed: {ex.Message}");
         }
     }
 }

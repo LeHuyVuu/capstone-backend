@@ -11,4 +11,9 @@ public interface IGoogleAuthService
     /// Verify Google ID Token và trả về payload
     /// </summary>
     Task<GoogleJsonWebSignature.Payload?> VerifyGoogleTokenAsync(string idToken);
+
+    /// <summary>
+    /// Verify Google ID Token cho mobile client và trả về payload
+    /// </summary>
+    Task<GoogleJsonWebSignature.Payload?> VerifyGoogleMobileTokenAsync(string idToken);
 }

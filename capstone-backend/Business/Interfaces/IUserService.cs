@@ -136,4 +136,11 @@ public interface IUserService
     /// <param name="request">Google login request với ID token</param>
     /// <returns>Login response với JWT tokens</returns>
     Task<LoginResponse?> GoogleLoginAsync(GoogleLoginRequest request);
+
+    /// <summary>
+    /// Login hoặc register bằng Google cho mobile app
+    /// </summary>
+    /// <param name="request">Google login request với ID token</param>
+    /// <returns>Login response với JWT tokens</returns>
+    Task<LoginResponse?> GoogleMobileLoginAsync(GoogleLoginRequest request);
 }

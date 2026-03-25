@@ -631,11 +631,27 @@ public class UserService : IUserService
     /// </summary>
     public async Task<LoginResponse?> GoogleLoginAsync(GoogleLoginRequest request)
     {
+        return await GoogleLoginInternalAsync(request, isMobile: false);
+    }
+
+    /// <summary>
+    /// Login hoặc register bằng Google (cho mobile)
+    /// </summary>
+    public async Task<LoginResponse?> GoogleMobileLoginAsync(GoogleLoginRequest request)
+    {
+        return await GoogleLoginInternalAsync(request, isMobile: true);
+    }
+
+    private async Task<LoginResponse?> GoogleLoginInternalAsync(GoogleLoginRequest request, bool isMobile)
+    {
         // 1. Verify Google ID Token
-        var googlePayload = await _googleAuthService.VerifyGoogleTokenAsync(request.IdToken);
+        var googlePayload = isMobile
+            ? await _googleAuthService.VerifyGoogleMobileTokenAsync(request.IdToken)
+            : await _googleAuthService.VerifyGoogleTokenAsync(request.IdToken);
+
         if (googlePayload == null)
         {
-            _logger.LogWarning("Invalid Google ID Token");
+            _logger.LogWarning("Invalid Google ID Token for channel: {Channel}", isMobile ? "mobile" : "web");
             return null;
         }
 
@@ -648,6 +664,15 @@ public class UserService : IUserService
 
         if (existingUser != null)
         {
+            if (!isMobile && !IsAllowedWebGoogleRole(existingUser.Role))
+            {
+                _logger.LogWarning(
+                    "Google web login blocked for email {Email} due to role {Role}",
+                    email,
+                    existingUser.Role ?? "<null>");
+                throw new InvalidOperationException("Tài khoản này không có quyền đăng nhập web");
+            }
+
             // User đã tồn tại - Login
             if (existingUser.IsActive != true)
             {
@@ -729,6 +754,12 @@ public class UserService : IUserService
             _logger.LogError(ex, "Error during Google registration for {Email}", email);
             throw;
         }
+    }
+
+    private static bool IsAllowedWebGoogleRole(string? role)
+    {
+        return string.Equals(role, "VENUEOWNER", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(role, "STAFF", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
