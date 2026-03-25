@@ -219,12 +219,13 @@ namespace capstone_backend.Api.Controllers
 
         /// <summary>
         /// Create Date Plan
-        /// 
+        /// </summary>
+        /// <remarks>
         /// DurationMode:
         /// - SAME_DAY: Lịch trình diễn ra trong cùng một ngày
         /// 
         /// - WITHIN_24_HOURS: Lịch trình diễn ra trong vòng 24 giờ kể từ thời điểm bắt đầu
-        /// </summary>
+        /// </remarks>
         [HttpPost]
         public async Task<IActionResult> CreateDatePlan([FromBody] CreateDatePlanRequest request)
         {
