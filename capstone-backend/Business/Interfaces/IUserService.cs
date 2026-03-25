@@ -68,7 +68,7 @@ public interface IUserService
         string? searchTerm = null);
 
     /// <summary>
-    /// Create a new user
+    /// Create a new staff account (admin flow)
     /// </summary>
     /// <param name="request">User creation data</param>
     /// <param name="createdBy">User ID who is creating this user</param>

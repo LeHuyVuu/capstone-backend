@@ -5,6 +5,7 @@ using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.User;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -336,7 +337,22 @@ public class UserService : IUserService
         if (await _unitOfWork.Users.EmailExistsAsync(request.Email))
             throw new InvalidOperationException($"Email '{request.Email}' already exists");
 
-        // TODO: Use BCrypt.Net.BCrypt.HashPassword(request.Password)
+        var normalizedRole = request.Role?.Trim().ToUpperInvariant();
+        if (normalizedRole != "STAFF")
+            throw new InvalidOperationException("Endpoint này chỉ hỗ trợ tạo role STAFF");
+
+        if (!request.LocationId.HasValue)
+            throw new InvalidOperationException("LocationId là bắt buộc khi tạo STAFF");
+
+        var venueLocation = await _unitOfWork.VenueLocations.GetByIdAsync(request.LocationId.Value);
+        if (venueLocation == null || venueLocation.IsDeleted == true)
+            throw new InvalidOperationException("Venue location không tồn tại");
+
+        if (!string.Equals(venueLocation.Status, VenueLocationStatus.ACTIVE.ToString(), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Chỉ có thể gán STAFF vào venue location đang ACTIVE");
+
+        int? assignedVenueLocationId = venueLocation.Id;
+
         string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
         var user = new UserAccount
@@ -345,10 +361,11 @@ public class UserService : IUserService
             PasswordHash = passwordHash,
             DisplayName = request.FullName,
             PhoneNumber = request.PhoneNumber,
-            Role = request.Role,
+            Role = normalizedRole,
             IsActive = true,
             IsVerified = false,
             IsDeleted = false,
+            AssignedVenueLocationId = assignedVenueLocationId,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -371,7 +388,19 @@ public class UserService : IUserService
         user.UpdatedAt = DateTime.UtcNow;
 
         if (!string.IsNullOrEmpty(request.Role))
-            user.Role = request.Role;
+        {
+            var normalizedRole = request.Role.Trim().ToUpperInvariant();
+            if (normalizedRole is not ("ADMIN" or "MEMBER" or "VENUEOWNER" or "STAFF"))
+                throw new InvalidOperationException("Role không hợp lệ. Chỉ chấp nhận: ADMIN, MEMBER, VENUEOWNER, STAFF");
+
+            if (normalizedRole == "STAFF" && !user.AssignedVenueLocationId.HasValue)
+                throw new InvalidOperationException("Không thể cập nhật role thành STAFF khi chưa có location được gán");
+
+            if (normalizedRole != "STAFF")
+                user.AssignedVenueLocationId = null;
+
+            user.Role = normalizedRole;
+        }
 
         _unitOfWork.Users.Update(user);
         await _unitOfWork.SaveChangesAsync();
@@ -410,7 +439,7 @@ public class UserService : IUserService
             FullName = user.DisplayName ?? string.Empty,
             PhoneNumber = user.PhoneNumber,
             AvatarUrl = user.AvatarUrl,
-            Role = user.Role ?? "User",
+            Role = user.Role ?? "MEMBER",
             IsActive = user.IsActive ?? false,
             LastLoginAt = user.LastLoginAt,
             CreatedAt = user.CreatedAt ?? DateTime.MinValue,

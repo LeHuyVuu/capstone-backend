@@ -39,9 +39,13 @@ public class CreateUserRequest
     [Phone(ErrorMessage = "Invalid phone number format")]
     public string? PhoneNumber { get; set; }
 
+
+    /// <example>STAFF</example>
+    public string Role { get; set; } = "STAFF";
+
     /// <summary>
-    /// User's role (default: User)
+    /// Assigned venue location ID (required when role is STAFF)
     /// </summary>
-    /// <example>User</example>
-    public string Role { get; set; } = "User";
+    /// <example>123</example>
+    public int? LocationId { get; set; }
 }

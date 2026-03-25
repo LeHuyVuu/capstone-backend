@@ -15,7 +15,14 @@ public class UpdateUserRequestValidator : AbstractValidator<UpdateUserRequest>
             .MaximumLength(20).When(x => !string.IsNullOrEmpty(x.PhoneNumber));
 
         RuleFor(x => x.Role)
-            .Must(role => string.IsNullOrEmpty(role) || role == "Admin" || role == "User")
-            .WithMessage("Role phải là 'Admin' hoặc 'User'");
+            .Must(role =>
+            {
+                if (string.IsNullOrWhiteSpace(role))
+                    return true;
+
+                var normalizedRole = role.Trim().ToUpperInvariant();
+                return normalizedRole is "ADMIN" or "MEMBER" or "VENUEOWNER" or "STAFF";
+            })
+            .WithMessage("Role phải là một trong các giá trị: ADMIN, MEMBER, VENUEOWNER, STAFF");
     }
 }

@@ -26,7 +26,16 @@ public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
 
         RuleFor(x => x.Role)
             .NotEmpty().WithMessage("Role không được để trống")
-            .Must(role => role == "Admin" || role == "User")
-            .WithMessage("Role phải là 'Admin' hoặc 'User'");
+            .Must(role => string.Equals(role?.Trim(), "STAFF", StringComparison.OrdinalIgnoreCase))
+            .WithMessage("Endpoint này chỉ hỗ trợ tạo role STAFF");
+
+        RuleFor(x => x.LocationId)
+            .NotNull().WithMessage("LocationId là bắt buộc khi role là STAFF")
+            .GreaterThan(0).WithMessage("LocationId phải lớn hơn 0")
+            .When(x => string.Equals(x.Role?.Trim(), "STAFF", StringComparison.OrdinalIgnoreCase));
+
+        RuleFor(x => x.LocationId)
+            .Null().WithMessage("LocationId chỉ được dùng khi role là STAFF")
+            .When(x => !string.Equals(x.Role?.Trim(), "STAFF", StringComparison.OrdinalIgnoreCase));
     }
 }

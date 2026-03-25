@@ -7,7 +7,7 @@ namespace capstone_backend.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-// [Authorize]
+[Authorize(Roles = "ADMIN")]
 public class UsersController : BaseController
 {
     private readonly IUserService _userService;
@@ -40,9 +40,8 @@ public class UsersController : BaseController
         return OkResponse(user);
     }
 
-    // Create new user (Admin only)
+    // Create staff account (Admin only)
     [HttpPost]
-    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
     {
         try
@@ -67,7 +66,7 @@ public class UsersController : BaseController
 
     // Delete user (soft delete, Admin only)
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "ADMIN")]
     public async Task<IActionResult> DeleteUser(int id)
     {
         var success = await _userService.DeleteUserAsync(id);
