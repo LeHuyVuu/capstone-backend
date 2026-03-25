@@ -12,6 +12,8 @@ namespace capstone_backend.Business.DTOs.DatePlan
         public DateTime? CompletedAt { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+
+        public string? DurationMode { get; set; }
         public List<DatePlanItemResponse> Venues { get; set; } = new List<DatePlanItemResponse>();
     }
 }

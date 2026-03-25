@@ -1,4 +1,5 @@
 ﻿using capstone_backend.Business.DTOs.DatePlanItem;
+using capstone_backend.Data.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace capstone_backend.Business.DTOs.DatePlan
@@ -15,5 +16,8 @@ namespace capstone_backend.Business.DTOs.DatePlan
         [Required(ErrorMessage = "End time is required")]
         public DateTime PlannedEndAt { get; set; }
         public decimal EstimatedBudget { get; set; } = 0m;
+
+        /// <example>SINGLE_DAY</example>
+        public DatePlanDurationMode DurationMode { get; set; } = DatePlanDurationMode.SAME_DAY;
     }
 }

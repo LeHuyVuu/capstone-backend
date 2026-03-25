@@ -20,6 +20,8 @@ public partial class DatePlan
 
     public string? Note { get; set; }
 
+    public string? DurationMode { get; set; }
+
     public int? Version { get; set; }
 
     public int TotalCount { get; set; }
