@@ -12,6 +12,8 @@ namespace capstone_backend.Business.DTOs.DatePlan
         public DateTime? PlannedEndAt { get; set; }
         public decimal? EstimatedBudget { get; set; }
         public string? Status { get; set; }
+
+        public string? DurationMode { get; set; }
     }
 
 }

@@ -1,4 +1,6 @@
-﻿namespace capstone_backend.Business.DTOs.DatePlan
+﻿using capstone_backend.Data.Enums;
+
+namespace capstone_backend.Business.DTOs.DatePlan
 {
     public class UpdateDatePlanRequest
     {
@@ -9,5 +11,8 @@
         public DateTime? PlannedStartAt { get; set; }
         public DateTime? PlannedEndAt { get; set; }
         public decimal? EstimatedBudget { get; set; }
+
+        /// <example>SINGLE_DAY</example>
+        public DatePlanDurationMode? DurationMode { get; set; }
     }
 }

@@ -36,6 +36,13 @@ namespace capstone_backend.Business.Services
                 if (datePlan == null)
                     throw new Exception("Không tìm thấy lịch trình buổi hẹn");
 
+                if (datePlan.OrganizerMemberId != member.Id)
+                    throw new Exception("Chỉ có người tổ chức buổi hẹn mới có thể chỉnh sửa mục lịch trình");
+
+                if (datePlan.Status != DatePlanStatus.DRAFTED.ToString() &&
+                    datePlan.Status != DatePlanStatus.PENDING.ToString())
+                    throw new Exception("Chỉ có thể thêm địa điểm khi lịch trình ở trạng thái DRAFTED hoặc PENDING");
+
                 // Check if date plan start and end time are valid
                 var now = DateTime.UtcNow;
                 if (!datePlan.PlannedStartAt.HasValue || !datePlan.PlannedEndAt.HasValue)
@@ -183,6 +190,13 @@ namespace capstone_backend.Business.Services
                 var datePlanItem = await _unitOfWork.DatePlanItems.GetByIdAndDatePlanIdAsync(datePlanItemId, datePlanId);
                 if (datePlanItem == null)
                     throw new Exception("Không tìm thấy mục trong lịch trình");
+
+                if (datePlan.OrganizerMemberId != member.Id)
+                    throw new Exception("Chỉ có người tổ chức buổi hẹn mới có thể chỉnh sửa mục lịch trình");
+
+                datePlan.TotalCount = Math.Max(0, datePlan.TotalCount - 1);
+                datePlan.UpdatedAt = DateTime.UtcNow;
+                datePlan.Version += 1;
 
                 datePlanItem.IsDeleted = true;
                 _unitOfWork.DatePlanItems.Update(datePlanItem);
