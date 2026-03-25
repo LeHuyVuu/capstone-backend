@@ -6,6 +6,7 @@ using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using capstone_backend.Business.DTOs.MoneyToPoint;
+using AutoMapper;
 
 namespace capstone_backend.Business.Services;
 
@@ -13,11 +14,13 @@ public class WalletService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ISystemConfigService _systemConfigService;
+    private readonly IMapper _mapper;
 
-    public WalletService(IUnitOfWork unitOfWork, ISystemConfigService systemConfigService)
+    public WalletService(IUnitOfWork unitOfWork, ISystemConfigService systemConfigService, IMapper mapper)
     {
         _unitOfWork = unitOfWork;
         _systemConfigService = systemConfigService;
+        _mapper = mapper;
     }
 
     public async Task<WalletBalanceResponse?> GetWalletBalanceAsync(int userId)
@@ -185,6 +188,7 @@ public class WalletService
             2 => "ADS_ORDER",
             3 => "MEMBER_SUBSCRIPTION",
             4 => "WALLET_TOPUP",
+            6 => "MONEY_TO_POINT",
             _ => "UNKNOWN"
         };
     }
@@ -256,6 +260,55 @@ public class WalletService
             PointsBefore = pointsBefore,
             PointsAfter = wallet.Points ?? 0,
             Rate = rate
+        };
+    }
+
+    public async Task<PagedResult<WalletTransactionHistoryResponse>> GetMemberWalletTransactionHistoryAsync(int userId, int pageNumber, int pageSize)
+    {
+        var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+        if (member == null)
+            throw new Exception("Thành viên không tồn tại");
+
+        var wallet = await _unitOfWork.Wallets.GetByUserIdAsync(userId);
+        if (wallet == null)
+            throw new Exception("Ví không tồn tại");
+
+        var (transactions, totalCount) = await _unitOfWork.Transactions.GetPagedAsync(
+            pageNumber,
+            pageSize,
+            t => t.UserId == userId &&
+                 t.Status == TransactionStatus.SUCCESS.ToString() &&
+                 (t.TransType == 4 || t.TransType == 6),
+            t => t.OrderByDescending(t => t.CreatedAt).ThenByDescending(t => t.Id)
+        );
+
+        var response = _mapper.Map<List<WalletTransactionHistoryResponse>>(transactions);
+
+        foreach (var item in response)
+        {
+            if (item.TransactionType == TransactionType.WALLET_TOPUP.ToString())
+            {
+                item.Direction = "IN";
+                item.BalanceChange = item.Amount;
+            }
+            else if (item.TransactionType == TransactionType.MONEY_TO_POINT.ToString())
+            {
+                item.Direction = "OUT";
+                item.BalanceChange = -item.Amount;
+            }
+            else
+            {
+                item.Direction = "IN";
+                item.BalanceChange = item.Amount;
+            }
+        }
+
+        return new PagedResult<WalletTransactionHistoryResponse>
+        {
+            Items = response,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
         };
     }
 }
