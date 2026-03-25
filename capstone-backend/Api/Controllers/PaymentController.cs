@@ -2,6 +2,7 @@ using capstone_backend.Api.Models;
 using capstone_backend.Business.DTOs.Momo;
 using capstone_backend.Business.DTOs.Wallet;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Services;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -19,15 +20,18 @@ public class PaymentController : BaseController
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<PaymentController> _logger;
     private readonly IMomoService _momoService;
+    private readonly WalletService _walletService;
 
     public PaymentController(
         IUnitOfWork unitOfWork,
         ILogger<PaymentController> logger,
-        IMomoService momoService)
+        IMomoService momoService,
+        WalletService walletService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _momoService = momoService;
+        _walletService = walletService;
     }
 
     /// <summary>
@@ -266,6 +270,32 @@ public class PaymentController : BaseController
             if (result == null)
                 return BadRequestResponse("Lấy link thanh toán thất bại");
             return OkResponse(result, "Lấy link thanh toán thành công");
+        }
+        catch (Exception ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Check payment status for wallet top-up (For Members)
+    /// </summary>
+    [HttpGet("top-up/status/{orderId}")]
+    public async Task<IActionResult> CheckWalletTopupStatus([FromRoute] string orderId)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return UnauthorizedResponse("Unauthorized");
+            }
+            var result = await _walletService.CheckWalletTopupStatusAsync(userId.Value, orderId);
+            if (result == null)
+            {
+                return NotFoundResponse("Giao dịch không khả dụng");
+            }
+            return OkResponse(result, "Lấy trạng thái giao dịch thành công");
         }
         catch (Exception ex)
         {

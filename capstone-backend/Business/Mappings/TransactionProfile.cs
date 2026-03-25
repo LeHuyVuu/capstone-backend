@@ -11,6 +11,10 @@ namespace capstone_backend.Business.Mappings
             CreateMap<Transaction, WalletTransactionHistoryResponse>()
                 .ForMember(dest => dest.TransactionId, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.TransactionType, opt => opt.MapFrom(src => GetTransactionTypeName(src.TransType)));
+
+            CreateMap<Transaction, WalletTransactionResponse>()
+                .ForMember(dest => dest.TransactionId, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.TransType, opt => opt.MapFrom(src => GetTransactionTypeName(src.TransType)));
         }
 
         private string GetTransactionTypeName(int transType)

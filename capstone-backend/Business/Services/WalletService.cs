@@ -1,12 +1,16 @@
-using capstone_backend.Business.DTOs.Wallet;
+using Amazon.Rekognition.Model;
+using AutoMapper;
 using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Business.DTOs.MemberSubscription;
+using capstone_backend.Business.DTOs.Momo;
+using capstone_backend.Business.DTOs.MoneyToPoint;
+using capstone_backend.Business.DTOs.Wallet;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
+using capstone_backend.Extensions.Common;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
-using capstone_backend.Business.DTOs.MoneyToPoint;
-using AutoMapper;
 
 namespace capstone_backend.Business.Services;
 
@@ -411,5 +415,33 @@ public class WalletService
             PointAmount = 1,
             Description = $"Tỉ lệ đổi: {rate} VND = 1 point"
         };
+    }
+
+    public async Task<WalletTransactionResponse> CheckWalletTopupStatusAsync(int userId, string orderId)
+    {
+        var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+        if (member == null)
+            throw new Exception("Hồ sơ thành viên không tồn tại");
+
+        var orderParts = orderId.Split("_");
+        if (orderParts.Length < 3)
+            throw new Exception("Order ID không hợp lệ");
+        var transactionId = IdEncoder.Decode(orderParts[2]);
+
+        var tx = await _unitOfWork.Transactions.GetByIdAsync((int)transactionId);
+        if (tx == null || tx.UserId != userId)
+            throw new Exception("Giao dịch không tồn tại hoặc không thuộc về người dùng");
+
+        if (tx.TransType != 4)
+            throw new Exception("Giao dịch không phải là nạp tiền vào ví");
+
+        var metadata = JsonConverterUtil.DeserializeOrDefault<MomoTransactionMetadata>(tx.ExternalRefCode);
+        var response = _mapper.Map<WalletTransactionResponse>(tx);
+        response.PayUrl = metadata?.PayUrl;
+        response.QrCodeUrl = metadata?.QrCodeUrl;
+        response.DeepLink = metadata?.DeepLink;
+        response.DeeplinkMiniApp = metadata?.DeeplinkMiniApp;
+
+        return response;
     }
 }
