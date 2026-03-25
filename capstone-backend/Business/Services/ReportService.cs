@@ -84,6 +84,35 @@ public class ReportService : IReportService
         if (report == null)
             return false;
 
+        if (report.TargetId.HasValue &&
+            Enum.TryParse<ReportTargetType>(report.TargetType, ignoreCase: true, out var targetType))
+        {
+            var targetId = report.TargetId.Value;
+
+            switch (targetType)
+            {
+                case ReportTargetType.POST:
+                    var post = await _unitOfWork.Posts.GetByIdAsync(targetId);
+                    if (post != null && post.IsDeleted != true)
+                    {
+                        post.Status = PostStatus.CANCELLED.ToString();
+                        post.UpdatedAt = DateTime.UtcNow;
+                        _unitOfWork.Posts.Update(post);
+                    }
+                    break;
+
+                case ReportTargetType.REVIEW:
+                    var review = await _unitOfWork.Reviews.GetByIdAsync(targetId);
+                    if (review != null && review.IsDeleted != true)
+                    {
+                        review.Status = ReviewStatus.CANCELED.ToString();
+                        review.UpdatedAt = DateTime.UtcNow;
+                        _unitOfWork.Reviews.Update(review);
+                    }
+                    break;
+            }
+        }
+
         report.Status = ReportStatus.APPROVED.ToString();
         report.UpdatedAt = DateTime.UtcNow;
 
