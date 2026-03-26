@@ -1487,6 +1487,9 @@ namespace capstone_backend.Business.Services
 
             if (!isNew)
                 _unitOfWork.CoupleProfileChallenges.Update(coupleChallenge);
+
+            // Notify 
+
         }
 
         private static CoupleChallengeProgressData CreateInitialCheckinProgressData(CoupleProfile couple)

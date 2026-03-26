@@ -229,12 +229,9 @@ namespace capstone_backend.Business.Services
             if (member == null)
                 throw new Exception("Hồ sơ thành viên không tồn tại");
 
-            var comment = await _unitOfWork.Comments.GetByIdAsync(commentId);
-            if (comment == null || comment.IsDeleted == true)
+            var comment = await _unitOfWork.Comments.GetByIdIncludeAsync(commentId);
+            if (comment == null || comment.IsDeleted == true || comment.Status != CommentStatus.PUBLISHED.ToString())
                 throw new Exception("Bình luận không tồn tại");
-
-            if (comment.Status != CommentStatus.PUBLISHED.ToString())
-                throw new Exception("Bình luận chưa được xuất bản");
 
             var notification = new Notification();
             await _unitOfWork.BeginTransactionAsync();
@@ -251,7 +248,7 @@ namespace capstone_backend.Business.Services
                 // Notify 
                 notification = new Notification
                 {
-                    UserId = comment.AuthorId,
+                    UserId = comment.Author.UserId,
                     Title = NotificationTemplate.Post.TitleNewLikeComment,
                     Message = NotificationTemplate.Post.GetNewLikeCommentBody(member.FullName),
                     Type = NotificationType.SOCIAL.ToString(),
