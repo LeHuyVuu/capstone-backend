@@ -14,5 +14,6 @@ namespace capstone_backend.Business.DTOs.DatePlanItem
         public string? Note { get; set; }
         public string Status { get; set; } = null!;
         public DateTime? CreatedAt { get; set; }
+        public int? Version { get; set; }
     }
 }

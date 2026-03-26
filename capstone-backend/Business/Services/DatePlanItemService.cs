@@ -277,6 +277,7 @@ namespace capstone_backend.Business.Services
                     throw new Exception("Chỉ có người tổ chức buổi hẹn mới có thể xem lịch trình ở trạng thái DRAFTED");
 
                 var response = _mapper.Map<DatePlanItemResponse>(datePlanItem);
+                response.Version = datePlan.Version;
                 return response;
             }
             catch (Exception)
