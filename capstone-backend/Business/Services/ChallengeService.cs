@@ -1595,6 +1595,11 @@ namespace capstone_backend.Business.Services
                 return;
 
             var now = DateTime.UtcNow;
+            var pendingNotifications = new List<Notification>();
+
+            var partnerMemberId = couple.MemberId1 == member.Id ? couple.MemberId2 : couple.MemberId1;
+            var partnerMemberProfile = await _unitOfWork.MembersProfile.GetByIdAsync(partnerMemberId);
+            var partnerUserId = partnerMemberProfile?.UserId;
 
             // 2. Load all in-progress REVIEW challenges of this couple
             var coupleChallenges = await _unitOfWork.CoupleProfileChallenges.GetAsync(cc =>
@@ -1636,6 +1641,8 @@ namespace capstone_backend.Business.Services
                 if (!IsReviewQualified(challenge.ConditionRules, venueId, hasImage))
                     continue;
 
+                var wasCompleted = progress.IsCompleted;
+
                 // 8. Update progress
                 var updated = ApplyReviewMetricProgress(progress, challenge, member.Id, venueId, reviewId, now);
                 // Enrich venue name if needed
@@ -1659,6 +1666,8 @@ namespace capstone_backend.Business.Services
                 if (!updated)
                     continue;
 
+                var partnerJoined = IsPartnerJoined(progress, member.Id, couple);
+
                 // 9. Check completion
                 if (progress.Current >= progress.Target)
                 {
@@ -1668,15 +1677,81 @@ namespace capstone_backend.Business.Services
                     coupleChallenge.CompletedAt = now;
                 }
 
+                var justCompleted = !wasCompleted && progress.IsCompleted;
+
                 // 10. Save progress
                 coupleChallenge.CurrentProgress = progress.Current;
                 coupleChallenge.ProgressData = JsonConverterUtil.Serialize(progress);
                 coupleChallenge.UpdatedAt = now;
 
                 _unitOfWork.CoupleProfileChallenges.Update(coupleChallenge);
+
+                if (justCompleted)
+                {
+                    pendingNotifications.Add(new Notification
+                    {
+                        UserId = member.UserId,
+                        Title = NotificationTemplate.Challenge.TitleChallengeCompleted,
+                        Message = NotificationTemplate.Challenge.GetChallengeCompletedBody(challenge.Title),
+                        Type = NotificationType.SYSTEM.ToString(),
+                        ReferenceId = challenge.Id,
+                        ReferenceType = ReferenceType.CHALLENGE.ToString(),
+                        IsRead = false,
+                    });
+
+                    if (partnerJoined && partnerUserId.HasValue)
+                    {
+                        pendingNotifications.Add(new Notification
+                        {
+                            UserId = partnerUserId.Value,
+                            Title = NotificationTemplate.Challenge.TitleChallengeCompleted,
+                            Message = NotificationTemplate.Challenge.GetChallengeCompletedBody(challenge.Title),
+                            Type = NotificationType.SYSTEM.ToString(),
+                            ReferenceId = challenge.Id,
+                            ReferenceType = ReferenceType.CHALLENGE.ToString(),
+                            IsRead = false,
+                        });
+                    }
+                }
+                else
+                {
+                    pendingNotifications.Add(new Notification
+                    {
+                        UserId = member.UserId,
+                        Title = NotificationTemplate.Challenge.TitleChallengeProgress,
+                        Message = NotificationTemplate.Challenge.GetChallengeProgressBody(challenge.Title, progress.Current, progress.Target),
+                        Type = NotificationType.SYSTEM.ToString(),
+                        ReferenceId = challenge.Id,
+                        ReferenceType = ReferenceType.CHALLENGE.ToString(),
+                        IsRead = false,
+                    });
+
+                    if (partnerJoined && partnerUserId.HasValue)
+                    {
+                        pendingNotifications.Add(new Notification
+                        {
+                            UserId = partnerUserId.Value,
+                            Title = NotificationTemplate.Challenge.TitleChallengeProgress,
+                            Message = NotificationTemplate.Challenge.GetChallengeProgressBody(challenge.Title, progress.Current, progress.Target),
+                            Type = NotificationType.SYSTEM.ToString(),
+                            ReferenceId = challenge.Id,
+                            ReferenceType = ReferenceType.CHALLENGE.ToString(),
+                            IsRead = false,
+                        });
+                    }
+                }
             }
 
+            if (pendingNotifications.Any())
+                await _unitOfWork.Notifications.AddRangeAsync(pendingNotifications);
+
             await _unitOfWork.SaveChangesAsync();
+
+            foreach (var notification in pendingNotifications)
+            {
+                var id = notification.Id;
+                BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(id));
+            }
         }
 
         private CoupleChallengeProgressData EnsureReviewProgressData(CoupleChallengeProgressData progress, Challenge challenge, int memberId, DateTime now)
@@ -2033,7 +2108,8 @@ namespace capstone_backend.Business.Services
                 }
             }
 
-            await _unitOfWork.Notifications.AddRangeAsync(pendingNotifications.Select(x => x));
+            if (pendingNotifications.Any())
+                await _unitOfWork.Notifications.AddRangeAsync(pendingNotifications);
 
             await _unitOfWork.SaveChangesAsync();
 
