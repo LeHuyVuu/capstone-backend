@@ -2,6 +2,7 @@ using capstone_backend.Business.DTOs.VenueLocation;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Api.Models;
 using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Data.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -67,6 +68,34 @@ public class VenueLocationController : BaseController
         var venues = await _venueLocationService.GetVenueLocationsByVenueOwnerAsync(currentUserId.Value);
 
         return OkResponse(venues, $"Retrieved {venues.Count} venue locations");
+    }
+
+    [HttpGet("my-venues/by-status")]
+    [ProducesResponseType(typeof(ApiResponse<PagedResult<VenueOwnerVenueLocationResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    public async Task<IActionResult> GetMyVenueLocationsByStatus([FromQuery] VenueLocationStatus? status, [FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    {
+        if (page < 1)
+        {
+            return BadRequestResponse("Page number must be greater than 0");
+        }
+
+        if (pageSize < 1 || pageSize > 100)
+        {
+            return BadRequestResponse("Page size must be between 1 and 100");
+        }
+
+        _logger.LogInformation("Requesting venue locations with status {Status} and search {Search}", status, search);
+
+        var venues = await _venueLocationService.GetVenueLocationsByVenueOwnerAndStatusAsync(status, search, page, pageSize);
+
+        var message = status.HasValue
+            ? $"Retrieved {venues.Items.Count()} venue locations with status {status}"
+            : $"Retrieved {venues.Items.Count()} venue locations";
+
+        return OkResponse(venues, message);
     }
 
     /// <summary>

@@ -1,5 +1,6 @@
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.VenueLocation;
+using capstone_backend.Data.Enums;
 
 namespace capstone_backend.Business.Interfaces;
 
@@ -102,6 +103,8 @@ public interface IVenueLocationService
     /// <param name="userId">User ID (owner)</param>
     /// <returns>Venue location detail or null if not found or not owned by user</returns>
     Task<VenueOwnerVenueLocationResponse?> GetVenueLocationByIdForOwnerAsync(int venueId, int userId);
+
+    Task<PagedResult<VenueOwnerVenueLocationResponse>> GetVenueLocationsByVenueOwnerAndStatusAsync(VenueLocationStatus? status, string? search, int page, int pageSize);
 
     /// <summary>
     /// Submit venue location to admin for approval
