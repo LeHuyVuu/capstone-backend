@@ -1,6 +1,8 @@
 using capstone_backend.Business.DTOs.Wallet;
 using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Business.DTOs.Email;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Common;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -14,10 +16,12 @@ namespace capstone_backend.Api.Controllers
     public class WithdrawRequestController : BaseController
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IEmailService _emailService;
 
-        public WithdrawRequestController(IUnitOfWork unitOfWork)
+        public WithdrawRequestController(IUnitOfWork unitOfWork, IEmailService emailService)
         {
             _unitOfWork = unitOfWork;
+            _emailService = emailService;
         }
 
         /// <summary>
@@ -145,7 +149,11 @@ namespace capstone_backend.Api.Controllers
         {
             try
             {
-                var withdrawRequest = await _unitOfWork.WithdrawRequests.GetByIdAsync(withdrawRequestId);
+                var withdrawRequest = await _unitOfWork.Context.Set<WithdrawRequest>()
+                    .Include(wr => wr.Wallet)
+                    .ThenInclude(w => w.User)
+                    .FirstOrDefaultAsync(wr => wr.Id == withdrawRequestId);
+
                 if (withdrawRequest == null)
                     return NotFoundResponse("Withdraw request not found");
 
@@ -159,6 +167,60 @@ namespace capstone_backend.Api.Controllers
 
                 _unitOfWork.WithdrawRequests.Update(withdrawRequest);
                 await _unitOfWork.SaveChangesAsync();
+
+                // Gửi email thông báo approve
+                try
+                {
+                    var user = withdrawRequest.Wallet?.User;
+                    if (user != null && !string.IsNullOrWhiteSpace(user.Email))
+                    {
+                        BankInfoDto? bankInfo = null;
+                        try
+                        {
+                            if (!string.IsNullOrEmpty(withdrawRequest.BankInfo))
+                                bankInfo = System.Text.Json.JsonSerializer.Deserialize<BankInfoDto>(withdrawRequest.BankInfo);
+                        }
+                        catch { }
+
+                        if (bankInfo != null)
+                        {
+                            var userName = user.DisplayName ?? user.Email;
+                            var amount = withdrawRequest.Amount ?? 0;
+
+                            var htmlBody = EmailApproveWithdrawTemplate.GetApproveWithdrawEmailContent(
+                                userName,
+                                amount,
+                                bankInfo.BankName ?? "",
+                                bankInfo.AccountNumber ?? "",
+                                bankInfo.AccountName ?? ""
+                            );
+
+                            var textBody = EmailApproveWithdrawTemplate.GetApproveWithdrawPlainText(
+                                userName,
+                                amount,
+                                bankInfo.BankName ?? "",
+                                bankInfo.AccountNumber ?? "",
+                                bankInfo.AccountName ?? ""
+                            );
+
+                            var emailRequest = new SendEmailRequest
+                            {
+                                To = user.Email,
+                                Subject = "Yêu cầu rút tiền đã được phê duyệt - CoupleMood",
+                                HtmlBody = htmlBody,
+                                TextBody = textBody,
+                                FromName = "CoupleMood"
+                            };
+
+                            await _emailService.SendEmailAsync(emailRequest);
+                        }
+                    }
+                }
+                catch (Exception emailEx)
+                {
+                    // Log lỗi nhưng không fail request
+                    Console.WriteLine($"[WARNING] Failed to send approve withdraw email: {emailEx.Message}");
+                }
 
                 return OkResponse(MapWithdrawRequestResponse(withdrawRequest), "Withdraw request approved successfully");
             }
