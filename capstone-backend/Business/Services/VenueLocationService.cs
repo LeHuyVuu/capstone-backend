@@ -1096,6 +1096,59 @@ public class VenueLocationService : IVenueLocationService
         return response;
     }
 
+    public async Task<PagedResult<VenueOwnerVenueLocationResponse>> GetVenueLocationsByVenueOwnerAndStatusAsync(VenueLocationStatus? status, int page, int pageSize)
+    {
+        _logger.LogInformation("Getting all system venue locations with status {Status} (Page {Page}, Size {PageSize})", status, page, pageSize);
+
+        var (venueLocations, totalCount) = await _unitOfWork.VenueLocations.GetPagedAsync(
+            page,
+            pageSize,
+            v => v.IsDeleted != true && (!status.HasValue || (v.Status != null && v.Status.ToUpper() == status.Value.ToString().ToUpper())),
+            query => query.OrderByDescending(v => v.CreatedAt),
+            query => query
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt!.CoupleMoodType)
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt!.CouplePersonalityType)
+                .AsSplitQuery());
+
+        var responses = venueLocations
+            .Select(v => new VenueOwnerVenueLocationResponse
+            {
+                Id = v.Id,
+                Name = v.Name,
+                Description = v.Description,
+                Address = v.Address,
+                Email = v.Email,
+                PhoneNumber = v.PhoneNumber,
+                WebsiteUrl = v.WebsiteUrl,
+                PriceMin = v.PriceMin,
+                PriceMax = v.PriceMax,
+                Latitude = v.Latitude,
+                Longitude = v.Longitude,
+                Area = v.Area,
+                AverageRating = v.AverageRating.HasValue ? Math.Round(v.AverageRating.Value, 1) : null,
+                AvarageCost = v.AvarageCost,
+                ReviewCount = v.ReviewCount,
+                Status = v.Status,
+                CoverImage = DeserializeImages(v.CoverImage),
+                InteriorImage = DeserializeImages(v.InteriorImage),
+                Category = v.Category,
+                FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
+                IsOwnerVerified = v.IsOwnerVerified,
+                RejectionDetails = string.IsNullOrWhiteSpace(v.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(v.RejectReason),
+                CreatedAt = v.CreatedAt,
+                UpdatedAt = v.UpdatedAt,
+                LocationTags = CreateLocationTagsInfo(v)
+            }).ToList();
+
+        _logger.LogInformation("Retrieved {Count} system venue locations with status {Status} (Total {TotalCount})", responses.Count, status, totalCount);
+
+        return new PagedResult<VenueOwnerVenueLocationResponse>(responses, page, pageSize, totalCount);
+    }
+
     /// <summary>
     /// Submit venue location to admin for approval
     /// Validates required fields before changing status to PENDING
