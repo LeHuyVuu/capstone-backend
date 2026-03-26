@@ -1,4 +1,6 @@
-﻿namespace capstone_backend.Business.DTOs.MemberSubscription
+﻿using capstone_backend.Data.Enums;
+
+namespace capstone_backend.Business.DTOs.MemberSubscription
 {
     public class TransactionResponse
     {
@@ -7,7 +9,7 @@
         public string Currency { get; set; } = "VND";
         public int UserId { get; set; }
         public string? PaymentMethod { get; set; }
-        public string TransType { get; set; } = "MEMBER_SUBSCRIPTION";
+        public string? TransType { get; set; }
         public int DocNo { get; set; }
         public string? Description { get; set; }
 
@@ -27,5 +29,7 @@
         public DateTime CreatedAt { get; set; }
 
         public string Status { get; set; }
+
+        public bool IsSuccess => Status == TransactionStatus.SUCCESS.ToString();
     }
 }

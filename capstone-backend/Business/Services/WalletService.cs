@@ -417,7 +417,7 @@ public class WalletService
         };
     }
 
-    public async Task<WalletTransactionResponse> CheckWalletTopupStatusAsync(int userId, string orderId)
+    public async Task<TransactionResponse> CheckMomoPaymentStatusAsync(int userId, string orderId)
     {
         var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
         if (member == null)
@@ -432,11 +432,23 @@ public class WalletService
         if (tx == null || tx.UserId != userId)
             throw new Exception("Giao dịch không tồn tại hoặc không thuộc về người dùng");
 
-        if (tx.TransType != 4)
-            throw new Exception("Giao dịch không phải là nạp tiền vào ví");
+        if (tx.TransType != 3 && tx.TransType != 4)
+            throw new Exception("Giao dịch không phải là nạp tiền vào ví hoặc thanh toán gói member");
+
+        var response = _mapper.Map<TransactionResponse>(tx);
+
+        if (tx.TransType == 3) {
+            var sub = await _unitOfWork.MemberSubscriptionPackages.GetByIdAsync(tx.DocNo);
+            if (sub == null)
+                throw new Exception("Không ghi nhận được gói đăng ký của member");
+
+            response.MemberSubscriptionId = tx.DocNo;
+            response.StartDate = sub.StartDate;
+            response.EndDate = sub.EndDate;
+            response.IsActive = sub.Status == MemberSubscriptionPackageStatus.ACTIVE.ToString();
+        }
 
         var metadata = JsonConverterUtil.DeserializeOrDefault<MomoTransactionMetadata>(tx.ExternalRefCode);
-        var response = _mapper.Map<WalletTransactionResponse>(tx);
         response.PayUrl = metadata?.PayUrl;
         response.QrCodeUrl = metadata?.QrCodeUrl;
         response.DeepLink = metadata?.DeepLink;

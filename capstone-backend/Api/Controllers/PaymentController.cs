@@ -278,9 +278,9 @@ public class PaymentController : BaseController
     }
 
     /// <summary>
-    /// Check payment status for wallet top-up (For Members)
+    /// Check payment status (For Members)
     /// </summary>
-    [HttpGet("top-up/status/{orderId}")]
+    [HttpGet("member/status/{orderId}")]
     public async Task<IActionResult> CheckWalletTopupStatus([FromRoute] string orderId)
     {
         try
@@ -290,7 +290,7 @@ public class PaymentController : BaseController
             {
                 return UnauthorizedResponse("Unauthorized");
             }
-            var result = await _walletService.CheckWalletTopupStatusAsync(userId.Value, orderId);
+            var result = await _walletService.CheckMomoPaymentStatusAsync(userId.Value, orderId);
             if (result == null)
             {
                 return NotFoundResponse("Giao dịch không khả dụng");

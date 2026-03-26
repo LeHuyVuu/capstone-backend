@@ -111,6 +111,13 @@ namespace capstone_backend.Business.Services
                 throw;
             }
 
+            var extraData = new Dictionary<string, string>()
+            {
+                ["business"] = "member_subscription",
+                ["packageId"] = package.Id.ToString(),
+                ["subscriptionId"] = subscription.Id.ToString()
+            };
+
             var momoRequest = new CreateMomoPaymentRequest
             {
                 PartnerCode = _partnerCode,
@@ -122,7 +129,7 @@ namespace capstone_backend.Business.Services
                 RedirectUrl = Environment.GetEnvironmentVariable("PAYMENT_REDIRECT_URL"),
                 IpnUrl = _ipnUrl,
                 RequestType = "captureWallet",
-                ExtraData = "",
+                ExtraData = EncodeBase64(extraData),
                 Items = new List<PaymentItems>
                 {
                     new PaymentItems
@@ -151,7 +158,7 @@ namespace capstone_backend.Business.Services
             var rawSignature =
                 $"accessKey={_accessKey}" +
                 $"&amount={momoRequest.Amount}" +
-                $"&extraData=" +
+                $"&extraData={momoRequest.ExtraData}" +
                 $"&ipnUrl={_ipnUrl}" +
                 $"&orderId={orderId}" +
                 $"&orderInfo={momoRequest.OrderInfo}" +
