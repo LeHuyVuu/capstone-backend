@@ -94,5 +94,28 @@
                 return $"{fullName} vừa thích bình luận của bạn!";
             }
         }
+
+        public static class Challenge
+        {
+            public const string TitleNewChallenge = "Bạn đã tham gia một thử thách mới!";
+            public const string TitleChallengeCompleted = "Bạn đã hoàn thành thử thách!";
+
+            public const string TitlePartnerNewChallenge = "Partner của bạn vừa tham gia một thử thách!";
+
+            public static string GetNewChallengeBody(string challengeTitle)
+            {
+                return $"Bạn đã tham gia thử thách \"{challengeTitle}\"! Hãy hoàn thành thử thách để nhận phần thưởng nhé!";
+            }
+
+            public static string GetChallengeCompletedBody(string challengeTitle)
+            {
+                return $"Chúc mừng bạn đã hoàn thành thử thách \"{challengeTitle}\"! Hãy nhận phần thưởng của bạn nhé!";
+            }
+
+            public static string GetPartnerNewChallengeBody(string partnerName, string challengeTitle)
+            {
+                return $"{partnerName} vừa tham gia thử thách \"{challengeTitle}\"! Tham gia chứ?";
+            }
+        }
     }
 }

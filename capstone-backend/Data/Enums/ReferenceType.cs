@@ -9,5 +9,6 @@
         REVIEW,
         POST,
         COMMENT,
+        CHALLENGE
     }
 }

@@ -1,13 +1,16 @@
 ﻿using AutoMapper;
+using capstone_backend.Business.Common;
 using capstone_backend.Business.Common.Constants;
 using capstone_backend.Business.Common.Helpers;
 using capstone_backend.Business.DTOs.Challenge;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Notification;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using CsvHelper;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using System.Linq.Expressions;
@@ -925,6 +928,39 @@ namespace capstone_backend.Business.Services
                 await _unitOfWork.CoupleProfileChallenges.AddAsync(coupleChallenge);
             }
             await _unitOfWork.SaveChangesAsync();
+
+            // Notify to couple
+            var actorNotification = new Notification
+            {
+                UserId = member.UserId,
+                Title = NotificationTemplate.Challenge.TitleNewChallenge,
+                Message = NotificationTemplate.Challenge.GetNewChallengeBody(challenge.Title),
+                Type = NotificationType.SYSTEM.ToString(),
+                ReferenceId = coupleChallenge.Id,
+                ReferenceType = ReferenceType.CHALLENGE.ToString(),
+            };
+
+            var partnerId = couple.MemberId1 == member.Id ? couple.MemberId2 : couple.MemberId1;
+            var partnerMemberProfile = await _unitOfWork.MembersProfile.GetByIdAsync(partnerId);
+
+            var partnerNotification = new Notification
+            {
+                UserId = partnerMemberProfile.UserId,
+                Title = NotificationTemplate.Challenge.TitlePartnerNewChallenge,
+                Message = NotificationTemplate.Challenge.GetPartnerNewChallengeBody(partnerMemberProfile.FullName, challenge.Title),
+                Type = NotificationType.SYSTEM.ToString(),
+                ReferenceId = coupleChallenge.Id,
+                ReferenceType = ReferenceType.CHALLENGE.ToString(),
+            };
+
+            await _unitOfWork.Notifications.AddRangeAsync(new List<Notification> { actorNotification, partnerNotification });
+
+            await _unitOfWork.SaveChangesAsync();
+
+            // Send push notification
+            BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(actorNotification.Id));
+            BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(partnerNotification.Id));
+
             var response = _mapper.Map<CoupleChallengeListItemResponse>(coupleChallenge);
             var challengeResponse = await EnrichChallengeResponseAsync(new List<Challenge> { challenge });
             var challengeMap = challengeResponse.ToDictionary(c => c.Id);
