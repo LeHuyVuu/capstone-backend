@@ -29,7 +29,6 @@ namespace capstone_backend.Data.Repositories
             //    )
             //    .FirstOrDefaultAsync();
             IQueryable<DatePlan> query = _dbSet
-                .AsNoTracking()
                 .Include(dp => dp.OrganizerMember)
                 .Where(dp => dp.Id == id &&
                        dp.CoupleId == coupleId &&
