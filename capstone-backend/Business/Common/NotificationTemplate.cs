@@ -51,5 +51,21 @@
                 return $"Bạn vẫn đang ở 📍{venueName}📍 chứ? Cùng Đánh giá ngay nào!";
             }
         }
+
+        public static class Post
+        {
+            public const string TitleNewLike = "Có đồng minh vừa thích bài viết của bạn!";
+            public const string TitleNewComment = "Có đồng minh vừa bình luận về bài viết của bạn!";
+
+            public static string GetNewLikeBody(string fullName)
+            {
+                return $"Đồng minh {fullName} vừa thích bài viết của bạn!";
+            }
+
+            public static string GetNewCommentBody(string fullName)
+            {
+                return $"Đồng minh {fullName} vừa bình luận về bài viết của bạn!";
+            }
+        }
     }
 }

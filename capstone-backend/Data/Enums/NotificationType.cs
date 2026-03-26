@@ -7,6 +7,7 @@
         LOCATION,
         PAIRING,
         CHAT,
-        SYSTEM
+        SYSTEM,
+        SOCIAL,
     }
 }

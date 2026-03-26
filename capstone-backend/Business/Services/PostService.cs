@@ -1,5 +1,6 @@
 ﻿using Amazon.Rekognition.Model;
 using AutoMapper;
+using capstone_backend.Business.Common;
 using capstone_backend.Business.Common.Constants;
 using capstone_backend.Business.DTOs.Accessory;
 using capstone_backend.Business.DTOs.Common;
@@ -8,6 +9,7 @@ using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Like;
 using capstone_backend.Business.Jobs.Moderation;
+using capstone_backend.Business.Jobs.Notification;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
@@ -173,6 +175,7 @@ namespace capstone_backend.Business.Services
             if (post.Visibility != PostVisibility.PUBLIC.ToString() && post.Status != PostStatus.PUBLISHED.ToString())
                 throw new Exception("Bài viết không hợp lệ để like");
 
+            var notification = new Notification();
             await _unitOfWork.BeginTransactionAsync();
             try
             {
@@ -181,6 +184,20 @@ namespace capstone_backend.Business.Services
                     MemberId = member.Id,
                     PostId = post.Id
                 });
+                await _unitOfWork.SaveChangesAsync();
+
+                // Create notification
+                notification = new Notification
+                {
+                    UserId = post.AuthorId,
+                    Type = NotificationType.SOCIAL.ToString(),
+                    ReferenceId = post.Id,
+                    ReferenceType = ReferenceType.POST.ToString(),
+                    Title = NotificationTemplate.Post.TitleNewLike,
+                    Message = NotificationTemplate.Post.GetNewLikeBody(member.FullName ?? "Ai đó"),
+                    IsRead = false
+                };
+                await _unitOfWork.Notifications.AddAsync(notification);
                 await _unitOfWork.SaveChangesAsync();
 
                 await _unitOfWork.CommitTransactionAsync();
@@ -193,6 +210,12 @@ namespace capstone_backend.Business.Services
             }
 
             BackgroundJob.Enqueue<ILikeWorker>(j => j.RecountPostLikeAsync(post.Id));
+
+            // Notify post author if not like own post
+            if (post.AuthorId != member.Id)
+            {
+                BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(notification.Id));
+            }
 
             return new PostLikeResponse
             {

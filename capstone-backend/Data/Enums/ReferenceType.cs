@@ -7,5 +7,6 @@
         VENUE_LOCATION,
         CHECK_IN_HISTORY,
         REVIEW,
+        POST,
     }
 }
