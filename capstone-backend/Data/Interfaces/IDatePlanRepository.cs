@@ -7,5 +7,6 @@ namespace capstone_backend.Data.Interfaces
     {
         Task<DatePlan?> GetByIdAndCoupleIdAsync(int id, int coupleId, bool includeItems = false, bool includeVenueLocation = false);
         Task<IEnumerable<DatePlan>> GetAllExpiredPlansAsync(DateTime thresholdTime);
+        Task<bool> HasOverlappingAsync(int coupleId, DateTime plannedStartAt, DateTime plannedEndAt, int? excludeDatePlanId);
     }
 }

@@ -43,6 +43,7 @@ namespace capstone_backend.Business.Services
             var plannedEndAtUtc = DateTimeNormalizeUtil.NormalizeToUtc(request.PlannedEndAt);
 
             ValidateDatePlanTime(plannedStartAtUtc, plannedEndAtUtc, request.DurationMode);
+            await ValidateDatePlanOverlapAsync(couple.id, plannedStartAtUtc, plannedEndAtUtc);
 
             // Create date plan
             var datePlan = _mapper.Map<DatePlan>(request);
@@ -312,6 +313,7 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Lịch trình chưa có đầy đủ thời gian bắt đầu và kết thúc");
 
             ValidateDatePlanTime(newStart.Value, newEnd.Value, newMode);
+            await ValidateDatePlanOverlapAsync(couple.id, newStart.Value, newEnd.Value, datePlan.Id);
 
             // Apply partial updates
             if (!string.IsNullOrWhiteSpace(request.Title))
@@ -499,6 +501,18 @@ namespace capstone_backend.Business.Services
 
             _unitOfWork.DatePlans.Update(datePlan);
             return await _unitOfWork.SaveChangesAsync();
-        }      
+        }
+
+        private async Task ValidateDatePlanOverlapAsync(
+            int coupleId,
+            DateTime startUtc,
+            DateTime endUtc,
+            int? excludeDatePlanId = null)
+        {
+            var overlapped = await _unitOfWork.DatePlans.HasOverlappingAsync(coupleId, startUtc, endUtc, excludeDatePlanId);
+
+            if (overlapped)
+                throw new Exception("Đã tồn tại lịch trình khác bị trùng khoảng thời gian");
+        }
     }
 }

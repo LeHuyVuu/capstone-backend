@@ -1,5 +1,6 @@
 ﻿using capstone_backend.Data.Context;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Runtime.Intrinsics.Arm;
@@ -60,6 +61,29 @@ namespace capstone_backend.Data.Repositories
                 .AsNoTracking()
                 .Where(dp => dp.IsDeleted == false && dp.PlannedEndAt < thresholdTime)
                 .ToListAsync();
+        }
+
+        public async Task<bool> HasOverlappingAsync(
+            int coupleId,
+            DateTime plannedStartAt,
+            DateTime plannedEndAt,
+            int? excludeDatePlanId = null)
+        {
+            return await _dbSet.AnyAsync(dp =>
+                dp.CoupleId == coupleId &&
+                dp.IsDeleted == false &&
+                dp.PlannedStartAt.HasValue &&
+                dp.PlannedEndAt.HasValue &&
+                (!excludeDatePlanId.HasValue || dp.Id != excludeDatePlanId.Value) &&
+                (
+                    dp.Status == DatePlanStatus.DRAFTED.ToString() ||
+                    dp.Status == DatePlanStatus.PENDING.ToString() ||
+                    dp.Status == DatePlanStatus.SCHEDULED.ToString() ||
+                    dp.Status == DatePlanStatus.IN_PROGRESS.ToString()
+                ) &&
+                plannedStartAt < dp.PlannedEndAt.Value &&
+                plannedEndAt > dp.PlannedStartAt.Value
+            );
         }
     }
 }
