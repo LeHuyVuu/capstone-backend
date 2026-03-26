@@ -196,6 +196,40 @@ public class AuthController : BaseController
             var userId = GetCurrentUserId();
             if (userId == null) return UnauthorizedResponse();
 
+            // Validate request
+            if (request == null)
+                return BadRequestResponse("Request body không được để trống");
+
+            if (string.IsNullOrWhiteSpace(request.CurrentPassword))
+                return BadRequestResponse("Mật khẩu hiện tại không được để trống");
+
+            if (string.IsNullOrWhiteSpace(request.NewPassword))
+                return BadRequestResponse("Mật khẩu mới không được để trống");
+
+            if (request.NewPassword.Length < 8)
+                return BadRequestResponse("Mật khẩu mới phải có ít nhất 8 ký tự");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.NewPassword, @"[A-Z]"))
+                return BadRequestResponse("Mật khẩu mới phải có ít nhất 1 chữ hoa");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.NewPassword, @"[a-z]"))
+                return BadRequestResponse("Mật khẩu mới phải có ít nhất 1 chữ thường");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.NewPassword, @"[0-9]"))
+                return BadRequestResponse("Mật khẩu mới phải có ít nhất 1 chữ số");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.NewPassword, @"[\W_]"))
+                return BadRequestResponse("Mật khẩu mới phải có ít nhất 1 ký tự đặc biệt");
+
+            if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
+                return BadRequestResponse("Xác nhận mật khẩu không được để trống");
+
+            if (request.NewPassword != request.ConfirmPassword)
+                return BadRequestResponse("Xác nhận mật khẩu không khớp");
+
+            if (request.CurrentPassword == request.NewPassword)
+                return BadRequestResponse("Mật khẩu mới phải khác mật khẩu hiện tại");
+
             await _userService.UpdatePasswordAsync(userId.Value, request);
             return OkResponse<object?>(null, "Cập nhật mật khẩu thành công");
         }
@@ -221,6 +255,19 @@ public class AuthController : BaseController
     {
         try
         {
+            // Validate request
+            if (request == null)
+                return BadRequestResponse("Request body không được để trống");
+
+            if (string.IsNullOrWhiteSpace(request.Email))
+                return BadRequestResponse("Email không được để trống");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                return BadRequestResponse("Email không hợp lệ");
+
+            if (request.Email.Length > 255)
+                return BadRequestResponse("Email không được vượt quá 255 ký tự");
+
             await _userService.SendPasswordResetOtpAsync(request);
             return OkResponse<object?>(null, "Mã OTP đã được gửi đến email của bạn");
         }
@@ -246,6 +293,25 @@ public class AuthController : BaseController
     {
         try
         {
+            // Validate request
+            if (request == null)
+                return BadRequestResponse("Request body không được để trống");
+
+            if (string.IsNullOrWhiteSpace(request.Email))
+                return BadRequestResponse("Email không được để trống");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                return BadRequestResponse("Email không hợp lệ");
+
+            if (string.IsNullOrWhiteSpace(request.OtpCode))
+                return BadRequestResponse("Mã OTP không được để trống");
+
+            if (request.OtpCode.Length != 6)
+                return BadRequestResponse("Mã OTP phải có 6 ký tự");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.OtpCode, @"^\d{6}$"))
+                return BadRequestResponse("Mã OTP chỉ được chứa số");
+
             await _userService.VerifyOtpAsync(request);
             return OkResponse<object?>(null, "Xác thực OTP thành công");
         }
@@ -271,6 +337,49 @@ public class AuthController : BaseController
     {
         try
         {
+            // Validate request
+            if (request == null)
+                return BadRequestResponse("Request body không được để trống");
+
+            if (string.IsNullOrWhiteSpace(request.Email))
+                return BadRequestResponse("Email không được để trống");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                return BadRequestResponse("Email không hợp lệ");
+
+            if (string.IsNullOrWhiteSpace(request.OtpCode))
+                return BadRequestResponse("Mã OTP không được để trống");
+
+            if (request.OtpCode.Length != 6)
+                return BadRequestResponse("Mã OTP phải có 6 ký tự");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.OtpCode, @"^\d{6}$"))
+                return BadRequestResponse("Mã OTP chỉ được chứa số");
+
+            if (string.IsNullOrWhiteSpace(request.NewPassword))
+                return BadRequestResponse("Mật khẩu mới không được để trống");
+
+            if (request.NewPassword.Length < 8)
+                return BadRequestResponse("Mật khẩu mới phải có ít nhất 8 ký tự");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.NewPassword, @"[A-Z]"))
+                return BadRequestResponse("Mật khẩu mới phải có ít nhất 1 chữ hoa");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.NewPassword, @"[a-z]"))
+                return BadRequestResponse("Mật khẩu mới phải có ít nhất 1 chữ thường");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.NewPassword, @"[0-9]"))
+                return BadRequestResponse("Mật khẩu mới phải có ít nhất 1 chữ số");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.NewPassword, @"[\W_]"))
+                return BadRequestResponse("Mật khẩu mới phải có ít nhất 1 ký tự đặc biệt");
+
+            if (string.IsNullOrWhiteSpace(request.ConfirmPassword))
+                return BadRequestResponse("Xác nhận mật khẩu không được để trống");
+
+            if (request.NewPassword != request.ConfirmPassword)
+                return BadRequestResponse("Xác nhận mật khẩu không khớp");
+
             await _userService.ResetPasswordAsync(request);
             return OkResponse<object?>(null, "Đặt lại mật khẩu thành công");
         }
