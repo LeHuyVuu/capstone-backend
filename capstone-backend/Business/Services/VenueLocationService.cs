@@ -1096,14 +1096,23 @@ public class VenueLocationService : IVenueLocationService
         return response;
     }
 
-    public async Task<PagedResult<VenueOwnerVenueLocationResponse>> GetVenueLocationsByVenueOwnerAndStatusAsync(VenueLocationStatus? status, int page, int pageSize)
+    public async Task<PagedResult<VenueOwnerVenueLocationResponse>> GetVenueLocationsByVenueOwnerAndStatusAsync(VenueLocationStatus? status, string? search, int page, int pageSize)
     {
-        _logger.LogInformation("Getting all system venue locations with status {Status} (Page {Page}, Size {PageSize})", status, page, pageSize);
+        _logger.LogInformation("Getting all system venue locations with status {Status}, search {Search} (Page {Page}, Size {PageSize})", status, search, page, pageSize);
+
+        var normalizedSearch = search?.Trim();
+        var hasSearch = !string.IsNullOrWhiteSpace(normalizedSearch);
+        var likePattern = hasSearch ? $"%{EscapeSqlLikePattern(normalizedSearch!)}%" : null;
 
         var (venueLocations, totalCount) = await _unitOfWork.VenueLocations.GetPagedAsync(
             page,
             pageSize,
-            v => v.IsDeleted != true && (!status.HasValue || (v.Status != null && v.Status.ToUpper() == status.Value.ToString().ToUpper())),
+            v => v.IsDeleted != true
+                && (!status.HasValue || v.Status == status.Value.ToString())
+                && (!hasSearch
+                    || (v.Name != null && EF.Functions.Like(v.Name, likePattern!))
+                    || (v.Description != null && EF.Functions.Like(v.Description, likePattern!))
+                    || (v.Address != null && EF.Functions.Like(v.Address, likePattern!))),
             query => query.OrderByDescending(v => v.CreatedAt),
             query => query
                 .Include(v => v.VenueLocationTags)
@@ -1144,9 +1153,17 @@ public class VenueLocationService : IVenueLocationService
                 LocationTags = CreateLocationTagsInfo(v)
             }).ToList();
 
-        _logger.LogInformation("Retrieved {Count} system venue locations with status {Status} (Total {TotalCount})", responses.Count, status, totalCount);
+        _logger.LogInformation("Retrieved {Count} system venue locations with status {Status}, search {Search} (Total {TotalCount})", responses.Count, status, search, totalCount);
 
         return new PagedResult<VenueOwnerVenueLocationResponse>(responses, page, pageSize, totalCount);
+    }
+
+    private static string EscapeSqlLikePattern(string input)
+    {
+        return input
+            .Replace("[", "[[]")
+            .Replace("%", "[%]")
+            .Replace("_", "[_]");
     }
 
     /// <summary>

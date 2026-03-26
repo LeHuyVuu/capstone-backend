@@ -104,7 +104,7 @@ public interface IVenueLocationService
     /// <returns>Venue location detail or null if not found or not owned by user</returns>
     Task<VenueOwnerVenueLocationResponse?> GetVenueLocationByIdForOwnerAsync(int venueId, int userId);
 
-    Task<PagedResult<VenueOwnerVenueLocationResponse>> GetVenueLocationsByVenueOwnerAndStatusAsync(VenueLocationStatus? status, int page, int pageSize);
+    Task<PagedResult<VenueOwnerVenueLocationResponse>> GetVenueLocationsByVenueOwnerAndStatusAsync(VenueLocationStatus? status, string? search, int page, int pageSize);
 
     /// <summary>
     /// Submit venue location to admin for approval
