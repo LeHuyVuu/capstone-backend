@@ -8,5 +8,6 @@
         CHECK_IN_HISTORY,
         REVIEW,
         POST,
+        COMMENT,
     }
 }

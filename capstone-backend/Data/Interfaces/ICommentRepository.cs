@@ -7,5 +7,6 @@ namespace capstone_backend.Data.Interfaces
     {
         Task<IEnumerable<Comment>> GetChildCommentsByParentIdAsync(int parentId);
         Task<Comment?> GetByIdIncludeAsync(int commentId);
+        Task<Comment?> GetByIdIncludeWithAllStatusAsync(int commentId);
     }
 }

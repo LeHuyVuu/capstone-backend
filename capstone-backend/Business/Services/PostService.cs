@@ -186,19 +186,22 @@ namespace capstone_backend.Business.Services
                 });
                 await _unitOfWork.SaveChangesAsync();
 
-                // Create notification
-                notification = new Notification
+                if (post.AuthorId != member.Id)
                 {
-                    UserId = post.AuthorId,
-                    Type = NotificationType.SOCIAL.ToString(),
-                    ReferenceId = post.Id,
-                    ReferenceType = ReferenceType.POST.ToString(),
-                    Title = NotificationTemplate.Post.TitleNewLike,
-                    Message = NotificationTemplate.Post.GetNewLikeBody(member.FullName ?? "Ai đó"),
-                    IsRead = false
-                };
-                await _unitOfWork.Notifications.AddAsync(notification);
-                await _unitOfWork.SaveChangesAsync();
+                    // Create notification
+                    notification = new Notification
+                    {
+                        UserId = post.Author.UserId,
+                        Type = NotificationType.SOCIAL.ToString(),
+                        ReferenceId = post.Id,
+                        ReferenceType = ReferenceType.POST.ToString(),
+                        Title = NotificationTemplate.Post.TitleNewLike,
+                        Message = NotificationTemplate.Post.GetNewLikeBody(member.FullName ?? "Ai đó"),
+                        IsRead = false
+                    };
+                    await _unitOfWork.Notifications.AddAsync(notification);
+                    await _unitOfWork.SaveChangesAsync();
+                }
 
                 await _unitOfWork.CommitTransactionAsync();
             }

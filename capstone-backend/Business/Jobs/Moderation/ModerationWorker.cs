@@ -1,7 +1,10 @@
 ﻿
+using AutoMapper.Execution;
+using capstone_backend.Business.Common;
 using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Comment;
+using capstone_backend.Business.Jobs.Notification;
 using capstone_backend.Data.Enums;
 using Hangfire;
 
@@ -22,7 +25,7 @@ namespace capstone_backend.Business.Jobs.Moderation
 
         public async Task ProcessCommentModerationAsync(int commentId, List<ModerationResultDto> results)
         {
-            var comment = await _unitOfWork.Comments.GetByIdAsync(commentId);
+            var comment = await _unitOfWork.Comments.GetByIdIncludeWithAllStatusAsync(commentId);
             if (comment == null || comment.IsDeleted == true)
                 return;
 
@@ -34,6 +37,34 @@ namespace capstone_backend.Business.Jobs.Moderation
             _logger.LogInformation($"[MODERATION WORKER] Comment ID {commentId} moderated with status: {comment.Status}");
 
             await _unitOfWork.SaveChangesAsync();
+
+            if (comment.Status == CommentStatus.PUBLISHED.ToString())
+            {
+                int? receiverUserId = comment.TargetMember == null ? comment.Post.Author.UserId : comment.TargetMember.UserId;
+                if (receiverUserId.HasValue && receiverUserId.Value != comment.Author.UserId)
+                {
+                    // Create notification
+                    var notification = new Data.Entities.Notification
+                    {
+                        UserId = receiverUserId.Value,
+                        Type = NotificationType.SOCIAL.ToString(),
+                        ReferenceId = comment.Id,
+                        ReferenceType = ReferenceType.COMMENT.ToString(),
+                        Title = comment.TargetMember != null
+                                ? NotificationTemplate.Post.TitleNewCommentReply
+                                : NotificationTemplate.Post.TitleNewComment,
+                        Message = comment.TargetMember != null 
+                                  ? NotificationTemplate.Post.GetNewCommentReplyBody(comment.Author.FullName ?? "Ai đó")
+                                  : NotificationTemplate.Post.GetNewCommentBody(comment.Author.FullName ?? "Ai đó"),
+                        IsRead = false
+                    };
+                    await _unitOfWork.Notifications.AddAsync(notification);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // Push notification to the user in real-time
+                    BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(notification.Id));
+                }
+            }
 
             BackgroundJob.Enqueue<ICommentWorker>(j => j.RecountPostAsync(comment.PostId));
 

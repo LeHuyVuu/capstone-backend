@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using AutoMapper.Execution;
+using capstone_backend.Business.Common;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Post;
@@ -77,6 +78,7 @@ namespace capstone_backend.Business.Services
                 Content = request.Content,
                 Status = CommentStatus.PENDING.ToString(),
             };
+
             await _unitOfWork.Comments.AddAsync(comment);
             await _unitOfWork.SaveChangesAsync();
 
