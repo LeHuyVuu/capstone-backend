@@ -103,6 +103,12 @@ namespace capstone_backend.Business.Services
                     inserted++;
                 }
 
+                if (!testType.CurrentVersion.HasValue || testType.CurrentVersion.Value <= 0)
+                {
+                    testType.CurrentVersion = newVersion;
+                    _unitOfWork.TestTypes.Update(testType);
+                }
+
                 var result = await _unitOfWork.SaveChangesAsync();
 
                 // 6. Upload CSV to S3

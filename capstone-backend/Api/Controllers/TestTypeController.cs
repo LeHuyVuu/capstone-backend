@@ -158,8 +158,8 @@ namespace capstone_backend.Api.Controllers
                 );
 
                 return result.Errors.Any()
-                    ? BadRequest(result)
-                    : Ok(result);
+                    ? BadRequestResponse(result)
+                    : OkResponse(result);
             }
             catch (Exception ex)
             {
