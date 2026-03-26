@@ -72,6 +72,8 @@
             public const string TitleNewComment = "Có đồng minh vừa bình luận về bài viết của bạn!";
             public const string TitleNewCommentReply = "Có đồng minh vừa trả lời bình luận của bạn!";
 
+            public const string TitleNewLikeComment = "Có đồng minh vừa thích bình luận của bạn!";
+
             public static string GetNewLikeBody(string fullName)
             {
                 return $"{fullName} vừa thích bài viết của bạn!";
@@ -85,6 +87,11 @@
             public static string GetNewCommentReplyBody(string fullName)
             {
                 return $"{fullName} vừa trả lời bình luận của bạn!";
+            }
+
+            public static string GetNewLikeCommentBody(string fullName)
+            {
+                return $"{fullName} vừa thích bình luận của bạn!";
             }
         }
     }

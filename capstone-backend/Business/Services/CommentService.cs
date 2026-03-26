@@ -8,6 +8,7 @@ using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Comment;
 using capstone_backend.Business.Jobs.Like;
 using capstone_backend.Business.Jobs.Moderation;
+using capstone_backend.Business.Jobs.Notification;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Hangfire;
@@ -235,6 +236,7 @@ namespace capstone_backend.Business.Services
             if (comment.Status != CommentStatus.PUBLISHED.ToString())
                 throw new Exception("Bình luận chưa được xuất bản");
 
+            var notification = new Notification();
             await _unitOfWork.BeginTransactionAsync();
             try
             {
@@ -246,6 +248,21 @@ namespace capstone_backend.Business.Services
 
                 await _unitOfWork.SaveChangesAsync();
 
+                // Notify 
+                notification = new Notification
+                {
+                    UserId = comment.AuthorId,
+                    Title = NotificationTemplate.Post.TitleNewLikeComment,
+                    Message = NotificationTemplate.Post.GetNewLikeCommentBody(member.FullName),
+                    Type = NotificationType.SOCIAL.ToString(),
+                    ReferenceId = comment.Id,
+                    ReferenceType = ReferenceType.COMMENT.ToString(),
+                    IsRead = false
+                };
+
+                await _unitOfWork.Notifications.AddAsync(notification);
+                await _unitOfWork.SaveChangesAsync();
+
                 await _unitOfWork.CommitTransactionAsync();
             }
             catch (Exception)
@@ -255,6 +272,7 @@ namespace capstone_backend.Business.Services
             }
 
             BackgroundJob.Enqueue<ILikeWorker>(j => j.RecountCommentLikeAsync(comment.Id));
+            BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(notification.Id));
 
             return new CommentLikeResponse
             {
