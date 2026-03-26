@@ -1,4 +1,5 @@
 using System.Text.Json;
+using capstone_backend.Business.Common;
 using capstone_backend.Business.DTOs.Emotion;
 using capstone_backend.Business.DTOs.MoodType;
 using capstone_backend.Business.DTOs.Notification;

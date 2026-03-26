@@ -13,6 +13,8 @@
 
             public const string TitleDatePlanAutoClosed = "Buổi hẹn đã được đóng tự động";
 
+            public const string TitleAccepted = "Buổi hẹn đã được đồng ý!";
+
             public static string GetReminder1DayBody(string datePlanTitle, TimeOnly plannedStartAt)
             {
                 return $"Đừng quên là ngày mai mình có hẹn \"{datePlanTitle}\" vào lúc {plannedStartAt:HH:mm} nhé!";
@@ -40,6 +42,11 @@
             public static string GetDatePlanAutoClosedBody(string datePlanTitle)
             {
                 return $"Buổi hẹn \"{datePlanTitle}\" đã được đóng tự động. Hãy lên kế hoạch cho buổi hẹn tiếp theo nhé!";
+            }
+
+            public static string GetAcceptedBody(string datePlanTitle)
+            {
+                return $"Buổi hẹn \"{datePlanTitle}\" của bạn đã được partner đồng ý! Hãy chuẩn bị cho một buổi hẹn tuyệt vời nhé!";
             }
         }
 

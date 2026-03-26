@@ -1,9 +1,11 @@
 ﻿using AutoMapper;
+using capstone_backend.Business.Common;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.DatePlan;
 using capstone_backend.Business.DTOs.DatePlanItem;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.DatePlan;
+using capstone_backend.Business.Jobs.Notification;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
@@ -445,6 +447,23 @@ namespace capstone_backend.Business.Services
                 if (datePlan.OrganizerMemberId == member.Id)
                     throw new Exception("Người tổ chức không thể chấp nhận lịch trình buổi hẹn");
                 datePlan.Status = DatePlanStatus.SCHEDULED.ToString();
+
+                // Notify sender date plan
+                var notification = new Notification
+                {
+                    UserId = datePlan.OrganizerMember.UserId,
+                    Title = NotificationTemplate.DatePlan.TitleAccepted,
+                    Message = NotificationTemplate.DatePlan.GetAcceptedBody(datePlan.Title),
+                    Type = NotificationType.PAIRING.ToString(),
+                    ReferenceId = datePlan.Id,
+                    ReferenceType = ReferenceType.DATE_PLAN.ToString(),
+                    IsRead = false,
+                };
+
+                await _unitOfWork.Notifications.AddAsync(notification);
+                await _unitOfWork.SaveChangesAsync();
+
+                BackgroundJob.Enqueue<INotificationWorker>(s => s.SendPushNotificationAsync(notification.Id));
 
                 // Start date plan jobs
                 await StartDatePlanAsync(datePlan);
