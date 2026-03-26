@@ -17,13 +17,15 @@ namespace capstone_backend.Business.Services
         private readonly IMapper _mapper;
         private readonly IHubContext<NotificationHub> _hubContext;
         private readonly IFcmService? _fcmService;
+        private readonly ILogger<NotificationService> _logger;
 
-        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IServiceProvider serviceProvider)
+        public NotificationService(IUnitOfWork unitOfWork, IMapper mapper, IHubContext<NotificationHub> hubContext, IServiceProvider serviceProvider, ILogger<NotificationService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _hubContext = hubContext;
             _fcmService = serviceProvider.GetService<IFcmService>();
+            _logger = logger;
         }
 
         public async Task<NotificationResponse> CreateNotificationService(int userId, NotificationRequest request)
@@ -150,9 +152,7 @@ namespace capstone_backend.Business.Services
                 // 1. Save notification to database
                 var notificationRes = await CreateNotificationService(userId, request);
                 if (notificationRes == null)
-                {
-                    throw new Exception("Failed to save notification.");
-                }
+                    _logger.LogError("Failed to create notification for user {UserId}", userId);
 
                 // 2. Send notification
                 var (total, unread) = await _unitOfWork.Notifications.GetNotificationStatsByUserIdAsync(userId);

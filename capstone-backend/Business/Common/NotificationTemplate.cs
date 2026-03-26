@@ -46,9 +46,16 @@
         public static class Review
         {
             public const string TitleReviewRequest = "⏳ Đã 10 phút rồi!";
+            public const string TitleReceiveNewReview = "Một đánh giá mới";
+
             public static string GetReviewRequestBody(string venueName)
             {
                 return $"Bạn vẫn đang ở 📍{venueName}📍 chứ? Cùng Đánh giá ngay nào!";
+            }
+
+            public static string GetReceiveNewReviewBody(string fullName, string venueName)
+            {
+                return $"{fullName} vừa đánh giá địa điểm {venueName} của bạn!";
             }
         }
 

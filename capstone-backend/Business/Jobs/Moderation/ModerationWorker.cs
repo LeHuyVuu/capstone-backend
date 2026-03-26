@@ -2,6 +2,7 @@
 using AutoMapper.Execution;
 using capstone_backend.Business.Common;
 using capstone_backend.Business.DTOs.Moderation;
+using capstone_backend.Business.DTOs.Notification;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Comment;
 using capstone_backend.Business.Jobs.Notification;
@@ -15,12 +16,14 @@ namespace capstone_backend.Business.Jobs.Moderation
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ModerationWorker> _logger;
         private readonly IChallengeService _challengeService;
+        private readonly INotificationService _notificationService;
 
-        public ModerationWorker(IUnitOfWork unitOfWork, ILogger<ModerationWorker> logger, IChallengeService challengeService)
+        public ModerationWorker(IUnitOfWork unitOfWork, ILogger<ModerationWorker> logger, IChallengeService challengeService, INotificationService notificationService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
             _challengeService = challengeService;
+            _notificationService = notificationService;
         }
 
         public async Task ProcessCommentModerationAsync(int commentId, List<ModerationResultDto> results)
@@ -133,6 +136,10 @@ namespace capstone_backend.Business.Jobs.Moderation
 
         public async Task ProcessReviewModerationAndChallengeAsync(int reviewId, List<ModerationResultDto> results, int userId, int? venueId, bool hasImage)
         {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null) 
+                return;
+
             var review = await _unitOfWork.Reviews.GetByIdAsync(reviewId);
             if (review == null || review.IsDeleted == true)
                 return;
@@ -145,10 +152,27 @@ namespace capstone_backend.Business.Jobs.Moderation
             _logger.LogInformation($"[MODERATION WORKER] Review ID {reviewId} moderated with status: {review.Status}");
             await _unitOfWork.SaveChangesAsync();
 
+            var venueLocation = await _unitOfWork.VenueLocations.GetByIdWithOwnerAsync(venueId.Value);
+
             if (review.Status == ReviewStatus.PUBLISHED.ToString())
             {
                 // Only process challenge progress if the review is approved
                 await _challengeService.HandleReviewChallengeProgressAsync(userId, reviewId, venueId, hasImage);
+
+                // Send notification
+                if (venueLocation != null)
+                {
+                    var notification = new NotificationRequest
+                    {
+                        Type = NotificationType.SOCIAL.ToString(),
+                        ReferenceId = review.Id,
+                        ReferenceType = ReferenceType.REVIEW.ToString(),
+                        Title = NotificationTemplate.Review.TitleReceiveNewReview,
+                        Message = NotificationTemplate.Review.GetReceiveNewReviewBody(member.FullName, venueLocation.Name)
+                    };
+
+                    await _notificationService.SendNotificationAsync(venueLocation.VenueOwner.UserId, notification);
+                }
             }
         }
     }
