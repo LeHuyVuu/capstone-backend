@@ -26,6 +26,24 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Get 30 days Date Plans
+        /// </summary>
+        [HttpGet("calendar-30-days")]
+        public async Task<IActionResult> GetDatePlansIn30Days()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _datePlanService.GetDatePlansIn30DaysAsync(userId.Value);
+                return OkResponse(result, "Lấy lịch trình buổi hẹn trong 30 ngày thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Get All Date Plans By Time
         /// </summary>
         /// <remarks>

@@ -514,5 +514,62 @@ namespace capstone_backend.Business.Services
             if (overlapped)
                 throw new Exception("Đã tồn tại lịch trình khác bị trùng khoảng thời gian");
         }
+
+        public async Task<DatePlanCalendar30DaysResponse> GetDatePlansIn30DaysAsync(int value)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(value);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            var vnNow = TimezoneUtil.ToVietNamTime(DateTime.UtcNow);
+            var startDate = DateOnly.FromDateTime(vnNow.Date.AddDays(-3));
+            var endDate = startDate.AddDays(29);
+
+            var startUtc = DateTimeNormalizeUtil.NormalizeToUtc(startDate.ToDateTime(TimeOnly.MinValue));
+            var endUtcExclusive = DateTimeNormalizeUtil.NormalizeToUtc(endDate.AddDays(1).ToDateTime(TimeOnly.MinValue));
+
+            var datePlans = await _unitOfWork.DatePlans.GetAsync(dp =>
+                dp.IsDeleted == false &&
+                dp.CoupleId == couple.id &&
+                dp.PlannedStartAt != null &&
+                dp.PlannedStartAt >= startUtc &&
+                dp.PlannedStartAt < endUtcExclusive
+            );
+
+            var lookup = datePlans
+                .GroupBy(x => DateOnly.FromDateTime(TimezoneUtil.ToVietNamTime(x.PlannedStartAt!.Value)))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderBy(x => x.PlannedStartAt)
+                        .Select(x => x.Id)
+                        .ToList()
+                );
+
+            var days = new List<DatePlanCalendarDayItemResponse>();
+
+            for (int i = 0; i < 30; i++)
+            {
+                var date = startDate.AddDays(i);
+                lookup.TryGetValue(date, out var ids);
+
+                days.Add(new DatePlanCalendarDayItemResponse
+                {
+                    Date = date,
+                    HasDatePlan = ids != null && ids.Count > 0,
+                    DatePlanIds = ids ?? new List<int>()
+                });
+            }
+
+            return new DatePlanCalendar30DaysResponse
+            {
+                StartDay = startDate,
+                EndDay = endDate,
+                Days = days
+            };
+        }
     }
 }

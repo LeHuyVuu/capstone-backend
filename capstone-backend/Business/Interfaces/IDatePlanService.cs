@@ -13,5 +13,6 @@ namespace capstone_backend.Business.Interfaces
         Task<DatePlanResponse> UpdateDatePlanAsync(int userId, int datePlanId, int version, UpdateDatePlanRequest request);
         Task<int> DeleteDatePlanAsync(int userId, int datePlanId);
         Task<int> ActionDatePlanAsync(int userId, int datePlanId, DatePlanAction action);
+        Task<DatePlanCalendar30DaysResponse> GetDatePlansIn30DaysAsync(int value);
     }
 }
