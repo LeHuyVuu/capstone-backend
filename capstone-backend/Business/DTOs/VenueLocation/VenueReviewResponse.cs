@@ -1,3 +1,4 @@
+using capstone_backend.Business.DTOs.Accessory;
 using capstone_backend.Business.DTOs.Review;
 
 namespace capstone_backend.Business.DTOs.VenueLocation;
@@ -66,6 +67,9 @@ public class ReviewMemberInfo
     public string? DisplayName { get; set; }
     public string? AvatarUrl { get; set; }
     public string? Email { get; set; }
+
+    // Accessory information
+    public List<EquippedAccessoryBriefResponse> EquippedAccessories { get; set; } = new();
 }
 
 /// <summary>

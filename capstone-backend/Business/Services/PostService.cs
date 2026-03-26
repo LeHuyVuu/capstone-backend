@@ -1,6 +1,7 @@
 ﻿using Amazon.Rekognition.Model;
 using AutoMapper;
 using capstone_backend.Business.Common.Constants;
+using capstone_backend.Business.DTOs.Accessory;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Post;
@@ -24,6 +25,7 @@ namespace capstone_backend.Business.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IModerationService _moderationService;
+        private readonly IAccessoryService _accessoryService;
 
         // Weight Config
         private const double W_PERSONALITY = 65;
@@ -32,11 +34,12 @@ namespace capstone_backend.Business.Services
         private const double W_LOCATION = 45;
         private const double W_CONTEXT = 30;
 
-        public PostService(IUnitOfWork unitOfWork, IMapper mapper, IModerationService moderationService)
+        public PostService(IUnitOfWork unitOfWork, IMapper mapper, IModerationService moderationService, IAccessoryService accessoryService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _moderationService = moderationService;
+            _accessoryService = accessoryService;
         }
 
         public async Task<PostResponse> GetPostDetailsAsync(int userId, int postId)
@@ -53,6 +56,9 @@ namespace capstone_backend.Business.Services
             response.IsLikedByMe = post.PostLikes.Any(pl => pl.MemberId == member.Id);
             response.IsOwner = post.AuthorId == member.Id;
             response.Author.Avatar = post.Author.User.AvatarUrl;
+
+            var accessory = await _accessoryService.GetEquippedAccessoryForMemberAsync(post.AuthorId);
+            response.Author.EquippedAccessories = accessory;
 
             return response;
         }
@@ -268,6 +274,17 @@ namespace capstone_backend.Business.Services
                 item.IsLikedByMe = entity.CommentLikes?.Any(cl => cl.MemberId == member.Id) == true;
 
                 item.IsOwner = entity.AuthorId == member.Id;
+
+                // Add accessory
+                var accessoryAuthor = await _accessoryService.GetEquippedAccessoryForMemberAsync(entity.AuthorId);
+                item.Author.EquippedAccessories = accessoryAuthor;
+
+                var accessoryTarget = new List<EquippedAccessoryBriefResponse>();
+                if (entity.TargetMemberId.HasValue)
+                {
+                    accessoryTarget = await _accessoryService.GetEquippedAccessoryForMemberAsync(entity.TargetMemberId.Value);
+                    item.ReplyToMember.EquippedAccessories = accessoryTarget;
+                }
             }
 
 
@@ -296,6 +313,9 @@ namespace capstone_backend.Business.Services
             response.IsLikedByMe = false;
             response.IsOwner = false;
             response.Author.Avatar = post.Author.User.AvatarUrl;
+
+            var accessory = await _accessoryService.GetEquippedAccessoryForMemberAsync(post.AuthorId);
+            response.Author.EquippedAccessories = accessory;
 
             return response;
         }
@@ -353,6 +373,10 @@ namespace capstone_backend.Business.Services
             response.IsLikedByMe = false;
             response.IsOwner = false;
             response.Author.Avatar = post.Author.User.AvatarUrl;
+
+            var accessory = await _accessoryService.GetEquippedAccessoryForMemberAsync(post.AuthorId);
+            response.Author.EquippedAccessories = accessory;
+
             return response;
         }
 
@@ -374,13 +398,15 @@ namespace capstone_backend.Business.Services
                     p => p.Include(p => p.PostLikes).Include(p => p.Author)
                 );
             var response = _mapper.Map<List<PostResponse>>(posts);
-            response.ForEach(r =>
+            foreach (var r in response)
             {
                 r.IsLikedByMe = posts.First(p => p.Id == r.Id).PostLikes.Any(pl => pl.MemberId == member.Id);
                 r.IsOwner = true;
-
                 r.Author.Avatar = user.AvatarUrl;
-            });
+
+                var accessory = await _accessoryService.GetEquippedAccessoryForMemberAsync(member.Id);
+                r.Author.EquippedAccessories = accessory;
+            }
             return response;
         }
 
@@ -437,6 +463,13 @@ namespace capstone_backend.Business.Services
                 return dto;
             })
             .ToList();
+
+            // 5. Add accessory info
+            foreach (var item in response)
+            {
+                var accessory = await _accessoryService.GetEquippedAccessoryForMemberAsync(item.Author.Id);
+                item.Author.EquippedAccessories = accessory;
+            }
 
             return new FeedResponse
             {

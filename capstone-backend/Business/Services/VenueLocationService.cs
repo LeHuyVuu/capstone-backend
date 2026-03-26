@@ -1,6 +1,7 @@
 using AutoMapper;
 using capstone_backend.Api.Models;
 using capstone_backend.Api.VenueRecommendation.Service;
+using capstone_backend.Business.DTOs.Accessory;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.User;
 using capstone_backend.Business.DTOs.VenueLocation;
@@ -27,17 +28,19 @@ public class VenueLocationService : IVenueLocationService
     private readonly RefundService _refundService;
     private readonly IEmailService _emailService;
     private readonly WalletPaymentService _walletPaymentService;
+    private readonly IAccessoryService _accessoryService;
 
     public VenueLocationService(
-        IUnitOfWork unitOfWork, 
-        IMapper mapper, 
-        ILogger<VenueLocationService> logger, 
+        IUnitOfWork unitOfWork,
+        IMapper mapper,
+        ILogger<VenueLocationService> logger,
         ICurrentUser currentUser,
         SepayService sepayService,
         IMeilisearchService meilisearchService,
         RefundService refundService,
         IEmailService emailService,
-        WalletPaymentService walletPaymentService)
+        WalletPaymentService walletPaymentService,
+        IAccessoryService accessoryService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -48,10 +51,11 @@ public class VenueLocationService : IVenueLocationService
         _refundService = refundService;
         _emailService = emailService;
         _walletPaymentService = walletPaymentService;
+        _accessoryService = accessoryService;
     }
 
     #region Category & Image Helpers
-    
+
     /// <summary>
     /// Serialize list of categories to string (format: "CATEGORY1 / CATEGORY2 / CATEGORY3")
     /// </summary>
@@ -297,7 +301,19 @@ public class VenueLocationService : IVenueLocationService
         var allMedias = await _unitOfWork.Media.GetByListTargetIdsAsync(reviewIds, ReferenceType.REVIEW.ToString());
         var mediaLookup = allMedias.ToLookup(m => m.TargetId);
 
-        var venue = await _unitOfWork.VenueLocations.GetByIdWithOwnerAsync(venueId);     
+        var venue = await _unitOfWork.VenueLocations.GetByIdWithOwnerAsync(venueId);
+
+        var memberIds = reviews
+            .Where(r => r.IsAnonymous != true && r.Member != null)
+            .Select(r => r.MemberId)
+            .Distinct()
+            .ToList();
+
+        var accessoryLookup = new Dictionary<int, List<EquippedAccessoryBriefResponse>>();
+        foreach (var memberId in memberIds)
+        {
+            accessoryLookup[memberId] = await _accessoryService.GetEquippedAccessoryForMemberAsync(memberId);
+        }
 
         // Map reviews sang VenueReviewResponse
         var reviewResponses = reviews.Select(r => 
@@ -311,11 +327,13 @@ public class VenueLocationService : IVenueLocationService
                 {
                     Id = 0,
                     UserId = 0,
-                    FullName = "Ẩn danh"
+                    FullName = "Ẩn danh",
+                    EquippedAccessories = new List<EquippedAccessoryBriefResponse>()
                 };
             }
             else if (r.Member != null)
             {
+
                 response.Member = new ReviewMemberInfo
                 {
                     Id = r.Member.Id,
@@ -325,7 +343,8 @@ public class VenueLocationService : IVenueLocationService
                     Bio = r.Member.Bio,
                     DisplayName = r.Member.User?.DisplayName,
                     AvatarUrl = r.Member.User?.AvatarUrl,
-                    Email = r.Member.User?.Email
+                    Email = r.Member.User?.Email,
+                    EquippedAccessories = accessoryLookup.TryGetValue(r.MemberId, out var accessories) ? accessories : new List<EquippedAccessoryBriefResponse>()
                 };
             }
 
@@ -445,6 +464,19 @@ public class VenueLocationService : IVenueLocationService
         var allMedias = await _unitOfWork.Media.GetByListTargetIdsAsync(reviewIds, ReferenceType.REVIEW.ToString());
         var mediaLookup = allMedias.ToLookup(m => m.TargetId);
 
+        // Get accessories
+        var memberIds = reviews
+            .Where(r => r.IsAnonymous != true && r.Member != null)
+            .Select(r => r.MemberId)
+            .Distinct()
+            .ToList();
+
+        var accessoryLookup = new Dictionary<int, List<EquippedAccessoryBriefResponse>>();
+        foreach (var memberId in memberIds)
+        {
+            accessoryLookup[memberId] = await _accessoryService.GetEquippedAccessoryForMemberAsync(memberId);
+        }
+
         // Map reviews sang VenueReviewResponse
         var reviewResponses = reviews.Select(r => 
         {
@@ -462,7 +494,8 @@ public class VenueLocationService : IVenueLocationService
                     Bio = r.Member.Bio,
                     DisplayName = r.Member.User?.DisplayName,
                     AvatarUrl = r.Member.User?.AvatarUrl,
-                    Email = r.Member.User?.Email
+                    Email = r.Member.User?.Email,
+                    EquippedAccessories = accessoryLookup.TryGetValue(r.MemberId, out var accessories) ? accessories : new List<EquippedAccessoryBriefResponse>()
                 };
             }
 

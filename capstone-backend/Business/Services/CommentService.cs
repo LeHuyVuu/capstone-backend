@@ -19,12 +19,14 @@ namespace capstone_backend.Business.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IModerationService _moderationService;
+        private readonly IAccessoryService _accessoryService;
 
-        public CommentService(IUnitOfWork unitOfWork, IMapper mapper, IModerationService moderationService)
+        public CommentService(IUnitOfWork unitOfWork, IMapper mapper, IModerationService moderationService, IAccessoryService accessoryService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _moderationService = moderationService;
+            _accessoryService = accessoryService;
         }
 
         public async Task<CommentResponse> CommentPostAsync(int userId, int postId, CreateCommentRequest request)
@@ -198,6 +200,15 @@ namespace capstone_backend.Business.Services
 
                 item.IsLikedByMe = entity.CommentLikes?.Any(cl => cl.MemberId == member.Id) == true;
                 item.IsOwner = entity.AuthorId == member.Id;
+
+                // Add accessory
+                var accessories = await _accessoryService.GetEquippedAccessoryForMemberAsync(entity.AuthorId);
+                item.Author.EquippedAccessories = accessories;
+                if (entity.TargetMemberId.HasValue)
+                {
+                    var targetAccessories = await _accessoryService.GetEquippedAccessoryForMemberAsync(entity.TargetMemberId.Value);
+                    item.ReplyToMember.EquippedAccessories = targetAccessories;
+                }
             }
 
             return new PagedResult<CommentResponse>
@@ -303,6 +314,10 @@ namespace capstone_backend.Business.Services
             
             response.IsLikedByMe = existingComment.CommentLikes?.Any(cl => cl.MemberId == member.Id) == true;
             response.IsOwner = existingComment.AuthorId == member.Id;
+
+            // Add accessory
+            var accessories = await _accessoryService.GetEquippedAccessoryForMemberAsync(existingComment.AuthorId);
+            response.Author.EquippedAccessories = accessories;
 
             return response;
         }
