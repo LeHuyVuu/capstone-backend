@@ -1,4 +1,4 @@
-using capstone_backend.Api.Models;
+﻿using capstone_backend.Api.Models;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Services;
@@ -22,10 +22,18 @@ public class UploadController : BaseController
     [HttpPost("")]
     public async Task<IActionResult> Upload(IFormFile file, [FromQuery] MediaType type)
     {
-        if (file == null || file.Length == 0)
-            return BadRequest("No file uploaded.");
+        if (file == null)
+            return BadRequestResponse("Không có file nào được chọn.");
 
-        var url = await _s3Service.UploadFileAsync(file, GetCurrentUserId().Value, type.ToString());
+        long totalSize = file.Length;
+        if (totalSize > 10 * 1024 * 1024)
+            return BadRequestResponse("Tổng dung lượng ảnh quá lớn (Tối đa 10MB).");
+
+        var userId = GetCurrentUserId();
+        if (userId == null)
+            return UnauthorizedResponse();
+
+        var url = await _s3Service.UploadFileAsync(file, userId.Value, type.ToString());
 
         return Ok(ApiResponse<object>.Success(url, "File uploaded successfully"));
     }

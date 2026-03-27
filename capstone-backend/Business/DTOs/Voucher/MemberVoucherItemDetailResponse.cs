@@ -8,6 +8,7 @@
         public string? VoucherDescription { get; set; }
         public string ItemCode { get; set; } = null!;
         public string? QrCodeUrl { get; set; }
+        public string? ImageUrl { get; set; }
         public string Status { get; set; } = null!;
         public DateTime? AcquiredAt { get; set; }
         public DateTime? ExpiredAt { get; set; }

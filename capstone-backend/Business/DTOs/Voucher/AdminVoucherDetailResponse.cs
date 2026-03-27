@@ -24,6 +24,8 @@
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
+        public string? ImageUrl { get; set; }
+
         public List<VoucherLocationItemResponse> Locations { get; set; } = new();
     }
 }

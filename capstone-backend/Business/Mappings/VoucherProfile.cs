@@ -50,6 +50,7 @@ namespace capstone_backend.Business.Mappings
                         : null));
 
             CreateMap<VoucherItem, VoucherItemValidationAndRedemptionResponse>()
+                .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom(src => src.Voucher.ImageUrl))
                 .ForMember(dest => dest.VoucherTitle, opt => opt.MapFrom(src => src.Voucher.Title))
                 .ForMember(dest => dest.VoucherDescription, opt => opt.MapFrom(src => src.Voucher.Description))
                 .ForMember(dest => dest.DiscountType, opt => opt.MapFrom(src => src.Voucher.DiscountType))
@@ -87,10 +88,12 @@ namespace capstone_backend.Business.Mappings
                 .ForMember(dest => dest.VoucherTitle, opt => opt.MapFrom(src => src.Voucher.Title));
 
             CreateMap<VoucherItem, MemberVoucherItemResponse>()
+                .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom(src => src.Voucher.ImageUrl))
                 .ForMember(dest => dest.VoucherItemId, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.VoucherTitle, opt => opt.MapFrom(src => src.Voucher.Title));
 
             CreateMap<VoucherItem, MemberVoucherItemDetailResponse>()
+                .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom(src => src.Voucher.ImageUrl))
                 .ForMember(dest => dest.VoucherItemId, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.VoucherTitle, opt => opt.MapFrom(src => src.Voucher.Title))
                 .ForMember(dest => dest.VoucherDescription, opt => opt.MapFrom(src => src.Voucher.Description))
@@ -120,6 +123,7 @@ namespace capstone_backend.Business.Mappings
                 ));
 
             CreateMap<VoucherItem, MemberVoucherTransactionVoucherItemResponse>()
+                .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom(src => src.Voucher.ImageUrl))
                 .ForMember(dest => dest.VoucherItemId, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.VoucherTitle, opt => opt.MapFrom(src => src.Voucher.Title))
                 .ForMember(dest => dest.VoucherDescription, opt => opt.MapFrom(src => src.Voucher.Description))

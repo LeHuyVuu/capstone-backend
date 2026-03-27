@@ -230,6 +230,14 @@ namespace capstone_backend.Business.Services
             voucher.RemainingQuantity = request.Quantity;
             voucher.Status = VoucherStatus.DRAFTED.ToString();
 
+            const string validImagePrefix = "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/";
+
+            voucher.ImageUrl =
+                !string.IsNullOrWhiteSpace(voucher.ImageUrl) &&
+                voucher.ImageUrl.StartsWith(validImagePrefix, StringComparison.OrdinalIgnoreCase)
+                    ? voucher.ImageUrl
+                    : "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/system/voucher_thumbnail.png";
+
             // Generate unique voucher code
             var prefix = "VOU";
             voucher.Code = await GenerateUniqueVoucherCodeAsync(prefix);
@@ -428,6 +436,14 @@ namespace capstone_backend.Business.Services
             // Update remaining quantity if quantity changed
             if (voucher.Quantity != voucher.RemainingQuantity)
                 voucher.RemainingQuantity = voucher.Quantity;
+
+            const string validImagePrefix = "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/";
+
+            voucher.ImageUrl =
+                !string.IsNullOrWhiteSpace(voucher.ImageUrl) &&
+                voucher.ImageUrl.StartsWith(validImagePrefix, StringComparison.OrdinalIgnoreCase)
+                    ? voucher.ImageUrl
+                    : "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/system/voucher_thumbnail.png";
 
             _unitOfWork.Vouchers.Update(voucher);
             await _unitOfWork.SaveChangesAsync();

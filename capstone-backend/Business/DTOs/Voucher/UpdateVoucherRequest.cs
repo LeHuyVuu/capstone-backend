@@ -36,5 +36,7 @@
 
         /// <example>2026-07-15T23:59:59</example>
         public DateTime? EndDate { get; set; }
+
+        public string? ImageUrl { get; set; }
     }
 }

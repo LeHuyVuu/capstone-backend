@@ -12,6 +12,7 @@
 
         public string VoucherTitle { get; set; } = null!;
         public string VoucherDescription { get; set; } = null!;
+        public string? ImageUrl { get; set; }
         public string DiscountType { get; set; } = null!;
         public decimal? DiscountAmount { get; set; }
         public decimal? DiscountPercent { get; set; }

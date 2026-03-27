@@ -42,5 +42,7 @@ namespace capstone_backend.Business.DTOs.Voucher
 
         /// <example>2026-06-11T23:59:59</example>
         public DateTime? EndDate { get; set; }
+
+        public string? ImageUrl { get; set; }
     }
 }
