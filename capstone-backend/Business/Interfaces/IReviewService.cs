@@ -1,4 +1,6 @@
-﻿using capstone_backend.Business.DTOs.Review;
+﻿using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Business.DTOs.Review;
+using capstone_backend.Business.DTOs.VenueLocation;
 
 namespace capstone_backend.Business.Interfaces
 {
@@ -7,6 +9,7 @@ namespace capstone_backend.Business.Interfaces
         Task<int> CheckinAsync(int userId, CheckinRequest request);
         Task<int> DeleteReviewAsync(int userId, int reviewId);
         Task<int> DeleteReviewReplyAsync(int userId, int reviewId);
+        Task<PagedResult<MyReviewResponse>> GetMyReviewsAsync(int value, GetMyReviewRequest request);
         Task<int> ReplyToReviewAsync(int userId, int reviewId, ReviewReplyRequest request);
         Task<int> SubmitReviewAsync(int userId, CreateReviewRequest request);
         Task<ReviewLikeResponse> ToggleLikeReviewAsync(int userId, int reviewId);

@@ -22,6 +22,11 @@ namespace capstone_backend.Business.Mappings
                     src.UpdatedAt.HasValue
                         ? TimezoneUtil.ToVietNamTime(src.UpdatedAt.Value)
                         : (DateTime?)null));
+
+            CreateMap<Review, MyReviewResponse>()
+                .ForMember(dest => dest.VenueId, opt => opt.MapFrom(src => src.VenueId))
+                .ForMember(dest => dest.VenueName, opt => opt.MapFrom(src => src.Venue.Name))
+                .ForMember(dest => dest.VenueCoverImage, opt => opt.MapFrom(src => src.Venue.CoverImage));
         }
     }
 }

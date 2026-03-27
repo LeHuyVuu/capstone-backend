@@ -21,6 +21,24 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Get my reviews
+        /// </summary>
+        [HttpGet("my-reviews")]
+        public async Task<IActionResult> GetMyReviewsAsync([FromQuery] GetMyReviewRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                var result = await _reviewService.GetMyReviewsAsync(userId.Value, request);
+                return OkResponse(result, "Lấy danh sách đánh giá của tôi thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Check-in to a venue location
         /// </summary>
         [HttpPost("check-in-trigger")]

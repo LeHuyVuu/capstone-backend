@@ -1,8 +1,10 @@
 ﻿using Amazon.S3.Model.Internal.MarshallTransformations;
 using AutoMapper;
 using capstone_backend.Business.Common;
+using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Review;
+using capstone_backend.Business.DTOs.VenueLocation;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Moderation;
 using capstone_backend.Business.Jobs.Review;
@@ -11,6 +13,7 @@ using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace capstone_backend.Business.Services
 {
@@ -447,6 +450,73 @@ namespace capstone_backend.Business.Services
 
             _unitOfWork.CheckInHistories.Update(checkIn);
             return await _unitOfWork.SaveChangesAsync();
+        }
+
+        public async Task<PagedResult<MyReviewResponse>> GetMyReviewsAsync(int userId, GetMyReviewRequest request)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Không tìm thấy hồ sơ thành viên");
+
+            request.PageNumber = request.PageNumber <= 0 ? 1 : request.PageNumber;
+            request.PageSize = request.PageSize <= 0 ? 10 : request.PageSize;
+
+            var keyword = request.Keyword?.Trim().ToLower();
+
+            var (reviews, totalCoun) = await _unitOfWork.Reviews.GetPagedAsync(
+                request.PageNumber,
+                request.PageSize,
+                r => r.MemberId == member.Id &&
+                     r.IsDeleted == false &&
+                     (request.VenueId == null || r.VenueId == request.VenueId) &&
+                     (string.IsNullOrWhiteSpace(keyword) || r.Content.ToLower().Contains(keyword) || r.Venue.Name.ToLower().Contains(keyword)),
+                r => request.SortDescending
+                    ? r.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id)
+                    : r.OrderBy(r => r.CreatedAt).ThenBy(r => r.Id),
+                r => r.Include(r => r.Venue).Include(r => r.ReviewReply)
+            );
+
+            var reviewIds = reviews.Select(r => r.Id).ToList();
+            var mediaLookup = await _unitOfWork.Media.GetByListTargetIdsAsync(
+                reviewIds,
+                ReferenceType.REVIEW.ToString()
+            );
+
+            var response = _mapper.Map<List<MyReviewResponse>>(reviews);
+            foreach (var item in response)
+            {
+                var reviewEntity = reviews.FirstOrDefault(r => r.Id == item.Id);
+
+                item.ImageUrls = mediaLookup
+                    .Where(m => m.TargetId == item.Id && !string.IsNullOrWhiteSpace(m.Url))
+                    .Select(m => m.Url!)
+                    .ToList();
+
+                if (reviewEntity?.ReviewReply != null)
+                {
+                    item.Reply = new MyReviewReplyInfo
+                    {
+                        Id = reviewEntity.ReviewReply.Id,
+                        Content = reviewEntity.ReviewReply.Content,
+                        CreatedAt = reviewEntity.ReviewReply.CreatedAt,
+                        UpdatedAt = reviewEntity.ReviewReply.UpdatedAt
+                    };
+                }
+                else
+                {
+                    item.Reply = null;
+                }
+
+                item.HasReply = item.Reply != null;
+            }
+
+            return new PagedResult<MyReviewResponse>
+            {
+                Items = response,
+                TotalCount = totalCoun,
+                PageNumber = request.PageNumber,
+                PageSize = request.PageSize
+            };
         }
     }
 }
