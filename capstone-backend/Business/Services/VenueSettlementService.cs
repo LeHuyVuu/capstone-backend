@@ -51,7 +51,6 @@ namespace capstone_backend.Business.Services
 
             var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
             var pageSize = request.PageSize < 1 ? 10 : request.PageSize;
-            var status = request.Status.ToString().Trim().ToUpper();
 
             // Create order ef
             Func<IQueryable<VenueSettlement>, IOrderedQueryable<VenueSettlement>> orderBy = q =>
@@ -85,7 +84,7 @@ namespace capstone_backend.Business.Services
                 pageSize,
                 vs => vs.IsDeleted == false &&
                     voucherItemIds.Contains(vs.VoucherItemId) &&
-                    (string.IsNullOrEmpty(status) || vs.Status == status) &&
+                    (request.Status == null || vs.Status == request.Status.ToString()) &&
                     (!request.FromDate.HasValue || vs.CreatedAt >= request.FromDate.Value) &&
                     (!request.ToDate.HasValue || vs.CreatedAt <= request.ToDate.Value),
                 orderBy

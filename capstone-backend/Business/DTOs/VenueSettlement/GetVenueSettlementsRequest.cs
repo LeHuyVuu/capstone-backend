@@ -10,7 +10,7 @@ namespace capstone_backend.Business.DTOs.VenueSettlement
         public int PageSize { get; set; } = 10;
 
         /// <example>PENDING</example>
-        public VenueSettlementStatus Status { get; set; } = VenueSettlementStatus.PENDING;
+        public VenueSettlementStatus? Status { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
 
