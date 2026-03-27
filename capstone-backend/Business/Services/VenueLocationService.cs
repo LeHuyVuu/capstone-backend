@@ -348,7 +348,8 @@ public class VenueLocationService : IVenueLocationService
                 };
             }
 
-            response.IsAnonymous = r.IsAnonymous;       
+            response.IsAnonymous = r.IsAnonymous;
+            response.IsOwner = currentMemberId.HasValue && r.MemberId == currentMemberId.Value;
 
             // Lấy ImageUrls từ Media
             if (mediaLookup.Contains(r.Id))
@@ -439,6 +440,17 @@ public class VenueLocationService : IVenueLocationService
         int? year = null,
         bool sortDescending = true)
     {
+        int? currentMemberId = null;
+
+        if (_currentUser?.UserId != null)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
+            if (member != null)
+            {
+                currentMemberId = member.Id;
+            }
+        }
+
         // Kiểm tra venue có tồn tại không
         var venue = await _unitOfWork.VenueLocations.GetByIdWithOwnerAsync(venueId);
         if (venue == null || venue.IsDeleted == true)
@@ -481,9 +493,19 @@ public class VenueLocationService : IVenueLocationService
         var reviewResponses = reviews.Select(r => 
         {
             var response = _mapper.Map<VenueReviewResponse>(r);
-            
+
             // Map member information
-            if (r.Member != null)
+            if (r.IsAnonymous == true)
+            {
+                response.Member = new ReviewMemberInfo
+                {
+                    Id = 0,
+                    UserId = 0,
+                    FullName = "Ẩn danh",
+                    EquippedAccessories = new List<EquippedAccessoryBriefResponse>()
+                };
+            }
+            else if (r.Member != null)
             {
                 response.Member = new ReviewMemberInfo
                 {
@@ -498,6 +520,9 @@ public class VenueLocationService : IVenueLocationService
                     EquippedAccessories = accessoryLookup.TryGetValue(r.MemberId, out var accessories) ? accessories : new List<EquippedAccessoryBriefResponse>()
                 };
             }
+
+            response.IsAnonymous = r.IsAnonymous;
+            response.IsOwner = currentMemberId.HasValue && r.MemberId == currentMemberId.Value;
 
             // Lấy ImageUrls từ Media
             if (mediaLookup.Contains(r.Id))
