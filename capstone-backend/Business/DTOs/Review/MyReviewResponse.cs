@@ -2,6 +2,8 @@
 {
     public class MyReviewResponse
     {
+
+        public bool IsOwner { get; set; }
         public int Id { get; set; }
 
         public int VenueId { get; set; }

@@ -508,6 +508,8 @@ namespace capstone_backend.Business.Services
                 }
 
                 item.HasReply = item.Reply != null;
+
+                item.IsOwner = true;
             }
 
             return new PagedResult<MyReviewResponse>
