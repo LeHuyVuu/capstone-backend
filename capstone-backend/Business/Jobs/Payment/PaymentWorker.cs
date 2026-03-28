@@ -20,7 +20,7 @@ namespace capstone_backend.Business.Jobs.Payment
         [JobDisplayName("Auto Expire Pending Payments")]
         public async Task AutoExpirePendingPaymentsAsync()
         {
-            var thresholdTime = DateTime.UtcNow.AddMinutes(-15);
+            var thresholdTime = DateTime.UtcNow.AddMinutes(-5);
 
             _logger.LogInformation("[AUTO EXPIRE] Checking for pending payments older than {ThresholdTime}", thresholdTime);
 
