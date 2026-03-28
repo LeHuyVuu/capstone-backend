@@ -261,7 +261,6 @@ namespace capstone_backend.Business.Services
 
         public async Task<ReviewLikeResponse> ToggleLikeReviewAsync(int userId, int reviewId)
         {
-            // Use transaction
             await _unitOfWork.BeginTransactionAsync();
             try
             {
@@ -277,33 +276,46 @@ namespace capstone_backend.Business.Services
                 if (existingLike != null)
                 {
                     _unitOfWork.ReviewLikes.Delete(existingLike);
-
                     await _unitOfWork.SaveChangesAsync();
                 }
                 else
                 {
-                    // LIKE
-                    var newLike = new ReviewLike 
-                    { 
-                        ReviewId = reviewId, 
-                        MemberId = member.Id 
+                    var newLike = new ReviewLike
+                    {
+                        ReviewId = reviewId,
+                        MemberId = member.Id
                     };
 
                     try
                     {
                         await _unitOfWork.ReviewLikes.AddAsync(newLike);
-                        await _unitOfWork.SaveChangesAsync(); // Save để chắc chắn insert thành công
+                        await _unitOfWork.SaveChangesAsync();
                     }
                     catch (DbUpdateException)
                     {
-                        throw new Exception("Bạn đã like đánh giá này rồi (Concurreny check)");
+                        throw new Exception("Bạn đã like đánh giá này rồi");
                     }
+
                     isLiked = true;
+
+                    // Cộng điểm ranking cho couple của author review
+                    if (review.MemberId != member.Id)
+                    {
+                        var authorCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(review.MemberId);
+                        if (authorCouple != null)
+                        {
+                            authorCouple.InteractionPoints += 1;
+                            authorCouple.UpdatedAt = DateTime.UtcNow;
+                            _unitOfWork.CoupleProfiles.Update(authorCouple);
+                            await _unitOfWork.SaveChangesAsync();
+                        }
+                    }
                 }
 
                 var realCount = await _unitOfWork.ReviewLikes.CountAsync(x => x.ReviewId == reviewId);
 
                 review.LikeCount = realCount;
+                review.UpdatedAt = DateTime.UtcNow;
                 _unitOfWork.Reviews.Update(review);
                 await _unitOfWork.SaveChangesAsync();
 
