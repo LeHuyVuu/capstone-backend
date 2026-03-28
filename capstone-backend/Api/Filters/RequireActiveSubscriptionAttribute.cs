@@ -132,7 +132,7 @@ public class RequireActiveSubscriptionAttribute : ActionFilterAttribute
                     ErrorStatusCode,
                     context.HttpContext.TraceIdentifier))
                 {
-                    StatusCode = ErrorStatusCode
+                    StatusCode = 200
                 };
                 return;
             }
