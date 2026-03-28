@@ -171,6 +171,9 @@ namespace capstone_backend.Business.Services
 
         public async Task<int> SubmitReviewAsync(int userId, CreateReviewRequest request)
         {
+            if (request.Images != null && request.Images.Count > 5)
+                throw new Exception("Bạn chỉ có thể tải lên tối đa 5 hình ảnh cho mỗi đánh giá");
+
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Không tìm thấy hồ sơ thành viên");
