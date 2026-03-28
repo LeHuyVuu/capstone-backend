@@ -1,6 +1,7 @@
 using capstone_backend.Business.DTOs.Advertisement;
 using capstone_backend.Business.DTOs.Email;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Api.Models;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,7 @@ public class AdvertisementService : IAdvertisementService
     private readonly RefundService _refundService;
     private readonly WalletPaymentService _walletPaymentService;
     private readonly IEmailService _emailService;
+    private readonly ICurrentUser _currentUser;
     private static int _rotationIndex = 0;
     private static readonly object _lock = new object();
     private static readonly Random _random = new Random();
@@ -26,7 +28,8 @@ public class AdvertisementService : IAdvertisementService
         SepayService sepayService,
         RefundService refundService,
         WalletPaymentService walletPaymentService,
-        IEmailService emailService)
+        IEmailService emailService,
+        ICurrentUser currentUser)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -34,6 +37,7 @@ public class AdvertisementService : IAdvertisementService
         _refundService = refundService;
         _walletPaymentService = walletPaymentService;
         _emailService = emailService;
+        _currentUser = currentUser;
     }
 
     public async Task<List<AdvertisementResponse>> GetRotatingAdvertisementsAsync(string? placementType = null)
@@ -54,6 +58,28 @@ public class AdvertisementService : IAdvertisementService
             
             _logger.LogInformation("Filtered ads by PlacementType '{PlacementType}': {Count} ads found", 
                 placementType, venueLocationAds.Count);
+        }
+
+        if (_currentUser.UserId.HasValue)
+        {
+            var memberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
+            if (memberProfile != null)
+            {
+                var latestMoodLog = (await _unitOfWork.MemberMoodLogs.GetByMemberIdAsync(memberProfile.Id))
+                    .FirstOrDefault();
+
+                if (latestMoodLog != null)
+                {
+                    venueLocationAds = venueLocationAds
+                        .Where(vla => vla.Advertisement.MoodTypeId == latestMoodLog.MoodTypeId)
+                        .ToList();
+
+                    _logger.LogInformation(
+                        "Filtered ads by current member mood {MoodTypeId}: {Count} ads found",
+                        latestMoodLog.MoodTypeId,
+                        venueLocationAds.Count);
+                }
+            }
         }
 
         // Nhóm quảng cáo theo priority score
@@ -164,6 +190,15 @@ public class AdvertisementService : IAdvertisementService
     {
         _logger.LogInformation("Creating advertisement for user {UserId}", userId);
 
+        var selectedMoodType = await _unitOfWork.Context.Set<MoodType>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Id == request.MoodTypeId && m.IsDeleted != true && m.IsActive == true);
+
+        if (selectedMoodType == null)
+        {
+            throw new InvalidOperationException("Selected mood type is invalid or inactive");
+        }
+
         // Find VenueOwnerProfile from userId
         var venueOwnerProfile = await _unitOfWork.Context.Set<VenueOwnerProfile>()
             .FirstOrDefaultAsync(vop => vop.UserId == userId && vop.IsDeleted != true);
@@ -190,6 +225,7 @@ public class AdvertisementService : IAdvertisementService
         var advertisement = new Advertisement
         {
             VenueOwnerId = venueOwnerProfile.Id,
+            MoodTypeId = request.MoodTypeId,
             Title = request.Title,
             Content = request.Content,
             BannerUrl = request.BannerUrl,
@@ -255,6 +291,15 @@ public class AdvertisementService : IAdvertisementService
             throw new InvalidOperationException("Desired start date cannot be more than 1 year in the future");
         }
 
+        var selectedMoodType = await _unitOfWork.Context.Set<MoodType>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Id == request.MoodTypeId && m.IsDeleted != true && m.IsActive == true);
+
+        if (selectedMoodType == null)
+        {
+            throw new InvalidOperationException("Selected mood type is invalid or inactive");
+        }
+
         using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
 
         try
@@ -264,6 +309,7 @@ public class AdvertisementService : IAdvertisementService
             advertisement.BannerUrl = request.BannerUrl;
             advertisement.TargetUrl = request.TargetUrl;
             advertisement.PlacementType = request.PlacementType;
+            advertisement.MoodTypeId = request.MoodTypeId;
             advertisement.DesiredStartDate = request.DesiredStartDate;
             advertisement.Status = AdvertisementStatus.DRAFT.ToString();
             advertisement.UpdatedAt = DateTime.UtcNow;
@@ -294,6 +340,8 @@ public class AdvertisementService : IAdvertisementService
                 BannerUrl = updated.BannerUrl ?? string.Empty,
                 TargetUrl = updated.TargetUrl,
                 PlacementType = updated.PlacementType ?? string.Empty,
+                MoodTypeId = updated.MoodTypeId,
+                MoodTypeName = updated.MoodType?.Name,
                 Status = updated.Status ?? AdvertisementStatus.DRAFT.ToString(),
                 RejectionHistory = rejectionHistory,
                 DesiredStartDate = updated.DesiredStartDate,
@@ -301,7 +349,7 @@ public class AdvertisementService : IAdvertisementService
                 UpdatedAt = updated.UpdatedAt
             };
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             await dbTransaction.RollbackAsync();
             throw;
@@ -337,6 +385,8 @@ public class AdvertisementService : IAdvertisementService
                 Title = ad.Title ?? string.Empty,
                 BannerUrl = ad.BannerUrl ?? string.Empty,
                 PlacementType = ad.PlacementType ?? string.Empty,
+                MoodTypeId = ad.MoodTypeId,
+                MoodTypeName = ad.MoodType?.Name,
                 Status = ad.Status ?? AdvertisementStatus.DRAFT.ToString(),
                 RejectionHistory = ParseRejectionHistory(ad.RejectionReason),
                 DesiredStartDate = ad.DesiredStartDate,
@@ -910,6 +960,8 @@ public class AdvertisementService : IAdvertisementService
             BannerUrl = ad.BannerUrl ?? string.Empty,
             TargetUrl = ad.TargetUrl,
             PlacementType = ad.PlacementType ?? string.Empty,
+            MoodTypeId = ad.MoodTypeId,
+            MoodTypeName = ad.MoodType?.Name,
             Status = ad.Status ?? AdvertisementStatus.DRAFT.ToString(),
             RejectionHistory = rejectionHistory,
             DesiredStartDate = ad.DesiredStartDate,
@@ -1247,15 +1299,17 @@ public class AdvertisementService : IAdvertisementService
             try
             {
                 var venueOwner = advertisement.VenueOwner;
-                var ownerEmail = venueOwner?.Email;
+                var ownerEmail = string.Empty;
 
-                if (string.IsNullOrWhiteSpace(ownerEmail) && venueOwner != null)
+                if (venueOwner != null)
                 {
                     var ownerUser = await _unitOfWork.Context.Set<UserAccount>()
                         .AsNoTracking()
                         .FirstOrDefaultAsync(u => u.Id == venueOwner.UserId);
 
-                    ownerEmail = ownerUser?.Email;
+                    ownerEmail = !string.IsNullOrWhiteSpace(ownerUser?.Email)
+                        ? ownerUser.Email
+                        : (venueOwner.Email ?? string.Empty);
                 }
 
                 if (!string.IsNullOrWhiteSpace(ownerEmail))
@@ -1271,7 +1325,7 @@ public class AdvertisementService : IAdvertisementService
 
                     var emailRequest = new SendEmailRequest
                     {
-                        To = "lehuyvuok@gmail.com",
+                        To = ownerEmail,
                         Subject = $"[CoupleMood] Thông báo từ chối quảng cáo: {advertisement.Title ?? request.AdvertisementId.ToString()}",
                         HtmlBody = emailHtml,
                         FromName = "CoupleMood"

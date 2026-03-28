@@ -36,6 +36,7 @@ public class AdvertisementRepository : GenericRepository<Advertisement>, IAdvert
     public async Task<List<Advertisement>> GetByVenueOwnerIdAsync(int venueOwnerId)
     {
         return await _context.Advertisements
+            .Include(a => a.MoodType)
             .Include(a => a.VenueLocationAdvertisements
                 .Where(vla => vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString()))
                 .ThenInclude(vla => vla.Venue)
@@ -49,6 +50,7 @@ public class AdvertisementRepository : GenericRepository<Advertisement>, IAdvert
     public async Task<Advertisement?> GetByIdWithDetailsAsync(int id)
     {
         return await _context.Advertisements
+            .Include(a => a.MoodType)
             .Include(a => a.VenueOwner)
             .Include(a => a.VenueLocationAdvertisements)
                 .ThenInclude(vla => vla.Venue)

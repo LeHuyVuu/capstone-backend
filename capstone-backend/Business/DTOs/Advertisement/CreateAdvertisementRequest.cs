@@ -21,6 +21,9 @@ public class CreateAdvertisementRequest
     [StringLength(50, ErrorMessage = "PlacementType cannot exceed 50 characters")]
     public string PlacementType { get; set; } = null!;
 
+    [Required(ErrorMessage = "MoodTypeId is required")]
+    public int MoodTypeId { get; set; }
+
     /// <summary>
     /// Desired start date for the advertisement campaign
     /// If admin approves after this date, start date will be auto-adjusted to approval date

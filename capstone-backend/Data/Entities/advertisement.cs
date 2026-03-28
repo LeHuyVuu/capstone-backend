@@ -13,6 +13,8 @@ public partial class Advertisement
 
     public int VenueOwnerId { get; set; }
 
+    public int? MoodTypeId { get; set; }
+
     public string? Title { get; set; }
 
     public string? Content { get; set; }
@@ -42,6 +44,10 @@ public partial class Advertisement
 
     [InverseProperty("Advertisement")]
     public virtual ICollection<VenueLocationAdvertisement> VenueLocationAdvertisements { get; set; } = new List<VenueLocationAdvertisement>();
+
+    [ForeignKey("MoodTypeId")]
+    [InverseProperty("Advertisements")]
+    public virtual MoodType? MoodType { get; set; }
 
     [ForeignKey("VenueOwnerId")]
     [InverseProperty("Advertisements")]
