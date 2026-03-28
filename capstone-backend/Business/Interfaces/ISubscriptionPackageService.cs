@@ -7,7 +7,7 @@ public interface ISubscriptionPackageService
     /// <summary>
     /// Get all subscription packages by type (MEMBER or VENUE)
     /// </summary>
-    /// <param name="type">Package type: MEMBER or VENUE</param>
+    /// <param name="type">Package type: MEMBER/VENUEOWNER or VENUE</param>
     /// <returns>List of subscription packages</returns>
     Task<List<SubscriptionPackageDto>> GetSubscriptionPackagesByTypeAsync(string type);
 

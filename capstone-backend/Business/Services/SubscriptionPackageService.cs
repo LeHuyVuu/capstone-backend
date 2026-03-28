@@ -33,9 +33,9 @@ public class SubscriptionPackageService : ISubscriptionPackageService
             var normalizedType = type.ToUpper().Trim();
 
             // Validate type is either MEMBER or VENUE
-            if (normalizedType != "MEMBER" && normalizedType != "VENUE")
+            if (normalizedType != "MEMBER" && normalizedType != "VENUE" && normalizedType != "VENUEOWNER")
             {
-                throw new ArgumentException("Type must be either MEMBER or VENUE", nameof(type));
+                throw new ArgumentException("Type must be either MEMBER, VENUE, or VENUEOWNER", nameof(type));
             }
 
             _logger.LogInformation("Getting subscription packages for type: {Type}", normalizedType);

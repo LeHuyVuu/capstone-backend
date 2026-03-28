@@ -21,9 +21,9 @@ public class SubscriptionPackageController : BaseController
     }
 
     /// <summary>
-    /// Get all subscription packages by type (MEMBER or VENUE)
+    /// Get all subscription packages by type (MEMBER/VENUEOWNER or VENUE)
     /// </summary>
-    /// <param name="type">Package type: MEMBER or VENUE</param>
+    /// <param name="type">Package type: MEMBER/VENUEOWNER or VENUE</param>
     /// <returns>List of subscription packages</returns>
     /// <response code="200">Returns the list of subscription packages</response>
     /// <response code="400">If the type is invalid</response>
