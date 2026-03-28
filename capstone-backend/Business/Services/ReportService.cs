@@ -1,5 +1,6 @@
 using capstone_backend.Business.DTOs.Report;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -78,7 +79,8 @@ public class ReportService : IReportService
     public async Task<bool> ApproveReportAsync(int id)
     {
         var report = await _unitOfWork.Reports.GetFirstAsync(
-            predicate: r => r.Id == id && r.IsDeleted != true
+            predicate: r => r.Id == id && r.IsDeleted != true,
+            include: r => r.Include(r => r.ReportType)
         );
 
         if (report == null)
@@ -110,6 +112,26 @@ public class ReportService : IReportService
                         _unitOfWork.Reviews.Update(review);
                     }
                     break;
+
+                case ReportTargetType.VOUCHER_ITEM:
+                    if (report.ReportType != null &&
+                        string.Equals(report.ReportType.TypeName, "VOUCHER_DISPUTE", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var settlement = await _unitOfWork.VenueSettlements
+                            .GetFirstAsync(s =>
+                                s.VoucherItemId == targetId &&
+                                s.IsDeleted != true);
+
+                        if (settlement != null &&
+                            string.Equals(settlement.Status, VenueSettlementStatus.DISPUTED.ToString(), StringComparison.OrdinalIgnoreCase))
+                        {
+                            settlement.Status = VenueSettlementStatus.CANCELLED.ToString();
+                            settlement.UpdatedAt = DateTime.UtcNow;
+
+                            _unitOfWork.VenueSettlements.Update(settlement);
+                        }
+                    }
+                    break;
             }
         }
 
@@ -124,11 +146,31 @@ public class ReportService : IReportService
     public async Task<bool> RejectReportAsync(int id)
     {
         var report = await _unitOfWork.Reports.GetFirstAsync(
-            predicate: r => r.Id == id && r.IsDeleted != true
+            predicate: r => r.Id == id && r.IsDeleted != true && r.Status != ReportStatus.REJECTED.ToString(),
+            include: r => r.Include(r => r.ReportType)
         );
 
         if (report == null)
             return false;
+
+        if (report.TargetId.HasValue &&
+            report.ReportType != null &&
+            string.Equals(report.ReportType.TypeName, "VOUCHER_DISPUTE", StringComparison.OrdinalIgnoreCase) &&
+            Enum.TryParse<ReportTargetType>(report.TargetType, true, out var targetType) &&
+            targetType == ReportTargetType.VOUCHER_ITEM)
+        {
+            var settlement = await _unitOfWork.Context.VenueSettlements
+                .FirstOrDefaultAsync(s =>
+                    s.VoucherItemId == report.TargetId.Value &&
+                    s.IsDeleted != true);
+
+            if (settlement != null &&
+                string.Equals(settlement.Status, VenueSettlementStatus.DISPUTED.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                settlement.Status = VenueSettlementStatus.PENDING.ToString();
+                settlement.UpdatedAt = DateTime.UtcNow;
+            }
+        }
 
         report.Status = ReportStatus.REJECTED.ToString();
         report.UpdatedAt = DateTime.UtcNow;
@@ -152,6 +194,11 @@ public class ReportService : IReportService
 
         if (reportType == null)
             throw new InvalidOperationException($"Report type không hợp lệ: {request.ReportTypeId}");
+
+        if (string.Equals(reportType.TypeName, "VOUCHER_DISPUTE", StringComparison.OrdinalIgnoreCase))
+        {
+            await HandleVoucherReportAsync(request, reporterProfile, reportType.TypeName);
+        }
 
         var evidenceSnapshot = await BuildEvidenceSnapshotAsync(request.TargetType, request.TargetId);
 
@@ -189,6 +236,72 @@ public class ReportService : IReportService
         };
     }
 
+    private async Task HandleVoucherReportAsync(
+        CreateReportRequest request,
+        MemberProfile reporterProfile,
+        string reportTypeName)
+    {
+        if (request.TargetType != ReportTargetType.VOUCHER_ITEM)
+            throw new InvalidOperationException("Loại report VOUCHER_DISPUTE chỉ áp dụng cho voucher item");
+
+        if (string.IsNullOrWhiteSpace(request.Reason))
+            throw new InvalidOperationException("Vui lòng nhập lý do khiếu nại voucher");
+
+        var voucherItem = await _unitOfWork.Context.VoucherItems
+            .Include(v => v.VoucherItemMember)
+                .ThenInclude(vim => vim.Member)
+            .Include(v => v.Voucher)
+            .FirstOrDefaultAsync(v => v.Id == request.TargetId && v.IsDeleted != true);
+
+        if (voucherItem == null)
+            throw new InvalidOperationException("Voucher item không tồn tại");
+
+        if (voucherItem.VoucherItemMember == null || voucherItem.VoucherItemMember.MemberId != reporterProfile.Id)
+            throw new InvalidOperationException("Bạn không thể khiếu nại voucher không thuộc về mình");
+
+        if (!string.Equals(voucherItem.Status, VoucherItemStatus.USED.ToString(), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Chỉ có thể khiếu nại voucher đã sử dụng");
+
+        if (!voucherItem.UsedAt.HasValue)
+            throw new InvalidOperationException("Không xác định được thời điểm sử dụng voucher");
+
+        if (DateTime.UtcNow > voucherItem.UsedAt.Value.AddDays(3))
+            throw new InvalidOperationException("Đã quá thời hạn khiếu nại 3 ngày");
+
+        var hasPendingReport = await _unitOfWork.Context.Reports
+            .Include(r => r.ReportType)
+            .AnyAsync(r =>
+                r.IsDeleted != true &&
+                r.TargetType == ReportTargetType.VOUCHER_ITEM.ToString() &&
+                r.TargetId == request.TargetId &&
+                r.Status == ReportStatus.PENDING.ToString() &&
+                r.ReportType != null &&
+                r.ReportType.TypeName == reportTypeName);
+
+        if (hasPendingReport)
+            throw new InvalidOperationException("Voucher này đang có khiếu nại đang được xử lý");
+
+        var settlement = await _unitOfWork.Context.VenueSettlements
+            .FirstOrDefaultAsync(s =>
+                s.VoucherItemId == request.TargetId &&
+                s.IsDeleted != true);
+
+        if (settlement == null)
+            throw new InvalidOperationException("Không tìm thấy bản ghi đối soát cho voucher này");
+
+        if (string.Equals(settlement.Status, VenueSettlementStatus.DISPUTED.ToString(), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Voucher này đang trong quá trình khiếu nại");
+
+        if (string.Equals(settlement.Status, VenueSettlementStatus.PAID.ToString(), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Voucher này đã được đối soát thanh toán, không thể khiếu nại");
+
+        if (string.Equals(settlement.Status, VenueSettlementStatus.CANCELLED.ToString(), StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Voucher này đã bị hủy đối soát");
+
+        settlement.Status = VenueSettlementStatus.DISPUTED.ToString();
+        settlement.UpdatedAt = DateTime.UtcNow;
+    }
+
     public async Task<IEnumerable<ReportTypeDto>> GetAllReportTypesAsync()
     {
         var reportTypes = await _unitOfWork.Context.ReportTypes
@@ -216,6 +329,7 @@ public class ReportService : IReportService
             ReportTargetType.REVIEW => await BuildReviewSnapshotAsync(targetId),
             ReportTargetType.USER => await BuildUserSnapshotAsync(targetId),
             ReportTargetType.VENUE => await BuildVenueSnapshotAsync(targetId),
+            ReportTargetType.VOUCHER_ITEM => await BuildVoucherItemSnapshotAsync(targetId),
             _ => null
         };
 
@@ -231,6 +345,34 @@ public class ReportService : IReportService
         };
 
         return JsonSerializer.Serialize(envelope);
+    }
+
+    private async Task<object?> BuildVoucherItemSnapshotAsync(int targetId)
+    {
+        var voucherItem = await _unitOfWork.Context.VoucherItems
+            .Include(v => v.Voucher)
+            .Include(v => v.VoucherItemMember)
+                .ThenInclude(vim => vim.Member)
+            .FirstOrDefaultAsync(v => v.Id == targetId && v.IsDeleted != true);
+
+        if (voucherItem == null)
+            return null;
+
+        return new
+        {
+            voucherItem.Id,
+            voucherItem.VoucherId,
+            voucherItem.VoucherItemMemberId,
+            voucherItem.ItemCode,
+            voucherItem.Status,
+            voucherItem.AcquiredAt,
+            voucherItem.UsedAt,
+            voucherItem.ExpiredAt,
+            VoucherTitle = voucherItem.Voucher?.Title,
+            VoucherStatus = voucherItem.Voucher?.Status,
+            MemberId = voucherItem.VoucherItemMember?.MemberId,
+            MemberName = voucherItem.VoucherItemMember?.Member?.FullName
+        };
     }
 
     private async Task<object?> BuildPostSnapshotAsync(int targetId)

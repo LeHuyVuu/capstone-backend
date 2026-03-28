@@ -3,6 +3,7 @@
     public enum VenueSettlementStatus
     {
         PENDING,
+        DISPUTED,
         PAID,
         CANCELLED
     }

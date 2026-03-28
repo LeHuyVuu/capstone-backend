@@ -6,6 +6,7 @@ namespace capstone_backend.Data.Enums
         COMMENT,
         REVIEW,
         USER,
-        VENUE
+        VENUE,
+        VOUCHER_ITEM
     }
 }
