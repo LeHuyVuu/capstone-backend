@@ -172,8 +172,10 @@ namespace capstone_backend.Business.Services
             if (post == null || post.IsDeleted == true)
                 throw new Exception("Bài viết không tồn tại");
 
-            if (post.Visibility != PostVisibility.PUBLIC.ToString() && post.Status != PostStatus.PUBLISHED.ToString())
+            if (post.Visibility != PostVisibility.PUBLIC.ToString() || post.Status != PostStatus.PUBLISHED.ToString())
                 throw new Exception("Bài viết không hợp lệ để like");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(post.AuthorId);
 
             var notification = new Notification();
             await _unitOfWork.BeginTransactionAsync();
@@ -200,6 +202,15 @@ namespace capstone_backend.Business.Services
                         IsRead = false
                     };
                     await _unitOfWork.Notifications.AddAsync(notification);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+
+                // Update interation score
+                if (couple != null && post.AuthorId != member.Id)
+                {
+                    couple.InteractionPoints += 1;
+                    couple.UpdatedAt = DateTime.UtcNow;
+                    _unitOfWork.CoupleProfiles.Update(couple);
                     await _unitOfWork.SaveChangesAsync();
                 }
 
