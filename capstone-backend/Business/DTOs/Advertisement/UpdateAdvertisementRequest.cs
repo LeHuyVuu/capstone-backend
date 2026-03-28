@@ -16,6 +16,9 @@ public class UpdateAdvertisementRequest
     
     [Required]
     public string PlacementType { get; set; } = null!;
+
+    [Required]
+    public int MoodTypeId { get; set; }
     
     [Required]
     public DateTime DesiredStartDate { get; set; }

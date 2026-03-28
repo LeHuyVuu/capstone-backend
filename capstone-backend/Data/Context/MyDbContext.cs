@@ -226,6 +226,11 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
+            entity.HasIndex(e => e.MoodTypeId).HasDatabaseName("idx_advertisements_mood_type_id");
+
+            entity.HasOne(d => d.MoodType).WithMany(p => p.Advertisements)
+                .HasConstraintName("advertisements_mood_type_id_fkey");
+
             entity.HasOne(d => d.VenueOwner).WithMany(p => p.Advertisements)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("advertisements_venue_owner_id_fkey");

@@ -6,6 +6,8 @@ public class MyAdvertisementResponse
     public string Title { get; set; } = null!;
     public string BannerUrl { get; set; } = null!;
     public string PlacementType { get; set; } = null!;
+    public int? MoodTypeId { get; set; }
+    public string? MoodTypeName { get; set; }
     public string Status { get; set; } = null!; // DRAFT, PENDING, ACTIVE, REJECTED, EXPIRED
     public List<RejectionHistoryEntry>? RejectionHistory { get; set; }
     public DateTime? DesiredStartDate { get; set; }

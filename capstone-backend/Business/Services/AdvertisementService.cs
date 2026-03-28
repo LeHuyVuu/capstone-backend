@@ -164,6 +164,15 @@ public class AdvertisementService : IAdvertisementService
     {
         _logger.LogInformation("Creating advertisement for user {UserId}", userId);
 
+        var selectedMoodType = await _unitOfWork.Context.Set<MoodType>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Id == request.MoodTypeId && m.IsDeleted != true && m.IsActive == true);
+
+        if (selectedMoodType == null)
+        {
+            throw new InvalidOperationException("Selected mood type is invalid or inactive");
+        }
+
         // Find VenueOwnerProfile from userId
         var venueOwnerProfile = await _unitOfWork.Context.Set<VenueOwnerProfile>()
             .FirstOrDefaultAsync(vop => vop.UserId == userId && vop.IsDeleted != true);
@@ -190,6 +199,7 @@ public class AdvertisementService : IAdvertisementService
         var advertisement = new Advertisement
         {
             VenueOwnerId = venueOwnerProfile.Id,
+            MoodTypeId = request.MoodTypeId,
             Title = request.Title,
             Content = request.Content,
             BannerUrl = request.BannerUrl,
@@ -255,6 +265,15 @@ public class AdvertisementService : IAdvertisementService
             throw new InvalidOperationException("Desired start date cannot be more than 1 year in the future");
         }
 
+        var selectedMoodType = await _unitOfWork.Context.Set<MoodType>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Id == request.MoodTypeId && m.IsDeleted != true && m.IsActive == true);
+
+        if (selectedMoodType == null)
+        {
+            throw new InvalidOperationException("Selected mood type is invalid or inactive");
+        }
+
         using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
 
         try
@@ -264,6 +283,7 @@ public class AdvertisementService : IAdvertisementService
             advertisement.BannerUrl = request.BannerUrl;
             advertisement.TargetUrl = request.TargetUrl;
             advertisement.PlacementType = request.PlacementType;
+            advertisement.MoodTypeId = request.MoodTypeId;
             advertisement.DesiredStartDate = request.DesiredStartDate;
             advertisement.Status = AdvertisementStatus.DRAFT.ToString();
             advertisement.UpdatedAt = DateTime.UtcNow;
@@ -294,6 +314,8 @@ public class AdvertisementService : IAdvertisementService
                 BannerUrl = updated.BannerUrl ?? string.Empty,
                 TargetUrl = updated.TargetUrl,
                 PlacementType = updated.PlacementType ?? string.Empty,
+                MoodTypeId = updated.MoodTypeId,
+                MoodTypeName = updated.MoodType?.Name,
                 Status = updated.Status ?? AdvertisementStatus.DRAFT.ToString(),
                 RejectionHistory = rejectionHistory,
                 DesiredStartDate = updated.DesiredStartDate,
@@ -301,7 +323,7 @@ public class AdvertisementService : IAdvertisementService
                 UpdatedAt = updated.UpdatedAt
             };
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             await dbTransaction.RollbackAsync();
             throw;
@@ -337,6 +359,8 @@ public class AdvertisementService : IAdvertisementService
                 Title = ad.Title ?? string.Empty,
                 BannerUrl = ad.BannerUrl ?? string.Empty,
                 PlacementType = ad.PlacementType ?? string.Empty,
+                MoodTypeId = ad.MoodTypeId,
+                MoodTypeName = ad.MoodType?.Name,
                 Status = ad.Status ?? AdvertisementStatus.DRAFT.ToString(),
                 RejectionHistory = ParseRejectionHistory(ad.RejectionReason),
                 DesiredStartDate = ad.DesiredStartDate,
@@ -910,6 +934,8 @@ public class AdvertisementService : IAdvertisementService
             BannerUrl = ad.BannerUrl ?? string.Empty,
             TargetUrl = ad.TargetUrl,
             PlacementType = ad.PlacementType ?? string.Empty,
+            MoodTypeId = ad.MoodTypeId,
+            MoodTypeName = ad.MoodType?.Name,
             Status = ad.Status ?? AdvertisementStatus.DRAFT.ToString(),
             RejectionHistory = rejectionHistory,
             DesiredStartDate = ad.DesiredStartDate,
