@@ -545,7 +545,7 @@ public class AdvertisementService : IAdvertisementService
         var existingPending = await _unitOfWork.Context.Set<AdsOrder>()
             .Where(ao => ao.AdvertisementId == advertisementId
                 && ao.Status == AdsOrderStatus.PENDING.ToString()
-                && ao.CreatedAt > DateTime.UtcNow.AddMinutes(-15))
+                && ao.CreatedAt > DateTime.UtcNow.AddMinutes(-5))
             .FirstOrDefaultAsync();
 
         if (existingPending != null)
@@ -842,7 +842,7 @@ public class AdvertisementService : IAdvertisementService
             }
 
             // 13. Update transaction with VietQR info
-            var expireAt = DateTime.UtcNow.AddMinutes(15);
+            var expireAt = DateTime.UtcNow.AddMinutes(5);
             var (bankName, accountNumber, accountName) = _sepayService.GetBankInfo();
             
             var externalRef = System.Text.Json.JsonSerializer.Serialize(new

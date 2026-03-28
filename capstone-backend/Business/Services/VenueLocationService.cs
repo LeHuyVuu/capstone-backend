@@ -1497,7 +1497,7 @@ public class VenueLocationService : IVenueLocationService
         var existingPending = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
             .Where(vsp => vsp.VenueId == venueId 
                 && vsp.Status == VenueSubscriptionPackageStatus.PENDING_PAYMENT.ToString()
-                && vsp.CreatedAt > DateTime.UtcNow.AddMinutes(-15))
+                && vsp.CreatedAt > DateTime.UtcNow.AddMinutes(-5))
             .FirstOrDefaultAsync();
 
         if (existingPending != null)
@@ -1679,7 +1679,7 @@ public class VenueLocationService : IVenueLocationService
             }
 
             // 12. Update transaction with VietQR info
-            var expireAt = DateTime.UtcNow.AddMinutes(15);
+            var expireAt = DateTime.UtcNow.AddMinutes(5);
             var bankInfo = _sepayService.GetBankInfo();
             
             var externalRef = System.Text.Json.JsonSerializer.Serialize(new
@@ -1795,7 +1795,7 @@ public class VenueLocationService : IVenueLocationService
             .Where(vsp => vsp.OwnerId == ownerProfile.Id
                         && vsp.VenueId == null
                         && vsp.Status == VenueSubscriptionPackageStatus.PENDING_PAYMENT.ToString()
-                        && vsp.CreatedAt > DateTime.UtcNow.AddMinutes(-15))
+                        && vsp.CreatedAt > DateTime.UtcNow.AddMinutes(-5))
             .FirstOrDefaultAsync();
 
         if (existingPending != null)
@@ -1947,7 +1947,7 @@ public class VenueLocationService : IVenueLocationService
                 };
             }
 
-            var expireAt = DateTime.UtcNow.AddMinutes(15);
+            var expireAt = DateTime.UtcNow.AddMinutes(5);
             var bankInfo = _sepayService.GetBankInfo();
 
             var externalRef = JsonSerializer.Serialize(new
