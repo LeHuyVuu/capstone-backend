@@ -318,16 +318,19 @@ public class VenueLocationService : IVenueLocationService
         // Map reviews sang VenueReviewResponse
         var reviewResponses = reviews.Select(r => 
         {
-            var response = _mapper.Map<VenueReviewResponse>(r);          
+            var response = _mapper.Map<VenueReviewResponse>(r);
+            response.IsOwner = currentMemberId.HasValue && r.MemberId == currentMemberId.Value;
 
             // Map member information
-            if (r.IsAnonymous == true)
+            if (r.IsAnonymous == true && response.IsOwner == false)
             {
                 response.Member = new ReviewMemberInfo
                 {
                     Id = 0,
                     UserId = 0,
                     FullName = "Ẩn danh",
+                    DisplayName = "Ẩn danh",
+                    AvatarUrl = "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/system/anonymous.png",
                     EquippedAccessories = new List<EquippedAccessoryBriefResponse>()
                 };
             }
@@ -349,7 +352,6 @@ public class VenueLocationService : IVenueLocationService
             }
 
             response.IsAnonymous = r.IsAnonymous;
-            response.IsOwner = currentMemberId.HasValue && r.MemberId == currentMemberId.Value;
 
             // Lấy ImageUrls từ Media
             if (mediaLookup.Contains(r.Id))
@@ -497,15 +499,18 @@ public class VenueLocationService : IVenueLocationService
         var reviewResponses = reviews.Select(r => 
         {
             var response = _mapper.Map<VenueReviewResponse>(r);
+            response.IsOwner = currentMemberId.HasValue && r.MemberId == currentMemberId.Value;
 
             // Map member information
-            if (r.IsAnonymous == true)
+            if (r.IsAnonymous == true && response.IsOwner == false)
             {
                 response.Member = new ReviewMemberInfo
                 {
                     Id = 0,
                     UserId = 0,
                     FullName = "Ẩn danh",
+                    DisplayName = "Ẩn danh",
+                    AvatarUrl = "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/system/anonymous.png",
                     EquippedAccessories = new List<EquippedAccessoryBriefResponse>()
                 };
             }
@@ -526,7 +531,6 @@ public class VenueLocationService : IVenueLocationService
             }
 
             response.IsAnonymous = r.IsAnonymous;
-            response.IsOwner = currentMemberId.HasValue && r.MemberId == currentMemberId.Value;
 
             // Lấy ImageUrls từ Media
             if (mediaLookup.Contains(r.Id))
