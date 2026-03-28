@@ -364,7 +364,11 @@ public class VenueLocationService : IVenueLocationService
             if (r.ReviewReply != null)
             {
                 if (response.ReviewReply != null)
-                    response.ReviewReply.VenueOwnerProfile = _mapper.Map<VenueOwnerProfileResponse>(venue.VenueOwner);
+                {
+                    response.ReviewReply.VenueId = venue.Id;
+                    response.ReviewReply.VenueName = venue.Name;
+                    response.ReviewReply.VenueCoverImage = venue.CoverImage != null ? DeserializeImages(venue.CoverImage)?.FirstOrDefault() : null;
+                }
             }
 
             // Set MatchedTag bằng tiếng Việt
@@ -537,7 +541,11 @@ public class VenueLocationService : IVenueLocationService
             if (r.ReviewReply != null)
             {
                 if (response.ReviewReply != null)
-                    response.ReviewReply.VenueOwnerProfile = _mapper.Map<VenueOwnerProfileResponse>(venue.VenueOwner);
+                {
+                    response.ReviewReply.VenueId = venue.Id;
+                    response.ReviewReply.VenueName = venue.Name;
+                    response.ReviewReply.VenueCoverImage = venue.CoverImage != null ? DeserializeImages(venue.CoverImage)?.FirstOrDefault() : null;
+                }
             }
 
             // Set MatchedTag bằng tiếng Việt
