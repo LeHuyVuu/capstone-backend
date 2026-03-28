@@ -222,6 +222,9 @@ public static class ServiceExtensions
         // Register Subscription Package Service
         services.AddScoped<ISubscriptionPackageService, SubscriptionPackageService>();
 
+        // Register Subscription Validation Service
+        services.AddScoped<ISubscriptionValidationService, SubscriptionValidationService>();
+
         // Register Couple Invitation Service
         services.AddScoped<ICoupleInvitationService, CoupleInvitationService>();
         

@@ -1244,7 +1244,8 @@ public class VenueLocationService : IVenueLocationService
         var activeSubscriptions = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
             .AsNoTracking()
             .Include(vsp => vsp.Package)
-            .Where(vsp => venueIds.Contains(vsp.VenueId)
+            .Where(vsp => vsp.VenueId.HasValue
+                && venueIds.Contains(vsp.VenueId.Value)
                 && vsp.Status == VenueSubscriptionPackageStatus.ACTIVE.ToString()
                 && (!vsp.StartDate.HasValue || vsp.StartDate.Value <= now)
                 && (!vsp.EndDate.HasValue || vsp.EndDate.Value >= now))
@@ -1253,7 +1254,7 @@ public class VenueLocationService : IVenueLocationService
             .ToListAsync();
 
         return activeSubscriptions
-            .GroupBy(vsp => vsp.VenueId)
+            .GroupBy(vsp => vsp.VenueId!.Value)
             .ToDictionary(group => group.Key, group => group.First());
     }
 
@@ -1732,6 +1733,269 @@ public class VenueLocationService : IVenueLocationService
             { 
                 IsSuccess = false, 
                 Message = "An error occurred while processing payment. Please try again." 
+            };
+        }
+    }
+
+    /// <summary>
+    /// Buy venue-owner subscription without selecting a venue.
+    /// Creates user-level subscription (VenueId = null, OwnerId = current owner).
+    /// </summary>
+    public async Task<SubmitVenueWithPaymentResponse> SubmitSubscriptionOnlyWithPaymentAsync(
+        int userId,
+        SubmitSubscriptionOnlyWithPaymentRequest request)
+    {
+        _logger.LogInformation("Submitting user-level subscription with payment - UserId: {UserId}, PackageId: {PackageId}, Qty: {Qty}, Method: {Method}",
+            userId, request.PackageId, request.Quantity, request.PaymentMethod);
+
+        var ownerProfile = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(userId);
+        if (ownerProfile == null)
+        {
+            return new SubmitVenueWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "Venue owner profile not found"
+            };
+        }
+
+        var package = await _unitOfWork.Context.Set<SubscriptionPackage>()
+            .FirstOrDefaultAsync(p => p.Id == request.PackageId
+                && p.IsDeleted != true
+                && p.IsActive == true);
+
+        if (package == null)
+        {
+            return new SubmitVenueWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "Package not found or inactive"
+            };
+        }
+
+        if (!string.Equals(package.Type, "VENUEOWNER", StringComparison.OrdinalIgnoreCase))
+        {
+            return new SubmitVenueWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "This package is not for venue owner subscription"
+            };
+        }
+
+        if (package.Price == null || package.Price <= 0 ||
+            package.DurationDays == null || package.DurationDays <= 0)
+        {
+            return new SubmitVenueWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "Package configuration is invalid"
+            };
+        }
+
+        var existingPending = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
+            .Where(vsp => vsp.OwnerId == ownerProfile.Id
+                        && vsp.VenueId == null
+                        && vsp.Status == VenueSubscriptionPackageStatus.PENDING_PAYMENT.ToString()
+                        && vsp.CreatedAt > DateTime.UtcNow.AddMinutes(-15))
+            .FirstOrDefaultAsync();
+
+        if (existingPending != null)
+        {
+            return new SubmitVenueWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "There is already a pending subscription payment. Please complete or wait for it to expire."
+            };
+        }
+
+        var totalAmount = package.Price.Value * request.Quantity;
+        var totalDays = package.DurationDays.Value * request.Quantity;
+
+        var paymentMethod = request.PaymentMethod?.ToUpper() ?? "VIETQR";
+        if (paymentMethod != "VIETQR" && paymentMethod != "WALLET")
+        {
+            return new SubmitVenueWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "Invalid payment method. Must be VIETQR or WALLET"
+            };
+        }
+
+        if (paymentMethod == "WALLET")
+        {
+            var (hasSufficient, currentBalance) = await _walletPaymentService.CheckWalletBalanceAsync(userId, totalAmount);
+            if (!hasSufficient)
+            {
+                return new SubmitVenueWithPaymentResponse
+                {
+                    IsSuccess = false,
+                    Message = $"Insufficient wallet balance. Available: {currentBalance:N0} VND, Required: {totalAmount:N0} VND"
+                };
+            }
+        }
+
+        using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
+        try
+        {
+            var subscription = new VenueSubscriptionPackage
+            {
+                VenueId = null,
+                OwnerId = ownerProfile.Id,
+                PackageId = package.Id,
+                Quantity = request.Quantity,
+                StartDate = null,
+                EndDate = null,
+                Status = VenueSubscriptionPackageStatus.PENDING_PAYMENT.ToString(),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.Context.Set<VenueSubscriptionPackage>().AddAsync(subscription);
+            await _unitOfWork.SaveChangesAsync();
+
+            var paymentContent = $"VSP{subscription.Id}";
+
+            var transaction = new Transaction
+            {
+                UserId = userId,
+                Amount = totalAmount,
+                Currency = "VND",
+                PaymentMethod = paymentMethod,
+                TransType = (int)TransactionType.VENUE_SUBSCRIPTION,
+                DocNo = subscription.Id,
+                Description = $"Thanh toán gói {package.PackageName} (x{request.Quantity})",
+                Status = TransactionStatus.PENDING.ToString(),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.Context.Set<Transaction>().AddAsync(transaction);
+            await _unitOfWork.SaveChangesAsync();
+
+            if (paymentMethod == "WALLET")
+            {
+                var walletResult = await _walletPaymentService.ProcessWalletPaymentAsync(
+                    userId,
+                    totalAmount,
+                    transaction.Id,
+                    transaction.Description ?? "Venue subscription payment");
+
+                if (!walletResult.IsSuccess)
+                {
+                    await dbTransaction.RollbackAsync();
+                    return new SubmitVenueWithPaymentResponse
+                    {
+                        IsSuccess = false,
+                        Message = walletResult.Message
+                    };
+                }
+
+                var now = DateTime.UtcNow;
+                subscription.Status = VenueSubscriptionPackageStatus.ACTIVE.ToString();
+                subscription.StartDate = now;
+                subscription.EndDate = now.AddDays(totalDays);
+                subscription.UpdatedAt = now;
+                _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(subscription);
+
+                await _unitOfWork.SaveChangesAsync();
+                await dbTransaction.CommitAsync();
+
+                return new SubmitVenueWithPaymentResponse
+                {
+                    IsSuccess = true,
+                    Message = $"Payment successful via Wallet. Subscription activated. Balance: {walletResult.OldBalance:N0} -> {walletResult.NewBalance:N0} VND",
+                    TransactionId = transaction.Id,
+                    SubscriptionId = subscription.Id,
+                    QrCodeUrl = null,
+                    Amount = totalAmount,
+                    BankInfo = null,
+                    ExpireAt = null,
+                    PaymentContent = paymentContent,
+                    PackageName = package.PackageName ?? "Unknown",
+                    TotalDays = totalDays,
+                    PaymentMethod = "WALLET",
+                    WalletBalance = walletResult.NewBalance
+                };
+            }
+
+            SepayTransactionResponse sepayResponse;
+            try
+            {
+                sepayResponse = await _sepayService.CreateTransactionAsync(
+                    totalAmount,
+                    paymentContent,
+                    paymentContent);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create Sepay transaction for user-level subscription");
+                await dbTransaction.RollbackAsync();
+                return new SubmitVenueWithPaymentResponse
+                {
+                    IsSuccess = false,
+                    Message = "Unable to create payment transaction. Please try again."
+                };
+            }
+
+            if (sepayResponse.Data == null || string.IsNullOrEmpty(sepayResponse.Data.QrCode))
+            {
+                await dbTransaction.RollbackAsync();
+                return new SubmitVenueWithPaymentResponse
+                {
+                    IsSuccess = false,
+                    Message = "Failed to generate QR code. Please try again."
+                };
+            }
+
+            var expireAt = DateTime.UtcNow.AddMinutes(15);
+            var bankInfo = _sepayService.GetBankInfo();
+
+            var externalRef = JsonSerializer.Serialize(new
+            {
+                sepayTransactionId = sepayResponse.Data.Id,
+                qrCodeUrl = sepayResponse.Data.QrCode,
+                qrData = sepayResponse.Data.QrData,
+                orderCode = sepayResponse.Data.OrderCode,
+                expireAt,
+                bankInfo = new { bankInfo.BankName, bankInfo.AccountNumber, bankInfo.AccountName }
+            });
+
+            transaction.ExternalRefCode = externalRef;
+            transaction.UpdatedAt = DateTime.UtcNow;
+            _unitOfWork.Context.Set<Transaction>().Update(transaction);
+            await _unitOfWork.SaveChangesAsync();
+
+            await dbTransaction.CommitAsync();
+
+            return new SubmitVenueWithPaymentResponse
+            {
+                IsSuccess = true,
+                Message = "Package validated successfully. Please complete payment to activate subscription.",
+                TransactionId = transaction.Id,
+                SubscriptionId = subscription.Id,
+                QrCodeUrl = sepayResponse.Data.QrCode,
+                Amount = totalAmount,
+                BankInfo = new BankInfo
+                {
+                    BankName = bankInfo.BankName,
+                    AccountNumber = bankInfo.AccountNumber,
+                    AccountName = bankInfo.AccountName
+                },
+                ExpireAt = expireAt,
+                PaymentContent = paymentContent,
+                PackageName = package.PackageName ?? "Unknown",
+                TotalDays = totalDays,
+                PaymentMethod = paymentMethod
+            };
+        }
+        catch (Exception ex)
+        {
+            await dbTransaction.RollbackAsync();
+            _logger.LogError(ex, "Error in submit subscription-only with payment");
+            return new SubmitVenueWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "An error occurred while processing payment. Please try again."
             };
         }
     }

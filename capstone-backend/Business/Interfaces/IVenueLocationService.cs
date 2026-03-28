@@ -123,6 +123,12 @@ public interface IVenueLocationService
     /// <param name="request">Payment request with packageId and quantity</param>
     /// <returns>Submission result with payment info and QR code</returns>
     Task<SubmitVenueWithPaymentResponse> SubmitVenueWithPaymentAsync(int venueId, int userId, SubmitVenueWithPaymentRequest request);
+
+    /// <summary>
+    /// Buy venue-owner subscription without binding to a specific venue.
+    /// Creates user-level subscription (VenueId = null) and payment transaction.
+    /// </summary>
+    Task<SubmitVenueWithPaymentResponse> SubmitSubscriptionOnlyWithPaymentAsync(int userId, SubmitSubscriptionOnlyWithPaymentRequest request);
     
     /// <summary>
     /// Get pending venue locations for admin approval

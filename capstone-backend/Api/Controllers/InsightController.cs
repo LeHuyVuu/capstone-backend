@@ -1,3 +1,4 @@
+using capstone_backend.Api.Filters;
 using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +31,7 @@ public class InsightController : BaseController
     /// Get venue insights including top searches, hot moods, popular personalities, and mood trends
     /// Cached in Redis for 30 minutes
     /// </summary>
+    [RequireActiveSubscription(UserType = "VENUEOWNER", ErrorMessage = "Bạn cần gia hạn gói để dùng tính năng này", ErrorStatusCode = 402)]
     [HttpGet]
     public async Task<IActionResult> GetVenueInsights([FromQuery] string? timeframe = "all")
     {

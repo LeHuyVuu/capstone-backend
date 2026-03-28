@@ -91,8 +91,20 @@ public class SubscriptionPackageService : ISubscriptionPackageService
                 throw new InvalidOperationException($"Subscription package with ID {id} not found or has been deleted");
             }
 
+            var normalizedPackageName = request.PackageName.Trim();
+            var duplicatedNameExists = await _unitOfWork.Context.Set<SubscriptionPackage>()
+                .AnyAsync(p => p.Id != id
+                               && p.IsDeleted != true
+                               && p.PackageName != null
+                               && p.PackageName.ToUpper() == normalizedPackageName.ToUpper());
+
+            if (duplicatedNameExists)
+            {
+                throw new InvalidOperationException("Package name already exists. PackageName must be unique.");
+            }
+
             // Update package properties
-            package.PackageName = request.PackageName;
+            package.PackageName = normalizedPackageName;
             package.Price = request.Price;
             package.DurationDays = request.DurationDays;
             package.Description = request.Description;
@@ -136,12 +148,12 @@ public class SubscriptionPackageService : ISubscriptionPackageService
 
             var venueSubscriptions = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
                 .Include(vsp => vsp.Package)
-                .Where(vsp => vsp.VenueId == venueId)
+                .Where(vsp => vsp.VenueId.HasValue && vsp.VenueId.Value == venueId)
                 .OrderByDescending(vsp => vsp.CreatedAt)
                 .Select(vsp => new VenueSubscriptionPackageDto
                 {
                     Id = vsp.Id,
-                    VenueId = vsp.VenueId,
+                    VenueId = vsp.VenueId!.Value,
                     PackageId = vsp.PackageId,
                     StartDate = vsp.StartDate,
                     EndDate = vsp.EndDate,
@@ -208,19 +220,19 @@ public class SubscriptionPackageService : ISubscriptionPackageService
             var venueSubscriptions = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
                 .Include(vsp => vsp.Package)
                 .Include(vsp => vsp.Venue)
-                .Where(vsp => venueIds.Contains(vsp.VenueId))
+                .Where(vsp => vsp.VenueId.HasValue && venueIds.Contains(vsp.VenueId.Value))
                 .OrderByDescending(vsp => vsp.CreatedAt)
                 .Select(vsp => new VenueSubscriptionPackageDto
                 {
                     Id = vsp.Id,
-                    VenueId = vsp.VenueId,
+                    VenueId = vsp.VenueId!.Value,
                     PackageId = vsp.PackageId,
                     StartDate = vsp.StartDate,
                     EndDate = vsp.EndDate,
                     Quantity = vsp.Quantity,
                     Status = vsp.Status,
                     CreatedAt = vsp.CreatedAt,
-                    VenueName = vsp.Venue.Name,
+                    VenueName = vsp.Venue != null ? vsp.Venue.Name : null,
                     Package = vsp.Package != null ? new SubscriptionPackageDto
                     {
                         Id = vsp.Package.Id,

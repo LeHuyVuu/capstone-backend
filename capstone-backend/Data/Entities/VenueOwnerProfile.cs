@@ -39,4 +39,7 @@ public partial class VenueOwnerProfile
 
     [InverseProperty("VenueOwner")]
     public virtual ICollection<Voucher> Vouchers { get; set; } = new List<Voucher>();
+
+    [InverseProperty("Owner")]
+    public virtual ICollection<VenueSubscriptionPackage> VenueSubscriptionPackages { get; set; } = new List<VenueSubscriptionPackage>();
 }

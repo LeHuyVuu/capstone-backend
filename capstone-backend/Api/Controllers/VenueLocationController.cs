@@ -398,6 +398,32 @@ public class VenueLocationController : BaseController
         
         return OkResponse(result, "Payment QR code generated. Please scan to complete payment.");
     }
+
+    [HttpPost("subscription-only/submit-with-payment")]
+    [Authorize(Roles = "VENUEOWNER")]
+    [ProducesResponseType(typeof(ApiResponse<SubmitVenueWithPaymentResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    public async Task<IActionResult> SubmitSubscriptionOnlyWithPayment([FromBody] SubmitSubscriptionOnlyWithPaymentRequest request)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (!currentUserId.HasValue)
+        {
+            return UnauthorizedResponse("User not authenticated");
+        }
+
+        _logger.LogInformation("User {UserId} creating user-level subscription with payment", currentUserId);
+
+        var result = await _venueLocationService.SubmitSubscriptionOnlyWithPaymentAsync(currentUserId.Value, request);
+
+        if (!result.IsSuccess)
+        {
+            return OkResponse(result, result.Message);
+        }
+
+        return OkResponse(result, "Payment QR code generated. Please scan to complete payment.");
+    }
     
     /// <summary>ADMIN get list venue pending</summary>
     [HttpGet("pending")]

@@ -12,7 +12,9 @@ public partial class VenueSubscriptionPackage
     [Key]
     public int Id { get; set; }
 
-    public int VenueId { get; set; }
+    public int? VenueId { get; set; }
+
+    public int? OwnerId { get; set; }
 
     public int PackageId { get; set; }
 
@@ -34,5 +36,9 @@ public partial class VenueSubscriptionPackage
 
     [ForeignKey("VenueId")]
     [InverseProperty("VenueSubscriptionPackages")]
-    public virtual VenueLocation Venue { get; set; } = null!;
+    public virtual VenueLocation? Venue { get; set; }
+
+    [ForeignKey("OwnerId")]
+    [InverseProperty("VenueSubscriptionPackages")]
+    public virtual VenueOwnerProfile? Owner { get; set; }
 }
