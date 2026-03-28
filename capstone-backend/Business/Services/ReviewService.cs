@@ -13,6 +13,7 @@ using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace capstone_backend.Business.Services
@@ -481,20 +482,33 @@ namespace capstone_backend.Business.Services
                 r => r.MemberId == member.Id &&
                      r.IsDeleted == false &&
                      (request.VenueId == null || r.VenueId == request.VenueId) &&
-                     (string.IsNullOrWhiteSpace(keyword) || r.Content.ToLower().Contains(keyword) || r.Venue.Name.ToLower().Contains(keyword)),
+                     (string.IsNullOrWhiteSpace(keyword) ||
+                      r.Content.ToLower().Contains(keyword) ||
+                      r.Venue.Name.ToLower().Contains(keyword)),
                 r => request.SortDescending
                     ? r.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id)
                     : r.OrderBy(r => r.CreatedAt).ThenBy(r => r.Id),
-                r => r.Include(r => r.Venue).Include(r => r.ReviewReply)
+                r => r.Include(r => r.Venue)
+                      .Include(r => r.ReviewReply)
             );
 
             var reviewIds = reviews.Select(r => r.Id).ToList();
+
             var mediaLookup = await _unitOfWork.Media.GetByListTargetIdsAsync(
                 reviewIds,
                 ReferenceType.REVIEW.ToString()
             );
 
+            var myLikedReviews = await _unitOfWork.ReviewLikes.GetAsync(
+                rl => rl.MemberId == member.Id && reviewIds.Contains(rl.ReviewId.Value)
+            );
+
+            var likedReviewIds = myLikedReviews
+                .Select(x => x.ReviewId)
+                .ToHashSet();
+
             var response = _mapper.Map<List<MyReviewResponse>>(reviews);
+
             foreach (var item in response)
             {
                 var reviewEntity = reviews.FirstOrDefault(r => r.Id == item.Id);
@@ -520,8 +534,8 @@ namespace capstone_backend.Business.Services
                 }
 
                 item.HasReply = item.Reply != null;
-
                 item.IsOwner = true;
+                item.IsLikedByMe = likedReviewIds.Contains(item.Id);
             }
 
             return new PagedResult<MyReviewResponse>

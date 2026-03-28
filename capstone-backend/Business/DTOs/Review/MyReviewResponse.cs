@@ -4,6 +4,7 @@
     {
 
         public bool IsOwner { get; set; }
+        public bool IsLikedByMe { get; set; }
         public int Id { get; set; }
 
         public int VenueId { get; set; }

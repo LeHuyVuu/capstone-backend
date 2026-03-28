@@ -320,6 +320,7 @@ public class VenueLocationService : IVenueLocationService
         {
             var response = _mapper.Map<VenueReviewResponse>(r);
             response.IsOwner = currentMemberId.HasValue && r.MemberId == currentMemberId.Value;
+            response.IsLikedByMe = r.ReviewLikes != null && currentMemberId.HasValue && r.ReviewLikes.Any(rl => rl.MemberId == currentMemberId.Value);
 
             // Map member information
             if (r.IsAnonymous == true && response.IsOwner == false)
@@ -500,6 +501,7 @@ public class VenueLocationService : IVenueLocationService
         {
             var response = _mapper.Map<VenueReviewResponse>(r);
             response.IsOwner = currentMemberId.HasValue && r.MemberId == currentMemberId.Value;
+            response.IsLikedByMe = r.ReviewLikes != null && currentMemberId.HasValue && r.ReviewLikes.Any(rl => rl.MemberId == currentMemberId.Value);
 
             // Map member information
             if (r.IsAnonymous == true && response.IsOwner == false)
