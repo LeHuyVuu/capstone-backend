@@ -35,6 +35,7 @@ public class SearchHistoryService : ISearchHistoryService
         }
         var memberId = memberProfile.Id;
         var query = _unitOfWork.Context.Set<SearchHistory>()
+            .AsNoTracking()
             .Where(h => h.MemberId == memberId && h.IsDeleted != true);
 
         var total = await query.CountAsync(cancellationToken);
@@ -55,11 +56,45 @@ public class SearchHistoryService : ISearchHistoryService
 
     public async Task<SearchHistoryResponse> CreateSearchHistoryAsync(int? memberId, string keyword, object? filterCriteria, int resultCount, CancellationToken cancellationToken = default)
     {
+        var normalizedKeyword = NormalizeKeyword(keyword);
+        if (string.IsNullOrWhiteSpace(normalizedKeyword))
+        {
+            _logger.LogDebug("Skip creating search history because keyword is empty for member {MemberId}", memberId);
+            return new SearchHistoryResponse
+            {
+                Id = 0,
+                MemberId = memberId,
+                Keyword = string.Empty,
+                ResultCount = resultCount,
+                SearchedAt = DateTime.UtcNow
+            };
+        }
+
+        var serializedFilterCriteria = filterCriteria != null ? JsonSerializer.Serialize(filterCriteria) : null;
+
+        var existingHistory = await _unitOfWork.Context.Set<SearchHistory>()
+            .AsNoTracking()
+            .Where(h => h.MemberId == memberId && h.IsDeleted != true)
+            .OrderByDescending(h => h.SearchedAt)
+            .FirstOrDefaultAsync(h =>
+                h.Keyword == normalizedKeyword &&
+                h.FilterCriteria == serializedFilterCriteria,
+                cancellationToken);
+
+        if (existingHistory != null)
+        {
+            _logger.LogDebug(
+                "Skipped duplicate search history for member {MemberId} - keyword: {Keyword}",
+                memberId,
+                normalizedKeyword);
+            return MapToResponse(existingHistory);
+        }
+
         var searchHistory = new SearchHistory
         {
             MemberId = memberId,
-            Keyword = keyword,
-            FilterCriteria = filterCriteria != null ? JsonSerializer.Serialize(filterCriteria) : null,
+            Keyword = normalizedKeyword,
+            FilterCriteria = serializedFilterCriteria,
             ResultCount = resultCount,
             SearchedAt = DateTime.UtcNow,
             IsDeleted = false
@@ -133,5 +168,10 @@ public class SearchHistoryService : ISearchHistoryService
             ResultCount = history.ResultCount,
             SearchedAt = history.SearchedAt
         };
+    }
+
+    private static string NormalizeKeyword(string keyword)
+    {
+        return string.IsNullOrWhiteSpace(keyword) ? string.Empty : keyword.Trim();
     }
 }
