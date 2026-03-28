@@ -1,6 +1,7 @@
 using capstone_backend.Business.DTOs.Advertisement;
 using capstone_backend.Business.DTOs.Email;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Api.Models;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +17,7 @@ public class AdvertisementService : IAdvertisementService
     private readonly RefundService _refundService;
     private readonly WalletPaymentService _walletPaymentService;
     private readonly IEmailService _emailService;
+    private readonly ICurrentUser _currentUser;
     private static int _rotationIndex = 0;
     private static readonly object _lock = new object();
     private static readonly Random _random = new Random();
@@ -26,7 +28,8 @@ public class AdvertisementService : IAdvertisementService
         SepayService sepayService,
         RefundService refundService,
         WalletPaymentService walletPaymentService,
-        IEmailService emailService)
+        IEmailService emailService,
+        ICurrentUser currentUser)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -34,6 +37,7 @@ public class AdvertisementService : IAdvertisementService
         _refundService = refundService;
         _walletPaymentService = walletPaymentService;
         _emailService = emailService;
+        _currentUser = currentUser;
     }
 
     public async Task<List<AdvertisementResponse>> GetRotatingAdvertisementsAsync(string? placementType = null)
@@ -54,6 +58,28 @@ public class AdvertisementService : IAdvertisementService
             
             _logger.LogInformation("Filtered ads by PlacementType '{PlacementType}': {Count} ads found", 
                 placementType, venueLocationAds.Count);
+        }
+
+        if (_currentUser.UserId.HasValue)
+        {
+            var memberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
+            if (memberProfile != null)
+            {
+                var latestMoodLog = (await _unitOfWork.MemberMoodLogs.GetByMemberIdAsync(memberProfile.Id))
+                    .FirstOrDefault();
+
+                if (latestMoodLog != null)
+                {
+                    venueLocationAds = venueLocationAds
+                        .Where(vla => vla.Advertisement.MoodTypeId == latestMoodLog.MoodTypeId)
+                        .ToList();
+
+                    _logger.LogInformation(
+                        "Filtered ads by current member mood {MoodTypeId}: {Count} ads found",
+                        latestMoodLog.MoodTypeId,
+                        venueLocationAds.Count);
+                }
+            }
         }
 
         // Nhóm quảng cáo theo priority score
