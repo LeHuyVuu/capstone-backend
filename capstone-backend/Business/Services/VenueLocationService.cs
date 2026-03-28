@@ -1875,6 +1875,7 @@ public class VenueLocationService : IVenueLocationService
                     if (successfulTransaction != null && successfulTransaction.Amount > 0)
                     {
                         var venueOwner = await _unitOfWork.Context.Set<VenueOwnerProfile>()
+                            .Include(vop => vop.User)
                             .FirstOrDefaultAsync(vop => vop.Id == venue.VenueOwnerId);
 
                         if (venueOwner != null)
@@ -1917,9 +1918,12 @@ public class VenueLocationService : IVenueLocationService
                                         request.Reason ?? "Không đạt yêu cầu"
                                     );
 
+                                    var ownerEmail = !string.IsNullOrWhiteSpace(venueOwner.User?.Email)
+                                        ? venueOwner.User.Email
+                                        : venueOwner.Email;
                                     var emailRequest = new capstone_backend.Business.DTOs.Email.SendEmailRequest
                                     {
-                                        To = "lehuyvuok@gmail.com",
+                                        To = ownerEmail ?? string.Empty,
                                         Subject = $"[CoupleMood] Thông báo hoàn tiền - Địa điểm {venue.Name} bị từ chối",
                                         HtmlBody = emailHtml,
                                         FromName = "CoupleMood"
@@ -1936,6 +1940,10 @@ public class VenueLocationService : IVenueLocationService
                                         {
                                             _logger.LogWarning("⚠️ Failed to send refund email to {Email}", emailRequest.To);
                                         }
+                                    }
+                                    else
+                                    {
+                                        _logger.LogWarning("⚠️ Skip refund notification email: venue owner {VenueOwnerId} has no email", venueOwner.Id);
                                     }
                                 }
                                 catch (Exception emailEx)
@@ -2034,14 +2042,17 @@ public class VenueLocationService : IVenueLocationService
                             {
                                 var emailHtml = EmailAccountInfoTemplate.GetStaffAccountInfoEmailContent(
                                     venueOwner.BusinessName ?? "Venue Owner",
-                                    venue.Name,
+                                    venue.Name ?? "Địa điểm",
                                     staffEmail,
                                     staffPassword
                                 );
 
+                                var ownerEmail = !string.IsNullOrWhiteSpace(venueOwner.User?.Email)
+                                    ? venueOwner.User.Email
+                                    : venueOwner.Email;
                                 var emailRequest = new capstone_backend.Business.DTOs.Email.SendEmailRequest
                                 {
-                                    To = "lehuyvuok@gmail.com",
+                                    To = ownerEmail ?? string.Empty,
                                     Subject = $"[CoupleMood] Địa điểm {venue.Name} đã được phê duyệt - Thông tin tài khoản STAFF",
                                     HtmlBody = emailHtml,
                                     FromName = "CoupleMood"

@@ -1247,15 +1247,17 @@ public class AdvertisementService : IAdvertisementService
             try
             {
                 var venueOwner = advertisement.VenueOwner;
-                var ownerEmail = venueOwner?.Email;
+                var ownerEmail = string.Empty;
 
-                if (string.IsNullOrWhiteSpace(ownerEmail) && venueOwner != null)
+                if (venueOwner != null)
                 {
                     var ownerUser = await _unitOfWork.Context.Set<UserAccount>()
                         .AsNoTracking()
                         .FirstOrDefaultAsync(u => u.Id == venueOwner.UserId);
 
-                    ownerEmail = ownerUser?.Email;
+                    ownerEmail = !string.IsNullOrWhiteSpace(ownerUser?.Email)
+                        ? ownerUser.Email
+                        : (venueOwner.Email ?? string.Empty);
                 }
 
                 if (!string.IsNullOrWhiteSpace(ownerEmail))
@@ -1271,7 +1273,7 @@ public class AdvertisementService : IAdvertisementService
 
                     var emailRequest = new SendEmailRequest
                     {
-                        To = "lehuyvuok@gmail.com",
+                        To = ownerEmail,
                         Subject = $"[CoupleMood] Thông báo từ chối quảng cáo: {advertisement.Title ?? request.AdvertisementId.ToString()}",
                         HtmlBody = emailHtml,
                         FromName = "CoupleMood"
