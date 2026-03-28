@@ -359,7 +359,8 @@ public class SepayWebhookController : ControllerBase
                 if (subscription.Venue != null)
                 {
                     // Only update if venue is still in valid state
-                    if (subscription.Venue.Status == VenueLocationStatus.DRAFTED.ToString())
+                    if (subscription.Venue.Status == VenueLocationStatus.DRAFTED.ToString()
+                        || subscription.Venue.Status == VenueLocationStatus.INACTIVE.ToString())
                     {
                         subscription.Venue.Status = VenueLocationStatus.PENDING.ToString();
                         subscription.Venue.UpdatedAt = now;

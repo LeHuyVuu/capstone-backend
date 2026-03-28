@@ -1420,12 +1420,15 @@ public class VenueLocationService : IVenueLocationService
         }
 
         // 3. Validate venue status
-        if (venue.Status != VenueLocationStatus.DRAFTED.ToString())
+        var isAllowedSubmitStatus = venue.Status == VenueLocationStatus.DRAFTED.ToString()
+            || venue.Status == VenueLocationStatus.INACTIVE.ToString();
+
+        if (!isAllowedSubmitStatus)
         {
             return new SubmitVenueWithPaymentResponse 
             { 
                 IsSuccess = false, 
-                Message = $"Venue status is {venue.Status}, cannot submit." 
+                Message = $"Venue status is {venue.Status}, cannot submit. Only DRAFTED or INACTIVE venues can be submitted." 
             };
         }
 

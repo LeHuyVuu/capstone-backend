@@ -14,6 +14,7 @@ using capstone_backend.Business.Jobs.Notification;
 using capstone_backend.Business.Jobs.Payment;
 using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Business.Jobs.VenueSettlement;
+using capstone_backend.Business.Jobs.VenueSubscription;
 using capstone_backend.Business.Jobs.Voucher;
 using capstone_backend.Business.Services;
 using capstone_backend.Data.Context;
@@ -249,6 +250,7 @@ public static class ServiceExtensions
         services.AddScoped<ILeaderboardWorker, LeaderboardWorker>();
         services.AddScoped<IVenueSettlementWorker, VenueSettlementWorker>();
         services.AddScoped<IPaymentWorker, PaymentWorker>();
+        services.AddScoped<IVenueSubscriptionWorker, VenueSubscriptionWorker>();
         services.AddScoped<INotificationWorker, NotificationWorker>();
 
         // Register Messaging Service

@@ -9,6 +9,7 @@ using capstone_backend.Business.Jobs.Media;
 using capstone_backend.Business.Jobs.Payment;
 using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Business.Jobs.VenueSettlement;
+using capstone_backend.Business.Jobs.VenueSubscription;
 using capstone_backend.Business.Mappings;
 using capstone_backend.Extensions;
 using capstone_backend.Hubs;
@@ -261,6 +262,15 @@ using (var scope = serviceProvider.CreateScope())
         "auto-expire-pending-payments",
         job => job.AutoExpirePendingPaymentsAsync(),
         "*/5 * * * *", // Every 5 minutes
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
+    recurringJobManager.AddOrUpdate<IVenueSubscriptionWorker>(
+        "auto-expire-venue-subscriptions-daily",
+        job => job.AutoExpireVenueSubscriptionsDailyAsync(),
+        Cron.Daily(1), // Once per day at 01:00
         new RecurringJobOptions
         {
             TimeZone = vnTz

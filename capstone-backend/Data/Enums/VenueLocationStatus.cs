@@ -5,6 +5,7 @@ namespace capstone_backend.Data.Enums
         DRAFTED,
         PENDING,
         ACTIVE,
+        INACTIVE,
         REJECTED
     }
 }
