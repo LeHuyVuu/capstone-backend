@@ -861,6 +861,10 @@ public partial class MyDbContext : DbContext
             entity.HasKey(e => e.Id).HasName("subscription_packages_pkey");
 
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
+            entity.Property(e => e.FeatureFlags)
+                .HasColumnType("jsonb")
+                .HasColumnName("feature_flags")
+                .HasDefaultValueSql("'{}'::jsonb");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.Price).HasDefaultValueSql("0");

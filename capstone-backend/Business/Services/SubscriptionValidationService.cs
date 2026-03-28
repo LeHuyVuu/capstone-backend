@@ -3,6 +3,7 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace capstone_backend.Business.Services;
 
@@ -30,7 +31,8 @@ public class SubscriptionValidationService : ISubscriptionValidationService
     /// </summary>
     public async Task<(bool isActive, string? errorMessage)> ValidateSubscriptionAsync(
         int userId, 
-        string userType)
+        string userType,
+        string? featureCode = null)
     {
         try
         {
@@ -51,11 +53,11 @@ public class SubscriptionValidationService : ISubscriptionValidationService
             // Route to appropriate validation method based on user type
             if (normalizedType.Contains("MEMBER"))
             {
-                return await ValidateMemberSubscriptionAsync(userId);
+                return await ValidateMemberSubscriptionAsync(userId, featureCode);
             }
             else if (normalizedType.Contains("VENUEOWNER"))
             {
-                return await ValidateVenueOwnerSubscriptionAsync(userId);
+                return await ValidateVenueOwnerSubscriptionAsync(userId, featureCode);
             }
             else
             {
@@ -73,7 +75,7 @@ public class SubscriptionValidationService : ISubscriptionValidationService
     /// <summary>
     /// Validate Member subscription
     /// </summary>
-    public async Task<(bool isActive, string? errorMessage)> ValidateMemberSubscriptionAsync(int userId)
+    public async Task<(bool isActive, string? errorMessage)> ValidateMemberSubscriptionAsync(int userId, string? featureCode = null)
     {
         try
         {
@@ -100,6 +102,8 @@ public class SubscriptionValidationService : ISubscriptionValidationService
                     msp.EndDate.HasValue &&
                     msp.EndDate.Value >= now
                 )
+                .Include(msp => msp.Package)
+                .OrderByDescending(msp => msp.EndDate)
                 .FirstOrDefaultAsync();
 
             if (activeSub == null)
@@ -117,6 +121,16 @@ public class SubscriptionValidationService : ISubscriptionValidationService
                 activeSub.Id,
                 activeSub.EndDate);
 
+            if (!HasFeatureAccess(activeSub.Package?.FeatureFlags, featureCode))
+            {
+                _logger.LogInformation(
+                    "Feature access denied for member ID: {MemberId}, FeatureCode: {FeatureCode}, PackageId: {PackageId}",
+                    memberProfile.Id,
+                    featureCode,
+                    activeSub.PackageId);
+                return (false, "Gói hiện tại không hỗ trợ tính năng này");
+            }
+
             return (true, null);
         }
         catch (Exception ex)
@@ -129,7 +143,7 @@ public class SubscriptionValidationService : ISubscriptionValidationService
     /// <summary>
     /// Validate VenueOwner user-level subscription
     /// </summary>
-    public async Task<(bool isActive, string? errorMessage)> ValidateVenueOwnerSubscriptionAsync(int userId)
+    public async Task<(bool isActive, string? errorMessage)> ValidateVenueOwnerSubscriptionAsync(int userId, string? featureCode = null)
     {
         try
         {
@@ -157,6 +171,8 @@ public class SubscriptionValidationService : ISubscriptionValidationService
                     vsp.EndDate.HasValue &&
                     vsp.EndDate.Value >= now
                 )
+                .Include(vsp => vsp.Package)
+                .OrderByDescending(vsp => vsp.EndDate)
                 .FirstOrDefaultAsync();
 
             if (userLevelSub == null)
@@ -174,6 +190,16 @@ public class SubscriptionValidationService : ISubscriptionValidationService
                 userLevelSub.Id,
                 userLevelSub.EndDate);
 
+            if (!HasFeatureAccess(userLevelSub.Package?.FeatureFlags, featureCode))
+            {
+                _logger.LogInformation(
+                    "Feature access denied for venue owner ID: {OwnerId}, FeatureCode: {FeatureCode}, PackageId: {PackageId}",
+                    venueOwner.Id,
+                    featureCode,
+                    userLevelSub.PackageId);
+                return (false, "Gói hiện tại không hỗ trợ tính năng này");
+            }
+
             return (true, null);
         }
         catch (Exception ex)
@@ -181,5 +207,38 @@ public class SubscriptionValidationService : ISubscriptionValidationService
             _logger.LogError(ex, "Error validating VenueOwner subscription for user ID: {UserId}", userId);
             throw;
         }
+    }
+
+    private bool HasFeatureAccess(JsonDocument? featureFlags, string? featureCode)
+    {
+        if (string.IsNullOrWhiteSpace(featureCode))
+        {
+            return true;
+        }
+
+        if (featureFlags == null || featureFlags.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        var normalizedFeature = featureCode.Trim();
+        foreach (var property in featureFlags.RootElement.EnumerateObject())
+        {
+            if (!string.Equals(property.Name, normalizedFeature, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return property.Value.ValueKind switch
+            {
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                JsonValueKind.String => bool.TryParse(property.Value.GetString(), out var boolValue) && boolValue,
+                JsonValueKind.Number => property.Value.TryGetInt32(out var numberValue) && numberValue > 0,
+                _ => false
+            };
+        }
+
+        return false;
     }
 }

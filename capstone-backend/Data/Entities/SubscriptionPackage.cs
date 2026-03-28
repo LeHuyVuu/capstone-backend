@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Data.Entities;
@@ -29,6 +30,8 @@ public partial class SubscriptionPackage
     public bool? IsDeleted { get; set; }
 
     public bool? IsActive { get; set; }
+
+    public JsonDocument? FeatureFlags { get; set; }
 
     [InverseProperty("Package")]
     public virtual ICollection<MemberSubscriptionPackage> MemberSubscriptionPackages { get; set; } = new List<MemberSubscriptionPackage>();

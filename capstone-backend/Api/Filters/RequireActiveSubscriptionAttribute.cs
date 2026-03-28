@@ -39,6 +39,12 @@ public class RequireActiveSubscriptionAttribute : ActionFilterAttribute
     /// User type to validate: "MEMBER", "VENUE_OWNER", or null for auto-detect from role claim
     /// </summary>
     public string? UserType { get; set; }
+
+    /// <summary>
+    /// Optional feature code to validate against package feature flags
+    /// Example: "VENUE_INSIGHT"
+    /// </summary>
+    public string? FeatureCode { get; set; }
     
     /// <summary>
     /// Custom error message
@@ -114,7 +120,7 @@ public class RequireActiveSubscriptionAttribute : ActionFilterAttribute
             }
 
             // Validate subscription
-            var (isActive, message) = await validationService.ValidateSubscriptionAsync(userId, userType);
+            var (isActive, message) = await validationService.ValidateSubscriptionAsync(userId, userType, FeatureCode);
 
             if (!isActive)
             {

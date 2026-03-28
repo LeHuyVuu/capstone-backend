@@ -31,7 +31,7 @@ public class InsightController : BaseController
     /// Get venue insights including top searches, hot moods, popular personalities, and mood trends
     /// Cached in Redis for 30 minutes
     /// </summary>
-    [RequireActiveSubscription(UserType = "VENUEOWNER", ErrorMessage = "Bạn cần gia hạn gói để dùng tính năng này", ErrorStatusCode = 402)]
+    [RequireActiveSubscription(UserType = "VENUEOWNER", FeatureCode = "VENUE_INSIGHT", ErrorMessage = "Bạn cần gia hạn gói để dùng tính năng này", ErrorStatusCode = 402)]
     [HttpGet]
     public async Task<IActionResult> GetVenueInsights([FromQuery] string? timeframe = "all")
     {
