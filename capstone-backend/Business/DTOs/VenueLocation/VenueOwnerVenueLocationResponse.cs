@@ -31,6 +31,9 @@ public class VenueOwnerVenueLocationResponse
     public List<RejectionRecord>? RejectionDetails { get; set; }  // ✅ Đổi thành List trực tiếp
     public DateTime? CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public int? DurationDays { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
 
     /// <summary>
     /// Location Tags information including couple mood type and personality type (many-to-many)

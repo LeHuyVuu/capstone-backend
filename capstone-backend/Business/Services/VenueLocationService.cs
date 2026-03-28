@@ -1036,6 +1036,9 @@ public class VenueLocationService : IVenueLocationService
         // Get venue locations with LocationTag details
         var venueLocations = await _unitOfWork.VenueLocations.GetByVenueOwnerIdWithLocationTagAsync(venueOwnerProfile.Id);
 
+        var activeSubscriptionsByVenueId = await GetActiveVenueSubscriptionsByVenueIdsAsync(
+            venueLocations.Select(v => v.Id).ToList());
+
         // Map to response DTOs
         var responses = venueLocations.Select(v => new VenueOwnerVenueLocationResponse
         {
@@ -1063,6 +1066,15 @@ public class VenueLocationService : IVenueLocationService
             RejectionDetails = string.IsNullOrWhiteSpace(v.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(v.RejectReason),
             CreatedAt = v.CreatedAt,
             UpdatedAt = v.UpdatedAt,
+            DurationDays = activeSubscriptionsByVenueId.TryGetValue(v.Id, out var activeSubscription)
+                ? CalculateActualDurationDays(activeSubscription)
+                : null,
+            StartDate = activeSubscriptionsByVenueId.TryGetValue(v.Id, out activeSubscription)
+                ? activeSubscription.StartDate
+                : null,
+            EndDate = activeSubscriptionsByVenueId.TryGetValue(v.Id, out activeSubscription)
+                ? activeSubscription.EndDate
+                : null,
             LocationTags = CreateLocationTagsInfo(v)
         }).ToList();
 
@@ -1094,6 +1106,8 @@ public class VenueLocationService : IVenueLocationService
             return null;
         }
 
+        var activeSubscriptionsByVenueId = await GetActiveVenueSubscriptionsByVenueIdsAsync(new List<int> { venueId });
+
         // Map to response DTO
         var response = new VenueOwnerVenueLocationResponse
         {
@@ -1121,6 +1135,15 @@ public class VenueLocationService : IVenueLocationService
             RejectionDetails = string.IsNullOrWhiteSpace(venue.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(venue.RejectReason),
             CreatedAt = venue.CreatedAt,
             UpdatedAt = venue.UpdatedAt,
+            DurationDays = activeSubscriptionsByVenueId.TryGetValue(venue.Id, out var activeSubscription)
+                ? CalculateActualDurationDays(activeSubscription)
+                : null,
+            StartDate = activeSubscriptionsByVenueId.TryGetValue(venue.Id, out activeSubscription)
+                ? activeSubscription.StartDate
+                : null,
+            EndDate = activeSubscriptionsByVenueId.TryGetValue(venue.Id, out activeSubscription)
+                ? activeSubscription.EndDate
+                : null,
             LocationTags = CreateLocationTagsInfo(venue)
         };
 
@@ -1156,6 +1179,9 @@ public class VenueLocationService : IVenueLocationService
                         .ThenInclude(lt => lt!.CouplePersonalityType)
                 .AsSplitQuery());
 
+        var activeSubscriptionsByVenueId = await GetActiveVenueSubscriptionsByVenueIdsAsync(
+            venueLocations.Select(v => v.Id).ToList());
+
         var responses = venueLocations
             .Select(v => new VenueOwnerVenueLocationResponse
             {
@@ -1183,12 +1209,63 @@ public class VenueLocationService : IVenueLocationService
                 RejectionDetails = string.IsNullOrWhiteSpace(v.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(v.RejectReason),
                 CreatedAt = v.CreatedAt,
                 UpdatedAt = v.UpdatedAt,
+                DurationDays = activeSubscriptionsByVenueId.TryGetValue(v.Id, out var activeSubscription)
+                    ? CalculateActualDurationDays(activeSubscription)
+                    : null,
+                StartDate = activeSubscriptionsByVenueId.TryGetValue(v.Id, out activeSubscription)
+                    ? activeSubscription.StartDate
+                    : null,
+                EndDate = activeSubscriptionsByVenueId.TryGetValue(v.Id, out activeSubscription)
+                    ? activeSubscription.EndDate
+                    : null,
                 LocationTags = CreateLocationTagsInfo(v)
             }).ToList();
 
         _logger.LogInformation("Retrieved {Count} system venue locations with status {Status}, search {Search} (Total {TotalCount})", responses.Count, status, search, totalCount);
 
         return new PagedResult<VenueOwnerVenueLocationResponse>(responses, page, pageSize, totalCount);
+    }
+
+    private async Task<Dictionary<int, VenueSubscriptionPackage>> GetActiveVenueSubscriptionsByVenueIdsAsync(List<int> venueIds)
+    {
+        if (venueIds.Count == 0)
+        {
+            return new Dictionary<int, VenueSubscriptionPackage>();
+        }
+
+        var now = DateTime.UtcNow;
+
+        var activeSubscriptions = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
+            .AsNoTracking()
+            .Include(vsp => vsp.Package)
+            .Where(vsp => venueIds.Contains(vsp.VenueId)
+                && vsp.Status == VenueSubscriptionPackageStatus.ACTIVE.ToString()
+                && (!vsp.StartDate.HasValue || vsp.StartDate.Value <= now)
+                && (!vsp.EndDate.HasValue || vsp.EndDate.Value >= now))
+            .OrderByDescending(vsp => vsp.CreatedAt)
+            .ThenByDescending(vsp => vsp.Id)
+            .ToListAsync();
+
+        return activeSubscriptions
+            .GroupBy(vsp => vsp.VenueId)
+            .ToDictionary(group => group.Key, group => group.First());
+    }
+
+    private static int? CalculateActualDurationDays(VenueSubscriptionPackage subscription)
+    {
+        if (subscription.StartDate.HasValue && subscription.EndDate.HasValue)
+        {
+            var durationDays = (int)Math.Ceiling((subscription.EndDate.Value - subscription.StartDate.Value).TotalDays);
+            return Math.Max(durationDays, 0);
+        }
+
+        if (subscription.Package?.DurationDays.HasValue == true)
+        {
+            var quantity = subscription.Quantity ?? 1;
+            return subscription.Package.DurationDays.Value * quantity;
+        }
+
+        return null;
     }
 
     private static string EscapeSqlLikePattern(string input)
