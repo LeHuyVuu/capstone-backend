@@ -21,6 +21,7 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
     public async Task<(List<Review> Reviews, int TotalCount)> GetReviewsByVenueIdAsync(int venueId, int page, int pageSize, int? currentMemberId = null, int? currentCoupleId = null, int? partnerMemberId = null)
     {
         var query = _context.Set<Review>()
+            .Include(r => r.ReviewLikes)
             .Include(r => r.Member)
                 .ThenInclude(m => m!.User)
             .Include(r => r.ReviewReply)

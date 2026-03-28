@@ -1,6 +1,7 @@
 ﻿using Amazon.S3.Model.Internal.MarshallTransformations;
 using AutoMapper;
 using capstone_backend.Business.Common;
+using capstone_backend.Business.DTOs.Accessory;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Review;
@@ -13,6 +14,9 @@ using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Linq;
+using static capstone_backend.Business.Services.VenueLocationService;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace capstone_backend.Business.Services
@@ -23,13 +27,15 @@ namespace capstone_backend.Business.Services
         private readonly IMapper _mapper;
         private readonly S3StorageService _s3Service;
         private readonly IModerationService _moderationService;
+        private readonly IAccessoryService _accessoryService;
 
-        public ReviewService(IUnitOfWork unitOfWork, IMapper mapper, S3StorageService s3Service, IModerationService moderationService)
+        public ReviewService(IUnitOfWork unitOfWork, IMapper mapper, S3StorageService s3Service, IModerationService moderationService, IAccessoryService accessoryService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _s3Service = s3Service;
             _moderationService = moderationService;
+            _accessoryService = accessoryService;
         }
 
         public async Task<int> CheckinAsync(int userId, CheckinRequest request)
@@ -170,6 +176,9 @@ namespace capstone_backend.Business.Services
 
         public async Task<int> SubmitReviewAsync(int userId, CreateReviewRequest request)
         {
+            if (request.Images != null && request.Images.Count > 3)
+                throw new Exception("Bạn chỉ có thể tải lên tối đa 3 hình ảnh cho mỗi đánh giá");
+
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Không tìm thấy hồ sơ thành viên");
@@ -389,8 +398,8 @@ namespace capstone_backend.Business.Services
             int currentImageCount = existingImageCount - (request.DeletedImageUrls?.Count ?? 0);
             int newImageCount = request.NewImages?.Count ?? 0;
 
-            if (currentImageCount + newImageCount > 5)
-                throw new Exception("Bạn chỉ có thể tải lên tối đa 5 hình ảnh cho mỗi đánh giá");
+            if (currentImageCount + newImageCount > 3)
+                throw new Exception("Bạn chỉ có thể tải lên tối đa 3 hình ảnh cho mỗi đánh giá");
 
             if (request.NewImages != null && request.NewImages.Any())
             {
@@ -481,20 +490,35 @@ namespace capstone_backend.Business.Services
                 r => r.MemberId == member.Id &&
                      r.IsDeleted == false &&
                      (request.VenueId == null || r.VenueId == request.VenueId) &&
-                     (string.IsNullOrWhiteSpace(keyword) || r.Content.ToLower().Contains(keyword) || r.Venue.Name.ToLower().Contains(keyword)),
+                     (string.IsNullOrWhiteSpace(keyword) ||
+                      r.Content.ToLower().Contains(keyword) ||
+                      r.Venue.Name.ToLower().Contains(keyword)),
                 r => request.SortDescending
                     ? r.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id)
                     : r.OrderBy(r => r.CreatedAt).ThenBy(r => r.Id),
-                r => r.Include(r => r.Venue).Include(r => r.ReviewReply)
+                r => r.Include(r => r.Venue)
+                      .Include(r => r.ReviewReply)
+                      .Include(r => r.Member)
+                        .ThenInclude(m => m.User)
             );
 
             var reviewIds = reviews.Select(r => r.Id).ToList();
+
             var mediaLookup = await _unitOfWork.Media.GetByListTargetIdsAsync(
                 reviewIds,
                 ReferenceType.REVIEW.ToString()
             );
 
+            var myLikedReviews = await _unitOfWork.ReviewLikes.GetAsync(
+                rl => rl.MemberId == member.Id && reviewIds.Contains(rl.ReviewId.Value)
+            );
+
+            var likedReviewIds = myLikedReviews
+                .Select(x => x.ReviewId)
+                .ToHashSet();
+
             var response = _mapper.Map<List<MyReviewResponse>>(reviews);
+
             foreach (var item in response)
             {
                 var reviewEntity = reviews.FirstOrDefault(r => r.Id == item.Id);
@@ -506,22 +530,38 @@ namespace capstone_backend.Business.Services
 
                 if (reviewEntity?.ReviewReply != null)
                 {
-                    item.Reply = new MyReviewReplyInfo
+                    if (item.ReviewReply != null)
                     {
-                        Id = reviewEntity.ReviewReply.Id,
-                        Content = reviewEntity.ReviewReply.Content,
-                        CreatedAt = reviewEntity.ReviewReply.CreatedAt,
-                        UpdatedAt = reviewEntity.ReviewReply.UpdatedAt
-                    };
+                        item.ReviewReply.VenueId = reviewEntity.VenueId;
+                        item.ReviewReply.VenueName = reviewEntity.Venue.Name;
+                        item.ReviewReply.VenueCoverImage = DeserializeImages(reviewEntity.Venue.CoverImage);
+                    }
                 }
-                else
+
+                if (reviewEntity.Member != null)
                 {
-                    item.Reply = null;
+                    var acccessories = await _accessoryService.GetEquippedAccessoryForMemberAsync(reviewEntity.Member.Id);
+
+                    if (item.Member != null)
+                    {
+                        item.Member = new ReviewMemberInfo
+                        {
+                            Id = reviewEntity.Member.Id,
+                            UserId = reviewEntity.Member.UserId,
+                            FullName = reviewEntity.Member.FullName,
+                            Gender = reviewEntity.Member.Gender,
+                            Bio = reviewEntity.Member.Bio,
+                            DisplayName = reviewEntity.Member.User?.DisplayName,
+                            AvatarUrl = reviewEntity.Member.User?.AvatarUrl,
+                            Email = reviewEntity.Member.User?.Email,
+                            EquippedAccessories = acccessories ?? new List<EquippedAccessoryBriefResponse>()
+                        };
+                    }
                 }
 
-                item.HasReply = item.Reply != null;
-
+                item.HasReply = item.ReviewReply != null;
                 item.IsOwner = true;
+                item.IsLikedByMe = likedReviewIds.Contains(item.Id);
             }
 
             return new PagedResult<MyReviewResponse>

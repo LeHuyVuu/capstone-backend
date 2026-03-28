@@ -1,9 +1,12 @@
-﻿namespace capstone_backend.Business.DTOs.Review
+﻿using capstone_backend.Business.DTOs.VenueLocation;
+
+namespace capstone_backend.Business.DTOs.Review
 {
     public class MyReviewResponse
     {
 
         public bool IsOwner { get; set; }
+        public bool IsLikedByMe { get; set; }
         public int Id { get; set; }
 
         public int VenueId { get; set; }
@@ -23,16 +26,10 @@
         public List<string> ImageUrls { get; set; } = new();
 
         public bool HasReply { get; set; }
-        public MyReviewReplyInfo? Reply { get; set; }
+        public ReviewReplyResponse? ReviewReply { get; set; }
 
-        public DateTime? CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
-    }
+        public ReviewMemberInfo? Member { get; set; }
 
-    public class MyReviewReplyInfo
-    {
-        public int Id { get; set; }
-        public string? Content { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
     }

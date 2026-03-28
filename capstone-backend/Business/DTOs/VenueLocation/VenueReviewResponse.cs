@@ -9,6 +9,7 @@ namespace capstone_backend.Business.DTOs.VenueLocation;
 public class VenueReviewResponse
 {
     public bool IsOwner { get; set; }
+    public bool IsLikedByMe { get; set; }
     public int Id { get; set; }
     public int VenueId { get; set; }
     public int? Rating { get; set; }
