@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using capstone_backend.Api.Models;
+using capstone_backend.Data.Enums;
+using capstone_backend.Data.Static;
 
 namespace capstone_backend.Api.VenueRecommendation.Api;
 
@@ -73,6 +75,21 @@ public class UserContextController : BaseController
             })
             .FirstOrDefaultAsync();
 
+        var latestPersonalityResultCode = await _dbContext.PersonalityTests
+            .AsNoTracking()
+            .Where(p => p.MemberId == memberProfile.Id
+                        && p.IsDeleted != true
+                        && p.Status == PersonalityTestStatus.COMPLETED.ToString())
+            .OrderByDescending(p => p.TakenAt ?? p.CreatedAt)
+            .Select(p => p.ResultCode)
+            .FirstOrDefaultAsync();
+
+        if (!string.IsNullOrWhiteSpace(latestPersonalityResultCode))
+        {
+            var mbtiInfo = MbtiContentStore.GetProfile(latestPersonalityResultCode);
+            latestPersonalityResultCode = $"{mbtiInfo.Name} ({mbtiInfo.Code})";
+        }
+        
         var contextParts = new List<string>();
 
         if (latestInteraction != null)
@@ -102,13 +119,20 @@ public class UserContextController : BaseController
             contextParts.Add(moodText);
         }
 
-        var userContext = string.Join(". ", contextParts);
-        _logger.LogInformation("[USER CONTEXT] userContext for member {MemberId}: {UserContext}", memberProfile.Id, userContext);
+        if (!string.IsNullOrWhiteSpace(latestPersonalityResultCode))
+        {
+            contextParts.Add($"personality test {latestPersonalityResultCode}");
+        }
 
+        var userContext = string.Join(". ", contextParts);
         if (string.IsNullOrWhiteSpace(userContext))
         {
-            return BadRequestResponse("Cannot build user context from interactions or mood");
+            userContext = "suggest popular and diverse venues";
+            _logger.LogInformation("[USER CONTEXT] fallback default context for new member {MemberId}: {UserContext}", memberProfile.Id, userContext);
+            return OkResponse(userContext, "New user context generated successfully");
         }
+
+        _logger.LogInformation("[USER CONTEXT] userContext for member {MemberId}: {UserContext}", memberProfile.Id, userContext);
 
         return OkResponse(userContext, "User context retrieved successfully");
     }
