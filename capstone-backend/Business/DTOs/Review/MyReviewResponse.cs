@@ -8,7 +8,7 @@
 
         public int VenueId { get; set; }
         public string? VenueName { get; set; }
-        public string? VenueCoverImage { get; set; }
+        public List<string>? VenueCoverImage { get; set; }
 
         public int? Rating { get; set; }
         public string? Content { get; set; }

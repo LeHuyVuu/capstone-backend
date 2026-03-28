@@ -102,7 +102,7 @@ public class VenueLocationService : IVenueLocationService
     /// Deserialize JSON string to list of image URLs
     /// Handles multiple formats: JSON array, single string, or malformed strings
     /// </summary>
-    private static List<string>? DeserializeImages(string? json)
+    public static List<string>? DeserializeImages(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
             return null;
@@ -367,7 +367,7 @@ public class VenueLocationService : IVenueLocationService
                 {
                     response.ReviewReply.VenueId = venue.Id;
                     response.ReviewReply.VenueName = venue.Name;
-                    response.ReviewReply.VenueCoverImage = venue.CoverImage != null ? DeserializeImages(venue.CoverImage)?.FirstOrDefault() : null;
+                    response.ReviewReply.VenueCoverImage = venue.CoverImage != null ? DeserializeImages(venue.CoverImage) : null;
                 }
             }
 
@@ -544,7 +544,7 @@ public class VenueLocationService : IVenueLocationService
                 {
                     response.ReviewReply.VenueId = venue.Id;
                     response.ReviewReply.VenueName = venue.Name;
-                    response.ReviewReply.VenueCoverImage = venue.CoverImage != null ? DeserializeImages(venue.CoverImage)?.FirstOrDefault() : null;
+                    response.ReviewReply.VenueCoverImage = venue.CoverImage != null ? DeserializeImages(venue.CoverImage) : null;
                 }
             }
 

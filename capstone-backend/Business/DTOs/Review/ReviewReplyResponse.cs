@@ -9,7 +9,7 @@ namespace capstone_backend.Business.DTOs.Review
         public int ReviewId { get; set; }
         public int VenueId { get; set; }
         public string? VenueName { get; set; }
-        public string? VenueCoverImage { get; set; }
+        public List<string>? VenueCoverImage { get; set; }
         public string Content { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
