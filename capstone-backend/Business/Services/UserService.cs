@@ -125,14 +125,7 @@ public class UserService : IUserService
             await _unitOfWork.Users.AddAsync(user);
             await _unitOfWork.SaveChangesAsync();
 
-            // Generate wallet for new member
-            await _unitOfWork.Wallets.AddAsync(new Wallet
-            {
-                UserId = user.Id,
-                Balance = 0,
-                Points = 0,
-                IsActive = true,
-            });
+            await CreateWalletForUserAsync(user.Id);
 
             // Tạo member profile
             await CreateMemberProfileAsync(user.Id, request);
@@ -253,6 +246,8 @@ public class UserService : IUserService
         await _unitOfWork.Users.AddAsync(user);
         await _unitOfWork.SaveChangesAsync();
 
+        await CreateWalletForUserAsync(user.Id);
+
         // Tạo venue owner profile
         await CreateVenueOwnerProfileAsync(user.Id, request);
 
@@ -372,6 +367,8 @@ public class UserService : IUserService
 
         await _unitOfWork.Users.AddAsync(user);
         await _unitOfWork.SaveChangesAsync();
+
+        await CreateWalletForUserAsync(user.Id);
 
         return await MapToUserResponse(user);
     }
@@ -714,14 +711,7 @@ public class UserService : IUserService
             await _unitOfWork.Users.AddAsync(newUser);
             await _unitOfWork.SaveChangesAsync();
 
-            // Generate wallet for new member
-            await _unitOfWork.Wallets.AddAsync(new Wallet
-            {
-                UserId = newUser.Id,
-                Balance = 0,
-                Points = 0,
-                IsActive = true,
-            });
+            await CreateWalletForUserAsync(newUser.Id);
 
             // Tạo member profile với thông tin cơ bản
             var memberProfile = new MemberProfile
@@ -760,6 +750,23 @@ public class UserService : IUserService
     {
         return string.Equals(role, "VENUEOWNER", StringComparison.OrdinalIgnoreCase)
                || string.Equals(role, "STAFF", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task CreateWalletForUserAsync(int userId)
+    {
+        var existingWallet = await _unitOfWork.Wallets.GetByUserIdAsync(userId);
+        if (existingWallet != null)
+            return;
+
+        await _unitOfWork.Wallets.AddAsync(new Wallet
+        {
+            UserId = userId,
+            Balance = 0,
+            Points = 0,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
     }
 
     /// <summary>
