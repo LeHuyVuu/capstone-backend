@@ -6,5 +6,7 @@ namespace capstone_backend.Business.Interfaces
     {
         Task<string> SendNotificationAsync(string token, SendNotificationRequest request);
         Task<string> SendMultiNotificationAsync(List<string> tokens, SendNotificationRequest request);
+
+        Task<string> SendMultiDataOnlyNotificationAsync(List<string> tokens, SendNotificationRequest request);
     }
 }
