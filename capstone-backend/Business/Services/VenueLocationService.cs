@@ -304,7 +304,7 @@ public class VenueLocationService : IVenueLocationService
         var venue = await _unitOfWork.VenueLocations.GetByIdWithOwnerAsync(venueId);
 
         var memberIds = reviews
-            .Where(r => r.IsAnonymous != true && r.Member != null)
+            .Where(r => r.Member != null)
             .Select(r => r.MemberId)
             .Distinct()
             .ToList();
@@ -485,7 +485,7 @@ public class VenueLocationService : IVenueLocationService
 
         // Get accessories
         var memberIds = reviews
-            .Where(r => r.IsAnonymous != true && r.Member != null)
+            .Where(r => r.Member != null)
             .Select(r => r.MemberId)
             .Distinct()
             .ToList();
