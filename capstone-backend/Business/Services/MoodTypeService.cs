@@ -84,20 +84,22 @@ public class MoodTypeService : IMoodTypeService
         var nowVN = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
         var todayVN = nowVN.Date;
 
-        // Kiểm tra xem hôm nay (theo giờ VN) đã có MoodLog chưa
-        var existingLog = await _unitOfWork.Context.Set<MemberMoodLog>()
-            .Where(m => m.MemberId == memberProfile.Id 
-                     && m.CreatedAt.HasValue 
-                     && m.IsDeleted != true)
-            .ToListAsync(cancellationToken);
+        // Query theo khoảng thời gian UTC tương ứng với ngày hiện tại theo giờ VN,
+        // sau đó lấy log mới nhất trong ngày để tránh update nhầm record cũ.
+        var startOfTodayVN = new DateTime(todayVN.Year, todayVN.Month, todayVN.Day, 0, 0, 0, DateTimeKind.Unspecified);
+        var startOfTomorrowVN = startOfTodayVN.AddDays(1);
+        var startOfTodayUtc = TimeZoneInfo.ConvertTimeToUtc(startOfTodayVN, vnTimeZone);
+        var startOfTomorrowUtc = TimeZoneInfo.ConvertTimeToUtc(startOfTomorrowVN, vnTimeZone);
 
-        // Filter theo ngày VN (do database lưu UTC)
-        var todayLog = existingLog
-            .Where(m => {
-                var logDateVN = TimeZoneInfo.ConvertTimeFromUtc(m.CreatedAt!.Value, vnTimeZone).Date;
-                return logDateVN == todayVN;
-            })
-            .FirstOrDefault();
+        var todayLog = await _unitOfWork.Context.Set<MemberMoodLog>()
+            .Where(m => m.MemberId == memberProfile.Id
+                     && m.CreatedAt.HasValue
+                     && m.CreatedAt.Value >= startOfTodayUtc
+                     && m.CreatedAt.Value < startOfTomorrowUtc
+                     && m.IsDeleted != true)
+            .OrderByDescending(m => m.CreatedAt)
+            .ThenByDescending(m => m.Id)
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (todayLog != null)
         {
