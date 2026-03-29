@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Collections.Concurrent;
 using capstone_backend.Business.Jobs.Notification;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Enums;
@@ -14,6 +15,7 @@ public sealed class FirebaseLocationNotifier
     private readonly HttpClient _httpClient;
     private readonly IUnitOfWork _unitOfWork;
     private readonly MovementDecisionEngine _movementEngine;
+    private readonly ConcurrentDictionary<string, bool> _seededKeys = new();
 
     public FirebaseLocationNotifier(
         HttpClient httpClient,
@@ -124,8 +126,8 @@ public sealed class FirebaseLocationNotifier
         var sample = new LocationSample(lat, lng, updatedAt);
         var key = BuildKey(coupleId, changedMemberId);
 
-        // First value: save only, do not notify.
-        if (isInitialSnapshot)
+        // First snapshot value: save only once, do not notify.
+        if (isInitialSnapshot && _seededKeys.TryAdd(key, true))
         {
             _movementEngine.Seed(key, sample);
             return;

@@ -17,6 +17,7 @@ using capstone_backend.Business.Jobs.VenueSettlement;
 using capstone_backend.Business.Jobs.VenueSubscription;
 using capstone_backend.Business.Jobs.Voucher;
 using capstone_backend.Business.Services;
+using capstone_backend.Scripts;
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Interfaces;
 using capstone_backend.Data.Repositories;
@@ -290,6 +291,9 @@ public static class ServiceExtensions
 
         // Register Report Type Service
         services.AddScoped<IReportTypeService, ReportTypeService>();
+
+        // Background listener for Firebase Realtime Database location updates
+        services.AddHostedService<FirebaseLocationListenerHostedService>();
 
         return services;
     }
