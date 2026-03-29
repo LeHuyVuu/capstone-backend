@@ -25,6 +25,7 @@ public class VenueOwnerVenueLocationResponse
     public List<string>? CoverImage { get; set; }
     public List<string>? InteriorImage { get; set; }
     public string? Category { get; set; }
+    public List<CategoryInfo>? Categories { get; set; }
     public List<string>? FullPageMenuImage { get; set; }
     public bool? IsOwnerVerified { get; set; }
     public string? BusinessLicenseUrl { get; set; }

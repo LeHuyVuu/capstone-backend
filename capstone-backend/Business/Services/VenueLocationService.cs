@@ -1067,6 +1067,7 @@ public class VenueLocationService : IVenueLocationService
             CoverImage = DeserializeImages(v.CoverImage),
             InteriorImage = DeserializeImages(v.InteriorImage),
             Category = v.Category,
+            Categories = CreateCategoriesInfo(v),
             FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
             IsOwnerVerified = v.IsOwnerVerified,
             RejectionDetails = string.IsNullOrWhiteSpace(v.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(v.RejectReason),
@@ -1136,6 +1137,7 @@ public class VenueLocationService : IVenueLocationService
             CoverImage = DeserializeImages(venue.CoverImage),
             InteriorImage = DeserializeImages(venue.InteriorImage),
             Category = venue.Category,
+            Categories = CreateCategoriesInfo(venue),
             FullPageMenuImage = DeserializeImages(venue.FullPageMenuImage),
             IsOwnerVerified = venue.IsOwnerVerified,
             RejectionDetails = string.IsNullOrWhiteSpace(venue.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(venue.RejectReason),
@@ -1183,6 +1185,8 @@ public class VenueLocationService : IVenueLocationService
                 .Include(v => v.VenueLocationTags)
                     .ThenInclude(vlt => vlt.LocationTag)
                         .ThenInclude(lt => lt!.CouplePersonalityType)
+                .Include(v => v.VenueLocationCategories)
+                    .ThenInclude(vlc => vlc.Category)
                 .AsSplitQuery());
 
         var activeSubscriptionsByVenueId = await GetActiveVenueSubscriptionsByVenueIdsAsync(
@@ -1210,6 +1214,7 @@ public class VenueLocationService : IVenueLocationService
                 CoverImage = DeserializeImages(v.CoverImage),
                 InteriorImage = DeserializeImages(v.InteriorImage),
                 Category = v.Category,
+                Categories = CreateCategoriesInfo(v),
                 FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
                 IsOwnerVerified = v.IsOwnerVerified,
                 RejectionDetails = string.IsNullOrWhiteSpace(v.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(v.RejectReason),
@@ -2033,6 +2038,7 @@ public class VenueLocationService : IVenueLocationService
             CoverImage = DeserializeImages(v.CoverImage),
             InteriorImage = DeserializeImages(v.InteriorImage),
             Category = v.Category,
+            Categories = CreateCategoriesInfo(v),
             FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
             IsOwnerVerified = v.IsOwnerVerified,
             RejectionDetails = string.IsNullOrWhiteSpace(v.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(v.RejectReason),
@@ -2447,6 +2453,22 @@ public class VenueLocationService : IVenueLocationService
                     IsActive = vlt.LocationTag.CouplePersonalityType.IsActive
                 } : null
             })
+            .ToList();
+    }
+
+    private static List<CategoryInfo>? CreateCategoriesInfo(VenueLocation venue)
+    {
+        if (venue.VenueLocationCategories == null || !venue.VenueLocationCategories.Any())
+            return null;
+
+        return venue.VenueLocationCategories
+            .Where(vlc => vlc.IsDeleted != true && vlc.Category != null && vlc.Category.IsDeleted != true)
+            .Select(vlc => new CategoryInfo
+            {
+                Id = vlc.Category!.Id,
+                Name = vlc.Category.Name
+            })
+            .DistinctBy(c => c.Id)
             .ToList();
     }
 
