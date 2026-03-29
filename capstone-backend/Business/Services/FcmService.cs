@@ -1,4 +1,5 @@
-﻿using capstone_backend.Business.DTOs.Notification;
+﻿using Azure.Core;
+using capstone_backend.Business.DTOs.Notification;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Repositories;
 using FirebaseAdmin.Messaging;
@@ -76,6 +77,84 @@ namespace capstone_backend.Business.Services
             }
         }
 
+        public async Task<string> SendMultiDataOnlyNotificationAsync(List<string> tokens, SendNotificationRequest request)
+        {
+            if (tokens == null || !tokens.Any())
+                return "No tokens provided";
+
+            var data = new Dictionary<string, string>(request.Data ?? new Dictionary<string, string>());
+
+            if (!string.IsNullOrWhiteSpace(request.Title))
+                data["title"] = request.Title;
+
+            if (!string.IsNullOrWhiteSpace(request.Body))
+                data["body"] = request.Body;
+
+            if (!string.IsNullOrWhiteSpace(request.ImageUrl))
+                data["imageUrl"] = request.ImageUrl;
+
+            if (!data.Any())
+                return "Empty data";
+
+            try
+            {
+                var multicastMessage = new MulticastMessage
+                {
+                    Tokens = tokens,
+                    Data = data,
+                    Android = new AndroidConfig
+                    {
+                        Priority = Priority.High
+                    },
+                    Apns = new ApnsConfig
+                    {
+                        Headers = new Dictionary<string, string>
+                        {
+                            { "apns-priority", "5" }
+                        },
+                        Aps = new Aps
+                        {
+                            ContentAvailable = true
+                        }
+                    }
+                };
+
+                var response = await _messaging.SendEachForMulticastAsync(multicastMessage);
+
+                if (response.FailureCount > 0)
+                {
+                    var tokensToRemove = new List<string>();
+
+                    for (int i = 0; i < response.Responses.Count; i++)
+                    {
+                        var result = response.Responses[i];
+                        if (!result.IsSuccess && result.Exception is FirebaseMessagingException ex)
+                        {
+                            if (ex.MessagingErrorCode == MessagingErrorCode.Unregistered ||
+                                ex.MessagingErrorCode == MessagingErrorCode.InvalidArgument ||
+                                ex.MessagingErrorCode == MessagingErrorCode.SenderIdMismatch)
+                            {
+                                tokensToRemove.Add(tokens[i]);
+                            }
+                        }
+                    }
+
+                    if (tokensToRemove.Any())
+                    {
+                        await _unitOfWork.DeviceTokens.RemoveRangeByTokensAsync(tokensToRemove);
+                    }
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                return $"Success: {response.SuccessCount}, Fail: {response.FailureCount}";
+            }
+            catch (FirebaseMessagingException)
+            {
+                throw;
+            }
+        }
+
         public async Task<string> SendNotificationAsync(string token, SendNotificationRequest request)
         {
             if (string.IsNullOrEmpty(token)) return "Empty token";
@@ -120,8 +199,8 @@ namespace capstone_backend.Business.Services
                 Notification = new AndroidNotification
                 {
                     Sound = "default",
-                    ChannelId = "default", 
-                    Icon = "ic_notification",
+                    ChannelId = "default_channel",
+                    Priority = NotificationPriority.HIGH,
                     Color = "#FF6B6B",
                     ClickAction = "FLUTTER_NOTIFICATION_CLICK"
                 }

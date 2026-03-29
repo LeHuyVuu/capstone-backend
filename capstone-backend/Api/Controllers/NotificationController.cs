@@ -113,7 +113,35 @@ namespace capstone_backend.Api.Controllers
         {
             try
             {
-                await _fcmService.SendNotificationAsync(token, new SendNotificationRequest
+                await _fcmService.SendMultiNotificationAsync(new List<string> { token }, new SendNotificationRequest
+                {
+                    Title = "Test Push Notification",
+                    Body = "This is a test push notification message.",
+                    ImageUrl = "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/system/logo.png",
+                    Data = new Dictionary<string, string>
+                    {
+                        { "key1", "value1" },
+                        { "key2", "value2" }
+                    }
+                });
+                return OkResponse();
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Test Push Notification
+        /// </summary>
+        [HttpPost("push-test-data")]
+        public async Task<IActionResult> SendNotificationV3([FromQuery] string token)
+        {
+            try
+            {
+
+                await _fcmService.SendMultiDataOnlyNotificationAsync(new List<string> { token }, new SendNotificationRequest
                 {
                     Title = "Test Push Notification",
                     Body = "This is a test push notification message.",
