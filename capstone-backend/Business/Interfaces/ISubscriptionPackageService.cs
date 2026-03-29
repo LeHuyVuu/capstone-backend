@@ -32,4 +32,14 @@ public interface ISubscriptionPackageService
     /// <param name="userId">User ID of the venue owner</param>
     /// <returns>List of venue subscription packages for all venues owned by the user</returns>
     Task<List<VenueSubscriptionPackageDto>> GetVenueSubscriptionPackagesByOwnerUserIdAsync(int userId);
+
+    Task<List<SubscriptionPackageDto>> GetAdminSubscriptionPackagesAsync(string? type, bool includeDeleted = false);
+
+    Task<SubscriptionPackageDto?> GetAdminSubscriptionPackageByIdAsync(int id);
+
+    Task<SubscriptionPackageDto> CreateSubscriptionPackageAsync(CreateSubscriptionPackageRequest request);
+
+    Task<SubscriptionPackageDto> UpdateAdminSubscriptionPackageAsync(int id, UpdateSubscriptionPackageRequest request);
+
+    Task DeleteSubscriptionPackageAsync(int id);
 }

@@ -262,4 +262,154 @@ public class SubscriptionPackageService : ISubscriptionPackageService
             throw;
         }
     }
+
+    public async Task<List<SubscriptionPackageDto>> GetAdminSubscriptionPackagesAsync(string? type, bool includeDeleted = false)
+    {
+        var normalizedType = NormalizeType(type, allowEmpty: true);
+
+        var query = _unitOfWork.Context.Set<SubscriptionPackage>().AsQueryable();
+
+        if (!includeDeleted)
+        {
+            query = query.Where(p => p.IsDeleted != true);
+        }
+
+        if (!string.IsNullOrWhiteSpace(normalizedType))
+        {
+            query = query.Where(p => p.Type == normalizedType);
+        }
+
+        var packages = await query
+            .OrderByDescending(p => p.UpdatedAt ?? p.CreatedAt)
+            .ThenBy(p => p.PackageName)
+            .Select(p => new SubscriptionPackageDto
+            {
+                Id = p.Id,
+                PackageName = p.PackageName,
+                Price = p.Price,
+                DurationDays = p.DurationDays,
+                Type = p.Type,
+                Description = p.Description,
+                IsActive = p.IsActive,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt
+            })
+            .ToListAsync();
+
+        return packages;
+    }
+
+    public async Task<SubscriptionPackageDto?> GetAdminSubscriptionPackageByIdAsync(int id)
+    {
+        var package = await _unitOfWork.Context.Set<SubscriptionPackage>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == id && p.IsDeleted != true);
+
+        if (package == null)
+        {
+            return null;
+        }
+
+        return new SubscriptionPackageDto
+        {
+            Id = package.Id,
+            PackageName = package.PackageName,
+            Price = package.Price,
+            DurationDays = package.DurationDays,
+            Type = package.Type,
+            Description = package.Description,
+            IsActive = package.IsActive,
+            CreatedAt = package.CreatedAt,
+            UpdatedAt = package.UpdatedAt
+        };
+    }
+
+    public async Task<SubscriptionPackageDto> CreateSubscriptionPackageAsync(CreateSubscriptionPackageRequest request)
+    {
+        var normalizedPackageName = request.PackageName.Trim();
+        var normalizedType = NormalizeType(request.Type);
+
+        var duplicatedNameExists = await _unitOfWork.Context.Set<SubscriptionPackage>()
+            .AnyAsync(p => p.IsDeleted != true
+                           && p.PackageName != null
+                           && p.PackageName.ToUpper() == normalizedPackageName.ToUpper());
+
+        if (duplicatedNameExists)
+        {
+            throw new InvalidOperationException("Package name already exists. PackageName must be unique.");
+        }
+
+        var now = DateTime.UtcNow;
+
+        var package = new SubscriptionPackage
+        {
+            PackageName = normalizedPackageName,
+            Price = request.Price,
+            DurationDays = request.DurationDays,
+            Type = normalizedType,
+            Description = request.Description,
+            IsActive = request.IsActive,
+            IsDeleted = false,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+
+        await _unitOfWork.Context.Set<SubscriptionPackage>().AddAsync(package);
+        await _unitOfWork.SaveChangesAsync();
+
+        return new SubscriptionPackageDto
+        {
+            Id = package.Id,
+            PackageName = package.PackageName,
+            Price = package.Price,
+            DurationDays = package.DurationDays,
+            Type = package.Type,
+            Description = package.Description,
+            IsActive = package.IsActive,
+            CreatedAt = package.CreatedAt,
+            UpdatedAt = package.UpdatedAt
+        };
+    }
+
+    public async Task<SubscriptionPackageDto> UpdateAdminSubscriptionPackageAsync(int id, UpdateSubscriptionPackageRequest request)
+    {
+        return await UpdateSubscriptionPackageAsync(id, request);
+    }
+
+    public async Task DeleteSubscriptionPackageAsync(int id)
+    {
+        var package = await _unitOfWork.Context.Set<SubscriptionPackage>()
+            .FirstOrDefaultAsync(p => p.Id == id && p.IsDeleted != true);
+
+        if (package == null)
+        {
+            throw new InvalidOperationException($"Subscription package with ID {id} not found or has been deleted");
+        }
+        package.IsActive = false;
+        package.UpdatedAt = DateTime.UtcNow;
+
+        await _unitOfWork.SaveChangesAsync();
+    }
+
+    private static string? NormalizeType(string? type, bool allowEmpty = false)
+    {
+        if (string.IsNullOrWhiteSpace(type))
+        {
+            if (allowEmpty)
+            {
+                return null;
+            }
+
+            throw new ArgumentException("Type cannot be null or empty", nameof(type));
+        }
+
+        var normalizedType = type.ToUpper().Trim();
+
+        if (normalizedType != "MEMBER" && normalizedType != "VENUE" && normalizedType != "VENUEOWNER")
+        {
+            throw new ArgumentException("Type must be either MEMBER, VENUE, or VENUEOWNER", nameof(type));
+        }
+
+        return normalizedType;
+    }
 }
