@@ -26,6 +26,24 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Get AI Recommended Date Plan Item
+        /// </summary>
+        [HttpGet("ai-suggestion")]
+        public async Task<IActionResult> GetAIRecommendedDatePlanItem([FromQuery] bool previewOnly = true)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                object result = null;
+                return OkResponse(result, "Lấy gợi ý mục lịch trình từ AI thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Get 30 days Date Plans
         /// </summary>
         [HttpGet("calendar-30-days")]

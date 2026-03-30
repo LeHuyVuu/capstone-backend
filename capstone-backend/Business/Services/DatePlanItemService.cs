@@ -149,7 +149,10 @@ namespace capstone_backend.Business.Services
             TimeOnly startTime,
             TimeOnly endTime)
         {
-            var day0 = DateOnly.FromDateTime(planStartVn);
+            var safePlanStart = new DateTime(planStartVn.Year, planStartVn.Month, planStartVn.Day, planStartVn.Hour, planStartVn.Minute, 0);
+            var safePlanEnd = new DateTime(planEndVn.Year, planEndVn.Month, planEndVn.Day, planEndVn.Hour, planEndVn.Minute, 0);
+
+            var day0 = DateOnly.FromDateTime(safePlanStart);
             var candidates = new[]
             {
                 day0.ToDateTime(startTime),
@@ -163,7 +166,7 @@ namespace capstone_backend.Business.Services
                 if (endTime < startTime)
                     end = end.AddDays(1);
 
-                if (start >= planStartVn && end <= planEndVn && end > start)
+                if (start >= safePlanStart && end <= safePlanEnd && end > start)
                     return (start, end);
             }
 
