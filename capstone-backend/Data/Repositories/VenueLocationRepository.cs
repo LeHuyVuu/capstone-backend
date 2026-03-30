@@ -367,4 +367,55 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
         
         return invalidIds;
     }
+
+    public IQueryable<VenueLocation> BuildAiCandidatesQuery(
+        decimal estimatedBudget,
+        List<string>? intentCategories,
+        int startDayOfWeek,
+        TimeSpan startTime,
+        TimeSpan endTime,
+        decimal? lat = null,
+        decimal? lon = null,
+        double distanceKm = 15.0)
+    {
+        // 1. Base condition and bounding box lat/long
+        var query = _dbSet
+            .Where(v => v.IsDeleted == false && v.Status == VenueLocationStatus.ACTIVE.ToString());
+
+        if (lat.HasValue && lon.HasValue)
+        {
+            // Calculate delta lat/lon for bounding box
+            decimal latDelta = (decimal)(distanceKm / 111.0);
+            decimal lonDelta = (decimal)(distanceKm / (111.0 * Math.Cos((double)lat.Value * Math.PI / 180.0)));
+
+            query = query.Where(v =>
+                v.Latitude >= lat.Value - latDelta && v.Latitude <= lat.Value + latDelta &&
+                v.Longitude >= lon.Value - lonDelta && v.Longitude <= lon.Value + lonDelta);
+        }
+
+        // 2. Filter budget
+        if (estimatedBudget > 0)
+            query = query.Where(v => v.AvarageCost != null && v.AvarageCost <= estimatedBudget);
+
+        // 3. Filter by intent categories
+        if (intentCategories != null && intentCategories.Any())
+        {
+            var lowerCats = intentCategories.Select(c => c.ToLower()).ToList();
+
+            query = query.Where(v => _context.Set<VenueLocationCategory>()
+                .Where(vlc => vlc.VenueLocationId == v.Id && vlc.IsDeleted == false)
+                .Any(vlc => lowerCats.Contains(vlc.Category.Name.ToLower())));
+        }
+
+        // 4. Filter Opening Hours
+        query = query.Where(v => _context.Set<VenueOpeningHour>()
+            .Any(h => h.VenueLocationId == v.Id
+                   && h.Day == startDayOfWeek
+                   && h.IsClosed == false
+                   && h.OpenTime <= startTime
+                   && h.CloseTime >= endTime
+            ));
+
+        return query;
+    }
 }

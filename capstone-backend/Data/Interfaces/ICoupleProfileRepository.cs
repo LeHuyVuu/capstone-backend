@@ -37,4 +37,7 @@ public interface ICoupleProfileRepository : IGenericRepository<CoupleProfile>
         CancellationToken cancellationToken = default);
     Task<(int userId1, int userId2)> GetCoupleUserIdsAsync(int coupleId);
     Task<IEnumerable<MemberProfile>> GetCoupleMemberAsync(int coupleId);
+
+    Task<CoupleProfile?> GetActiveCoupleIncludePersonalityAndMoodByMemberIdAsync(
+        int memberId);
 }

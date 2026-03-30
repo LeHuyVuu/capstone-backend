@@ -3,6 +3,7 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Threading;
 
 namespace capstone_backend.Data.Repositories;
 
@@ -127,5 +128,15 @@ public class CoupleProfileRepository : GenericRepository<CoupleProfile>, ICouple
             members.Add(couple.MemberId2Navigation);
 
         return members;
+    }
+
+    public async Task<CoupleProfile?> GetActiveCoupleIncludePersonalityAndMoodByMemberIdAsync(int memberId)
+    {
+        return await _dbSet
+            .Include(c => c.CouplePersonalityType)
+            .Include(c => c.CoupleMoodType)
+            .Where(c => c.IsDeleted != true && c.Status == CoupleProfileStatus.ACTIVE.ToString())
+            .FirstOrDefaultAsync(c =>
+                c.MemberId1 == memberId || c.MemberId2 == memberId);
     }
 }

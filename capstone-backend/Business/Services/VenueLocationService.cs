@@ -662,6 +662,9 @@ public class VenueLocationService : IVenueLocationService
             WebsiteUrl = request.WebsiteUrl,
             PriceMin = request.PriceMin,
             PriceMax = request.PriceMax,
+            AvarageCost = (request.PriceMin.HasValue && request.PriceMax.HasValue) 
+                ? (request.PriceMin.Value + request.PriceMax.Value) / 2 
+                : null,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
             Category = null, // Will be set after saving categories
@@ -676,7 +679,7 @@ public class VenueLocationService : IVenueLocationService
             UpdatedAt = DateTime.UtcNow,
             IsDeleted = false,
             AverageRating = null,
-            ReviewCount = 0
+            ReviewCount = 0,
         };
 
         // Process multiple tag combinations (many-to-many)
@@ -814,7 +817,18 @@ public class VenueLocationService : IVenueLocationService
         
         if (request.BusinessLicenseUrl != null)
             venue.BusinessLicenseUrl = request.BusinessLicenseUrl;
-        
+
+        // set avarage cost
+        if (request.PriceMin.HasValue || request.PriceMax.HasValue)
+        {
+            var priceMin = request.PriceMin ?? venue.PriceMin;
+            var priceMax = request.PriceMax ?? venue.PriceMax;
+            if (priceMin.HasValue && priceMax.HasValue)
+            {
+                venue.AvarageCost = (priceMin.Value + priceMax.Value) / 2;
+            }
+        }
+
         // Update categories only if explicitly provided (not null)
         // If CategoryIds is null, keep the existing categories unchanged
         if (request.CategoryIds != null)
