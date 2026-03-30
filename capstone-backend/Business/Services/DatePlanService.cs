@@ -531,9 +531,9 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Đã tồn tại lịch trình khác bị trùng khoảng thời gian");
         }
 
-        public async Task<DatePlanCalendar30DaysResponse> GetDatePlansIn30DaysAsync(int value)
+        public async Task<DatePlanCalendar30DaysResponse> GetDatePlansIn30DaysAsync(int userId)
         {
-            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(value);
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Hồ sơ thành viên không tồn tại");
 
@@ -549,7 +549,7 @@ namespace capstone_backend.Business.Services
             var endUtcExclusive = DateTimeNormalizeUtil.NormalizeToUtc(endDate.AddDays(1).ToDateTime(TimeOnly.MinValue));
 
             var datePlans = await _unitOfWork.DatePlans.GetAsync(dp =>
-                dp.IsDeleted == false &&
+                dp.IsDeleted == false && (dp.Status == DatePlanStatus.SCHEDULED.ToString() || dp.Status == DatePlanStatus.IN_PROGRESS.ToString()) &&
                 dp.CoupleId == couple.id &&
                 dp.PlannedStartAt != null &&
                 dp.PlannedStartAt >= startUtc &&
