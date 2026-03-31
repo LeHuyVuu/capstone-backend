@@ -25,6 +25,9 @@ namespace capstone_backend.Business.DTOs.DatePlan
         [JsonPropertyName("venueAverageRating")]
         public decimal? VenueAverageRating { get; set; }
 
+        [JsonPropertyName("venueCoverImage")]
+        public List<string>? VenueCoverImage { get; set; }
+
         [JsonPropertyName("startTime")]
         public TimeOnly? StartTime { get; set; }
 

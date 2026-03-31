@@ -13,7 +13,7 @@ using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using OpenAI.Chat;
 using System.ClientModel;
-using System.Text.Json;
+using static capstone_backend.Business.Services.VenueLocationService;
 
 namespace capstone_backend.Business.Services
 {
@@ -679,6 +679,7 @@ namespace capstone_backend.Business.Services
                     v.AverageRating,
                     v.Latitude,
                     v.Longitude,
+                    v.CoverImage,
                     Categories = _unitOfWork.Context.Set<VenueLocationCategory>()
                         .Where(vlc => vlc.VenueLocationId == v.Id && vlc.IsDeleted == false)
                         .Select(vlc => vlc.Category.Name)
@@ -787,6 +788,7 @@ namespace capstone_backend.Business.Services
                         item.VenueDescription = rawVenue.Description;
                         item.VenueAddress = rawVenue.Address;
                         item.VenueAverageRating = rawVenue.AverageRating;
+                        item.VenueCoverImage = DeserializeImages(rawVenue.CoverImage);
                     }
                         
                 }
