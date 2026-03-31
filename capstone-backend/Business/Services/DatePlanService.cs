@@ -645,9 +645,15 @@ namespace capstone_backend.Business.Services
             }
 
             // Phase 2: Filter
+            var plannedStartAtUtc = DateTimeNormalizeUtil.NormalizeToUtc(request.PlannedStartAt);
+            var plannedEndAtUtc = DateTimeNormalizeUtil.NormalizeToUtc(request.PlannedEndAt);
+
+            var plannedStartAtVn = TimezoneUtil.ToVietNamTime(plannedStartAtUtc);
+            var plannedEndAtVn = TimezoneUtil.ToVietNamTime(plannedEndAtUtc);
+
             var startDayOfWeek = (int)request.PlannedStartAt.DayOfWeek + 1;
-            var startTimeSpan = TimeOnly.FromDateTime(request.PlannedStartAt).ToTimeSpan();
-            var endTimeSpan = TimeOnly.FromDateTime(request.PlannedEndAt).ToTimeSpan();
+            var startTimeSpan = TimeOnly.FromDateTime(plannedStartAtVn).ToTimeSpan();
+            var endTimeSpan = TimeOnly.FromDateTime(plannedEndAtVn).ToTimeSpan();
 
             var venueQuery = _unitOfWork.VenueLocations.BuildAiCandidatesQuery(
                 request.EstimatedBudget,
@@ -724,7 +730,8 @@ namespace capstone_backend.Business.Services
                     PlannedStartAt = TimezoneUtil.ToVietNamTime(request.PlannedStartAt).ToString("HH:mm"),
                     PlannedEndAt = TimezoneUtil.ToVietNamTime(request.PlannedEndAt).ToString("HH:mm"),
                     RawQuery = request.Query,
-                    UserIntent = extractedIntent
+                    UserIntent = extractedIntent,
+                    Address = request.Address
                 },
                 CoupleContext = new CoupleContextDto
                 {

@@ -22,6 +22,9 @@ namespace capstone_backend.Business.DTOs.DatePlan
         [JsonPropertyName("planned_end_at")]
         public string PlannedEndAt { get; set; } = string.Empty;
 
+        [JsonPropertyName("address")]
+        public string Address { get; set; } = string.Empty;
+
         [JsonPropertyName("estimated_budget")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public decimal EstimatedBudget { get; set; }

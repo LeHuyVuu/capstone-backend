@@ -408,13 +408,13 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
         }
 
         // 4. Filter Opening Hours
-        query = query.Where(v => _context.Set<VenueOpeningHour>()
-            .Any(h => h.VenueLocationId == v.Id
-                   && h.Day == startDayOfWeek
-                   && h.IsClosed == false
-                   && h.OpenTime <= startTime
-                   && h.CloseTime >= endTime
-            ));
+        //query = query.Where(v => _context.Set<VenueOpeningHour>()
+        //    .Any(h => h.VenueLocationId == v.Id
+        //           && h.Day == startDayOfWeek
+        //           && h.IsClosed == false
+        //           && h.OpenTime <= startTime
+        //           && h.CloseTime >= endTime
+        //    ));
 
         return query;
     }
