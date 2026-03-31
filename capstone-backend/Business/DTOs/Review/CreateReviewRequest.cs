@@ -8,6 +8,8 @@ namespace capstone_backend.Business.DTOs.Review
         public int CheckInId { get; set; }
         /// <example>Thật tuyệt vời!</example>
         public string? Content { get; set; } = null!;
+        /// <example>true</example>
+        public bool IsMatched { get; set; }
         /// <example>5</example>
         [Range(1, 5, ErrorMessage = "Điểm đánh giá phải nằm trong khoảng [1 - 5]")]
         public int Rating { get; set; }
