@@ -28,7 +28,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Get AI Recommended Date Plan Item
         /// </summary>
-        [RequireActiveSubscription(UserType = "MEMBER", ErrorMessage = "Bạn cần sở hữu gói để sử dụng tính năng này")]
+        [RequireActiveSubscription(UserType = "MEMBER", FeatureCode = "DATE_PLAN_AI", ErrorMessage = "Bạn cần sở hữu gói để sử dụng tính năng này")]
         [HttpPost("ai-suggestion")]
         public async Task<IActionResult> GetAIRecommendedDatePlanItem([FromBody] DatePlanAISuggestionRequest request, [FromQuery] bool previewOnly = true)
         {

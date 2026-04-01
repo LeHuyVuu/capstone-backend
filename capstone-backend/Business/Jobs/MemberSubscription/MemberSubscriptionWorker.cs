@@ -7,12 +7,14 @@ namespace capstone_backend.Business.Jobs.MemberSubscription
     public class MemberSubscriptionWorker : IMemberSubscriptionWorker
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMemberSubscriptionService _memberSubscriptionService;
         private readonly ILogger<MemberSubscriptionWorker> _logger;
 
-        public MemberSubscriptionWorker(IUnitOfWork unitOfWork, ILogger<MemberSubscriptionWorker> logger)
+        public MemberSubscriptionWorker(IUnitOfWork unitOfWork, ILogger<MemberSubscriptionWorker> logger, IMemberSubscriptionService memberSubscriptionService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _memberSubscriptionService = memberSubscriptionService;
         }
 
         public async Task AutoExpireMemberSubscriptionAsync()
@@ -49,8 +51,18 @@ namespace capstone_backend.Business.Jobs.MemberSubscription
                     currentSub.UpdatedAt = now;
 
                     _unitOfWork.MemberSubscriptionPackages.Update(currentSub);
-
                     await _unitOfWork.SaveChangesAsync();
+
+                    var member = await _unitOfWork.MembersProfile.GetByIdAsync(currentSub.MemberId);
+                    if (member == null || member.IsDeleted == true)
+                    {
+                        await _unitOfWork.RollbackTransactionAsync();
+                        _logger.LogWarning("[AUTO EXPIRE MEMBER SUB] Member with ID {MemberId} not found or is deleted while auto-expiring subscription with ID {SubscriptionId}", currentSub.MemberId, currentSub.Id);
+                        continue;
+                    }
+
+
+                    await _memberSubscriptionService.EnsureDefaultSubscriptionAsync(member.UserId);
                     await _unitOfWork.CommitTransactionAsync();
 
                     _logger.LogInformation("[AUTO EXPIRE MEMBER SUB] Successfully auto-expired member subscription with ID {SubscriptionId} for member {MemberId}", currentSub.Id, currentSub.MemberId);

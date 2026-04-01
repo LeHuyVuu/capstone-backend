@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using AutoMapper.Execution;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.MemberSubscription;
 using capstone_backend.Business.DTOs.Momo;
@@ -7,6 +8,7 @@ using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
+using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Services
 {
@@ -135,47 +137,74 @@ namespace capstone_backend.Business.Services
                 return active;
 
             var defaultPackage = await _unitOfWork.SubscriptionPackages.GetFirstAsync(
-                   p => p.Type == "MEMBER" &&
-                    p.IsDeleted == false &&
-                    p.IsActive == true &&
-                    p.IsDefault == true
-                );
+                p => p.Type == "MEMBER" &&
+                     p.IsDeleted == false &&
+                     p.IsActive == true &&
+                     p.IsDefault == true
+            );
 
             if (defaultPackage == null)
-                throw new Exception("Default subscription package is not configured");
+                return null;
 
-            var newSub = new MemberSubscriptionPackage
+            var defaultMemberSub = await _unitOfWork.MemberSubscriptionPackages.GetFirstAsync(
+                s => s.MemberId == member.Id &&
+                     s.Package.Type == "MEMBER" &&
+                     s.Package.IsDeleted == false &&
+                     s.Package.IsActive == true &&
+                     s.Package.IsDefault == true,
+                s => s.Include(x => x.Package)
+            );
+
+            var isNewSubscription = false;
+
+            if (defaultMemberSub == null)
             {
-                MemberId = member.Id,
-                PackageId = defaultPackage.Id,
-                StartDate = now,
-                EndDate = null,
-                Status = MemberSubscriptionPackageStatus.ACTIVE.ToString(),
-                CreatedAt = now,
-                UpdatedAt = now
-            };
+                defaultMemberSub = new MemberSubscriptionPackage
+                {
+                    MemberId = member.Id,
+                    PackageId = defaultPackage.Id,
+                    Status = MemberSubscriptionPackageStatus.ACTIVE.ToString(),
+                    StartDate = now,
+                    EndDate = null,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                };
 
-            await _unitOfWork.MemberSubscriptionPackages.AddAsync(newSub);
+                await _unitOfWork.MemberSubscriptionPackages.AddAsync(defaultMemberSub);
+                isNewSubscription = true;
+            }
+            else
+            {
+                defaultMemberSub.Status = MemberSubscriptionPackageStatus.ACTIVE.ToString();
+                defaultMemberSub.StartDate = now;
+                defaultMemberSub.EndDate = null;
+                defaultMemberSub.UpdatedAt = now;
+
+                _unitOfWork.MemberSubscriptionPackages.Update(defaultMemberSub);
+            }
+
             await _unitOfWork.SaveChangesAsync();
 
-            // add transaction
-            var newTx = new Transaction
+            if (isNewSubscription)
             {
-                UserId = userId,
-                Amount = defaultPackage.Price.Value,
-                Currency = "VND",
-                Description = $"Hệ thống tự động kích hoạt gói cho thành viên: {defaultPackage.PackageName}",
-                DocNo = newSub.Id,
-                PaymentMethod = "SYSTEM",
-                TransType = 3, // MEMBER_SUBSCRIPTION
-                Status = TransactionStatus.SUCCESS.ToString(),
-                ExternalRefCode = null
-            };
+                var newTx = new Transaction
+                {
+                    UserId = userId,
+                    Amount = defaultPackage.Price ?? 0,
+                    Currency = "VND",
+                    Description = $"Hệ thống tự động kích hoạt gói cho thành viên: {defaultPackage.PackageName}",
+                    DocNo = defaultMemberSub.Id,
+                    PaymentMethod = "SYSTEM",
+                    TransType = 3, // MEMBER_SUBSCRIPTION
+                    Status = TransactionStatus.SUCCESS.ToString(),
+                    ExternalRefCode = null
+                };
 
-            await _unitOfWork.Transactions.AddAsync(newTx);
-            await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.Transactions.AddAsync(newTx);
+                await _unitOfWork.SaveChangesAsync();
+            }
 
-            return newSub;
+            return defaultMemberSub;
         }
 
         public async Task<PagedResult<TransactionResponse>> GetTransactionHistoryAsync(int userId, int pageNumber, int pageSize)
