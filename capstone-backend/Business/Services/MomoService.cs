@@ -37,9 +37,26 @@ namespace capstone_backend.Business.Services
             if (package == null || package.IsDeleted == true || package.IsActive == false)
                 throw new Exception("Gói đăng ký không tồn tại hoặc không hợp lệ");
 
+            if (!package.DurationDays.HasValue || package.DurationDays.Value <= 0)
+                throw new Exception("Gói đăng ký không có thời hạn hợp lệ");
+
+            if ((package.Price ?? 0) <= 0)
+                throw new Exception("Gói miễn phí không hỗ trợ thanh toán qua MoMo");
+
             var activeSub = await _unitOfWork.MemberSubscriptionPackages.GetCurrentActiveSubscriptionAsync(member.Id);
+
             if (activeSub != null)
-                throw new Exception("Bạn đã có gói đăng ký đang hoạt động. Vui lòng chờ đến khi gói hiện tại hết hạn hoặc hủy bỏ trước khi mua gói mới.");
+            {
+                var isCurrentFreeDefault =
+                    activeSub.Package != null &&
+                    activeSub.Package.IsDefault == true &&
+                    (activeSub.Package.Price ?? 0) <= 0;
+
+                if (!isCurrentFreeDefault)
+                {
+                    throw new Exception("Bạn đã có gói đăng ký đang hoạt động. Vui lòng chờ đến khi gói hiện tại hết hạn hoặc hủy bỏ trước khi mua gói mới.");
+                }
+            }
 
             var now = DateTime.UtcNow;
 
@@ -328,6 +345,15 @@ namespace capstone_backend.Business.Services
                         {
                             var package = await _unitOfWork.SubscriptionPackages.GetByIdAsync(sub.PackageId);
                             var realNow = DateTime.UtcNow;
+
+                            // Deactivate default free
+                            var currentActiveSub = await _unitOfWork.MemberSubscriptionPackages.GetCurrentActiveSubscriptionAsync(sub.MemberId);
+                            if (currentActiveSub != null && currentActiveSub.Id != sub.Id)
+                            {
+                                currentActiveSub.Status = MemberSubscriptionPackageStatus.INACTIVE.ToString();
+                                currentActiveSub.UpdatedAt = DateTime.UtcNow;
+                                _unitOfWork.MemberSubscriptionPackages.Update(currentActiveSub);
+                            }
 
                             sub.StartDate = realNow;
                             sub.EndDate = realNow.AddDays(package?.DurationDays ?? 0);

@@ -76,4 +76,14 @@ public interface IVenueLocationRepository : IGenericRepository<VenueLocation>
 
     Task<IEnumerable<VenueLocation>> GetNamesByIdsAsync(List<string> venueIds);
     Task<List<string>> GetInvalidVenueIdsAsync(List<string> venueIds);
+
+    IQueryable<VenueLocation> BuildAiCandidatesQuery(
+        decimal estimatedBudget,
+        List<string>? intentCategories,
+        int startDayOfWeek,
+        TimeSpan startTime,
+        TimeSpan endTime,
+        decimal? lat = null,
+        decimal? lon = null,
+        double distanceKm = 15.0);
 }

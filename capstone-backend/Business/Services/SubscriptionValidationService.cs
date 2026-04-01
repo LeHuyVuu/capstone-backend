@@ -96,14 +96,21 @@ public class SubscriptionValidationService : ISubscriptionValidationService
             // 2. Check for active subscription
             var now = DateTime.UtcNow;
             var activeSub = await _context.MemberSubscriptionPackages
-                .Where(msp => 
+                .AsNoTracking()
+                .Include(msp => msp.Package)
+                .Where(msp =>
                     msp.MemberId == memberProfile.Id &&
                     msp.Status == MemberSubscriptionPackageStatus.ACTIVE.ToString() &&
-                    msp.EndDate.HasValue &&
-                    msp.EndDate.Value >= now
-                )
-                .Include(msp => msp.Package)
-                .OrderByDescending(msp => msp.EndDate)
+                    (
+                        !msp.EndDate.HasValue ||
+                        msp.EndDate.Value >= now
+                    ) &&
+                    msp.Package != null &&
+                    msp.Package.IsDeleted != true &&
+                    msp.Package.IsActive == true)
+                .OrderByDescending(msp => msp.EndDate.HasValue)
+                .ThenByDescending(msp => msp.EndDate)
+                .ThenByDescending(msp => msp.UpdatedAt)
                 .FirstOrDefaultAsync();
 
             if (activeSub == null)
@@ -112,7 +119,7 @@ public class SubscriptionValidationService : ISubscriptionValidationService
                     "No active subscription found for member ID: {MemberId} (User ID: {UserId})", 
                     memberProfile.Id, 
                     userId);
-                return (false, "Gói của bạn đã hết hạn để sài tính năng này");
+                return (false, "Bạn chưa có gói thành viên hợp lệ để sử dụng tính năng này");
             }
 
             _logger.LogInformation(
@@ -121,13 +128,15 @@ public class SubscriptionValidationService : ISubscriptionValidationService
                 activeSub.Id,
                 activeSub.EndDate);
 
-            if (!HasFeatureAccess(activeSub.Package?.FeatureFlags, featureCode))
+            if (!string.IsNullOrWhiteSpace(featureCode) &&
+            !HasFeatureAccess(activeSub.Package?.FeatureFlags, featureCode))
             {
                 _logger.LogInformation(
                     "Feature access denied for member ID: {MemberId}, FeatureCode: {FeatureCode}, PackageId: {PackageId}",
                     memberProfile.Id,
                     featureCode,
                     activeSub.PackageId);
+
                 return (false, "Gói hiện tại không hỗ trợ tính năng này");
             }
 

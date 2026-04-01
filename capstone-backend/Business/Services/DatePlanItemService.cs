@@ -61,28 +61,53 @@ namespace capstone_backend.Business.Services
                     .Select(x => x.VenueLocationId)
                     .ToList();
 
+                if (requestVenueIds.Count != requestVenueIds.Distinct().Count())
+                    throw new Exception("Danh sách địa điểm bị trùng");
+
                 var existedIds = requestVenueIds
                     .Where(id => existingVenueIds.Contains(id))
                     .Distinct()
                     .ToList();
 
+                if (existedIds.Any())
+                    throw new Exception($"Một số địa điểm đã có trong lịch trình: {string.Join(", ", existedIds)}");
+
+                var venueLocations = await _unitOfWork.VenueLocations.GetAsync(
+                    v => requestVenueIds.Contains(v.Id) &&
+                         v.IsDeleted == false &&
+                         v.Status == VenueLocationStatus.ACTIVE.ToString()
+                );
+
+                var activeVenueIds = venueLocations
+                    .Select(v => v.Id)
+                    .ToHashSet();
+
+                var invalidVenueIds = requestVenueIds
+                    .Where(id => !activeVenueIds.Contains(id))
+                    .Distinct()
+                    .ToList();
+
+                if (invalidVenueIds.Any())
+                    throw new Exception($"Một số địa điểm không tồn tại hoặc không hoạt động: {string.Join(", ", invalidVenueIds)}");
+
                 var planStartVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedStartAt!.Value);
                 var planEndVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedEndAt!.Value);
 
-                if (requestVenueIds.Count != requestVenueIds.Distinct().Count())
-                    throw new Exception("Danh sách địa điểm bị trùng");
+                foreach (var v in venues)
+                {
+                    if (!v.StartTime.HasValue || !v.EndTime.HasValue)
+                        throw new Exception("Mỗi mục trong lịch trình phải có đầy đủ thời gian bắt đầu và kết thúc");
+                }
 
-                if (requestVenueIds.Any(id => existingVenueIds.Contains(id)))
-                    throw new Exception($"Một số địa điểm đã có trong lịch trình: {string.Join(", ", existedIds)}");
-
-                var venuesWithTime = venues
-                    .Where(v => v.StartTime.HasValue && v.EndTime.HasValue)
-                    .ToList();
-
-                var rangesNew = venuesWithTime.Select(v => new
+                var rangesNew = venues.Select(v => new
                 {
                     V = v,
-                    Range = ResolveItemRangeWithinPlan(planStartVn, planEndVn, v.StartTime!.Value, v.EndTime!.Value)
+                    Range = ResolveItemRangeWithinPlan(
+                        planStartVn,
+                        planEndVn,
+                        v.StartTime!.Value,
+                        v.EndTime!.Value
+                    )
                 }).ToList();
 
                 // new - new
@@ -109,32 +134,33 @@ namespace capstone_backend.Business.Services
                             throw new Exception($"Khung giờ bạn chọn bị trùng với một mục đã có trong lịch trình");
                     }
 
-                var maxOderIndex = datePlanItems
-                    .Select(x => x.OrderIndex)
-                    .Max() ?? 0;
-
-                var items = new List<DatePlanItem>();             
+                var items = new List<DatePlanItem>();
 
                 foreach (var v in venues)
                 {
-
-                    var (itemStartVn, itemEndVn) = ResolveItemRangeWithinPlan(
-                        planStartVn, planEndVn,
-                        v.StartTime.Value, v.EndTime.Value
-                    );
-
                     var item = _mapper.Map<DatePlanItem>(v);
                     item.DatePlanId = datePlanId;
-
-                    item.OrderIndex = ++maxOderIndex;
                     items.Add(item);
+                }
 
-                    datePlan.TotalCount += 1;
-                };
+                await _unitOfWork.BeginTransactionAsync();
+
+                await _unitOfWork.DatePlanItems.AddRangeAsync(items);
+
+                datePlan.TotalCount += items.Count;
+                datePlan.UpdatedAt = DateTime.UtcNow;
+                datePlan.Version += 1;
 
                 _unitOfWork.DatePlans.Update(datePlan);
-                await _unitOfWork.DatePlanItems.AddRangeAsync(items);
-                return await _unitOfWork.SaveChangesAsync();
+
+                await _unitOfWork.SaveChangesAsync();
+
+                await RebuildOrderIndexByTimeAsync(datePlanId, planStartVn, planEndVn);
+
+                var result = await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return result;
             }
             catch (Exception)
             {
@@ -149,7 +175,10 @@ namespace capstone_backend.Business.Services
             TimeOnly startTime,
             TimeOnly endTime)
         {
-            var day0 = DateOnly.FromDateTime(planStartVn);
+            var safePlanStart = new DateTime(planStartVn.Year, planStartVn.Month, planStartVn.Day, planStartVn.Hour, planStartVn.Minute, 0);
+            var safePlanEnd = new DateTime(planEndVn.Year, planEndVn.Month, planEndVn.Day, planEndVn.Hour, planEndVn.Minute, 0);
+
+            var day0 = DateOnly.FromDateTime(safePlanStart);
             var candidates = new[]
             {
                 day0.ToDateTime(startTime),
@@ -163,7 +192,7 @@ namespace capstone_backend.Business.Services
                 if (endTime < startTime)
                     end = end.AddDays(1);
 
-                if (start >= planStartVn && end <= planEndVn && end > start)
+                if (start >= safePlanStart && end <= safePlanEnd && end > start)
                     return (start, end);
             }
 
@@ -230,17 +259,63 @@ namespace capstone_backend.Business.Services
                 if (datePlan.Status == DatePlanStatus.DRAFTED.ToString() && datePlan.OrganizerMemberId != member.Id)
                     throw new Exception("Chỉ có người tổ chức buổi hẹn mới có thể xem lịch trình ở trạng thái DRAFTED");
 
-                var (datePlanItems, totalCount) = await _unitOfWork.DatePlanItems.GetPagedAsync(
-                        pageNumber,
-                        pageSize,
-                        dpi => dpi.DatePlanId == datePlanId && dpi.IsDeleted == false,
-                        dpi => dpi.OrderBy(dpi => dpi.OrderIndex),
-                        dpi => dpi.Include(x => x.VenueLocation)
-                    );
+                var items = await _unitOfWork.DatePlanItems.GetByDatePlanIdAsync(datePlanId, true);
+
+                var activeItems = items
+                    .Where(x => x.IsDeleted == false)
+                    .ToList();
+
+                if (datePlan.PlannedStartAt.HasValue && datePlan.PlannedEndAt.HasValue)
+                {
+                    var planStartVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedStartAt.Value);
+                    var planEndVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedEndAt.Value);
+
+                    activeItems = activeItems
+                        .OrderBy(x =>
+                        {
+                            if (!x.StartTime.HasValue || !x.EndTime.HasValue)
+                                return DateTime.MaxValue;
+
+                            return ResolveItemRangeWithinPlan(
+                                planStartVn,
+                                planEndVn,
+                                x.StartTime.Value,
+                                x.EndTime.Value
+                            ).Start;
+                        })
+                        .ThenBy(x =>
+                        {
+                            if (!x.StartTime.HasValue || !x.EndTime.HasValue)
+                                return DateTime.MaxValue;
+
+                            return ResolveItemRangeWithinPlan(
+                                planStartVn,
+                                planEndVn,
+                                x.StartTime.Value,
+                                x.EndTime.Value
+                            ).End;
+                        })
+                        .ThenBy(x => x.Id)
+                        .ToList();
+                }
+                else
+                {
+                    activeItems = activeItems
+                        .OrderBy(x => x.OrderIndex ?? int.MaxValue)
+                        .ThenBy(x => x.Id)
+                        .ToList();
+                }
+
+                var totalCount = activeItems.Count;
+
+                var pagedItems = activeItems
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
 
                 return new PagedResult<DatePlanItemResponse>
                 {
-                    Items = _mapper.Map<List<DatePlanItemResponse>>(datePlanItems),
+                    Items = _mapper.Map<List<DatePlanItemResponse>>(pagedItems),
                     TotalCount = totalCount,
                     PageNumber = pageNumber,
                     PageSize = pageSize
@@ -315,32 +390,54 @@ namespace capstone_backend.Business.Services
                 if (datePlan.Version != version)
                     throw new Exception("Lịch trình đã được chỉnh sửa bởi người khác. Vui lòng tải lại và thử lại");
 
-                // Validate request
-                if (request.StartTime.HasValue)
-                    datePlanItem.StartTime = request.StartTime.Value;
+                if (!datePlan.PlannedStartAt.HasValue || !datePlan.PlannedEndAt.HasValue)
+                    throw new Exception("Vui lòng thiết lập thời gian bắt đầu và kết thúc dự kiến trước khi cập nhật mục lịch trình");
 
-                if (request.EndTime.HasValue)
-                    datePlanItem.EndTime = request.EndTime.Value;
+                var finalStartTime = request.StartTime ?? datePlanItem.StartTime;
+                var finalEndTime = request.EndTime ?? datePlanItem.EndTime;
 
-                if (request.OrderIndex.HasValue)
-                    datePlanItem.OrderIndex = request.OrderIndex.Value;
+                if (!finalStartTime.HasValue || !finalEndTime.HasValue)
+                    throw new Exception("Mục lịch trình phải có đầy đủ thời gian bắt đầu và kết thúc");
 
-                if (!string.IsNullOrEmpty(request.Note))
+                var planStartVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedStartAt.Value);
+                var planEndVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedEndAt.Value);
+
+                await ValidateDatePlanItemTimeAsync(
+                    datePlanId,
+                    datePlanItemId,
+                    planStartVn,
+                    planEndVn,
+                    finalStartTime.Value,
+                    finalEndTime.Value
+                );
+
+                datePlanItem.StartTime = finalStartTime.Value;
+                datePlanItem.EndTime = finalEndTime.Value;
+
+                if (request.Note != null)
                     datePlanItem.Note = request.Note;
 
                 datePlan.UpdatedAt = DateTime.UtcNow;
                 datePlan.Version += 1;
 
+                await _unitOfWork.BeginTransactionAsync();
+
                 _unitOfWork.DatePlanItems.Update(datePlanItem);
                 _unitOfWork.DatePlans.Update(datePlan);
+
+                await _unitOfWork.SaveChangesAsync();
+
+                await RebuildOrderIndexByTimeAsync(datePlanId, planStartVn, planEndVn);
+
                 var check = await _unitOfWork.SaveChangesAsync();
                 if (check <= 0)
                     throw new Exception("Cập nhật mục trong lịch trình thất bại");
 
-                // Reload with VenueLocation
-                datePlanItem = await _unitOfWork.DatePlanItems.GetByIdAndDatePlanIdAsync(datePlanItemId, datePlanId, includeVenueLocation: true);
-                var response = _mapper.Map<DatePlanItemResponse>(datePlanItem);
+                await _unitOfWork.CommitTransactionAsync();
 
+                datePlanItem = await _unitOfWork.DatePlanItems.GetByIdAndDatePlanIdAsync(datePlanItemId, datePlanId, includeVenueLocation: true);
+
+                var response = _mapper.Map<DatePlanItemResponse>(datePlanItem);
                 return response;
             }
             catch (Exception)
@@ -431,5 +528,87 @@ namespace capstone_backend.Business.Services
 
         private static bool Overlap((DateTime s, DateTime e) a, (DateTime s, DateTime e) b)
             => a.s < b.e && b.s < a.e;
+
+        private async Task ValidateDatePlanItemTimeAsync(
+            int datePlanId,
+            int? excludeDatePlanItemId,
+            DateTime planStartVn,
+            DateTime planEndVn,
+            TimeOnly startTime,
+            TimeOnly endTime)
+        {
+            var newRange = ResolveItemRangeWithinPlan(
+                planStartVn,
+                planEndVn,
+                startTime,
+                endTime
+            );
+
+            var existingItems = await _unitOfWork.DatePlanItems.GetByDatePlanIdAsync(datePlanId);
+
+            var existingWithTime = existingItems
+                .Where(x => x.Id != excludeDatePlanItemId &&
+                            x.IsDeleted == false &&
+                            x.StartTime.HasValue &&
+                            x.EndTime.HasValue)
+                .Select(x => new
+                {
+                    Item = x,
+                    Range = ResolveItemRangeWithinPlan(
+                        planStartVn,
+                        planEndVn,
+                        x.StartTime!.Value,
+                        x.EndTime!.Value
+                    )
+                })
+                .ToList();
+
+            foreach (var ex in existingWithTime)
+            {
+                if (Overlap(newRange, ex.Range))
+                    throw new Exception("Khung giờ bạn chọn bị trùng với một mục đã có trong lịch trình");
+            }
+        }
+
+        private async Task RebuildOrderIndexByTimeAsync(int datePlanId, DateTime planStartVn, DateTime planEndVn)
+        {
+            var items = await _unitOfWork.DatePlanItems.GetByDatePlanIdAsync(datePlanId);
+
+            var sortableItems = items
+                .Where(x => x.IsDeleted == false)
+                .OrderBy(x =>
+                {
+                    if (!x.StartTime.HasValue || !x.EndTime.HasValue)
+                        return DateTime.MaxValue;
+
+                    return ResolveItemRangeWithinPlan(
+                        planStartVn,
+                        planEndVn,
+                        x.StartTime.Value,
+                        x.EndTime.Value
+                    ).Start;
+                })
+                .ThenBy(x =>
+                {
+                    if (!x.StartTime.HasValue || !x.EndTime.HasValue)
+                        return DateTime.MaxValue;
+
+                    return ResolveItemRangeWithinPlan(
+                        planStartVn,
+                        planEndVn,
+                        x.StartTime.Value,
+                        x.EndTime.Value
+                    ).End;
+                })
+                .ThenBy(x => x.Id)
+                .ToList();
+
+            for (int i = 0; i < sortableItems.Count; i++)
+            {
+                sortableItems[i].OrderIndex = i + 1;
+            }
+
+            _unitOfWork.DatePlanItems.UpdateRange(sortableItems);
+        }
     }
 }

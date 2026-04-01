@@ -26,6 +26,25 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Get AI Recommended Date Plan Item
+        /// </summary>
+        [RequireActiveSubscription(UserType = "MEMBER", FeatureCode = "DATE_PLAN_AI", ErrorMessage = "Bạn cần sở hữu gói để sử dụng tính năng này")]
+        [HttpPost("ai-suggestion")]
+        public async Task<IActionResult> GetAIRecommendedDatePlanItem([FromBody] DatePlanAISuggestionRequest request, [FromQuery] bool previewOnly = true)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                object result = await _datePlanService.GetAISuggestionAsync(userId.Value, previewOnly, request);
+                return OkResponse(result, "Lấy gợi ý mục lịch trình từ AI thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Get 30 days Date Plans
         /// </summary>
         [HttpGet("calendar-30-days")]

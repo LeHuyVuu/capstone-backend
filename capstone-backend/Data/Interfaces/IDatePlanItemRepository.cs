@@ -6,6 +6,6 @@ namespace capstone_backend.Data.Interfaces
     public interface IDatePlanItemRepository : IGenericRepository<DatePlanItem>
     {
         Task<DatePlanItem?> GetByIdAndDatePlanIdAsync(int datePlanItemId, int datePlanId, bool includeItems = false, bool includeVenueLocation = false);
-        Task<IEnumerable<DatePlanItem>> GetByDatePlanIdAsync(int datePlanId);
+        Task<IEnumerable<DatePlanItem>> GetByDatePlanIdAsync(int datePlanId, bool includeVenueLocation = false);
     }
 }

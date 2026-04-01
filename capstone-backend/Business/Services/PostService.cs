@@ -1,5 +1,6 @@
 ﻿using Amazon.Rekognition.Model;
 using AutoMapper;
+using AutoMapper.Execution;
 using capstone_backend.Business.Common;
 using capstone_backend.Business.Common.Constants;
 using capstone_backend.Business.DTOs.Accessory;
@@ -417,7 +418,7 @@ namespace capstone_backend.Business.Services
             return response;
         }
 
-        public async Task<List<PostResponse>> GetPostsMemberProfileAsync(int userId, int pageNumber, int pageSize)
+        public async Task<PagedResult<PostResponse>> GetPostsMemberProfileAsync(int userId, int pageNumber, int pageSize)
         {
             var user = await _unitOfWork.Users.GetByIdAsync(userId);
             if (user == null)
@@ -444,7 +445,84 @@ namespace capstone_backend.Business.Services
                 var accessory = await _accessoryService.GetEquippedAccessoryForMemberAsync(member.Id);
                 r.Author.EquippedAccessories = accessory;
             }
-            return response;
+
+            return new PagedResult<PostResponse>
+            {
+                Items = response,
+                TotalCount = count,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
+
+        public async Task<PagedResult<PostResponse>> GetPostsOtherProfileAsync(int userId, int memberId, int pageNumber, int pageSize)
+        {
+            var viewer = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (viewer == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var targetMember = await _unitOfWork.MembersProfile.GetByIdAsync(memberId);
+            if (targetMember == null || targetMember.IsDeleted == true)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var isOwner = viewer.Id == targetMember.Id;
+            var isPartner = false;
+
+            if (!isOwner)
+            {
+                var viewerCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(viewer.Id);
+                if (viewerCouple != null)
+                {
+                    isPartner =
+                        viewerCouple.MemberId1 == targetMember.Id ||
+                        viewerCouple.MemberId2 == targetMember.Id;
+                }
+            }
+
+            var (posts, totalCount) = await _unitOfWork.Posts.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                p =>
+                    p.AuthorId == targetMember.Id &&
+                    p.IsDeleted == false &&
+                    (
+                        isOwner
+                            || (
+                                isPartner
+                                    ? (p.Visibility == PostVisibility.PUBLIC.ToString()
+                                       || p.Visibility == PostVisibility.COUPLE_ONLY.ToString())
+                                      && p.Status == PostStatus.PUBLISHED.ToString()
+                                    : p.Visibility == PostVisibility.PUBLIC.ToString()
+                                      && p.Status == PostStatus.PUBLISHED.ToString()
+                            )
+                    ),
+                p => p.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id),
+                p => p.Include(x => x.PostLikes)
+                      .Include(x => x.Author)
+                        .ThenInclude(a => a.User)
+            );
+
+            var response = _mapper.Map<List<PostResponse>>(posts);
+
+            foreach (var item in response)
+            {
+                var entity = posts.First(x => x.Id == item.Id);
+
+                item.IsOwner = entity.AuthorId == viewer.Id;
+                item.IsLikedByMe = entity.PostLikes.Any(pl => pl.MemberId == viewer.Id);
+                item.Author.Avatar = entity.Author.User?.AvatarUrl;
+
+                var accessory = await _accessoryService.GetEquippedAccessoryForMemberAsync(entity.AuthorId);
+                item.Author.EquippedAccessories = accessory;
+            }
+
+            return new PagedResult<PostResponse>
+            {
+                Items = response,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
         }
 
         public async Task<FeedResponse> GetFeedsAsync(int userId, FeedRequest request)

@@ -14,7 +14,8 @@ namespace capstone_backend.Business.Interfaces
         Task<PostResponse> GetPostDetailsAnonymousAsync(int postId);
         Task<PostResponse> GetPostDetailsAsync(int userId, int postId);
         Task<PostResponse> GetPostDetailsByShareLinkAsync(string shareCode);
-        Task<List<PostResponse>> GetPostsMemberProfileAsync(int userId, int pageNumber, int pageSize);
+        Task<PagedResult<PostResponse>> GetPostsMemberProfileAsync(int userId, int pageNumber, int pageSize);
+        Task<PagedResult<PostResponse>> GetPostsOtherProfileAsync(int userId, int memberId, int pageNumber, int pageSize);
         Task<PostLikeResponse> LikePostAsync(int userId, int postId);
         Task<PostLikeResponse> UnlikePostAsync(int userId, int postId);
         Task<PostResponse> UpdatePostAsync(int userId, int postId, UpdatePostRequest request);

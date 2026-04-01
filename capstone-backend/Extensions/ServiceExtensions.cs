@@ -38,6 +38,7 @@ using StackExchange.Redis;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using capstone_backend.Business.Jobs.MemberSubscription;
 
 namespace capstone_backend.Extensions;
 
@@ -253,6 +254,7 @@ public static class ServiceExtensions
         services.AddScoped<IPaymentWorker, PaymentWorker>();
         services.AddScoped<IVenueSubscriptionWorker, VenueSubscriptionWorker>();
         services.AddScoped<INotificationWorker, NotificationWorker>();
+        services.AddScoped<IMemberSubscriptionWorker, MemberSubscriptionWorker>();
 
         // Register Messaging Service
         services.AddScoped<IMessagingService, MessagingService>();     

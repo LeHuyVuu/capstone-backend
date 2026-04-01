@@ -10,6 +10,10 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using Hangfire;
+using Microsoft.EntityFrameworkCore;
+using OpenAI.Chat;
+using System.ClientModel;
+using static capstone_backend.Business.Services.VenueLocationService;
 
 namespace capstone_backend.Business.Services
 {
@@ -18,12 +22,24 @@ namespace capstone_backend.Business.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IDatePlanWorker _datePlanWorker;
         private readonly IMapper _mapper;
+        private readonly Lazy<ChatClient> _chatClientLazy;
 
         public DatePlanService(IUnitOfWork unitOfWork, IMapper mapper, IDatePlanWorker datePlanWorker)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _datePlanWorker = datePlanWorker;
+
+            _chatClientLazy = new Lazy<ChatClient>(() =>
+            {
+                var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+                var modelName = Environment.GetEnvironmentVariable("MODEL_NAME") ?? "gpt-4o-mini";
+
+                if (string.IsNullOrWhiteSpace(apiKey))
+                    throw new InvalidOperationException("Thiếu OpenAI API Key!");
+
+                return new ChatClient(model: modelName, apiKey: apiKey);
+            });
         }
 
         public async Task<int> CreateDatePlanAsync(int userId, CreateDatePlanRequest request)
@@ -515,9 +531,9 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Đã tồn tại lịch trình khác bị trùng khoảng thời gian");
         }
 
-        public async Task<DatePlanCalendar30DaysResponse> GetDatePlansIn30DaysAsync(int value)
+        public async Task<DatePlanCalendar30DaysResponse> GetDatePlansIn30DaysAsync(int userId)
         {
-            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(value);
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Hồ sơ thành viên không tồn tại");
 
@@ -533,7 +549,7 @@ namespace capstone_backend.Business.Services
             var endUtcExclusive = DateTimeNormalizeUtil.NormalizeToUtc(endDate.AddDays(1).ToDateTime(TimeOnly.MinValue));
 
             var datePlans = await _unitOfWork.DatePlans.GetAsync(dp =>
-                dp.IsDeleted == false &&
+                dp.IsDeleted == false && (dp.Status == DatePlanStatus.SCHEDULED.ToString() || dp.Status == DatePlanStatus.IN_PROGRESS.ToString()) &&
                 dp.CoupleId == couple.id &&
                 dp.PlannedStartAt != null &&
                 dp.PlannedStartAt >= startUtc &&
@@ -570,6 +586,257 @@ namespace capstone_backend.Business.Services
                 EndDay = endDate,
                 Days = days
             };
+        }
+
+        public async Task<object> GetAISuggestionAsync(int userId, bool previewOnly, DatePlanAISuggestionRequest request)
+        {
+            var chatClient = _chatClientLazy.Value;
+
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Không tìm thấy hồ sơ thành viên");
+
+            var personalityMember = await _unitOfWork.PersonalityTests.GetCurrentPersonalityAsync(member.Id);
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleIncludePersonalityAndMoodByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Thành viên chưa thuộc cặp đôi nào");
+
+            // Phase 1: Extract user query
+            var activeCategories = await _unitOfWork.Context.Set<Category>()
+                .Where(c => c.IsActive && !c.IsDeleted)
+                .Select(c => c.Name)
+                .ToListAsync();
+            var categoryStringList = string.Join(", ", activeCategories);
+            var phase1SystemPrompt = BuildPhase1SystemPrompt(categoryStringList);
+            var phase1UserPrompt = string.IsNullOrWhiteSpace(request.Query)
+                ? "Không có yêu cầu cụ thể"
+                : $"User query: '{request.Query.Trim()}'";
+
+            var options = new ChatCompletionOptions
+            {
+                ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat(),
+                Temperature = 0.2f
+            };
+
+            var messages = new List<ChatMessage>()
+            {
+                new SystemChatMessage(phase1SystemPrompt),
+                new UserChatMessage(phase1UserPrompt)
+            };
+
+            AiExtractedIntentResponse? extractedIntent;
+
+            try
+            {
+                // Call OpenAI API
+                ClientResult<ChatCompletion> response = await chatClient.CompleteChatAsync(messages, options);
+
+                var jsonString = response.Value.Content[0].Text;
+
+                extractedIntent = JsonConverterUtil.DeserializeOrDefault<AiExtractedIntentResponse>(jsonString);
+
+                if (extractedIntent == null)
+                    throw new Exception("AI không trả về đúng định dạng JSON.");
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Lỗi khi phân tích yêu cầu bằng AI: {ex.Message}");
+            }
+
+            // Phase 2: Filter
+            var plannedStartAtUtc = DateTimeNormalizeUtil.NormalizeToUtc(request.PlannedStartAt);
+            var plannedEndAtUtc = DateTimeNormalizeUtil.NormalizeToUtc(request.PlannedEndAt);
+
+            var plannedStartAtVn = TimezoneUtil.ToVietNamTime(plannedStartAtUtc);
+            var plannedEndAtVn = TimezoneUtil.ToVietNamTime(plannedEndAtUtc);
+
+            var startDayOfWeek = (int)request.PlannedStartAt.DayOfWeek + 1;
+            var startTimeSpan = TimeOnly.FromDateTime(plannedStartAtVn).ToTimeSpan();
+            var endTimeSpan = TimeOnly.FromDateTime(plannedEndAtVn).ToTimeSpan();
+
+            var venueQuery = _unitOfWork.VenueLocations.BuildAiCandidatesQuery(
+                request.EstimatedBudget,
+                activeCategories,
+                startDayOfWeek,
+                startTimeSpan,
+                endTimeSpan,
+                request.Latitude.HasValue ? request.Latitude.Value : null,
+                request.Longitude.HasValue ? request.Longitude.Value : null,
+                20.0
+            );
+
+            var rawVenues = await venueQuery
+                .OrderByDescending(v => v.AverageRating)
+                .ThenByDescending(v => v.ReviewCount)
+                .Take(50)
+                .Select(v => new
+                {
+                    v.Id,
+                    v.Name,
+                    v.Description,
+                    v.Address,
+                    v.AverageRating,
+                    v.Latitude,
+                    v.Longitude,
+                    v.CoverImage,
+                    Categories = _unitOfWork.Context.Set<VenueLocationCategory>()
+                        .Where(vlc => vlc.VenueLocationId == v.Id && vlc.IsDeleted == false)
+                        .Select(vlc => vlc.Category.Name)
+                        .ToList()
+                }).ToListAsync();
+
+            // filter with lat/long
+            if (request.Latitude.HasValue && request.Longitude.HasValue)
+            {
+                var reqLat = request.Latitude.Value;
+                var reqLon = request.Longitude.Value;
+                var maxDistanceKm = 20.0;
+
+                rawVenues = rawVenues
+                    .Where(v => v.Latitude.HasValue && v.Longitude.HasValue)
+                    .Where(v => GeoCalculator.CalculateDistance(
+                        reqLat,
+                        reqLon,
+                        v.Latitude.Value,
+                        v.Longitude.Value) <= maxDistanceKm)
+                    .ToList();
+            }
+
+            var aiCandidates = rawVenues.Select(v => new VenueCandidateDto
+            {
+                Id = v.Id,
+                Name = v.Name,
+                Description = v.Description,
+                Address = v.Address,
+                Rating = v.AverageRating.Value,
+                Categories = v.Categories
+            }).ToList();
+
+            // Phase 3: Request to AI
+            // Build context
+
+            // Random
+            var rng = new Random(Guid.NewGuid().GetHashCode());
+            aiCandidates = aiCandidates
+                .OrderBy(_ => rng.Next())
+                .Take(20)
+                .ToList();
+
+            var aiPromptRequest = new AIRecommendationDatePlanRequest
+            {
+                RequestContext = new RequestContextDto
+                {
+                    EstimatedBudget = request.EstimatedBudget,
+                    PlannedStartAt = TimezoneUtil.ToVietNamTime(request.PlannedStartAt).ToString("HH:mm"),
+                    PlannedEndAt = TimezoneUtil.ToVietNamTime(request.PlannedEndAt).ToString("HH:mm"),
+                    RawQuery = request.Query,
+                    UserIntent = extractedIntent,
+                    Address = request.Address
+                },
+                CoupleContext = new CoupleContextDto
+                {
+                    Ages = member.DateOfBirth.HasValue ? new List<int> { DateTime.Today.Year - member.DateOfBirth.Value.Year } : null,
+                    RelationshipDurationDays = couple?.StartDate.HasValue == true
+                        ? DateOnly.FromDateTime(DateTime.Today).DayNumber - couple.StartDate.Value.DayNumber
+                        : 0,
+                    Personality = couple.CouplePersonalityType != null
+                        ? couple.CouplePersonalityType.Name
+                        : (personalityMember != null ? personalityMember.ResultCode : null),
+                    Mood = couple.CoupleMoodType != null ? couple.CoupleMoodType.Name : (member.MoodTypes != null ? member.MoodTypes.Name : null),
+                    Interests = null, // TODO: Get interests of couple
+                },
+                VenueCandidates = aiCandidates
+            };
+
+            if (previewOnly == true)
+            {
+                return aiPromptRequest;
+            }
+
+            var promptJsonContext = JsonConverterUtil.Serialize(aiPromptRequest);
+
+            var phase3SystemPrompt = BuildPhase3SystemPrompt();
+            var p3Messages = new List<ChatMessage>()
+            {
+                new SystemChatMessage(phase3SystemPrompt),
+                new UserChatMessage(promptJsonContext)
+            };
+
+            var p3Options = new ChatCompletionOptions 
+            { 
+                ResponseFormat = ChatResponseFormat.CreateJsonObjectFormat(), 
+                Temperature = 0.5f 
+            };
+
+            try
+            {
+                var p3Result = await chatClient.CompleteChatAsync(p3Messages, p3Options);
+                var responseText = p3Result.Value.Content[0].Text;
+
+                var finalPlan = JsonConverterUtil.DeserializeOrDefault<AIDatePlanItemResponse>(responseText);
+
+                if (finalPlan == null || finalPlan.Items == null || !finalPlan.Items.Any())
+                    throw new Exception("AI không thể tạo lịch trình từ dữ liệu này.");
+
+                foreach (var item in finalPlan.Items)
+                {
+                    var rawVenue = rawVenues.FirstOrDefault(v => v.Id == item.VenueLocationId);
+                    if (rawVenue != null)
+                    {
+                        item.VenueName = rawVenue.Name;
+                        item.VenueDescription = rawVenue.Description;
+                        item.VenueAddress = rawVenue.Address;
+                        item.VenueAverageRating = rawVenue.AverageRating;
+                        item.VenueCoverImage = DeserializeImages(rawVenue.CoverImage);
+                    }
+                        
+                }
+
+                return finalPlan;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Lỗi khi AI sinh lịch trình: {ex.Message}");
+            }
+
+            return aiCandidates;
+        }
+
+        private static string BuildPhase1SystemPrompt(string validCategories)
+        {
+            return $@"Role: Dating Context Extractor.
+Rules:
+1. categories: Map input to closest semantic match in: [{validCategories}]. 
+   Ex: 'uống bia'->'Bar/Pub', 'bánh ngọt'->'Cafe'. Unmappable -> [].
+2. mood_tags: Extract vibes (chill, romantic...). Free text.
+3. Output PURE JSON. No markdown, no yapping.
+
+{{""categories"":[""MatchedCategory""],""mood_tags"":[""vibe""],""time_hint"":""Tối nay"",""special_note"":null}}";
+        }
+
+        private static string BuildPhase3SystemPrompt()
+        {
+            return @"Role: Date Planner AI.
+Task: Map 'raw_query', 'user_intent', 'venue_candidates' -> 3-item JSON itinerary.
+
+RULES (STRICT):
+1. TIME CONSTRAINTS & TRAVEL:
+   - Itinerary MUST fit strictly within [planned_start_at, planned_end_at].
+   - Add 15-20 mins travel time between venues. Do NOT overlap times.
+2. DYNAMIC SEQUENCING (COMMON SENSE):
+   - IGNORE the text order in 'raw_query'. Sort venues based on human logic and time of day.
+   - Core Heuristics: Morning (Breakfast/Cafe) -> Afternoon (Sightseeing/Outdoor/Sunset) -> Evening (Dinner/Main Meal) -> Late Night (Bar/Lounge/Live Music).
+   - Match venue categories to their optimal operating hours within the user's timeframe.
+3. ADAPTIVE SELECTION (EXACTLY 3 VENUES):
+   - MUST output exactly 3 distinct venues. No duplicate brands.
+   - If 'user_intent' has < 3 activities, AUTO-FILL the gaps with complementary venues from candidates to create a balanced date experience.
+4. FORMAT:
+   - 'note': < 15 words. Sharp and engaging. Vietnamese
+   - OUTPUT PURE JSON. NO markdown. NO yapping.
+
+{""items"":[{""venueLocationId"":1,""startTime"":""HH:mm:ss"",""endTime"":""HH:mm:ss"",""note"":""string""}]}
+";
         }
     }
 }

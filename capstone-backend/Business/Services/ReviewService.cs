@@ -217,7 +217,7 @@ namespace capstone_backend.Business.Services
             review.VenueId = request.VenueLocationId;
             review.Status = ReviewStatus.PENDING.ToString();
             review.IsAnonymous = request.IsAnonymous;
-            review.IsMatched = CalculateIsMatched(couple, venue);
+            review.IsMatched = request.IsMatched;
 
             checkIn.IsValid = false;
 

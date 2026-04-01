@@ -12,6 +12,8 @@ namespace capstone_backend.Business.DTOs.MemberSubscription
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 
+        public bool IsDefault { get; set; }
+
         public int PackageId { get; set; }
         public SubscriptionPackageDto? Package { get; set; }
     }
