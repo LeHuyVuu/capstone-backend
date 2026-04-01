@@ -35,6 +35,26 @@ public class WalletController : BaseController
         return OkResponse(balance, "Wallet balance retrieved successfully");
     }
 
+    /// <summary>VENUE OWNER - Tạo giao dịch nạp tiền vào wallet qua VietQR (chỉ xử lý transaction)</summary>
+    [HttpPost("topup")]
+    [Authorize(Roles = "VENUEOWNER")]
+    public async Task<IActionResult> CreateTopupTransaction([FromBody] CreateWalletTopupRequest request)
+    {
+        var userId = GetCurrentUserId();
+        if (!userId.HasValue)
+            return UnauthorizedResponse("User not authenticated");
+
+        try
+        {
+            var result = await _walletService.CreateVenueOwnerWalletTopupAsync(userId.Value, request);
+            return OkResponse(result, "Top-up transaction created successfully");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
+
     /// <summary>VENUE OWNER</summary>
     [HttpPost("withdraw")]
     [Authorize(Roles = "VENUEOWNER")]

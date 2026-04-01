@@ -88,13 +88,14 @@ public class SepayWebhookController : ControllerBase
                 return BadRequest(new { message = "Invalid webhook data" });
             }
 
-            // 4. Parse payment code (format: VSP{subscriptionId} or ADO{adsOrderId})
+            // 4. Parse payment code (format: VSP{subscriptionId} or ADO{adsOrderId} or WTO{transactionId})
             // Determine payment type and extract ID
             string paymentType;
             int paymentId;
             
             var vspIndex = paymentCode.IndexOf("VSP", StringComparison.OrdinalIgnoreCase);
             var adoIndex = paymentCode.IndexOf("ADO", StringComparison.OrdinalIgnoreCase);
+            var wtoIndex = paymentCode.IndexOf("WTO", StringComparison.OrdinalIgnoreCase);
             
             if (vspIndex >= 0)
             {
@@ -138,10 +139,31 @@ public class SepayWebhookController : ControllerBase
                 
                 _logger.LogInformation("[{RequestId}] 📋 Extracted ads order ID: {AdoId} from payment code: {Code}", requestId, paymentId, paymentCode);
             }
+            else if (wtoIndex >= 0)
+            {
+                // WTO payment - Wallet Top-up
+                paymentType = "WTO";
+                var afterWto = paymentCode.Substring(wtoIndex + 3); // After "WTO"
+                var digits = new string(afterWto.Where(char.IsDigit).ToArray());
+
+                if (string.IsNullOrEmpty(digits) || !int.TryParse(digits, out paymentId))
+                {
+                    _logger.LogWarning("[{RequestId}] ⚠️ Cannot parse wallet top-up transaction ID from payment code: {Code}", requestId, paymentCode);
+                    return BadRequest(new { message = "Invalid wallet top-up transaction ID format" });
+                }
+
+                if (paymentId <= 0 || paymentId > int.MaxValue)
+                {
+                    _logger.LogWarning("[{RequestId}] ⚠️ Invalid wallet top-up transaction ID: {TxId}", requestId, paymentId);
+                    return BadRequest(new { message = "Invalid wallet top-up transaction ID" });
+                }
+
+                _logger.LogInformation("[{RequestId}] 📋 Extracted wallet top-up transaction ID: {TxId} from payment code: {Code}", requestId, paymentId, paymentCode);
+            }
             else
             {
-                _logger.LogWarning("[{RequestId}] ⚠️ Invalid payment code - VSP or ADO not found: {Code}", requestId, paymentCode);
-                return BadRequest(new { message = "Payment code must contain VSP or ADO" });
+                _logger.LogWarning("[{RequestId}] ⚠️ Invalid payment code - VSP, ADO, or WTO not found: {Code}", requestId, paymentCode);
+                return BadRequest(new { message = "Payment code must contain VSP, ADO, or WTO" });
             }
             
             // Route to appropriate handler
@@ -149,9 +171,13 @@ public class SepayWebhookController : ControllerBase
             {
                 return await ProcessVenueSubscriptionPayment(requestId, paymentId, webhook);
             }
-            else // ADO
+            else if (paymentType == "ADO")
             {
                 return await ProcessAdvertisementOrderPayment(requestId, paymentId, webhook);
+            }
+            else // WTO
+            {
+                return await ProcessWalletTopupPayment(requestId, paymentId, webhook);
             }
         }
         catch (DbUpdateConcurrencyException ex)
@@ -414,6 +440,182 @@ public class SepayWebhookController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{RequestId}] ❌ VSP webhook processing failed", requestId);
+            return StatusCode(500, new { message = "Internal server error", requestId });
+        }
+    }
+
+    private async Task<IActionResult> ProcessWalletTopupPayment(string requestId, int transactionId, SepayWebhookData webhook)
+    {
+        try
+        {
+            var transaction = await _unitOfWork.Context.Set<Transaction>()
+                .FirstOrDefaultAsync(t => t.Id == transactionId
+                    && t.TransType == (int)TransactionType.WALLET_TOPUP);
+
+            if (transaction == null)
+            {
+                _logger.LogWarning("[{RequestId}] ⚠️ Wallet top-up transaction not found: {Id}", requestId, transactionId);
+                return NotFound(new { message = $"Wallet top-up transaction {transactionId} not found" });
+            }
+
+            if (transaction.Status == TransactionStatus.SUCCESS.ToString())
+            {
+                _logger.LogInformation("[{RequestId}] ℹ️ Wallet top-up transaction already processed: {Id}", requestId, transaction.Id);
+                return Ok(new
+                {
+                    message = "Wallet top-up transaction already processed",
+                    transactionId = transaction.Id,
+                    status = transaction.Status,
+                    idempotent = true
+                });
+            }
+
+            if (transaction.Status == TransactionStatus.EXPIRED.ToString())
+            {
+                return BadRequest(new { message = "Transaction has expired" });
+            }
+
+            if (transaction.Status == TransactionStatus.CANCELLED.ToString())
+            {
+                return BadRequest(new { message = "Transaction has been cancelled" });
+            }
+
+            if (transaction.Status != TransactionStatus.PENDING.ToString())
+            {
+                return BadRequest(new { message = $"Transaction status is {transaction.Status}" });
+            }
+
+            if (webhook.Amount != (int)transaction.Amount)
+            {
+                _logger.LogError("[{RequestId}] ❌ Wallet top-up amount mismatch - Expected: {Expected}, Received: {Received}",
+                    requestId, transaction.Amount, webhook.Amount);
+
+                transaction.Status = TransactionStatus.FAILED.ToString();
+                transaction.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Context.Set<Transaction>().Update(transaction);
+                await _unitOfWork.SaveChangesAsync();
+
+                return BadRequest(new { message = "Payment amount mismatch" });
+            }
+
+            if (transaction.CreatedAt.HasValue)
+            {
+                var transactionAge = DateTime.UtcNow - transaction.CreatedAt.Value;
+                if (transactionAge.TotalHours > 24)
+                {
+                    transaction.Status = TransactionStatus.EXPIRED.ToString();
+                    transaction.UpdatedAt = DateTime.UtcNow;
+                    _unitOfWork.Context.Set<Transaction>().Update(transaction);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    return BadRequest(new { message = "Transaction expired (created more than 24 hours ago)" });
+                }
+            }
+
+            if (!string.Equals(webhook.Status, "success", StringComparison.OrdinalIgnoreCase))
+            {
+                transaction.Status = TransactionStatus.FAILED.ToString();
+                transaction.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Context.Set<Transaction>().Update(transaction);
+                await _unitOfWork.SaveChangesAsync();
+
+                return Ok(new { message = "Payment failed, transaction status updated" });
+            }
+
+            using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
+            try
+            {
+                await _unitOfWork.Context.Entry(transaction).ReloadAsync();
+                if (transaction.Status == TransactionStatus.SUCCESS.ToString())
+                {
+                    await dbTransaction.RollbackAsync();
+                    return Ok(new { message = "Transaction already processed", idempotent = true });
+                }
+
+                var wallet = await _unitOfWork.Context.Set<Wallet>()
+                    .FirstOrDefaultAsync(w => w.Id == transaction.DocNo && w.UserId == transaction.UserId);
+
+                if (wallet == null)
+                {
+                    await dbTransaction.RollbackAsync();
+                    return NotFound(new { message = "Wallet not found for this transaction" });
+                }
+
+                if (wallet.IsActive != true)
+                {
+                    await dbTransaction.RollbackAsync();
+                    return BadRequest(new { message = "Wallet is not active" });
+                }
+
+                var balanceBefore = wallet.Balance ?? 0;
+                var balanceAfter = balanceBefore + transaction.Amount;
+
+                wallet.Balance = balanceAfter;
+                wallet.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Context.Set<Wallet>().Update(wallet);
+
+                var externalRefData = new Dictionary<string, object>();
+
+                try
+                {
+                    if (!string.IsNullOrEmpty(transaction.ExternalRefCode))
+                    {
+                        externalRefData = JsonSerializer.Deserialize<Dictionary<string, object>>(transaction.ExternalRefCode)
+                            ?? new Dictionary<string, object>();
+                    }
+                }
+                catch (JsonException)
+                {
+                    externalRefData = new Dictionary<string, object>();
+                }
+
+                externalRefData["sepayWebhookId"] = webhook.Id;
+                externalRefData["paidAt"] = DateTime.UtcNow.ToString("O");
+                externalRefData["transactionDate"] = webhook.TransactionDate ?? string.Empty;
+                externalRefData["gateway"] = webhook.Gateway ?? "Unknown";
+                externalRefData["referenceCode"] = webhook.ReferenceCode ?? string.Empty;
+                externalRefData["requestId"] = requestId;
+                externalRefData["balanceBefore"] = balanceBefore;
+                externalRefData["balanceAfter"] = balanceAfter;
+
+                transaction.Status = TransactionStatus.SUCCESS.ToString();
+                transaction.ExternalRefCode = JsonSerializer.Serialize(externalRefData);
+                transaction.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Context.Set<Transaction>().Update(transaction);
+
+                await _unitOfWork.SaveChangesAsync();
+                await dbTransaction.CommitAsync();
+
+                _logger.LogInformation("[{RequestId}] ✅ Wallet top-up processed - TxId: {TxId}, UserId: {UserId}, Balance: {Before} -> {After}",
+                    requestId, transaction.Id, transaction.UserId, balanceBefore, balanceAfter);
+
+                return Ok(new
+                {
+                    message = "Wallet top-up processed successfully",
+                    transactionId = transaction.Id,
+                    userId = transaction.UserId,
+                    walletId = wallet.Id,
+                    amount = transaction.Amount,
+                    balanceBefore,
+                    balanceAfter,
+                    requestId
+                });
+            }
+            catch (Exception)
+            {
+                await dbTransaction.RollbackAsync();
+                throw;
+            }
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogError(ex, "[{RequestId}] ❌ Concurrency conflict while processing wallet top-up", requestId);
+            return Conflict(new { message = "Payment is being processed by another request" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[{RequestId}] ❌ WTO webhook processing failed", requestId);
             return StatusCode(500, new { message = "Internal server error", requestId });
         }
     }

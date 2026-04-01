@@ -19,12 +19,18 @@ public class WalletService
     private readonly IUnitOfWork _unitOfWork;
     private readonly ISystemConfigService _systemConfigService;
     private readonly IMapper _mapper;
+    private readonly SepayService _sepayService;
 
-    public WalletService(IUnitOfWork unitOfWork, ISystemConfigService systemConfigService, IMapper mapper)
+    public WalletService(
+        IUnitOfWork unitOfWork,
+        ISystemConfigService systemConfigService,
+        IMapper mapper,
+        SepayService sepayService)
     {
         _unitOfWork = unitOfWork;
         _systemConfigService = systemConfigService;
         _mapper = mapper;
+        _sepayService = sepayService;
     }
 
     public async Task<WalletBalanceResponse?> GetWalletBalanceAsync(int userId)
@@ -115,6 +121,102 @@ public class WalletService
                 RequestedAt = wr.RequestedAt ?? DateTime.UtcNow
             };
         }).ToList();
+    }
+
+    public async Task<VenueOwnerWalletTopupResponse> CreateVenueOwnerWalletTopupAsync(int userId, CreateWalletTopupRequest request)
+    {
+        if (request.Amount < 1000)
+            throw new InvalidOperationException("Số tiền nạp tối thiểu là 1.000 VND");
+
+        var wallet = await _unitOfWork.Wallets.GetByUserIdAsync(userId);
+        if (wallet == null)
+            throw new InvalidOperationException("Wallet not found");
+
+        if (wallet.IsActive != true)
+            throw new InvalidOperationException("Wallet is not active");
+
+        using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
+        try
+        {
+            var transaction = new Transaction
+            {
+                UserId = userId,
+                Amount = request.Amount,
+                Currency = "VND",
+                PaymentMethod = "VIETQR",
+                TransType = (int)TransactionType.WALLET_TOPUP,
+                DocNo = wallet.Id,
+                Description = "Nạp tiền vào ví venue owner",
+                Status = TransactionStatus.PENDING.ToString(),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.Context.Set<Transaction>().AddAsync(transaction);
+            await _unitOfWork.SaveChangesAsync();
+
+            var paymentContent = $"WTO{transaction.Id}";
+
+            SepayTransactionResponse sepayResponse;
+            try
+            {
+                sepayResponse = await _sepayService.CreateTransactionAsync(request.Amount, paymentContent, paymentContent);
+            }
+            catch
+            {
+                await dbTransaction.RollbackAsync();
+                throw new InvalidOperationException("Unable to create payment transaction. Please try again.");
+            }
+
+            if (sepayResponse.Data == null || string.IsNullOrEmpty(sepayResponse.Data.QrCode))
+            {
+                await dbTransaction.RollbackAsync();
+                throw new InvalidOperationException("Failed to generate QR code. Please try again.");
+            }
+
+            var expireAt = DateTime.UtcNow.AddMinutes(5);
+            var bankInfo = _sepayService.GetBankInfo();
+
+            transaction.ExternalRefCode = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                sepayTransactionId = sepayResponse.Data.Id,
+                qrCodeUrl = sepayResponse.Data.QrCode,
+                qrData = sepayResponse.Data.QrData,
+                orderCode = sepayResponse.Data.OrderCode,
+                expireAt,
+                bankInfo = new { bankInfo.BankName, bankInfo.AccountNumber, bankInfo.AccountName }
+            });
+            transaction.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.Context.Set<Transaction>().Update(transaction);
+            await _unitOfWork.SaveChangesAsync();
+
+            await dbTransaction.CommitAsync();
+
+            return new VenueOwnerWalletTopupResponse
+            {
+                IsSuccess = true,
+                Message = "Top-up transaction created. Please complete payment via VietQR.",
+                TransactionId = transaction.Id,
+                Amount = request.Amount,
+                Currency = "VND",
+                PaymentContent = paymentContent,
+                QrCodeUrl = sepayResponse.Data.QrCode,
+                ExpireAt = expireAt,
+                BankInfo = new BankInfoDto
+                {
+                    BankName = bankInfo.BankName,
+                    AccountNumber = bankInfo.AccountNumber,
+                    AccountName = bankInfo.AccountName
+                }
+            };
+        }
+        catch
+        {
+            await dbTransaction.RollbackAsync();
+            throw;
+        }
     }
 
     public async Task<PagedResult<WalletTransactionHistoryResponse>> GetWalletTransactionHistoryAsync(
