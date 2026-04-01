@@ -2,6 +2,7 @@
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.MemberSubscription;
 using capstone_backend.Business.DTOs.SubscriptionPackage;
+using capstone_backend.Data.Entities;
 
 namespace capstone_backend.Business.Interfaces
 {
@@ -12,5 +13,6 @@ namespace capstone_backend.Business.Interfaces
         Task<PagedResult<SubscriptionPackageDto>> GetAvailablePackagesAsync(int pageNumber, int pageSize);
         Task<MemberSubscriptionResponse?> GetCurrentSubscriptionAsync(int userId);
         Task<PagedResult<TransactionResponse>> GetTransactionHistoryAsync(int userId, int pageNumber, int pageSize);
+        Task<MemberSubscriptionPackage?> EnsureDefaultSubscriptionAsync(int userId);
     }
 }

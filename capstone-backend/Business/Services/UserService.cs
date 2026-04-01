@@ -25,6 +25,7 @@ public class UserService : IUserService
     private readonly IEmailService _emailService;
     private readonly IGoogleAuthService _googleAuthService;
     private readonly IAccessoryService _accessoryService;
+    private readonly IMemberSubscriptionService _memberSubscriptionService;
 
     public UserService(
         IUnitOfWork unitOfWork,
@@ -34,7 +35,8 @@ public class UserService : IUserService
         IRedisService redisService,
         IEmailService emailService,
         IGoogleAuthService googleAuthService,
-        IAccessoryService accessoryService)
+        IAccessoryService accessoryService,
+        IMemberSubscriptionService memberSubscriptionService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -44,6 +46,7 @@ public class UserService : IUserService
         _emailService = emailService;
         _googleAuthService = googleAuthService;
         _accessoryService = accessoryService;
+        _memberSubscriptionService = memberSubscriptionService;
     }
 
     public async Task<LoginResponse?> LoginAsync(LoginRequest request)
@@ -129,6 +132,9 @@ public class UserService : IUserService
 
             // Tạo member profile
             await CreateMemberProfileAsync(user.Id, request);
+
+            // Auto kích hoạt gói default
+            await _memberSubscriptionService.EnsureDefaultSubscriptionAsync(user.Id);
 
             await _unitOfWork.SaveChangesAsync();
             await _unitOfWork.CommitTransactionAsync();
@@ -730,6 +736,9 @@ public class UserService : IUserService
 
             // Tạo collection mặc định
             await _collectionService.CreateDefaultCollectionForMemberAsync(memberProfile.Id);
+
+            // Auto kích hoạt gói default
+            await _memberSubscriptionService.EnsureDefaultSubscriptionAsync(newUser.Id);
 
             await _unitOfWork.CommitTransactionAsync();
 

@@ -69,7 +69,7 @@ namespace capstone_backend.Business.Services
             response.MemberSubscriptionId = tx.DocNo;
             response.StartDate = sub.StartDate;
             response.EndDate = sub.EndDate;
-            response.IsActive = sub.Status == MemberSubscriptionPackageStatus.ACTIVE.ToString();
+            response.IsActive = sub.Status == MemberSubscriptionPackageStatus.ACTIVE.ToString() && (!sub.EndDate.HasValue || sub.EndDate >= DateTime.UtcNow);
 
             return response;
         }
@@ -103,10 +103,79 @@ namespace capstone_backend.Business.Services
 
             var sub = await _unitOfWork.MemberSubscriptionPackages.GetCurrentActiveSubscriptionAsync(member.Id);
             if (sub == null)
-                return null;
+            {
+                await _unitOfWork.BeginTransactionAsync();
+                try
+                {
+                    sub = await EnsureDefaultSubscriptionAsync(userId);
+                    await _unitOfWork.CommitTransactionAsync();
+                }
+                catch (Exception ex)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw new Exception("Kích hoạt gói đăng ký mặc định thất bại: " + ex.Message);
+                }
+            }
+                
 
             var response = _mapper.Map<MemberSubscriptionResponse>(sub);
             return response;
+        }
+
+        public async Task<MemberSubscriptionPackage?> EnsureDefaultSubscriptionAsync(int userId)
+        {
+            var now = DateTime.UtcNow;
+
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                return null;
+
+            var active = await _unitOfWork.MemberSubscriptionPackages.GetCurrentActiveSubscriptionAsync(member.Id);
+            if (active != null)
+                return active;
+
+            var defaultPackage = await _unitOfWork.SubscriptionPackages.GetFirstAsync(
+                   p => p.Type == "MEMBER" &&
+                    p.IsDeleted == false &&
+                    p.IsActive == true &&
+                    p.IsDefault == true
+                );
+
+            if (defaultPackage == null)
+                throw new Exception("Default subscription package is not configured");
+
+            var newSub = new MemberSubscriptionPackage
+            {
+                MemberId = member.Id,
+                PackageId = defaultPackage.Id,
+                StartDate = now,
+                EndDate = null,
+                Status = MemberSubscriptionPackageStatus.ACTIVE.ToString(),
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+
+            await _unitOfWork.MemberSubscriptionPackages.AddAsync(newSub);
+            await _unitOfWork.SaveChangesAsync();
+
+            // add transaction
+            var newTx = new Transaction
+            {
+                UserId = userId,
+                Amount = defaultPackage.Price.Value,
+                Currency = "VND",
+                Description = $"Hệ thống tự động kích hoạt gói cho thành viên: {defaultPackage.PackageName}",
+                DocNo = newSub.Id,
+                PaymentMethod = "SYSTEM",
+                TransType = 3, // MEMBER_SUBSCRIPTION
+                Status = TransactionStatus.SUCCESS.ToString(),
+                ExternalRefCode = null
+            };
+
+            await _unitOfWork.Transactions.AddAsync(newTx);
+            await _unitOfWork.SaveChangesAsync();
+
+            return newSub;
         }
 
         public async Task<PagedResult<TransactionResponse>> GetTransactionHistoryAsync(int userId, int pageNumber, int pageSize)
@@ -156,7 +225,7 @@ namespace capstone_backend.Business.Services
                     item.MemberSubscriptionId = sub.Id;
                     item.StartDate = sub.StartDate;
                     item.EndDate = sub.EndDate;
-                    item.IsActive = sub.Status == MemberSubscriptionPackageStatus.ACTIVE.ToString();
+                    item.IsActive = sub.Status == MemberSubscriptionPackageStatus.ACTIVE.ToString() && (!sub.EndDate.HasValue || sub.EndDate >= DateTime.UtcNow);
                 }
                 else
                 {

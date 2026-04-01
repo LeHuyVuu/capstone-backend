@@ -31,6 +31,8 @@ public partial class SubscriptionPackage
 
     public bool? IsActive { get; set; }
 
+    public bool? IsDefault { get; set; }
+
     public JsonDocument? FeatureFlags { get; set; }
 
     [InverseProperty("Package")]

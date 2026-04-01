@@ -365,7 +365,7 @@ public class WalletService
             pageSize,
             t => t.UserId == userId &&
                  t.Status == TransactionStatus.SUCCESS.ToString() &&
-                 (t.TransType == 4 || t.TransType == 6),
+                 (t.TransType == 4 || t.TransType == 6 || t.TransType == 3),
             t => t.OrderByDescending(t => t.CreatedAt).ThenByDescending(t => t.Id)
         );
 

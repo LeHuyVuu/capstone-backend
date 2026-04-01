@@ -5,5 +5,6 @@
         ACTIVE,
         INACTIVE,
         CANCELED,
+        EXPIRED
     }
 }
