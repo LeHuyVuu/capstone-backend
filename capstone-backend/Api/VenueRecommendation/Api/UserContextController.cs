@@ -62,7 +62,6 @@ public class UserContextController : BaseController
             })
             .FirstOrDefaultAsync();
 
-        // TEMP: Disable personality-based context enrichment.
         var latestPersonalityResultCode = await _dbContext.PersonalityTests
             .AsNoTracking()
             .Where(p => p.MemberId == memberProfile.Id
@@ -72,13 +71,13 @@ public class UserContextController : BaseController
             .Select(p => p.ResultCode)
             .FirstOrDefaultAsync();
 
-        string personalityDescription = null;
+        string? personalityDescription = null;
         if (!string.IsNullOrWhiteSpace(latestPersonalityResultCode))
         {
             var mbtiInfo = MbtiContentStore.GetProfile(latestPersonalityResultCode);
-            if (mbtiInfo.Description != null && mbtiInfo.Description.Any())
+            if (!string.IsNullOrWhiteSpace(mbtiInfo.PersonalityDescription))
             {
-                personalityDescription = string.Join(" ", mbtiInfo.Description);
+                personalityDescription = mbtiInfo.PersonalityDescription;
             }
         }
         
@@ -100,7 +99,7 @@ public class UserContextController : BaseController
             contextParts.Add(personalityDescription);
         }
 
-        var userContext = string.Join(". người dùng có tính cách ", contextParts);
+        var userContext = string.Join(". user personality: ", contextParts);
         if (string.IsNullOrWhiteSpace(userContext))
         {
             userContext = "suggest popular and diverse venues";
