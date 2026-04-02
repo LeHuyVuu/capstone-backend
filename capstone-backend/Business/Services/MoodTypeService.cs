@@ -517,7 +517,7 @@ public class MoodTypeService : IMoodTypeService
         return new MoodTypeResponse
         {
             Id = moodType.Id,
-            Name = moodType.Name,
+            Name = FaceEmotionService.MapEmotionToVietnamese(moodType.Name),
             IconUrl = ResolveIconUrl(moodType.IconUrl, gender),
             IsActive = moodType.IsActive,
             CreatedAt = moodType.CreatedAt
