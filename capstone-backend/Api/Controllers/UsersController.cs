@@ -7,7 +7,6 @@ namespace capstone_backend.Api.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "ADMIN")]
 public class UsersController : BaseController
 {
     private readonly IUserService _userService;
