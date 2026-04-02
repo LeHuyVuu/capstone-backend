@@ -40,8 +40,29 @@ public class AdvertisementService : IAdvertisementService
         _currentUser = currentUser;
     }
 
-    public async Task<List<AdvertisementResponse>> GetRotatingAdvertisementsAsync(string? placementType = null)
+    public async Task<List<AdvertisementResponse>?> GetRotatingAdvertisementsAsync(string? placementType = null)
     {
+        if (_currentUser.UserId.HasValue)
+        {
+            var memberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
+            if (memberProfile != null)
+            {
+                var activeMemberSubscription = await _unitOfWork.MemberSubscriptionPackages
+                    .GetCurrentActiveSubscriptionAsync(memberProfile.Id);
+
+                if (activeMemberSubscription != null &&
+                    (activeMemberSubscription.PackageId == 6 || activeMemberSubscription.PackageId == 7))
+                {
+                    _logger.LogInformation(
+                        "Member {MemberId} has active premium subscription package {PackageId} (SubscriptionId: {SubscriptionId}). Returning null for rotating advertisements API.",
+                        memberProfile.Id,
+                        activeMemberSubscription.PackageId,
+                        activeMemberSubscription.Id);
+                    return null;
+                }
+            }
+        }
+
         // Lấy quảng cáo active
         var venueLocationAds = await _unitOfWork.Advertisements.GetActiveAdvertisementsAsync();
 
