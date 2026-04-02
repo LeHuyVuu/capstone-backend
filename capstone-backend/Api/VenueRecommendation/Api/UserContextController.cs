@@ -63,24 +63,24 @@ public class UserContextController : BaseController
             .FirstOrDefaultAsync();
 
         // TEMP: Disable personality-based context enrichment.
-        // var latestPersonalityResultCode = await _dbContext.PersonalityTests
-        //     .AsNoTracking()
-        //     .Where(p => p.MemberId == memberProfile.Id
-        //                 && p.IsDeleted != true
-        //                 && p.Status == PersonalityTestStatus.COMPLETED.ToString())
-        //     .OrderByDescending(p => p.TakenAt ?? p.CreatedAt)
-        //     .Select(p => p.ResultCode)
-        //     .FirstOrDefaultAsync();
+        var latestPersonalityResultCode = await _dbContext.PersonalityTests
+            .AsNoTracking()
+            .Where(p => p.MemberId == memberProfile.Id
+                        && p.IsDeleted != true
+                        && p.Status == PersonalityTestStatus.COMPLETED.ToString())
+            .OrderByDescending(p => p.TakenAt ?? p.CreatedAt)
+            .Select(p => p.ResultCode)
+            .FirstOrDefaultAsync();
 
-        // string personalityDescription = null;
-        // if (!string.IsNullOrWhiteSpace(latestPersonalityResultCode))
-        // {
-        //     var mbtiInfo = MbtiContentStore.GetProfile(latestPersonalityResultCode);
-        //     if (mbtiInfo.Description != null && mbtiInfo.Description.Any())
-        //     {
-        //         personalityDescription = string.Join(" ", mbtiInfo.Description);
-        //     }
-        // }
+        string personalityDescription = null;
+        if (!string.IsNullOrWhiteSpace(latestPersonalityResultCode))
+        {
+            var mbtiInfo = MbtiContentStore.GetProfile(latestPersonalityResultCode);
+            if (mbtiInfo.Description != null && mbtiInfo.Description.Any())
+            {
+                personalityDescription = string.Join(" ", mbtiInfo.Description);
+            }
+        }
         
         var contextParts = new List<string>();
 
@@ -95,12 +95,12 @@ public class UserContextController : BaseController
             contextParts.Add(interactionText);
         }
 
-        // if (!string.IsNullOrWhiteSpace(personalityDescription))
-        // {
-        //     contextParts.Add(personalityDescription);
-        // }
+        if (!string.IsNullOrWhiteSpace(personalityDescription))
+        {
+            contextParts.Add(personalityDescription);
+        }
 
-        var userContext = string.Join(". ", contextParts);
+        var userContext = string.Join(". người dùng có tính cách ", contextParts);
         if (string.IsNullOrWhiteSpace(userContext))
         {
             userContext = "suggest popular and diverse venues";
