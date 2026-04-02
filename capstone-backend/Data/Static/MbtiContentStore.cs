@@ -7,6 +7,7 @@
             public string Code { get; set; }
             public string Name { get; set; }
             public List<string> Description { get; set; }
+            public string PersonalityDescription { get; set; }
         }
 
         private static readonly Dictionary<string, MbtiProfileInfo> _profiles = new()
@@ -21,7 +22,8 @@
                     "Luôn coi trọng kỷ luật, trách nhiệm và sự ổn định.",
                     "Làm việc có kế hoạch, tuân thủ quy trình rõ ràng.",
                     "Không thích mơ mộng, ưu tiên hiệu quả và kết quả thực tế."
-                }
+                },
+                PersonalityDescription = "responsible, practical, disciplined, reliable, organized, realistic"
             },
 
             ["ISFJ"] = new MbtiProfileInfo
@@ -34,7 +36,8 @@
                     "Luôn âm thầm hỗ trợ và bảo vệ những người xung quanh.",
                     "Coi trọng truyền thống và sự an toàn.",
                     "Làm việc bền bỉ, ít phô trương."
-                }
+                },
+                PersonalityDescription = "caring, kind, supportive, loyal, careful, dependable"
             },
 
             ["INFJ"] = new MbtiProfileInfo
@@ -47,7 +50,8 @@
                     "Quan tâm mạnh mẽ đến giá trị và ý nghĩa cuộc sống.",
                     "Nhạy cảm với cảm xúc người khác.",
                     "Thường suy nghĩ nhiều và sống nội tâm."
-                }
+                },
+                PersonalityDescription = "deep, idealistic, thoughtful, caring, reflective, quiet"
             },
 
             ["INTJ"] = new MbtiProfileInfo
@@ -60,7 +64,8 @@
                     "Luôn lên kế hoạch dài hạn và tối ưu hệ thống.",
                     "Ít bị cảm xúc chi phối khi ra quyết định.",
                     "Không thích sự mơ hồ, thiếu logic."
-                }
+                },
+                PersonalityDescription = "strategic, logical, independent, focused, organized, decisive"
             },
 
             ["ISTP"] = new MbtiProfileInfo
@@ -73,7 +78,8 @@
                     "Giỏi xử lý tình huống phát sinh.",
                     "Ưa hành động hơn lời nói.",
                     "Không thích bị ràng buộc bởi quy tắc cứng nhắc."
-                }
+                },
+                PersonalityDescription = "practical, flexible, hands-on, calm, active, independent"
             },
 
             ["ISFP"] = new MbtiProfileInfo
@@ -86,7 +92,8 @@
                     "Yêu cái đẹp và sự tự do.",
                     "Không thích xung đột hay áp lực.",
                     "Thường thể hiện bản thân qua hành động hơn lời nói."
-                }
+                },
+                PersonalityDescription = "gentle, sensitive, free-spirited, artistic, peaceful, genuine"
             },
 
             ["INFP"] = new MbtiProfileInfo
@@ -99,7 +106,8 @@
                     "Sống theo lý tưởng và giá trị cá nhân.",
                     "Quan tâm đến ý nghĩa sâu xa của cuộc sống.",
                     "Dễ bị tổn thương nhưng rất chân thành."
-                }
+                },
+                PersonalityDescription = "idealistic, caring, sensitive, sincere, thoughtful, introspective"
             },
 
             ["INTP"] = new MbtiProfileInfo
@@ -112,7 +120,8 @@
                     "Luôn tìm cách hiểu bản chất vấn đề.",
                     "Không thích những quy tắc vô lý.",
                     "Thường đắm chìm trong suy nghĩ."
-                }
+                },
+                PersonalityDescription = "analytical, curious, logical, thoughtful, independent, reflective"
             },
 
             ["ESTP"] = new MbtiProfileInfo
@@ -125,7 +134,8 @@
                     "Giỏi ứng biến và nắm bắt cơ hội.",
                     "Không thích chờ đợi hay lý thuyết dài dòng.",
                     "Thích trải nghiệm thực tế."
-                }
+                },
+                PersonalityDescription = "energetic, bold, active, adaptable, practical, spontaneous"
             },
 
             ["ESFP"] = new MbtiProfileInfo
@@ -138,7 +148,8 @@
                     "Thích trở thành trung tâm của sự chú ý.",
                     "Sống cho hiện tại và trải nghiệm.",
                     "Dễ tạo cảm giác thoải mái cho người khác."
-                }
+                },
+                PersonalityDescription = "cheerful, friendly, expressive, energetic, fun, social"
             },
 
             ["ENFP"] = new MbtiProfileInfo
@@ -151,7 +162,8 @@
                     "Luôn nhìn thấy tiềm năng ở người khác.",
                     "Yêu tự do và những ý tưởng mới.",
                     "Dễ chán khi bị gò bó."
-                }
+                },
+                PersonalityDescription = "enthusiastic, creative, emotional, inspiring, curious, free-spirited"
             },
 
             ["ENTP"] = new MbtiProfileInfo
@@ -164,7 +176,8 @@
                     "Luôn tìm ra hướng đi mới.",
                     "Không thích sự lặp lại nhàm chán.",
                     "Giỏi thuyết phục và kết nối ý tưởng."
-                }
+                },
+                PersonalityDescription = "smart, curious, innovative, talkative, persuasive, adaptable"
             },
 
             ["ESTJ"] = new MbtiProfileInfo
@@ -177,7 +190,8 @@
                     "Giỏi quản lý và lãnh đạo.",
                     "Đề cao kỷ luật và hiệu suất.",
                     "Không thích sự thiếu rõ ràng."
-                }
+                },
+                PersonalityDescription = "decisive, organized, practical, disciplined, direct, efficient"
             },
 
             ["ESFJ"] = new MbtiProfileInfo
@@ -190,7 +204,8 @@
                     "Luôn mong muốn giúp đỡ người khác.",
                     "Coi trọng các mối quan hệ xã hội.",
                     "Nhạy cảm với sự đánh giá."
-                }
+                },
+                PersonalityDescription = "friendly, caring, helpful, social, responsible, supportive"
             },
 
             ["ENFJ"] = new MbtiProfileInfo
@@ -203,7 +218,8 @@
                     "Giỏi kết nối và dẫn dắt tập thể.",
                     "Quan tâm đến sự phát triển của người khác.",
                     "Dễ ôm đồm trách nhiệm."
-                }
+                },
+                PersonalityDescription = "charismatic, caring, inspiring, social, supportive, responsible"
             },
 
             ["ENTJ"] = new MbtiProfileInfo
@@ -216,7 +232,8 @@
                     "Giỏi tổ chức và điều phối nguồn lực.",
                     "Không ngại thử thách lớn.",
                     "Đôi khi bị xem là cứng rắn."
-                }
+                },
+                PersonalityDescription = "assertive, strategic, goal-focused, organized, confident, strong-willed"
             }
         };
 

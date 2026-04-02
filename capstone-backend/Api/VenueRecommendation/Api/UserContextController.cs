@@ -62,19 +62,6 @@ public class UserContextController : BaseController
             })
             .FirstOrDefaultAsync();
 
-        var latestMood = await _dbContext.MemberMoodLogs
-            .AsNoTracking()
-            .Where(m => m.MemberId == memberProfile.Id && m.IsDeleted != true)
-            .OrderByDescending(m => m.CreatedAt)
-            .Select(m => new
-            {
-                MoodName = m.MoodType.Name,
-                m.Reason,
-                m.Note,
-                m.CreatedAt
-            })
-            .FirstOrDefaultAsync();
-
         var latestPersonalityResultCode = await _dbContext.PersonalityTests
             .AsNoTracking()
             .Where(p => p.MemberId == memberProfile.Id
@@ -84,17 +71,21 @@ public class UserContextController : BaseController
             .Select(p => p.ResultCode)
             .FirstOrDefaultAsync();
 
+        string? personalityDescription = null;
         if (!string.IsNullOrWhiteSpace(latestPersonalityResultCode))
         {
             var mbtiInfo = MbtiContentStore.GetProfile(latestPersonalityResultCode);
-            latestPersonalityResultCode = $"{mbtiInfo.Name} ({mbtiInfo.Code})";
+            if (!string.IsNullOrWhiteSpace(mbtiInfo.PersonalityDescription))
+            {
+                personalityDescription = mbtiInfo.PersonalityDescription;
+            }
         }
         
         var contextParts = new List<string>();
 
         if (latestInteraction != null)
         {
-            var interactionText = "user likes";
+            var interactionText = "user like to view venues";
             if (!string.IsNullOrWhiteSpace(latestInteraction.CategoryInteraction))
             {
                 interactionText += $" category {latestInteraction.CategoryInteraction}";
@@ -103,28 +94,12 @@ public class UserContextController : BaseController
             contextParts.Add(interactionText);
         }
 
-        if (latestMood != null)
+        if (!string.IsNullOrWhiteSpace(personalityDescription))
         {
-            var moodText = $"current mood {latestMood.MoodName}";
-            if (!string.IsNullOrWhiteSpace(latestMood.Reason))
-            {
-                moodText += $", reason {latestMood.Reason}";
-            }
-
-            if (!string.IsNullOrWhiteSpace(latestMood.Note))
-            {
-                moodText += $", note {latestMood.Note}";
-            }
-
-            contextParts.Add(moodText);
+            contextParts.Add(personalityDescription);
         }
 
-        if (!string.IsNullOrWhiteSpace(latestPersonalityResultCode))
-        {
-            contextParts.Add($"personality test {latestPersonalityResultCode}");
-        }
-
-        var userContext = string.Join(". ", contextParts);
+        var userContext = string.Join(". user personality: ", contextParts);
         if (string.IsNullOrWhiteSpace(userContext))
         {
             userContext = "suggest popular and diverse venues";
