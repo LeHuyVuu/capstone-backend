@@ -62,39 +62,31 @@ public class UserContextController : BaseController
             })
             .FirstOrDefaultAsync();
 
-        var latestMood = await _dbContext.MemberMoodLogs
-            .AsNoTracking()
-            .Where(m => m.MemberId == memberProfile.Id && m.IsDeleted != true)
-            .OrderByDescending(m => m.CreatedAt)
-            .Select(m => new
-            {
-                MoodName = m.MoodType.Name,
-                m.Reason,
-                m.Note,
-                m.CreatedAt
-            })
-            .FirstOrDefaultAsync();
+        // TEMP: Disable personality-based context enrichment.
+        // var latestPersonalityResultCode = await _dbContext.PersonalityTests
+        //     .AsNoTracking()
+        //     .Where(p => p.MemberId == memberProfile.Id
+        //                 && p.IsDeleted != true
+        //                 && p.Status == PersonalityTestStatus.COMPLETED.ToString())
+        //     .OrderByDescending(p => p.TakenAt ?? p.CreatedAt)
+        //     .Select(p => p.ResultCode)
+        //     .FirstOrDefaultAsync();
 
-        var latestPersonalityResultCode = await _dbContext.PersonalityTests
-            .AsNoTracking()
-            .Where(p => p.MemberId == memberProfile.Id
-                        && p.IsDeleted != true
-                        && p.Status == PersonalityTestStatus.COMPLETED.ToString())
-            .OrderByDescending(p => p.TakenAt ?? p.CreatedAt)
-            .Select(p => p.ResultCode)
-            .FirstOrDefaultAsync();
-
-        if (!string.IsNullOrWhiteSpace(latestPersonalityResultCode))
-        {
-            var mbtiInfo = MbtiContentStore.GetProfile(latestPersonalityResultCode);
-            latestPersonalityResultCode = $"{mbtiInfo.Name} ({mbtiInfo.Code})";
-        }
+        // string personalityDescription = null;
+        // if (!string.IsNullOrWhiteSpace(latestPersonalityResultCode))
+        // {
+        //     var mbtiInfo = MbtiContentStore.GetProfile(latestPersonalityResultCode);
+        //     if (mbtiInfo.Description != null && mbtiInfo.Description.Any())
+        //     {
+        //         personalityDescription = string.Join(" ", mbtiInfo.Description);
+        //     }
+        // }
         
         var contextParts = new List<string>();
 
         if (latestInteraction != null)
         {
-            var interactionText = "user likes";
+            var interactionText = "user like to view venues";
             if (!string.IsNullOrWhiteSpace(latestInteraction.CategoryInteraction))
             {
                 interactionText += $" category {latestInteraction.CategoryInteraction}";
@@ -103,26 +95,10 @@ public class UserContextController : BaseController
             contextParts.Add(interactionText);
         }
 
-        if (latestMood != null)
-        {
-            var moodText = $"current mood {latestMood.MoodName}";
-            if (!string.IsNullOrWhiteSpace(latestMood.Reason))
-            {
-                moodText += $", reason {latestMood.Reason}";
-            }
-
-            if (!string.IsNullOrWhiteSpace(latestMood.Note))
-            {
-                moodText += $", note {latestMood.Note}";
-            }
-
-            contextParts.Add(moodText);
-        }
-
-        if (!string.IsNullOrWhiteSpace(latestPersonalityResultCode))
-        {
-            contextParts.Add($"personality test {latestPersonalityResultCode}");
-        }
+        // if (!string.IsNullOrWhiteSpace(personalityDescription))
+        // {
+        //     contextParts.Add(personalityDescription);
+        // }
 
         var userContext = string.Join(". ", contextParts);
         if (string.IsNullOrWhiteSpace(userContext))
