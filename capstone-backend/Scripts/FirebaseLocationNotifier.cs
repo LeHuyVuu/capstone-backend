@@ -12,6 +12,7 @@ namespace capstone_backend.Scripts;
 
 public sealed class FirebaseLocationNotifier
 {
+    private static readonly HashSet<int> PremiumMemberPackageIds = new() { 6, 7 };
     private readonly HttpClient _httpClient;
     private readonly IUnitOfWork _unitOfWork;
     private readonly MovementDecisionEngine _movementEngine;
@@ -132,6 +133,11 @@ public sealed class FirebaseLocationNotifier
             _movementEngine.Seed(key, sample);
             return;
         }
+
+        var activeSubscription = await _unitOfWork.MemberSubscriptionPackages
+            .GetCurrentActiveSubscriptionAsync(changedMemberId);
+        if (activeSubscription == null || !PremiumMemberPackageIds.Contains(activeSubscription.PackageId))
+            return;
 
         if (!_movementEngine.ShouldNotify(key, sample))
             return;
