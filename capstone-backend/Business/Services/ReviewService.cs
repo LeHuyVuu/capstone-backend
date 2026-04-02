@@ -313,9 +313,26 @@ namespace capstone_backend.Business.Services
                         var authorCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(review.MemberId);
                         if (authorCouple != null)
                         {
+                            var now = DateTime.UtcNow;
+                            var seasonKey = $"{now.Year}-{now.Month:D2}";
+
                             authorCouple.InteractionPoints += 1;
                             authorCouple.UpdatedAt = DateTime.UtcNow;
                             _unitOfWork.CoupleProfiles.Update(authorCouple);
+
+                            var leaderboard = await _unitOfWork.Context.Leaderboards.FirstOrDefaultAsync(
+                                    l => l.CoupleId == authorCouple.id &&
+                                    l.SeasonKey == seasonKey &&
+                                    l.Status == LeaderboardStatus.ACTIVE.ToString()
+                                );
+
+                            if (leaderboard != null)
+                            {
+                                leaderboard.TotalPoints = (leaderboard.TotalPoints ?? 0) + 1;
+                                leaderboard.UpdatedAt = DateTime.UtcNow;
+                                _unitOfWork.Context.Leaderboards.Update(leaderboard);
+                            }
+
                             await _unitOfWork.SaveChangesAsync();
                         }
                     }

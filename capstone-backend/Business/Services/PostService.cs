@@ -209,9 +209,26 @@ namespace capstone_backend.Business.Services
                 // Update interation score
                 if (couple != null && post.AuthorId != member.Id)
                 {
+                    var now = DateTime.UtcNow;
+                    var seasonKey = $"{now.Year}-{now.Month:D2}";
+
                     couple.InteractionPoints += 1;
                     couple.UpdatedAt = DateTime.UtcNow;
                     _unitOfWork.CoupleProfiles.Update(couple);
+
+                    var leaderboard = await _unitOfWork.Leaderboards
+                .GetFirstAsync(l =>
+                    l.CoupleId == couple.id &&
+                    l.SeasonKey == seasonKey &&
+                    l.Status == LeaderboardStatus.ACTIVE.ToString());
+
+                    if (leaderboard != null)
+                    {
+                        leaderboard.TotalPoints = (leaderboard.TotalPoints ?? 0) + 1;
+                        leaderboard.UpdatedAt = now;
+                        _unitOfWork.Leaderboards.Update(leaderboard);
+                    }
+
                     await _unitOfWork.SaveChangesAsync();
                 }
 
