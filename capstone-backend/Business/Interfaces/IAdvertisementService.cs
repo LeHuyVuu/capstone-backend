@@ -4,7 +4,7 @@ namespace capstone_backend.Business.Interfaces;
 
 public interface IAdvertisementService
 {
-    Task<List<AdvertisementResponse>?> GetRotatingAdvertisementsAsync(string? placementType = null);
+    Task<List<AdvertisementResponse>> GetRotatingAdvertisementsAsync(string? placementType = null);
     
     // Public detail endpoints (for when user clicks on banner)
     Task<PublicAdvertisementDetailResponse> GetPublicAdvertisementDetailAsync(int advertisementId);

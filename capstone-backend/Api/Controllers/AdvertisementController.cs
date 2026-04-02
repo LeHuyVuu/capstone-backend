@@ -37,12 +37,6 @@ public class AdvertisementController : BaseController
         {
             var advertisements = await _advertisementService.GetRotatingAdvertisementsAsync(placementType);
 
-            if (advertisements == null)
-            {
-                return OkResponse<List<AdvertisementResponse>?>(null,
-                    "Member has active subscription. Returning null advertisements as requested");
-            }
-
             var adCount = advertisements.Count(a => a.Type == "ADVERTISEMENT");
             var eventCount = advertisements.Count(a => a.Type == "SPECIAL_EVENT");
 

@@ -40,8 +40,10 @@ public class AdvertisementService : IAdvertisementService
         _currentUser = currentUser;
     }
 
-    public async Task<List<AdvertisementResponse>?> GetRotatingAdvertisementsAsync(string? placementType = null)
+    public async Task<List<AdvertisementResponse>> GetRotatingAdvertisementsAsync(string? placementType = null)
     {
+        var hasPremiumMemberSubscription = false;
+
         if (_currentUser.UserId.HasValue)
         {
             var memberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
@@ -53,12 +55,12 @@ public class AdvertisementService : IAdvertisementService
                 if (activeMemberSubscription != null &&
                     (activeMemberSubscription.PackageId == 6 || activeMemberSubscription.PackageId == 7))
                 {
+                    hasPremiumMemberSubscription = true;
                     _logger.LogInformation(
-                        "Member {MemberId} has active premium subscription package {PackageId} (SubscriptionId: {SubscriptionId}). Returning null for rotating advertisements API.",
+                        "Member {MemberId} has active premium subscription package {PackageId} (SubscriptionId: {SubscriptionId}). POPUP ads will be hidden.",
                         memberProfile.Id,
                         activeMemberSubscription.PackageId,
                         activeMemberSubscription.Id);
-                    return null;
                 }
             }
         }
@@ -72,6 +74,13 @@ public class AdvertisementService : IAdvertisementService
         if (!string.IsNullOrEmpty(placementType))
         {
             var normalizedPlacementType = placementType.Trim().ToUpper();
+
+            if (hasPremiumMemberSubscription && normalizedPlacementType == "POPUP")
+            {
+                _logger.LogInformation("Premium member requested POPUP placement. Returning no POPUP ads.");
+                return new List<AdvertisementResponse>();
+            }
+
             venueLocationAds = venueLocationAds
                 .Where(vla => !string.IsNullOrEmpty(vla.Advertisement.PlacementType) && 
                              vla.Advertisement.PlacementType.Trim().ToUpper() == normalizedPlacementType)
@@ -101,6 +110,13 @@ public class AdvertisementService : IAdvertisementService
                         venueLocationAds.Count);
                 }
             }
+        }
+
+        if (hasPremiumMemberSubscription)
+        {
+            venueLocationAds = venueLocationAds
+                .Where(vla => !string.Equals(vla.Advertisement.PlacementType?.Trim(), "POPUP", StringComparison.OrdinalIgnoreCase))
+                .ToList();
         }
 
         // Nhóm quảng cáo theo priority score
