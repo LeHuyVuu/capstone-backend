@@ -4,6 +4,7 @@ using capstone_backend.Business.DTOs.Notification;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Contracts.SignalR;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using capstone_backend.Hubs;
 using Hangfire.Logging.LogProviders;
 using Microsoft.AspNetCore.SignalR;
@@ -50,18 +51,39 @@ namespace capstone_backend.Business.Services
             }
         }
 
-        public async Task<PagedResult<NotificationResponse>> GetNotificationsByUserIdAsync(int userId, string type, int pageNumber = 1, int pageSize = 10)
+        public async Task<PagedResult<NotificationResponse>> GetNotificationsByUserIdAsync(int userId, string? type, int pageNumber = 1, int pageSize = 10)
         {
             try
             {
-                var (notification, totalCount) = await _unitOfWork.Notifications.GetPagedAsync(
+                var (notifications, totalCount) = await _unitOfWork.Notifications.GetPagedAsync(
                         pageNumber,
                         pageSize,
-                        n => n.UserId == userId && n.Type == type,
+                        n => n.UserId == userId && (string.IsNullOrEmpty(type) || n.Type == type),
                         n => n.OrderByDescending(x => x.CreatedAt)
                     );
 
-                var response = _mapper.Map<List<NotificationResponse>>(notification);
+                var response = _mapper.Map<List<NotificationResponse>>(notifications);
+
+                var locationNotificationIds = notifications
+                    .Where(x => x.Type == NotificationType.LOCATION.ToString())
+                    .Select(x => x.Id)
+                    .ToHashSet();
+
+                foreach (var item in response)
+                {
+                    if (locationNotificationIds.Contains(item.Id))
+                    {
+                        item.Data ??= new Dictionary<string, string>();
+                        item.Data["isLocation"] = "true";
+                        item.Data["notificationType"] = NotificationType.LOCATION.ToString();
+
+                        var checkin = await _unitOfWork.CheckInHistories.GetByIdAsync(item.ReferenceId.Value);
+                        if (checkin != null)
+                        {
+                            item.Data["venueLocationId"] = checkin.VenueId.ToString();
+                        }
+                    }
+                }
 
                 return new PagedResult<NotificationResponse>
                 {
