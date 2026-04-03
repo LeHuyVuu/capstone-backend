@@ -13,7 +13,6 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
-using static capstone_backend.Business.Common.NotificationTemplate;
 
 namespace capstone_backend.Business.Services
 {
