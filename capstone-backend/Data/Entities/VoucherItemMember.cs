@@ -29,4 +29,7 @@ public partial class VoucherItemMember
 
     [InverseProperty("VoucherItemMember")]
     public virtual ICollection<VoucherItem> VoucherItems { get; set; } = new List<VoucherItem>();
+
+    [InverseProperty("VoucherItemMember")]
+    public virtual ICollection<VenueSettlement> VenueSettlements { get; set; } = new List<VenueSettlement>();
 }

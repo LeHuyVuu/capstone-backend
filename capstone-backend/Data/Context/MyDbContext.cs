@@ -1257,6 +1257,24 @@ public partial class MyDbContext : DbContext
             entity.HasIndex(e => e.VoucherItemId)
                 .IsUnique()
                 .HasDatabaseName("uq_venue_settlements_voucher_item_id");
+
+            entity.HasOne(d => d.VoucherItem)
+                .WithMany(p => p.VenueSettlements)
+                .HasForeignKey(d => d.VoucherItemId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("fk_venue_settlements_voucher_item");
+
+            entity.HasOne(d => d.VoucherItemMember)
+                .WithMany(p => p.VenueSettlements)
+                .HasForeignKey(d => d.VoucherItemMemberId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("fk_venue_settlements_voucher_item_member");
+
+            entity.HasOne(d => d.VenueOwner)
+                .WithMany(p => p.VenueSettlements)
+                .HasForeignKey(d => d.VenueOwnerId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("fk_venue_settlements_venue_owner");
         });
 
         modelBuilder.Entity<SystemConfig>(entity =>

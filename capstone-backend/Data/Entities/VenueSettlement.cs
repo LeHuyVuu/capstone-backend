@@ -1,4 +1,6 @@
-﻿namespace capstone_backend.Data.Entities
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace capstone_backend.Data.Entities
 {
     public partial class VenueSettlement
     {
@@ -23,5 +25,17 @@
         public DateTime UpdatedAt { get; set; }
 
         public bool IsDeleted { get; set; } = false;
+
+        [ForeignKey("VoucherItemId")]
+        [InverseProperty("VenueSettlements")]
+        public virtual VoucherItem VoucherItem { get; set; } = null!;
+
+        [ForeignKey("VoucherItemMemberId")]
+        [InverseProperty("VenueSettlements")]
+        public virtual VoucherItemMember? VoucherItemMember { get; set; }
+
+        [ForeignKey("VenueOwnerId")]
+        [InverseProperty("VenueSettlements")]
+        public virtual VenueOwnerProfile VenueOwner { get; set; } = null!;
     }
 }
