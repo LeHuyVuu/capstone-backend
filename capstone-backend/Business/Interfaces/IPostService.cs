@@ -1,4 +1,5 @@
 ﻿using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Post;
 
 namespace capstone_backend.Business.Interfaces
@@ -18,6 +19,7 @@ namespace capstone_backend.Business.Interfaces
         Task<PagedResult<PostResponse>> GetPostsMemberProfileAsync(int userId, int pageNumber, int pageSize);
         Task<PagedResult<PostResponse>> GetPostsOtherProfileAsync(int userId, int memberId, int pageNumber, int pageSize);
         Task<PostLikeResponse> LikePostAsync(int userId, int postId);
+        Task<int> ModerateFlaggedPostAsync(int postId, ModerationRequest request);
         Task<PostLikeResponse> UnlikePostAsync(int userId, int postId);
         Task<PostResponse> UpdatePostAsync(int userId, int postId, UpdatePostRequest request);
     }

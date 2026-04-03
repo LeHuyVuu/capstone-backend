@@ -1,5 +1,6 @@
 ﻿using capstone_backend.Api.Filters;
 using capstone_backend.Business.Common.Constants;
+using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Services;
@@ -387,6 +388,24 @@ namespace capstone_backend.Api.Controllers
             {
                 var result = await _postService.GetFlaggedPostsAsync(pageNumber, pageSize);
                 return OkResponse(result, "Lấy danh sách bài viết bị báo cáo thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Moderate flagged post (for Admins)
+        /// </summary>
+        [Authorize(Roles = "ADMIN")]
+        [HttpPost("{postId}/moderation")]
+        public async Task<IActionResult> ModerateFlaggedPost([FromRoute] int postId, [FromBody] ModerationRequest request)
+        {
+            try
+            {
+                var result = await _postService.ModerateFlaggedPostAsync(postId, request);
+                return OkResponse(result, "Xử lý bài viết thành công");
             }
             catch (Exception ex)
             {

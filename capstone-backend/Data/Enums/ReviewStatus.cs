@@ -5,6 +5,6 @@
         PENDING,
         PUBLISHED,
         FLAGGED,
-        CANCELED
+        CANCELLED
     }
 }

@@ -259,7 +259,7 @@ namespace capstone_backend.Api.Controllers
             try
             {
                 var result = await _reviewService.ModerateReviewAsync(reviewId, request);
-                return OkResponse(result, "Đánh giá đã được xử lý thành công");
+                return OkResponse(result, "Xử lý đánh giá thành công");
             }
             catch (Exception ex)
             {

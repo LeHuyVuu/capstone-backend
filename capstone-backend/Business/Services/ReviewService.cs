@@ -643,7 +643,7 @@ namespace capstone_backend.Business.Services
                     review.Status = ReviewStatus.PUBLISHED.ToString();
                     break;
                 case ModerationRequestAction.CANCEL:
-                    review.Status = ReviewStatus.CANCELED.ToString();
+                    review.Status = ReviewStatus.CANCELLED.ToString();
                     break;
                 default:
                     throw new Exception("Action không hợp lệ. Chỉ hỗ trợ PUBLISH hoặc CANCEL");

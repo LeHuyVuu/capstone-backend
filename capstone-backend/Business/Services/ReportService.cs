@@ -107,7 +107,7 @@ public class ReportService : IReportService
                     var review = await _unitOfWork.Reviews.GetByIdAsync(targetId);
                     if (review != null && review.IsDeleted != true)
                     {
-                        review.Status = ReviewStatus.CANCELED.ToString();
+                        review.Status = ReviewStatus.CANCELLED.ToString();
                         review.UpdatedAt = DateTime.UtcNow;
                         _unitOfWork.Reviews.Update(review);
                     }
