@@ -6,8 +6,8 @@
         public int VoucherItemId { get; set; }
         public int? VoucherItemMemberId { get; set; }
 
-        public string VoucherItemCode { get; set; } = null!;
-        public string VoucherTitle { get; set; } = null!;
+        public string? VoucherItemCode { get; set; } = null!;
+        public string? VoucherTitle { get; set; } = null!;
         public string? MemberName { get; set; }
 
         public decimal GrossAmount { get; set; }

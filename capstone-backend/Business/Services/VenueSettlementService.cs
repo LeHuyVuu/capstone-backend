@@ -27,19 +27,20 @@ namespace capstone_backend.Business.Services
             if (venueOwner == null)
                 throw new Exception("Không tìm thấy chủ địa điểm");
 
-            var settlement = await _unitOfWork.VenueSettlements.GetByIdAsync(settlementId);
-            if (settlement == null || settlement.IsDeleted || settlement.VenueOwnerId != venueOwner.Id)
-                throw new Exception("Không tìm thấy đối soát");
+            var settlement = await _unitOfWork.VenueSettlements.GetFirstAsync(
+                x => x.Id == settlementId && x.IsDeleted == false && x.VenueOwnerId == venueOwner.Id,
+                q => q
+                    .Include(x => x.VoucherItem)
+                        .ThenInclude(vi => vi.Voucher)
+                    .Include(x => x.VoucherItem)
+                    .Include(x => x.VoucherItemMember)
+                        .ThenInclude(x => x.Member)
+            );
 
-            var voucherItem = await _unitOfWork.VoucherItems.GetByIdAsync(settlement.VoucherItemId);
-
-            var voucher = voucherItem != null ? await _unitOfWork.Vouchers.GetByIdAsync(voucherItem.VoucherId) : null;
+            if (settlement == null)
+                throw new Exception("Không tìm thấy thông tin quyết toán");
 
             var response = _mapper.Map<VenueSettlementDetailResponse>(settlement);
-            response.VoucherItemCode = voucherItem?.ItemCode;
-            response.VoucherTitle = voucher?.Title;
-            response.MemberName = voucherItem?.VoucherItemMember?.Member?.FullName;
-            response.UsedAt = voucherItem?.UsedAt;
             return response;
         }
 
