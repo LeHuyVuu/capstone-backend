@@ -287,5 +287,58 @@ namespace capstone_backend.Business.Services
             var response = _mapper.Map<VoucherItemDetailResponse>(voucherItem);
             return response;
         }
+
+        public async Task<int> DisableVoucherAsync(int voucherId, DisableVoucherRequest request)
+        {
+            var voucher = await _unitOfWork.Vouchers.GetByIdAsync(voucherId);
+            if (voucher == null)
+                throw new Exception("Không tìm thấy voucher");
+
+            var allowedStatuses = new[]
+            {
+                VoucherStatus.PENDING.ToString(),
+                VoucherStatus.APPROVED.ToString(),
+                VoucherStatus.ACTIVE.ToString()
+            };
+
+            if (!allowedStatuses.Contains(voucher.Status))
+                throw new Exception("Trạng thái voucher không hỗ trợ disable");
+            
+            voucher.Status = VoucherStatus.DISABLED.ToString();
+            voucher.UpdatedAt = DateTime.UtcNow;
+
+            voucher.RejectReason = request.Reason;
+
+            // End all active voucher items
+            var availableVoucherItems = await _unitOfWork.VoucherItems.GetAsync(vi =>
+                vi.VoucherId == voucherId &&
+                vi.Status == VoucherItemStatus.AVAILABLE.ToString() &&
+                vi.IsDeleted == false
+            );
+
+            foreach (var item in availableVoucherItems)
+            {
+                item.Status = VoucherItemStatus.ENDED.ToString();
+                item.UpdatedAt = DateTime.UtcNow;
+            }
+
+            _unitOfWork.VoucherItems.UpdateRange(availableVoucherItems);
+
+            // End jobs
+            var jobs = await _unitOfWork.VoucherJobs.GetAsync(
+                x => x.VoucherId == voucherId
+            );
+
+            foreach (var job in jobs)
+            {
+                if (!string.IsNullOrEmpty(job.JobId))
+                    BackgroundJob.Delete(job.JobId);
+            }
+
+            _unitOfWork.VoucherJobs.DeleteRange(jobs);
+
+            await _unitOfWork.SaveChangesAsync();
+            return voucherId;
+        }
     }
 }

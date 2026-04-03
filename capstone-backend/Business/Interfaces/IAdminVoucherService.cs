@@ -13,5 +13,6 @@ namespace capstone_backend.Business.Interfaces
         Task<PagedResult<AdminVoucherDetailResponse>> GetPendingVouchersAsync(GetPendingVouchersRequest query);
         Task<PagedResult<VoucherItemResponse>> GetVoucherItemAsync(int voucherId, GetVoucherItemsRequest query);
         Task<VoucherItemDetailResponse> GetVoucherItemByIdAsync(int voucherItemId);
+        Task<int> DisableVoucherAsync(int voucherId, DisableVoucherRequest request);
     }
 }

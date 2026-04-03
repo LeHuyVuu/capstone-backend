@@ -154,5 +154,24 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Disable voucher
+        /// </summary>
+        [HttpPost("{voucherId}/disable")]
+        public async Task<IActionResult> DisableVoucher(int voucherId, [FromBody] DisableVoucherRequest request)
+        {
+            try
+            {
+                var result = await _adminVoucherService.DisableVoucherAsync(voucherId, request);
+                if (result <= 0)
+                    return NotFoundResponse("Vô hiệu hóa voucher không thành công");
+                return OkResponse(result, "Vô hiệu hóa voucher thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }
