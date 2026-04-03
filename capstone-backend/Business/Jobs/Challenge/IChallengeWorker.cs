@@ -3,5 +3,6 @@
     public interface IChallengeWorker
     {
         Task RenewDailyCheckinChallengesAsync();
+        Task AutoEndChallengeAsync();
     }
 }

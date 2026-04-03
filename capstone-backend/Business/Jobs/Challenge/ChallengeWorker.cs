@@ -17,6 +17,27 @@ namespace capstone_backend.Business.Jobs.Challenge
             _logger = logger;
         }
 
+        public async Task AutoEndChallengeAsync()
+        {
+            var now = DateTime.UtcNow;
+            var activeChallenges = await _unitOfWork.Challenges.GetAsync(c =>
+                c.Status == ChallengeStatus.ACTIVE.ToString() &&
+                c.EndDate <= now &&
+                c.IsDeleted == false
+            );
+
+            int count = 0;
+            foreach (var challenge in activeChallenges)
+            {
+                challenge.Status = ChallengeStatus.ENDED.ToString();
+                challenge.UpdatedAt = now;
+                _unitOfWork.Challenges.Update(challenge);
+                count++;
+            }
+            await _unitOfWork.SaveChangesAsync();
+            _logger.LogInformation($"Đã tự động kết thúc {count} Challenges.");
+        }
+
         public async Task RenewDailyCheckinChallengesAsync()
         {
             var checkinChallenges = await _unitOfWork.Challenges.GetAsync(c =>

@@ -484,6 +484,10 @@ namespace capstone_backend.Business.Services
             if (challenge.Status == newStatus)
                 throw new Exception($"Thử thách đã ở trạng thái '{newStatus}'");
 
+            var now = DateTime.UtcNow;
+            if (newStatus == ChallengeStatus.ACTIVE.ToString() && challenge.EndDate <= now)
+                throw new Exception("Không thể kích hoạt thử thách đã hết hạn (EndDate đã qua)");
+
             challenge.Status = newStatus;
             challenge.UpdatedAt = DateTime.UtcNow;
 

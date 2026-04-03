@@ -286,6 +286,15 @@ using (var scope = serviceProvider.CreateScope())
             TimeZone = vnTz
         });
 
+    recurringJobManager.AddOrUpdate<IChallengeWorker>(
+        "auto-end-challenge",
+        job => job.AutoEndChallengeAsync(),
+        Cron.Daily(),
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
     app.Logger.LogInformation("[INFO] Hangfire recurring jobs configured");
 }
 
