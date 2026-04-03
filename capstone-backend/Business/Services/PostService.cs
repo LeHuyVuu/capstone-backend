@@ -723,5 +723,33 @@ namespace capstone_backend.Business.Services
             public double TrendScore { get; set; }
             public double RecencyScore { get; set; }
         }
+
+        public async Task<PagedResult<PostResponse>> GetFlaggedPostsAsync(int pageNumber, int pageSize)
+        {
+            var (posts, totalCount) = await _unitOfWork.Posts.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                p => p.IsDeleted == false && p.Status == PostStatus.FLAGGED.ToString(),
+                p => p.OrderByDescending(p => p.CreatedAt).ThenByDescending(p => p.Id),
+                p => p.Include(p => p.Author)
+                        .ThenInclude(a => a.User)
+            );
+
+
+            var response = _mapper.Map<List<PostResponse>>(posts);
+            foreach (var item in response)
+            {
+                item.IsLikedByMe = false;
+                item.IsOwner = false;
+            }
+
+            return new PagedResult<PostResponse>
+            {
+                Items = response,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
     }
 }

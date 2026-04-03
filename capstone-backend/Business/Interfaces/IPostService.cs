@@ -10,6 +10,7 @@ namespace capstone_backend.Business.Interfaces
         Task<int> DeletePostAsync(int userId, int postId);
         Task<PagedResult<CommentResponse>> GetCommentsPostAsync(int userId, int postId, int pageNumber = 1, int pageSize = 10);
         Task<FeedResponse> GetFeedsAsync(int userId, FeedRequest request);
+        Task<PagedResult<PostResponse>> GetFlaggedPostsAsync(int pageNumber, int pageSize);
         Task<ShareLinkResponse> GetLinkAsync(int postId);
         Task<PostResponse> GetPostDetailsAnonymousAsync(int postId);
         Task<PostResponse> GetPostDetailsAsync(int userId, int postId);

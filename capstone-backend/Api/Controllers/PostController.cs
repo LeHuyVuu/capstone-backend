@@ -11,7 +11,6 @@ namespace capstone_backend.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "MEMBER, member")]
     public class PostController : BaseController
     {
         private readonly IPostService _postService;
@@ -26,6 +25,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Get feeds for member
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpGet("feeds")]
         public async Task<IActionResult> GetFeeds([FromQuery] FeedRequest request)
         {
@@ -49,6 +49,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Get post details by id
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpGet("{postId:int}")]
         public async Task<IActionResult> GetPostDetails([FromRoute] int postId)
         {
@@ -81,6 +82,7 @@ namespace capstone_backend.Api.Controllers
         /// - PRIVATE: Chỉ mình tác giả mới xem đượ
         /// - COUPLE_ONLY: Chỉ người yêu mới xem được
         /// </remarks>
+        [Authorize(Roles = "MEMBER, member")]
         [Moderation]
         [HttpPost]
         public async Task<IActionResult> CreatePost([FromBody] CreatePostRequest request)
@@ -113,6 +115,7 @@ namespace capstone_backend.Api.Controllers
         /// - PRIVATE: Chỉ mình tác giả mới xem đượ
         /// - COUPLE_ONLY: Chỉ người yêu mới xem được
         /// </remarks>
+        [Authorize(Roles = "MEMBER, member")]
         [Moderation]
         [HttpPut("{postId:int}")]
         public async Task<IActionResult> UpdatePost([FromRoute] int postId, [FromBody] UpdatePostRequest request)
@@ -139,6 +142,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Delete post by id (soft delete)
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpDelete("{postId}")]
         public async Task<IActionResult> DeletePost([FromRoute] int postId)
         {
@@ -163,6 +167,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Get topics for post creation/editing - FE dùng để hiển thị dropdown chọn chủ đề
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpGet("topics")]
         public IActionResult GetTopics()
         {
@@ -182,6 +187,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Like Posts
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpPost("{postId:int}/like")]
         public async Task<IActionResult> LikePost([FromRoute] int postId)
         {
@@ -206,6 +212,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Unlike posts
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpDelete("{postId:int}/unlike")]
         public async Task<IActionResult> UnlikePost([FromRoute] int postId)
         {
@@ -230,6 +237,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Get comments for a post
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpGet("{postId:int}/comments")]
         public async Task<IActionResult> GetComments([FromRoute] int postId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
@@ -254,6 +262,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Comment posts
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpPost("{postId:int}/comment")]
         public async Task<IActionResult> CommentPost([FromRoute] int postId, [FromBody] CreateCommentRequest request)
         {
@@ -279,6 +288,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Get post for member's profile
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpGet("me")]
         public async Task<IActionResult> GetMyPosts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
@@ -346,6 +356,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Get post profile others
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpGet("profile/{memberId}")]
         public async Task<IActionResult> GetPostsProfileOthers([FromRoute] int memberId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
@@ -358,6 +369,24 @@ namespace capstone_backend.Api.Controllers
                 }
                 var result = await _postService.GetPostsOtherProfileAsync(userId.Value, memberId, pageNumber, pageSize);
                 return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get flagged posts (for Admins)
+        /// </summary>
+        [Authorize(Roles = "ADMIN")]
+        [HttpGet("flagged")]
+        public async Task<IActionResult> GetFlaggedPosts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var result = await _postService.GetFlaggedPostsAsync(pageNumber, pageSize);
+                return OkResponse(result, "Lấy danh sách bài viết bị báo cáo thành công");
             }
             catch (Exception ex)
             {

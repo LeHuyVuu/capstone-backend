@@ -240,7 +240,7 @@ namespace capstone_backend.Api.Controllers
             try
             {
                 var result = await _reviewService.GetFlaggedReviewsAsync(page, pageSize);
-                return OkResponse(result, $"Lấy danh sách đánh giá bị báo cáo thành công (trang {page})");
+                return OkResponse(result, $"Lấy danh sách đánh giá bị báo cáo thành công");
             }
             catch (Exception ex)
             {
