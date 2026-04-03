@@ -28,6 +28,12 @@ namespace capstone_backend.Business.Mappings
                 .ForMember(dest => dest.VenueId, opt => opt.MapFrom(src => src.VenueId))
                 .ForMember(dest => dest.VenueName, opt => opt.MapFrom(src => src.Venue.Name))
                 .ForMember(dest => dest.VenueCoverImage, opt => opt.MapFrom(src => DeserializeImages(src.Venue.CoverImage)));
+
+            CreateMap<VenueLocation, ReviewVenueInfo>()
+                .ForMember(dest => dest.VenueId, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.VenueName, opt => opt.MapFrom(src => src.Name))
+                .ForMember(dest => dest.VenueCoverImage, opt => opt.MapFrom(src => DeserializeImages(src.CoverImage)));
+            CreateMap<Review, ReviewResponse>();
         }
     }
 }

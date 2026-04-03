@@ -172,6 +172,8 @@ public class ReportService : IReportService
             }
         }
 
+
+
         report.Status = ReportStatus.REJECTED.ToString();
         report.UpdatedAt = DateTime.UtcNow;
 

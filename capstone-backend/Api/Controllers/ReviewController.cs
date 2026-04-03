@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace capstone_backend.Api.Controllers
 {
     [Route("api/[controller]")]
-    [Authorize(Roles = "MEMBER, member, VENUEOWNER")]
     [Moderation]
     [ApiController]
     public class ReviewController : BaseController
@@ -23,6 +22,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Get my reviews
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpGet("my-reviews")]
         public async Task<IActionResult> GetMyReviewsAsync([FromQuery] GetMyReviewRequest request)
         {
@@ -41,6 +41,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Check-in to a venue location
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpPost("check-in-trigger")]
         public async Task<IActionResult> CheckinAsync([FromBody] CheckinRequest request)
         {
@@ -59,6 +60,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Validate a check-in using the check-in history ID
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpPost("validate-condition")]
         public async Task<IActionResult> ValidateAsync([FromQuery] int checkInId, [FromBody] CheckinRequest request)
         {
@@ -78,6 +80,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Submit a review for a venue location
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpPost("submit")]
         public async Task<IActionResult> SubmitReviewAsync([FromBody] CreateReviewRequest request)
         {
@@ -97,6 +100,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Update a review for a venue location
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpPut("{reviewId}/update")]
         public async Task<IActionResult> SubmitReviewAsync(int reviewId, [FromBody] UpdateReviewRequest request)
         {
@@ -116,6 +120,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Delete a review for a venue location
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpDelete("{reviewId}/delete")]
         public async Task<IActionResult> DeleteReviewAsync(int reviewId)
         {
@@ -134,6 +139,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Reply to a review (for Venue Owners)
         /// </summary>
+        [Authorize(Roles = "VENUEOWNER")]
         [HttpPost("{reviewId:int}/reply")]
         public async Task<IActionResult> ReplyToReviewAsync(int reviewId, [FromBody] ReviewReplyRequest request)
         {
@@ -158,6 +164,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Update review reply (for Venue Owners)
         /// </summary>
+        [Authorize(Roles = "VENUEOWNER")]
         [HttpPut("{reviewId:int}/reply")]
         public async Task<IActionResult> UpdateReplyReviewAsync(int reviewId, [FromBody] ReviewReplyRequest request)
         {
@@ -182,6 +189,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Delete review reply (for Venue Owners)
         /// </summary>
+        [Authorize(Roles = "VENUEOWNER")]
         [HttpDelete("{reviewId:int}/reply")]
         public async Task<IActionResult> DeleteReplyReviewAsync(int reviewId)
         {
@@ -205,6 +213,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Like a review
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpPost("{reviewId:int}/toggle-like")]
         public async Task<IActionResult> ToggleLikeReviewAsync(int reviewId)
         {
@@ -214,6 +223,24 @@ namespace capstone_backend.Api.Controllers
                 var result = await _reviewService.ToggleLikeReviewAsync(userId.Value, reviewId);
                 var message = result.IsLiked ? "Thích đánh giá thành công" : "Bỏ thích đánh giá thành công";
                 return OkResponse(result, message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get flagged reviews for moderation (for Admins)
+        /// </summary>
+        [Authorize(Roles = "ADMIN")]
+        [HttpGet("flagged")]
+        public async Task<IActionResult> GetFlaggedReviewsAsync([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var result = await _reviewService.GetFlaggedReviewsAsync(page, pageSize);
+                return OkResponse(result, $"Lấy danh sách đánh giá bị báo cáo thành công (trang {page})");
             }
             catch (Exception ex)
             {

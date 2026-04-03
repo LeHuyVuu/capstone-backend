@@ -22,7 +22,7 @@ public class ReportTypeService : IReportTypeService
         var (reportTypes, totalCount) = await _unitOfWork.ReportTypes.GetPagedAsync(
             page,
             pageSize,
-            filter: rt => rt.IsDeleted != true && (!isActive.HasValue || rt.IsActive == isActive.Value),
+            filter: rt => rt.IsDeleted != true && (!isActive.HasValue || rt.IsActive == isActive.Value) && rt.TypeName == "FLAG",
             orderBy: q => q.OrderBy(rt => rt.TypeName)
         );
 

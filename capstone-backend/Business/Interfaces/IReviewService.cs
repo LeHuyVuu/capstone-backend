@@ -9,6 +9,7 @@ namespace capstone_backend.Business.Interfaces
         Task<int> CheckinAsync(int userId, CheckinRequest request);
         Task<int> DeleteReviewAsync(int userId, int reviewId);
         Task<int> DeleteReviewReplyAsync(int userId, int reviewId);
+        Task<PagedResult<ReviewResponse>> GetFlaggedReviewsAsync(int pageNumber, int pageSize);
         Task<PagedResult<MyReviewResponse>> GetMyReviewsAsync(int value, GetMyReviewRequest request);
         Task<int> ReplyToReviewAsync(int userId, int reviewId, ReviewReplyRequest request);
         Task<int> SubmitReviewAsync(int userId, CreateReviewRequest request);

@@ -296,7 +296,6 @@ namespace capstone_backend.Business.Services
 
             var allowedStatuses = new[]
             {
-                VoucherStatus.PENDING.ToString(),
                 VoucherStatus.APPROVED.ToString(),
                 VoucherStatus.ACTIVE.ToString()
             };

@@ -43,7 +43,7 @@ namespace capstone_backend.Business.Services
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Không tìm thấy hồ sơ thành viên");
-                
+
             var venue = await _unitOfWork.VenueLocations.GetByIdAsync(request.VenueLocationId);
             if (venue == null)
                 throw new Exception("Không tìm thấy địa điểm");
@@ -245,7 +245,7 @@ namespace capstone_backend.Business.Services
             await _unitOfWork.SaveChangesAsync();
 
             BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessReviewModerationAndChallengeAsync(review.Id, moderationResults, userId, review.VenueId, hasImage));
-         
+
             return review.Id;
         }
 
@@ -407,7 +407,7 @@ namespace capstone_backend.Business.Services
                 foreach (var img in imagesToDelete)
                 {
                     img.IsDeleted = true;
-                    _unitOfWork.Media.Update(img);                   
+                    _unitOfWork.Media.Update(img);
                 }
             }
 
@@ -474,7 +474,7 @@ namespace capstone_backend.Business.Services
             //if (checkIn.IsValid != false)
             //    throw new Exception("Trạng thái check-in không hợp lệ để xác thực");
 
-            var distance = GeoCalculator.CalculateDistance(           
+            var distance = GeoCalculator.CalculateDistance(
                 request.Latitude,
                 request.Longitude,
                 venue.Latitude.Value,
@@ -587,6 +587,44 @@ namespace capstone_backend.Business.Services
                 TotalCount = totalCoun,
                 PageNumber = request.PageNumber,
                 PageSize = request.PageSize
+            };
+        }
+
+        public async Task<PagedResult<ReviewResponse>> GetFlaggedReviewsAsync(int pageNumber, int pageSize)
+        {
+            var (reviews, totalCount) = await _unitOfWork.Reviews.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                r => r.IsDeleted == false && r.Status == ReviewStatus.FLAGGED.ToString(),
+                r => r.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id),
+                r => r.Include(r => r.Venue)
+                      .Include(r => r.Member)
+                        .ThenInclude(m => m.User)
+            );
+
+            var reviewIds = reviews.Select(r => r.Id).ToList();
+
+            var mediaLookup = await _unitOfWork.Media.GetByListTargetIdsAsync(
+                reviewIds,
+                ReferenceType.REVIEW.ToString()
+            );
+
+            var response = _mapper.Map<List<ReviewResponse>>(reviews);
+
+            foreach (var item in response)
+            {
+                item.ImageUrls = mediaLookup
+                    .Where(m => m.TargetId == item.Id && !string.IsNullOrWhiteSpace(m.Url))
+                    .Select(m => m.Url!)
+                    .ToList();
+            }
+
+            return new PagedResult<ReviewResponse>
+            {
+                Items = response,
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize
             };
         }
     }
