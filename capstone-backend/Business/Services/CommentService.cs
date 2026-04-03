@@ -338,5 +338,28 @@ namespace capstone_backend.Business.Services
 
             return response;
         }
+
+        public async Task<PagedResult<CommentResponse>> GetFlaggedCommentsAsync(int pageNumber, int pageSize)
+        {
+            var (comments, count) = await _unitOfWork.Comments.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                c => c.IsDeleted == false && c.Status == CommentStatus.FLAGGED.ToString(),
+                c => c.OrderBy(c => c.CreatedAt),
+                c => c.Include(c => c.Author)
+                        .ThenInclude(a => a.User)
+                       .Include(c => c.TargetMember)
+                        .ThenInclude(tm => tm.User)
+            );
+
+            var items = _mapper.Map<List<CommentResponse>>(comments);
+            return new PagedResult<CommentResponse>
+            {
+                Items = items,
+                TotalCount = count,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+        }
     }
 }

@@ -8,7 +8,6 @@ namespace capstone_backend.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class CommentController : BaseController
     {
         private readonly ICommentService _commentService;
@@ -21,6 +20,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Delete comment
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpDelete("{commentId:int}")]
         public async Task<IActionResult> DeleteComment([FromRoute] int commentId)
         {
@@ -45,6 +45,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Update comment
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpPut("{commentId:int}")]
         public async Task<IActionResult> UpdateComment([FromRoute] int commentId, [FromBody] UpdateCommentRequest request)
         {
@@ -70,6 +71,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Get replies for a comment
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpGet("{commentId:int}/replies")]
         public async Task<IActionResult> GetReplies([FromRoute] int commentId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
@@ -92,6 +94,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Like comment
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpPost("{commentId:int}/like")]
         public async Task<IActionResult> LikeComment([FromRoute] int commentId)
         {
@@ -116,6 +119,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Unlike comment
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpDelete("{commentId:int}/unlike")]
         public async Task<IActionResult> UnlikeComment([FromRoute] int commentId)
         {
@@ -140,6 +144,7 @@ namespace capstone_backend.Api.Controllers
         /// <summary>
         /// Get detail of a comment by id
         /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
         [HttpGet("{commentId:int}")]
         public async Task<IActionResult> GetCommentById([FromRoute] int commentId)
         {
@@ -154,6 +159,24 @@ namespace capstone_backend.Api.Controllers
                 if (result == null)
                     return NotFoundResponse("Không tìm thấy bình luận");
                 return OkResponse(result, "Lấy thông tin bình luận thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Get flagged comments (for Admins)
+        /// </summary>
+        [Authorize(Roles = "ADMIN")]
+        [HttpGet("flagged")]
+        public async Task<IActionResult> GetFlaggedComments([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                var result = await _commentService.GetFlaggedCommentsAsync(pageNumber, pageSize);
+                return OkResponse(result, $"Lấy các bình luận bị báo cáo thành công");
             }
             catch (Exception ex)
             {

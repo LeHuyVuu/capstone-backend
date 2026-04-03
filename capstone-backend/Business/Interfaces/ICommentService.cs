@@ -12,5 +12,6 @@ namespace capstone_backend.Business.Interfaces
         Task<CommentLikeResponse> LikeCommentAsync(int userId, int commentId);
         Task<CommentLikeResponse> UnlikeCommentAsync(int userId, int commentId);
         Task<CommentResponse> GetCommentByIdAsync(int userId, int commentId);
+        Task<PagedResult<CommentResponse>> GetFlaggedCommentsAsync(int pageNumber, int pageSize);
     }
 }
