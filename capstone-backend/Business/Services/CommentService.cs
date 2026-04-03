@@ -13,6 +13,7 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using static capstone_backend.Business.Common.NotificationTemplate;
 
 namespace capstone_backend.Business.Services
 {
@@ -360,6 +361,33 @@ namespace capstone_backend.Business.Services
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
+        }
+
+        public async Task<int> ModerateCommentAsync(int commentId, ModerationRequest request)
+        {
+            var comment = await _unitOfWork.Comments.GetByIdAsync(commentId);
+            if (comment == null || comment.IsDeleted == true)
+                throw new Exception("Bình luận không tồn tại");
+
+            if (comment.Status != CommentStatus.FLAGGED.ToString())
+                throw new Exception("Bình luận này không cần được kiểm duyệt");
+
+            switch (request.Action)
+            {
+                case ModerationRequestAction.PUBLISH:
+                    comment.Status = CommentStatus.PUBLISHED.ToString();
+                    break;
+                case ModerationRequestAction.CANCEL:
+                    comment.Status = CommentStatus.CANCELLED.ToString();
+                    break;
+                default:
+                    throw new Exception("Action không hợp lệ. Chỉ hỗ trợ PUBLISH hoặc CANCEL");
+            }
+
+            _unitOfWork.Comments.Update(comment);
+            await _unitOfWork.SaveChangesAsync();
+
+            return commentId;
         }
     }
 }

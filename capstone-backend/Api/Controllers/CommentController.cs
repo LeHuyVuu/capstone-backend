@@ -1,4 +1,5 @@
-﻿using capstone_backend.Business.DTOs.Post;
+﻿using capstone_backend.Business.DTOs.Moderation;
+using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -177,6 +178,24 @@ namespace capstone_backend.Api.Controllers
             {
                 var result = await _commentService.GetFlaggedCommentsAsync(pageNumber, pageSize);
                 return OkResponse(result, $"Lấy các bình luận bị báo cáo thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Moderate a flagged comment (for Admins)
+        /// </summary>
+        [Authorize(Roles = "ADMIN")]
+        [HttpPost("{commentId}/moderation")]
+        public async Task<IActionResult> ModerateComment([FromRoute] int commentId, [FromBody] ModerationRequest request)
+        {
+            try
+            {
+                var result = await _commentService.ModerateCommentAsync(commentId, request);
+                return OkResponse(result, "Xử lý bình luận thành công");
             }
             catch (Exception ex)
             {

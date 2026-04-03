@@ -1,4 +1,5 @@
 ﻿using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Post;
 
 namespace capstone_backend.Business.Interfaces
@@ -13,5 +14,6 @@ namespace capstone_backend.Business.Interfaces
         Task<CommentLikeResponse> UnlikeCommentAsync(int userId, int commentId);
         Task<CommentResponse> GetCommentByIdAsync(int userId, int commentId);
         Task<PagedResult<CommentResponse>> GetFlaggedCommentsAsync(int pageNumber, int pageSize);
+        Task<int> ModerateCommentAsync(int commentId, ModerationRequest request);
     }
 }
