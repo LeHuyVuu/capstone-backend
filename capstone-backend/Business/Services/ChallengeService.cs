@@ -832,12 +832,16 @@ namespace capstone_backend.Business.Services
             if (couple == null)
                 throw new Exception("Thành viên chưa thuộc cặp đôi nào");
 
+            var now = DateTime.UtcNow;
             var challenge = await _unitOfWork.Challenges.GetByIdAsync(challengeId);
             if (challenge == null || (challenge.IsDeleted.HasValue && challenge.IsDeleted != false))
                 throw new Exception("Thử thách không tồn tại");
 
             if (challenge.Status != ChallengeStatus.ACTIVE.ToString())
                 throw new Exception("Thử thách chưa khả dụng");
+
+            if (challenge.EndDate.HasValue && challenge.EndDate.Value < now)
+                throw new Exception("Thử thách đã hết hạn");
 
             var existing = await _unitOfWork.CoupleProfileChallenges.GetByCoupleIdAndChallengeIdAsync(couple.id, challengeId);
             var coupleChallenge = existing;
