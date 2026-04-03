@@ -1,4 +1,5 @@
 ﻿using capstone_backend.Api.Filters;
+using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Review;
 using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -241,6 +242,24 @@ namespace capstone_backend.Api.Controllers
             {
                 var result = await _reviewService.GetFlaggedReviewsAsync(page, pageSize);
                 return OkResponse(result, $"Lấy danh sách đánh giá bị báo cáo thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Moderate a flagged review (for Admins)
+        /// </summary>
+        [Authorize(Roles = "ADMIN")]
+        [HttpPost("{reviewId}/moderation")]
+        public async Task<IActionResult> ModerateReviewAsync(int reviewId, [FromBody] ModerationRequest request)
+        {
+            try
+            {
+                var result = await _reviewService.ModerateReviewAsync(reviewId, request);
+                return OkResponse(result, "Đánh giá đã được xử lý thành công");
             }
             catch (Exception ex)
             {

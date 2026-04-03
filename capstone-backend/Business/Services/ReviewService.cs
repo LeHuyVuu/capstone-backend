@@ -627,5 +627,32 @@ namespace capstone_backend.Business.Services
                 PageSize = pageSize
             };
         }
+
+        public async Task<int> ModerateReviewAsync(int reviewId, ModerationRequest request)
+        {
+            var review = await _unitOfWork.Reviews.GetByIdAsync(reviewId);
+            if (review == null || review.IsDeleted == true)
+                throw new Exception("Review không tồn tại");
+
+            if (review.Status != ReviewStatus.FLAGGED.ToString())
+                throw new Exception("Chỉ có thể duyệt review đang ở trạng thái FLAGGED");
+
+            switch (request.Action)
+            {
+                case ModerationRequestAction.PUBLISH:
+                    review.Status = ReviewStatus.PUBLISHED.ToString();
+                    break;
+                case ModerationRequestAction.CANCEL:
+                    review.Status = ReviewStatus.CANCELED.ToString();
+                    break;
+                default:
+                    throw new Exception("Action không hợp lệ. Chỉ hỗ trợ PUBLISH hoặc CANCEL");
+            }
+
+            review.UpdatedAt = DateTime.UtcNow;
+            _unitOfWork.Reviews.Update(review);
+            await _unitOfWork.SaveChangesAsync();
+            return review.Id;
+        }
     }
 }
