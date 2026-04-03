@@ -3,6 +3,7 @@ using capstone_backend.Business.DTOs.Challenge;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
+using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Jobs.Challenge
 {
@@ -36,6 +37,28 @@ namespace capstone_backend.Business.Jobs.Challenge
             }
             await _unitOfWork.SaveChangesAsync();
             _logger.LogInformation($"Đã tự động kết thúc {count} Challenges.");
+        }
+
+        public async Task AutoInCompleteChallengeAsync()
+        {
+            var now = DateTime.UtcNow;
+            var activeCoupleChallenges = await _unitOfWork.CoupleProfileChallenges.GetAsync(cpc =>
+                cpc.Status == CoupleProfileChallengeStatus.IN_PROGRESS.ToString() &&
+                cpc.Challenge.EndDate <= now &&
+                cpc.IsDeleted == false,
+                cpc => cpc.Include(cpc => cpc.Challenge)
+            );
+
+            int count = 0;
+            foreach (var coupleChallenge in activeCoupleChallenges)
+            {
+                coupleChallenge.Status = CoupleProfileChallengeStatus.IN_COMPLETED.ToString();
+                coupleChallenge.UpdatedAt = now;
+                _unitOfWork.CoupleProfileChallenges.Update(coupleChallenge);
+                count++;
+            }
+            await _unitOfWork.SaveChangesAsync();
+            _logger.LogInformation($"Đã tự động chuyển {count} Couple Challenges sang trạng thái IN_COMPLETE.");
         }
 
         public async Task RenewDailyCheckinChallengesAsync()

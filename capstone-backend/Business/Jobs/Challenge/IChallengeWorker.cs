@@ -4,5 +4,6 @@
     {
         Task RenewDailyCheckinChallengesAsync();
         Task AutoEndChallengeAsync();
+        Task AutoInCompleteChallengeAsync();
     }
 }
