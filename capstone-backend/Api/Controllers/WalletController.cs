@@ -57,7 +57,7 @@ public class WalletController : BaseController
 
     /// <summary>VENUE OWNER</summary>
     [HttpPost("withdraw")]
-    [Authorize(Roles = "VENUEOWNER")]
+    [Authorize(Roles = "VENUEOWNER, MEMBER")]
     public async Task<IActionResult> CreateWithdrawRequest([FromBody] CreateWithdrawRequestRequest request)
     {
         var userId = GetCurrentUserId();
