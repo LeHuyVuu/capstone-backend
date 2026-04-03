@@ -72,37 +72,20 @@ namespace capstone_backend.Business.Services
                 };
             }
 
-            var vouchers = await _unitOfWork.Vouchers.GetByVenueOwnerIdAsync(venueOwner.Id);
-            var voucherDict = vouchers.ToDictionary(v => v.Id, v => v);
-            var voucherIds = vouchers.Select(v => v.Id).ToList();
-
-            var voucherItems = await _unitOfWork.VoucherItems.GetByVoucherIdsAsync(voucherIds);
-            var voucherItemDict = voucherItems.ToDictionary(vi => vi.Id, vi => vi);
-            var voucherItemIds = voucherItems.Select(vi => vi.Id).ToList();
-
             var (selltements, totalCount) = await _unitOfWork.VenueSettlements.GetPagedAsync(
                 pageNumber,
                 pageSize,
                 vs => vs.IsDeleted == false &&
-                    voucherItemIds.Contains(vs.VoucherItemId) &&
+                    vs.VenueOwnerId == venueOwner.Id &&
                     (request.Status == null || vs.Status == request.Status.ToString()) &&
                     (!request.FromDate.HasValue || vs.CreatedAt >= request.FromDate.Value) &&
                     (!request.ToDate.HasValue || vs.CreatedAt <= request.ToDate.Value),
-                orderBy
+                orderBy,
+                vs => vs.Include(x => x.VoucherItem)
+                            .ThenInclude(x => x.Voucher)
             );
 
             var response = _mapper.Map<List<VenueSettlementListItemResponse>>(selltements);
-            response = response.Select(r =>
-            {
-                var vItem = voucherItemDict.GetValueOrDefault(r.VoucherItemId);
-                var voucher = vItem != null ? voucherDict.GetValueOrDefault(vItem.VoucherId) : null;
-
-                r.VoucherItemCode = vItem?.ItemCode;
-                r.VoucherTitle = voucher?.Title;
-                r.UsedAt = vItem?.UsedAt;
-
-                return r;
-            }).ToList();
 
             return new PagedResult<VenueSettlementListItemResponse>
             {
