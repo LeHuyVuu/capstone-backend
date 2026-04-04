@@ -1,4 +1,6 @@
-﻿namespace capstone_backend.Business.DTOs.Post
+﻿using capstone_backend.Business.DTOs.Accessory;
+
+namespace capstone_backend.Business.DTOs.Post
 {
     public class CommentResponse
     {

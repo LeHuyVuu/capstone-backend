@@ -84,6 +84,8 @@ namespace capstone_backend.Business.Services
             await _unitOfWork.SaveChangesAsync();
 
             var response = _mapper.Map<CommentResponse>(comment);
+            var accessories = await _accessoryService.GetEquippedAccessoryForMemberAsync(comment.AuthorId);
+            response.Author.EquippedAccessories = accessories;
 
             BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessCommentModerationAsync(comment.Id, moderationResults));
 
