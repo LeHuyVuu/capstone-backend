@@ -21,9 +21,9 @@ public class SepayService
     {
         _logger = logger;
         _accountNumber = configuration["Sepay:AccountNumber"] ?? throw new InvalidOperationException("Sepay:AccountNumber not configured");
-        _accountName = configuration["Sepay:AccountName"] ?? "NGUYEN VAN A";
-        _bankName = configuration["Sepay:BankName"] ?? "TPBank";
-        _bankBin = configuration["Sepay:BankBin"] ?? "970423"; // TPBank BIN
+        _accountName = configuration["Sepay:AccountName"] ?? "NGUYEN HIEN TRUNG NAM";
+        _bankName = configuration["Sepay:BankName"] ?? "BIDV";
+        _bankBin = configuration["Sepay:BankBin"] ?? "970418"; // BIDV BIN
     }
 
     /// <summary>
