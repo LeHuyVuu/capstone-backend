@@ -27,7 +27,7 @@ namespace capstone_backend.Api.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> HandleZaloPayCallback([FromBody] ZaloPayCallbackRequest request)
         {
-            _logger.LogInformation("Received Momo IPN: {@Request}", JsonSerializer.Serialize(request, new JsonSerializerOptions
+            _logger.LogInformation("Received ZALO IPN: {@Request}", JsonSerializer.Serialize(request, new JsonSerializerOptions
             {
                 WriteIndented = true
             }));

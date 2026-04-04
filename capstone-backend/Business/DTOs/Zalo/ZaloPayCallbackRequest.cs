@@ -50,9 +50,9 @@ namespace capstone_backend.Business.DTOs.Zalo
         public string MerchantUserId { get; set; } = null!;
 
         [JsonPropertyName("user_fee_amount")]
-        public string UserFeeAmount { get; set; } = null!;
+        public long UserFeeAmount { get; set; }
 
         [JsonPropertyName("discount_amount")]
-        public string DiscountAmount { get; set; } = null!;
+        public long DiscountAmount { get; set; }
     }
 }

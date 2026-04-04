@@ -151,7 +151,7 @@ namespace capstone_backend.Business.Services
 
                 if (!response.IsSuccessStatusCode || result == null || result.ReturnCode != 1)
                 {
-                    throw new Exception($"Lỗi từ ZaloPay: {result?.ReturnMessage ?? responseText}");
+                    throw new Exception($"Lỗi từ ZaloPay code: {result.ReturnCode}: {result?.ReturnMessage ?? responseText}");
                 }
 
                 var tx = await _unitOfWork.Transactions.GetByIdAsync(transaction.Id);
