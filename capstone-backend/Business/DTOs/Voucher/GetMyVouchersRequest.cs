@@ -26,6 +26,7 @@ namespace capstone_backend.Business.DTOs.Voucher
         /// SortBy:
         /// - createdAt
         /// - updatedAt
+        /// - accquiredAt
         /// </summary>
         /// <example>createdAt</example>
         public string? SortBy { get; set; } = "createdAt";

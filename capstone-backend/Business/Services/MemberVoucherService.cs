@@ -380,6 +380,8 @@ namespace capstone_backend.Business.Services
                     ("createdat", "desc") => q => q.OrderByDescending(x => x.CreatedAt),
                     ("updatedat", "asc") => q => q.OrderBy(x => x.UpdatedAt),
                     ("updatedat", "desc") => q => q.OrderByDescending(x => x.UpdatedAt),
+                    ("accquiredat", "asc") => q => q.OrderBy(x => x.AcquiredAt),
+                    ("accquiredat", "desc") => q => q.OrderByDescending(x => x.AcquiredAt),
                     _ => q => q.OrderByDescending(x => x.CreatedAt) // Default order
                 };
             }
