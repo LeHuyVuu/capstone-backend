@@ -120,6 +120,9 @@ builder.Services.AddFireBaseConfiguration();
 // 17. Add Resend Email Service
 builder.Services.AddEmailConfiguration();
 
+// 18. Add VNPAY
+builder.Services.AddVnpayConfiguration();
+
 var app = builder.Build();
 
 // ========================================

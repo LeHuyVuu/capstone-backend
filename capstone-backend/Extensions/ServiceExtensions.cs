@@ -39,6 +39,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using capstone_backend.Business.Jobs.MemberSubscription;
+using VNPAY.Extensions;
 
 namespace capstone_backend.Extensions;
 
@@ -833,6 +834,36 @@ public static class ServiceExtensions
         {
             Console.WriteLine($"[ERROR] Resend Email initialization failed: {ex.Message}");
         }
+
+        return services;
+    }
+
+    /// <summary>
+    /// Register VNPay Service
+    /// </summary>
+    public static IServiceCollection AddVnpayConfiguration(this IServiceCollection services)
+    {
+        var tmnCode = Environment.GetEnvironmentVariable("VNPAY_TMN_CODE");
+        var hashSecret = Environment.GetEnvironmentVariable("VNPAY_HASH_SECRET");
+        var baseUrl = Environment.GetEnvironmentVariable("VNPAY_BASE_URL")
+                      ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
+        var callbackUrl = Environment.GetEnvironmentVariable("VNPAY_CALLBACK_URL");
+
+        if (string.IsNullOrWhiteSpace(tmnCode) ||
+            string.IsNullOrWhiteSpace(hashSecret) ||
+            string.IsNullOrWhiteSpace(callbackUrl))
+        {
+            throw new Exception("[ERROR] Missing VNPAY environment variables");
+        }
+
+        // Config object để inject
+        services.AddVnpayClient(config =>
+        {
+            config.TmnCode = tmnCode;
+            config.HashSecret = hashSecret;
+            config.BaseUrl = baseUrl;
+            config.CallbackUrl = callbackUrl;
+        });
 
         return services;
     }

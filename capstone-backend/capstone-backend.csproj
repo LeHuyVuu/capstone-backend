@@ -66,6 +66,7 @@
         
         <!-- Google Authentication -->
         <PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
+        <PackageReference Include="VNPAY.NET" Version="2.1.0" />
     </ItemGroup>
 
     <ItemGroup>

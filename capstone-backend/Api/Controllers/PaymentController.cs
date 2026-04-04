@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using VNPAY;
+using VNPAY.Models;
+using VNPAY.Models.Enums;
 
 namespace capstone_backend.Api.Controllers;
 
@@ -21,17 +24,20 @@ public class PaymentController : BaseController
     private readonly ILogger<PaymentController> _logger;
     private readonly IMomoService _momoService;
     private readonly WalletService _walletService;
+    private readonly IVnpayClient _vnpayClient;
 
     public PaymentController(
         IUnitOfWork unitOfWork,
         ILogger<PaymentController> logger,
         IMomoService momoService,
-        WalletService walletService)
+        WalletService walletService,
+        IVnpayClient vnpayClient)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _momoService = momoService;
         _walletService = walletService;
+        _vnpayClient = vnpayClient;
     }
 
     /// <summary>
@@ -114,7 +120,7 @@ public class PaymentController : BaseController
         var transaction = await _unitOfWork.Context.Set<Transaction>()
             .FirstOrDefaultAsync(t => t.Id == transactionId
                 && t.UserId == userId.Value
-                && t.Status == TransactionStatus.PENDING.ToString());
+                && t.Status == Data.Enums.TransactionStatus.PENDING.ToString());
 
         if (transaction == null)
         {
@@ -156,7 +162,7 @@ public class PaymentController : BaseController
         var transaction = await _unitOfWork.Context.Set<Transaction>()
             .FirstOrDefaultAsync(t => t.Id == transactionId
                 && t.UserId == userId.Value
-                && t.Status == TransactionStatus.PENDING.ToString());
+                && t.Status == Data.Enums.TransactionStatus.PENDING.ToString());
 
         if (transaction == null)
         {
@@ -167,7 +173,7 @@ public class PaymentController : BaseController
 
         try
         {
-            transaction.Status = TransactionStatus.CANCELLED.ToString();
+            transaction.Status = Data.Enums.TransactionStatus.CANCELLED.ToString();
             transaction.UpdatedAt = DateTime.UtcNow;
             _unitOfWork.Context.Set<Transaction>().Update(transaction);
 
@@ -275,6 +281,26 @@ public class PaymentController : BaseController
         {
             return BadRequestResponse(ex.Message);
         }
+    }
+
+    // <summary>
+    /// Process subscription payment VNPAY (For Members)
+    /// </summary>
+    [HttpPost("member/vnpay-pay")]
+    public async Task<IActionResult> ProcessMemberSubscriptionPaymentVnpay()
+    {
+        var request = new VnpayPaymentRequest
+        {
+            Money = 10000, // Số tiền thanh toán (ví dụ: 10.000 VND)
+            Description = "Thanh toan don hang ABC", // Mô tả giao dịch
+            BankCode = BankCode.ANY, // Tùy chọn. Mã phương thức thanh toán. Mặc định là tất cả phương thức giao dịch
+            Language = DisplayLanguage.Vietnamese // Tùy chọn. Mặc định là tiếng Việt
+        };
+
+        var paymentUrlInfor = _vnpayClient.CreatePaymentUrl(request);
+        var paymentUrl = paymentUrlInfor.Url;
+
+        return OkResponse(paymentUrl, "Lấy link thanh toán thành công");
     }
 
     /// <summary>
