@@ -4,7 +4,7 @@
     {
         ACTIVE,
         INACTIVE,
-        CANCELED,
+        CANCELLED,
         EXPIRED
     }
 }

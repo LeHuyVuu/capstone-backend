@@ -33,7 +33,7 @@ namespace capstone_backend.Business.Services
             if (sub == null)
                 throw new Exception("Không tìm thấy gói đăng ký đang hoạt động");
 
-            sub.Status = MemberSubscriptionPackageStatus.CANCELED.ToString();
+            sub.Status = MemberSubscriptionPackageStatus.CANCELLED.ToString();
             _unitOfWork.MemberSubscriptionPackages.Update(sub);
             await _unitOfWork.SaveChangesAsync();
             return true;

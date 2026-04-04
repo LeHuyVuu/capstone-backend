@@ -88,8 +88,14 @@ namespace capstone_backend.Business.Jobs.Payment
                     // Handle MEMBER_SUBSCRIPTION (TransType = 3) - MoMo payment
                     else if (transaction.TransType == (int)TransactionType.MEMBER_SUBSCRIPTION)
                     {
-                        // Member subscription via MoMo - just expire transaction
-                        // MemberSubscriptionPackage will remain in its current state
+                        var memberSub = await _unitOfWork.MemberSubscriptionPackages.GetFirstAsync(ms => ms.Id == transaction.DocNo && ms.Status == MemberSubscriptionPackageStatus.INACTIVE.ToString());
+
+                        if (memberSub != null)
+                        {
+                            memberSub.Status = MemberSubscriptionPackageStatus.CANCELLED.ToString();
+                            memberSub.UpdatedAt = DateTime.UtcNow;
+                            _unitOfWork.MemberSubscriptionPackages.Update(memberSub);
+                        }
                         _logger.LogInformation("[AUTO EXPIRE] Expired MEMBER_SUBSCRIPTION Transaction #{TxId}", transaction.Id);
                     }
                     // Handle WALLET_TOPUP (TransType = 4) - MoMo payment

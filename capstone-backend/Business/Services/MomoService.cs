@@ -252,7 +252,7 @@ namespace capstone_backend.Business.Services
                 var sub = await _unitOfWork.MemberSubscriptionPackages.GetByIdAsync(transaction.DocNo);
                 if (sub != null)
                 {
-                    sub.Status = MemberSubscriptionPackageStatus.CANCELED.ToString();
+                    sub.Status = MemberSubscriptionPackageStatus.CANCELLED.ToString();
                     _unitOfWork.MemberSubscriptionPackages.Update(sub);
                 }
             }
