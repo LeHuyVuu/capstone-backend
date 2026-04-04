@@ -33,6 +33,9 @@ namespace capstone_backend.Business.Services
             if (member == null)
                 throw new Exception("Hồ sơ thành viên không tồn tại");
 
+            if (request.PaymentMethod != PaymentMethod.MOMO.ToString())
+                throw new Exception("Phương thức thanh toán không hợp lệ");
+
             var package = await _unitOfWork.SubscriptionPackages.GetByIdAsync(request.PackageId);
             if (package == null || package.IsDeleted == true || package.IsActive == false)
                 throw new Exception("Gói đăng ký không tồn tại hoặc không hợp lệ");

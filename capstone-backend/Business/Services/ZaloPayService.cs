@@ -1,4 +1,8 @@
-﻿using capstone_backend.Business.DTOs.Momo;
+﻿using Amazon.Rekognition.Model;
+using AutoMapper;
+using capstone_backend.Business.DTOs.MemberSubscription;
+using capstone_backend.Business.DTOs.Momo;
+using capstone_backend.Business.DTOs.Wallet;
 using capstone_backend.Business.DTOs.Zalo;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
@@ -13,6 +17,7 @@ namespace capstone_backend.Business.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IMapper _mapper;
 
         private readonly string _endpoint = Environment.GetEnvironmentVariable("ZALOPAY_ENDPOINT");
         private readonly string _appId = Environment.GetEnvironmentVariable("ZALOPAY_APP_ID");
@@ -21,16 +26,20 @@ namespace capstone_backend.Business.Services
         private readonly string _callbackUrl = Environment.GetEnvironmentVariable("ZALOPAY_CALLBACK_URL");
         private readonly string _redirectUrl = Environment.GetEnvironmentVariable("PAYMENT_REDIRECT_URL");
 
-        public ZaloPayService(IUnitOfWork unitOfWork, IHttpClientFactory httpClientFactory)
+        public ZaloPayService(IUnitOfWork unitOfWork, IHttpClientFactory httpClientFactory, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
             _httpClientFactory = httpClientFactory;
+            _mapper = mapper;
         }
 
         public async Task<ZaloPayLinkResponse> ProcessMemberSubscriptionPaymentAsync(int userId, ProcessMemberSubscriptionPaymentRequest request)
         {
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null) throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            if (request.PaymentMethod != PaymentMethod.ZALOPAY.ToString())
+                throw new Exception("Phương thức thanh toán không hợp lệ");
 
             var package = await _unitOfWork.SubscriptionPackages.GetByIdAsync(request.PackageId);
             if (package == null || package.IsDeleted == true || package.IsActive == false)
@@ -155,7 +164,117 @@ namespace capstone_backend.Business.Services
                 }
 
                 var tx = await _unitOfWork.Transactions.GetByIdAsync(transaction.Id);
-                tx!.ExternalRefCode = JsonConverterUtil.Serialize(new { AppTransId = appTransId, OrderUrl = result.OrderUrl });
+                tx!.ExternalRefCode = JsonConverterUtil.Serialize(new ZaloPayTxMetadata { AppTransId = appTransId, OrderUrl = result.OrderUrl });
+                _unitOfWork.Transactions.Update(tx);
+                await _unitOfWork.SaveChangesAsync();
+
+                return result;
+            }
+            catch
+            {
+                await MarkTransactionFailedAsync(transaction.Id);
+                throw;
+            }
+        }
+
+        public async Task<ZaloPayLinkResponse> ProcessMemberWalletTopupAsync(int userId, CreateWalletTopupRequest request)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null) throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var wallet = await _unitOfWork.Wallets.GetByUserIdAsync(userId);
+            if (wallet == null) throw new Exception("Ví của thành viên không tồn tại");
+
+            if (request.Amount < 1000) throw new Exception("Số tiền nạp tối thiểu là 1.000 VND");
+
+            var now = DateTime.UtcNow;
+            Transaction transaction;
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var recentTx = await _unitOfWork.Transactions.GetWalletTopupPendingAsync(userId, now.AddMinutes(-30));
+                if (recentTx != null)
+                {
+                    recentTx.Status = TransactionStatus.CANCELLED.ToString();
+                    _unitOfWork.Transactions.Update(recentTx);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+
+                transaction = new Transaction
+                {
+                    UserId = userId,
+                    DocNo = wallet.Id,
+                    PaymentMethod = PaymentMethod.ZALOPAY.ToString(),
+                    TransType = 4,
+                    Description = "Nạp tiền vào ví qua ZaloPay",
+                    Amount = request.Amount,
+                    Currency = "VND",
+                    ExternalRefCode = null,
+                    Status = TransactionStatus.PENDING.ToString()
+                };
+
+                await _unitOfWork.Transactions.AddAsync(transaction);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+
+            var appTransId = $"{now:yyMMdd}_{IdEncoder.Encode(transaction.Id)}";
+            var appTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            var amount = (long)request.Amount;
+
+            var embedData = new Dictionary<string, string>
+            {
+                ["redirecturl"] = _redirectUrl,
+                ["business"] = "wallet_topup",
+                ["userId"] = userId.ToString(),
+                ["walletId"] = wallet.Id.ToString()
+            };
+
+            var items = new[] { new { itemid = wallet.Id.ToString(), itemname = "Nạp tiền ví", itemprice = amount, itemquantity = 1 } };
+
+            var embedDataStr = JsonConverterUtil.Serialize(embedData);
+            var itemStr = JsonConverterUtil.Serialize(items);
+
+            var rawMac = $"{_appId}|{appTransId}|{userId}|{amount}|{appTime}|{embedDataStr}|{itemStr}";
+            var mac = GetHmacSha256(rawMac, _key1);
+
+            var zaloRequest = new
+            {
+                app_id = int.Parse(_appId),
+                app_user = userId.ToString(),
+                app_trans_id = appTransId,
+                app_time = appTime,
+                expire_duration_seconds = 15 * 60,
+                amount = amount,
+                item = itemStr,
+                description = $"Couplemood - Nạp {amount} VND",
+                embed_data = embedDataStr,
+                bank_code = "",
+                mac = mac,
+                callback_url = _callbackUrl
+            };
+
+            try
+            {
+                var client = _httpClientFactory.CreateClient();
+                var response = await client.PostAsJsonAsync(_endpoint, zaloRequest);
+                var responseText = await response.Content.ReadAsStringAsync();
+
+                var result = JsonConverterUtil.DeserializeOrDefault<ZaloPayLinkResponse>(responseText);
+
+                if (!response.IsSuccessStatusCode || result == null || result.ReturnCode != 1)
+                {
+                    throw new Exception($"Lỗi từ ZaloPay: {result?.ReturnMessage ?? responseText}");
+                }
+
+                var tx = await _unitOfWork.Transactions.GetByIdAsync(transaction.Id);
+                tx!.ExternalRefCode = JsonConverterUtil.Serialize(new ZaloPayTxMetadata { AppTransId = appTransId, OrderUrl = result.OrderUrl });
                 _unitOfWork.Transactions.Update(tx);
                 await _unitOfWork.SaveChangesAsync();
 
@@ -227,8 +346,12 @@ namespace capstone_backend.Business.Services
 
                 tx.Status = TransactionStatus.SUCCESS.ToString();
 
-                var metadataStr = tx.ExternalRefCode ?? "{}";
-                tx.ExternalRefCode = metadataStr.Replace("}", $", \"ZpTransId\": {cbData.ZpTransId} }}");
+                var metadata = JsonConverterUtil.DeserializeOrDefault<ZaloPayTxMetadata>(tx.ExternalRefCode);
+                if (metadata != null)
+                {
+                    metadata.ZpTransId = cbData.ZpTransId;
+                    tx.ExternalRefCode = JsonConverterUtil.Serialize(metadata);
+                }
 
                 if (tx.TransType == 3)
                 {
@@ -281,6 +404,48 @@ namespace capstone_backend.Business.Services
             var messageBytes = Encoding.UTF8.GetBytes(message);
             using var hmac = new HMACSHA256(keyBytes);
             return BitConverter.ToString(hmac.ComputeHash(messageBytes)).Replace("-", "").ToLower();
+        }
+
+        public async Task<TransactionResponse?> CheckWalletTopupStatusAsync(int userId, string appTransId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            // ZaloPay app_trans_id format: yyMMdd_encodedId
+            var parts = appTransId.Split("_");
+            if (parts.Length < 2)
+                throw new Exception("Mã giao dịch ZaloPay (app_trans_id) không hợp lệ");
+
+            var transactionId = IdEncoder.Decode(parts[1]);
+
+            var tx = await _unitOfWork.Transactions.GetByIdAsync((int)transactionId);
+            if (tx == null || tx.UserId != userId)
+                throw new Exception("Giao dịch không tồn tại hoặc không thuộc về người dùng");
+
+            if (tx.TransType != 3 && tx.TransType != 4)
+                throw new Exception("Giao dịch không hợp lệ (sai TransType)");
+
+            var response = _mapper.Map<TransactionResponse>(tx);
+
+            // Xử lý riêng cho Member Subscription
+            if (tx.TransType == 3)
+            {
+                var sub = await _unitOfWork.MemberSubscriptionPackages.GetByIdAsync(tx.DocNo);
+                if (sub == null)
+                    throw new Exception("Không tìm thấy gói đăng ký của member");
+
+                response.MemberSubscriptionId = tx.DocNo;
+                response.StartDate = sub.StartDate;
+                response.EndDate = sub.EndDate;
+                response.IsActive = sub.Status == MemberSubscriptionPackageStatus.ACTIVE.ToString();
+            }
+
+            var metadata = JsonConverterUtil.DeserializeOrDefault<ZaloPayTxMetadata>(tx.ExternalRefCode);
+
+            response.PayUrl = metadata?.OrderUrl;
+
+            return response;
         }
     }
 }

@@ -4,8 +4,8 @@
     {
         public int PackageId { get; set; }
 
-        /// <example>MOMO</example>
-        public string PaymentMethod { get; set; } = "MOMO";
+        /// <example>ZALOPAY</example>
+        public string PaymentMethod { get; set; } = "ZALOPAY";
 
         /// <example>null</example>
         public string? Description { get; set; }

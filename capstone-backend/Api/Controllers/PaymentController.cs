@@ -1,4 +1,5 @@
 using capstone_backend.Api.Models;
+using capstone_backend.Business.DTOs.MemberSubscription;
 using capstone_backend.Business.DTOs.Momo;
 using capstone_backend.Business.DTOs.Wallet;
 using capstone_backend.Business.Interfaces;
@@ -305,10 +306,10 @@ public class PaymentController : BaseController
     }
 
     /// <summary>
-    /// Check payment status (For Members)
+    /// Process wallet top-up payment (For Members)
     /// </summary>
-    [HttpGet("member/status/{orderId}")]
-    public async Task<IActionResult> CheckWalletTopupStatus([FromRoute] string orderId)
+    [HttpPost("member/zalo-topup")]
+    public async Task<IActionResult> ProcessMemberWalletTopupVnPay([FromBody] CreateWalletTopupRequest request)
     {
         try
         {
@@ -317,7 +318,41 @@ public class PaymentController : BaseController
             {
                 return UnauthorizedResponse("Unauthorized");
             }
-            var result = await _walletService.CheckMomoPaymentStatusAsync(userId.Value, orderId);
+            var result = await _zaloPayService.ProcessMemberWalletTopupAsync(userId.Value, request);
+            if (result == null)
+                return BadRequestResponse("Lấy link thanh toán thất bại");
+            return OkResponse(result, "Lấy link thanh toán thành công");
+        }
+        catch (Exception ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Check payment status (For Members)
+    /// </summary>
+    [HttpGet("member/status/{orderId}")]
+    public async Task<IActionResult> CheckWalletTopupStatus([FromRoute] string orderId, [FromQuery] string PaymentMethod = "MOMO")
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return UnauthorizedResponse("Unauthorized");
+            }
+            TransactionResponse result = null;
+
+            if (PaymentMethod.ToUpper() == "MOMO")
+            {
+                result = await _walletService.CheckMomoPaymentStatusAsync(userId.Value, orderId);
+            }
+            else if (PaymentMethod.ToUpper() == "ZALOPAY")
+            {
+                result = await _zaloPayService.CheckWalletTopupStatusAsync(userId.Value, orderId);
+            }
+
             if (result == null)
             {
                 return NotFoundResponse("Giao dịch không khả dụng");
