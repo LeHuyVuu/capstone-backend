@@ -106,7 +106,7 @@ namespace capstone_backend.Business.Services
             var nowVn = TimezoneUtil.ToVietNamTime(now);
 
             var appTransId = $"{nowVn:yyMMdd}_{IdEncoder.Encode(transaction.Id)}";
-            var appTime = new DateTimeOffset(nowVn).ToUnixTimeMilliseconds();
+            var appTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var amount = (long)package.Price.Value;
 
             var embedData = new Dictionary<string, string>
