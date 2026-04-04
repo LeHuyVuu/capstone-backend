@@ -3,6 +3,7 @@
     public enum PaymentMethod
     {
         MOMO,
+        ZALOPAY,
         SYSTEM
     }
 }
