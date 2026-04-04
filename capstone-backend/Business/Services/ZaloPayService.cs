@@ -16,8 +16,8 @@ namespace capstone_backend.Business.Services
 
         private readonly string _endpoint = Environment.GetEnvironmentVariable("ZALOPAY_ENDPOINT");
         private readonly string _appId = Environment.GetEnvironmentVariable("ZALOPAY_APP_ID");
-        private readonly string _key1 = Environment.GetEnvironmentVariable("ZALOPAY_KEY1");
-        private readonly string _key2 = Environment.GetEnvironmentVariable("ZALOPAY_KEY2");
+        private readonly string _key1 = Environment.GetEnvironmentVariable("ZALOPAY_APP_KEY1");
+        private readonly string _key2 = Environment.GetEnvironmentVariable("ZALOPAY_APP_KEY2");
         private readonly string _callbackUrl = Environment.GetEnvironmentVariable("ZALOPAY_CALLBACK_URL");
         private readonly string _redirectUrl = Environment.GetEnvironmentVariable("PAYMENT_REDIRECT_URL");
 

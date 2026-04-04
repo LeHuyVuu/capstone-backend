@@ -20,8 +20,8 @@ namespace capstone_backend.Business.DTOs.Zalo
         [JsonPropertyName("order_url")]
         public string OrderUrl { get; set; } = null!;
 
-        [JsonPropertyName("ZpTransToken")]
-        public string zp_trans_token { get; set; } = null!;
+        [JsonPropertyName("zp_trans_token")]
+        public string ZpTransToken { get; set; } = null!;
 
         [JsonPropertyName("order_token")]
         public string OrderToken { get; set; } = null!;

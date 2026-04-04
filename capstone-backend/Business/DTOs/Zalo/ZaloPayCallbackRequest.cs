@@ -11,7 +11,7 @@ namespace capstone_backend.Business.DTOs.Zalo
         public string Mac { get; set; } = null!;
 
         [JsonPropertyName("type")]
-        public string Type { get; set; } = null!;
+        public int Type { get; set; }
     }
 
     public class ZaloPayCallbackData

@@ -21,17 +21,20 @@ public class PaymentController : BaseController
     private readonly ILogger<PaymentController> _logger;
     private readonly IMomoService _momoService;
     private readonly WalletService _walletService;
+    private readonly IZaloPayService _zaloPayService;
 
     public PaymentController(
         IUnitOfWork unitOfWork,
         ILogger<PaymentController> logger,
         IMomoService momoService,
-        WalletService walletService)
+        WalletService walletService,
+        IZaloPayService zaloPayService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _momoService = momoService;
         _walletService = walletService;
+        _zaloPayService = zaloPayService;
     }
 
     /// <summary>
@@ -267,6 +270,30 @@ public class PaymentController : BaseController
                 return UnauthorizedResponse("Unauthorized");
             }
             var result = await _momoService.ProcessMemberWalletTopupAsync(userId.Value, request);
+            if (result == null)
+                return BadRequestResponse("Lấy link thanh toán thất bại");
+            return OkResponse(result, "Lấy link thanh toán thành công");
+        }
+        catch (Exception ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Process subscription payment (For Members)
+    /// </summary>
+    [HttpPost("member/zalo-pay")]
+    public async Task<IActionResult> ProcessMemberSubscriptionPaymentVnPay([FromBody] ProcessMemberSubscriptionPaymentRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return UnauthorizedResponse("Unauthorized");
+            }
+            var result = await _zaloPayService.ProcessMemberSubscriptionPaymentAsync(userId.Value, request);
             if (result == null)
                 return BadRequestResponse("Lấy link thanh toán thất bại");
             return OkResponse(result, "Lấy link thanh toán thành công");
