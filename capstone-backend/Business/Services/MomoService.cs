@@ -54,7 +54,15 @@ namespace capstone_backend.Business.Services
 
                 if (!isCurrentFreeDefault)
                 {
-                    throw new Exception("Bạn đã có gói đăng ký đang hoạt động. Vui lòng chờ đến khi gói hiện tại hết hạn hoặc hủy bỏ trước khi mua gói mới.");
+                    var currentPackage = activeSub.Package;
+
+                    if (currentPackage != null)
+                    {
+                        if ((currentPackage.DurationDays ?? 0) > (package.DurationDays ?? 0))
+                        {
+                            throw new Exception("Không thể chuyển xuống gói thấp hơn khi gói hiện tại còn hiệu lực. Vui lòng chờ hết hạn.");
+                        }
+                    }
                 }
             }
 
