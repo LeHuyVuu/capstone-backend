@@ -56,6 +56,6 @@ public class AdvertisementRepository : GenericRepository<Advertisement>, IAdvert
                 .ThenInclude(vla => vla.Venue)
             .Include(a => a.AdsOrders)
                 .ThenInclude(ao => ao.Package)
-            .FirstOrDefaultAsync(a => a.Id == id && a.IsDeleted != true);
+            .FirstOrDefaultAsync(a => a.Id == id);
     }
 }
