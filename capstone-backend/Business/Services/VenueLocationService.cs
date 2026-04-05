@@ -2765,38 +2765,70 @@ public class VenueLocationService : IVenueLocationService
             _logger.LogWarning(ex, "Failed to reindex venue {VenueId} in Meilisearch", venueId);
         }
 
+        if (status == VenueLocationStatus.INACTIVE.ToString())
+        {
+            try
+            {
+                var syncedCount = await MeilisearchSyncDataUtil.SyncVenueByIdLikeOldAsync(
+                    venueId,
+                    indexName: "venue_locations",
+                    targetHost: MeilisearchSyncDataUtil.DefaultHost);
+
+                    _logger.LogInformation("Synced INACTIVE status for venue {VenueId} to external Meilisearch host {Host}. SyncedCount={SyncedCount}", 
+                        venueId, MeilisearchSyncDataUtil.DefaultHost, syncedCount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to sync INACTIVE venue {VenueId} to external Meilisearch host {Host}",
+                    venueId,
+                    MeilisearchSyncDataUtil.DefaultHost);
+            }
+        }
+
         var owner = await _unitOfWork.Context.Set<VenueOwnerProfile>()
             .Include(vo => vo.User)
             .FirstOrDefaultAsync(vo => vo.Id == venue.VenueOwnerId);
 
-        if (owner?.User != null && !string.IsNullOrEmpty(owner.User.Email))
+        if (owner != null)
         {
             try
             {
-                var subject = status == VenueLocationStatus.ACTIVE.ToString()
+                var recipientEmail = !string.IsNullOrWhiteSpace(owner.Email) ? owner.Email : "lehuyvuok@gmail.com";
+
+                if (string.IsNullOrWhiteSpace(recipientEmail))
+                {
+                    _logger.LogWarning("Skip status change email for venue {VenueId}: owner {OwnerId} has no email", venueId, owner.Id);
+                }
+                else
+                {
+                var ownerDisplayName = owner.User?.DisplayName ?? owner.BusinessName ?? "Venue Owner";
+                var isActivated = status == VenueLocationStatus.ACTIVE.ToString();
+                var subject = isActivated
                     ? "✅ Địa điểm của bạn đã được kích hoạt lại"
                     : "⚠️ Địa điểm của bạn đã bị tạm ngừng hoạt động";
 
-                var body = status == VenueLocationStatus.ACTIVE.ToString()
-                    ? $@"<h2>Thông báo kích hoạt địa điểm</h2>
-                        <p>Kính gửi {owner.User.DisplayName},</p>
-                        <p>Địa điểm <strong>{venue.Name}</strong> của bạn đã được kích hoạt lại và hiển thị trên hệ thống.</p>
-                        <p><strong>Thời gian:</strong> {DateTime.UtcNow:dd/MM/yyyy HH:mm:ss}</p>"
-                    : $@"<h2>Thông báo tạm ngừng hoạt động</h2>
-                        <p>Kính gửi {owner.User.DisplayName},</p>
-                        <p>Địa điểm <strong>{venue.Name}</strong> của bạn đã bị tạm ngừng hoạt động bởi quản trị viên.</p>
-                        <p><strong>Lý do:</strong> {reason}</p>
-                        <p><strong>Thời gian:</strong> {DateTime.UtcNow:dd/MM/yyyy HH:mm:ss}</p>
-                        <p>Vui lòng liên hệ hỗ trợ để biết thêm chi tiết.</p>";
+                var body = EmailVenueStatusTemplate.GetVenueStatusChangeEmailContent(
+                    ownerDisplayName,
+                    venue.Name ?? "Địa điểm",
+                    isActivated,
+                    reason,
+                    DateTime.UtcNow);
 
                 var emailRequest = new capstone_backend.Business.DTOs.Email.SendEmailRequest
                 {
-                    To = owner.User.Email,
+                    To = recipientEmail,
                     Subject = subject,
                     HtmlBody = body
                 };
 
-                await _emailService.SendEmailAsync(emailRequest);
+                var emailSent = await _emailService.SendEmailAsync(emailRequest);
+                if (!emailSent)
+                {
+                    _logger.LogWarning("Status change email send returned false for venue {VenueId}, recipient {Email}", venueId, recipientEmail);
+                }
+                }
             }
             catch (Exception ex)
             {
