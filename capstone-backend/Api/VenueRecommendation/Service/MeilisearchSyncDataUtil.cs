@@ -91,13 +91,36 @@ public static class MeilisearchSyncDataUtil
 
         using var httpClient = CreateClient(apiKey);
         var sourceEndpoint = $"{srcHost.TrimEnd('/')}/indexes/{indexName}/documents/{venueId}";
-        using var sourceResponse = await httpClient.GetAsync(sourceEndpoint, cancellationToken);
-        var sourceBody = await sourceResponse.Content.ReadAsStringAsync(cancellationToken);
+        const int maxAttempts = 8;
+        const int delayMs = 250;
 
-        if (!sourceResponse.IsSuccessStatusCode)
+        string sourceBody = string.Empty;
+        int lastStatusCode = 0;
+        var isLoaded = false;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            using var sourceResponse = await httpClient.GetAsync(sourceEndpoint, cancellationToken);
+            sourceBody = await sourceResponse.Content.ReadAsStringAsync(cancellationToken);
+            lastStatusCode = (int)sourceResponse.StatusCode;
+
+            if (sourceResponse.IsSuccessStatusCode)
+            {
+                isLoaded = true;
+                break;
+            }
+
+            // Only retry when source doc is not found yet (indexing may still be in progress).
+            if (lastStatusCode != 404 || attempt == maxAttempts)
+                break;
+
+            await Task.Delay(delayMs, cancellationToken);
+        }
+
+        if (!isLoaded)
         {
             throw new HttpRequestException(
-                $"Failed to load source document {venueId} from {srcHost} ({(int)sourceResponse.StatusCode}): {sourceBody}");
+                $"Failed to load source document {venueId} from {srcHost} ({lastStatusCode}): {sourceBody}");
         }
 
         using var sourceJson = JsonDocument.Parse(sourceBody);
