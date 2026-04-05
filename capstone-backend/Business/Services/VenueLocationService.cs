@@ -2721,11 +2721,14 @@ public class VenueLocationService : IVenueLocationService
 
         if (status == VenueLocationStatus.INACTIVE.ToString() && !string.IsNullOrWhiteSpace(reason))
         {
-            var deactivationRecord = new
+            var deactivationRecord = new List<RejectionRecord>
             {
-                Reason = reason,
-                DeactivatedAt = DateTime.UtcNow.ToString("o"),
-                DeactivatedBy = $"ADMIN:{adminUserId}"
+                new()
+                {
+                    Reason = reason,
+                    RejectedAt = DateTime.UtcNow.ToString("o"),
+                    RejectedBy = $"ADMIN:{adminUserId}"
+                }
             };
             venue.RejectReason = JsonSerializer.Serialize(deactivationRecord);
 
