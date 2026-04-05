@@ -42,7 +42,7 @@ public class AdvertisementRepository : GenericRepository<Advertisement>, IAdvert
                 .ThenInclude(vla => vla.Venue)
             .Include(a => a.AdsOrders)
                 .ThenInclude(ao => ao.Package)
-            .Where(a => a.VenueOwnerId == venueOwnerId && a.IsDeleted != true)
+            .Where(a => a.VenueOwnerId == venueOwnerId)
             .OrderByDescending(a => a.CreatedAt)
             .ToListAsync();
     }
