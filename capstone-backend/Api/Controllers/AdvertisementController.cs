@@ -353,6 +353,75 @@ public class AdvertisementController : BaseController
         return OkResponse(result, result.Message);
     }
 
+    [HttpDelete("{id}/soft-delete")]
+    [Authorize(Roles = "VENUEOWNER")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> SoftDeleteAdvertisement(int id)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (!currentUserId.HasValue)
+        {
+            return UnauthorizedResponse("User not authenticated");
+        }
+
+        var result = await _advertisementService.SoftDeleteAdvertisementAsync(id, currentUserId.Value);
+        if (!result)
+        {
+            return NotFoundResponse($"Advertisement with ID {id} not found or you don't have permission to delete it");
+        }
+
+        return OkResponse(true, "Advertisement soft deleted successfully");
+    }
+
+    [HttpPost("{id}/restore")]
+    [Authorize(Roles = "VENUEOWNER")]
+    [ProducesResponseType(typeof(ApiResponse<AdvertisementApprovalResult>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> RestoreAdvertisement(int id)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (!currentUserId.HasValue)
+        {
+            return UnauthorizedResponse("User not authenticated");
+        }
+
+        var result = await _advertisementService.RestoreAdvertisementAsync(id, currentUserId.Value);
+        if (!result.IsSuccess)
+        {
+            if (result.Message == "Advertisement not found")
+            {
+                return NotFoundResponse(result.Message);
+            }
+
+            return BadRequestResponse(result.Message);
+        }
+
+        return OkResponse(result, result.Message);
+    }
+
+    [HttpDelete("admin/{id}/hard-delete")]
+    [Authorize(Roles = "ADMIN")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> HardDeleteAdvertisement(int id)
+    {
+        var result = await _advertisementService.HardDeleteAdvertisementAsync(id);
+        if (!result)
+        {
+            return NotFoundResponse($"Advertisement with ID {id} not found");
+        }
+
+        return OkResponse(true, "Advertisement hard deleted successfully");
+    }
+
     #region Public Detail Endpoints
 
 

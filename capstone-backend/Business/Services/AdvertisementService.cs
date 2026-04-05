@@ -1410,6 +1410,166 @@ public class AdvertisementService : IAdvertisementService
         }
     }
 
+    public async Task<bool> HardDeleteAdvertisementAsync(int advertisementId)
+    {
+        _logger.LogInformation("Admin hard deleting advertisement {AdId}", advertisementId);
+
+        using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
+        try
+        {
+            var advertisement = await _unitOfWork.Context.Set<Advertisement>()
+                .Include(a => a.VenueLocationAdvertisements)
+                .Include(a => a.AdsOrders)
+                .FirstOrDefaultAsync(a => a.Id == advertisementId);
+
+            if (advertisement == null)
+            {
+                _logger.LogWarning("Advertisement {AdId} not found for hard delete", advertisementId);
+                return false;
+            }
+
+            if (advertisement.VenueLocationAdvertisements != null && advertisement.VenueLocationAdvertisements.Any())
+            {
+                _unitOfWork.Context.Set<VenueLocationAdvertisement>().RemoveRange(advertisement.VenueLocationAdvertisements);
+            }
+
+            if (advertisement.AdsOrders != null && advertisement.AdsOrders.Any())
+            {
+                _unitOfWork.Context.Set<AdsOrder>().RemoveRange(advertisement.AdsOrders);
+            }
+
+            _unitOfWork.Context.Set<Advertisement>().Remove(advertisement);
+            await _unitOfWork.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
+
+            _logger.LogInformation("Admin hard deleted advertisement {AdId} successfully", advertisementId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            await dbTransaction.RollbackAsync();
+            _logger.LogError(ex, "Error hard deleting advertisement {AdId}", advertisementId);
+            return false;
+        }
+    }
+
+    public async Task<bool> SoftDeleteAdvertisementAsync(int advertisementId, int userId)
+    {
+        _logger.LogInformation("VenueOwner user {UserId} soft deleting advertisement {AdId}", userId, advertisementId);
+
+        var venueOwnerProfile = await _unitOfWork.Context.Set<VenueOwnerProfile>()
+            .FirstOrDefaultAsync(vop => vop.UserId == userId && vop.IsDeleted != true);
+
+        if (venueOwnerProfile == null)
+        {
+            _logger.LogWarning("User {UserId} does not have a venue owner profile", userId);
+            return false;
+        }
+
+        var advertisement = await _unitOfWork.Advertisements.GetByIdWithDetailsAsync(advertisementId);
+        if (advertisement == null)
+        {
+            _logger.LogWarning("Advertisement {AdId} not found for soft delete", advertisementId);
+            return false;
+        }
+
+        if (advertisement.VenueOwnerId != venueOwnerProfile.Id)
+        {
+            _logger.LogWarning("User {UserId} attempted to soft delete advertisement {AdId} without ownership", userId, advertisementId);
+            return false;
+        }
+
+        var now = DateTime.UtcNow;
+        advertisement.IsDeleted = true;
+        advertisement.UpdatedAt = now;
+
+       
+
+        _unitOfWork.Advertisements.Update(advertisement);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("VenueOwner user {UserId} soft deleted advertisement {AdId} successfully", userId, advertisementId);
+        return true;
+    }
+
+    public async Task<AdvertisementApprovalResult> RestoreAdvertisementAsync(int advertisementId, int userId)
+    {
+        _logger.LogInformation("VenueOwner user {UserId} restoring advertisement {AdId}", userId, advertisementId);
+
+        var venueOwnerProfile = await _unitOfWork.Context.Set<VenueOwnerProfile>()
+            .FirstOrDefaultAsync(vop => vop.UserId == userId && vop.IsDeleted != true);
+
+        if (venueOwnerProfile == null)
+        {
+            return new AdvertisementApprovalResult
+            {
+                IsSuccess = false,
+                Message = "You are not registered as a venue owner"
+            };
+        }
+
+        var advertisement = await _unitOfWork.Context.Set<Advertisement>()
+            .Include(a => a.VenueLocationAdvertisements)
+            .FirstOrDefaultAsync(a => a.Id == advertisementId);
+
+        if (advertisement == null)
+        {
+            return new AdvertisementApprovalResult
+            {
+                IsSuccess = false,
+                Message = "Advertisement not found"
+            };
+        }
+
+        if (advertisement.VenueOwnerId != venueOwnerProfile.Id)
+        {
+            return new AdvertisementApprovalResult
+            {
+                IsSuccess = false,
+                Message = "You don't have permission to restore this advertisement"
+            };
+        }
+
+        if (advertisement.IsDeleted != true)
+        {
+            return new AdvertisementApprovalResult
+            {
+                IsSuccess = false,
+                Message = "Advertisement is already visible"
+            };
+        }
+
+        var now = DateTime.UtcNow;
+        var hasValidRemainingDuration = advertisement.VenueLocationAdvertisements != null
+            && advertisement.VenueLocationAdvertisements.Any(vla =>
+                vla.EndDate >= now
+                && vla.Status != VenueLocationAdvertisementStatus.CANCELLED.ToString()
+                && vla.Status != VenueLocationAdvertisementStatus.EXPIRED.ToString());
+
+        if (!hasValidRemainingDuration)
+        {
+            return new AdvertisementApprovalResult
+            {
+                IsSuccess = false,
+                Message = "Advertisement is expired or no valid active duration remains, cannot restore"
+            };
+        }
+
+        advertisement.IsDeleted = false;
+        advertisement.UpdatedAt = now;
+
+        _unitOfWork.Advertisements.Update(advertisement);
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("VenueOwner user {UserId} restored advertisement {AdId} successfully", userId, advertisementId);
+
+        return new AdvertisementApprovalResult
+        {
+            IsSuccess = true,
+            Message = "Advertisement restored successfully"
+        };
+    }
+
     #endregion
 
     #region Public Detail APIs

@@ -25,4 +25,7 @@ public interface IAdvertisementService
     Task<List<MyAdvertisementResponse>> GetPendingAdvertisementsAsync();
     Task<AdvertisementApprovalResult> ApproveAdvertisementAsync(ApproveAdvertisementRequest request);
     Task<AdvertisementApprovalResult> RejectAdvertisementAsync(RejectAdvertisementRequest request);
+    Task<bool> HardDeleteAdvertisementAsync(int advertisementId);
+    Task<bool> SoftDeleteAdvertisementAsync(int advertisementId, int userId);
+    Task<AdvertisementApprovalResult> RestoreAdvertisementAsync(int advertisementId, int userId);
 }
