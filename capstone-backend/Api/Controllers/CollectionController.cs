@@ -181,4 +181,42 @@ public class CollectionController : BaseController
 
         return OkResponse(collection, "Venues removed from collection successfully");
     }
+
+    /// <summary>
+    /// Get share link for a collection (non authenticated)
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("{collectionId:int}/share-link")]
+    public async Task<IActionResult> GetShareLink([FromRoute] int collectionId)
+    {
+        try
+        {
+            var result = await _collectionService.GetCollectionShareLinkAsync(collectionId);
+            return OkResponse(result, "Tạo link chia sẻ thành công");
+        }
+        catch (Exception ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Get collection details by share link (non authenticated)
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("share/{shareCode}")]
+    public async Task<IActionResult> GetCollectionByShareLink([FromRoute] string shareCode)
+    {
+        try
+        {
+            var result = await _collectionService.GetCollectionByShareLinkAsync(shareCode);
+            if (result == null)
+                return NotFoundResponse("Collection không tồn tại hoặc đã bị ẩn");
+            return OkResponse(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
 }

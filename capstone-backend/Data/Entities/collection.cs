@@ -21,6 +21,8 @@ public partial class Collection
 
     public string? Status { get; set; }
 
+    public string? ShareCode { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

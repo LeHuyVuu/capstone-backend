@@ -1,10 +1,12 @@
 using capstone_backend.Business.Common.Constants;
 using capstone_backend.Business.DTOs.Collection;
 using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using NanoidDotNet;
 
 namespace capstone_backend.Business.Services;
 
@@ -486,5 +488,71 @@ public class CollectionService : ICollectionService
         }
 
         return collectionName.Trim().ToLower();
+    }
+
+    public async Task<ShareLinkResponse> GetCollectionShareLinkAsync(int collectionId, CancellationToken cancellationToken = default)
+    {
+        var collection = await _unitOfWork.Context.Set<Collection>()
+            .FirstOrDefaultAsync(c => c.Id == collectionId && c.IsDeleted != true, cancellationToken);
+
+        if (collection == null)
+            throw new Exception("Collection không tồn tại");
+
+        if (collection.Status != "PUBLIC")
+            throw new Exception("Chỉ có thể chia sẻ collection PUBLIC");
+
+        if (string.IsNullOrEmpty(collection.ShareCode))
+        {
+            bool isUnique = false;
+            string newCode = "";
+
+            while (!isUnique)
+            {
+                newCode = Nanoid.Generate(size: 10);
+                var existing = await _unitOfWork.Context.Set<Collection>()
+                    .FirstOrDefaultAsync(c => c.ShareCode == newCode, cancellationToken);
+
+                if (existing == null)
+                {
+                    isUnique = true;
+                }
+            }
+
+            collection.ShareCode = newCode;
+            collection.UpdatedAt = DateTime.UtcNow;
+
+            _unitOfWork.Context.Set<Collection>().Update(collection);
+            await _unitOfWork.SaveChangesAsync();
+
+            _logger.LogInformation("Generated share code {ShareCode} for collection {CollectionId}", newCode, collectionId);
+        }
+
+        return new ShareLinkResponse
+        {
+            ShareCode = collection.ShareCode,
+            ShareLinkUrl = $"{Environment.GetEnvironmentVariable("FE_URL")}/share/c/{collection.ShareCode}"
+        };
+    }
+
+    public async Task<CollectionResponse?> GetCollectionByShareLinkAsync(string shareCode, CancellationToken cancellationToken = default)
+    {
+        var collection = await _unitOfWork.Context.Set<Collection>()
+            .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CoupleMoodType)
+            .Include(c => c.Venues)
+                .ThenInclude(v => v.VenueLocationTags)
+                    .ThenInclude(vlt => vlt.LocationTag)
+                        .ThenInclude(lt => lt.CouplePersonalityType)
+            .FirstOrDefaultAsync(c => c.ShareCode == shareCode && c.IsDeleted != true, cancellationToken);
+
+        if (collection == null)
+            throw new Exception("Collection không tồn tại");
+
+        if (collection.Status != "PUBLIC")
+            throw new Exception("Collection không khả dụng để chia sẻ");
+
+        return MapToResponse(collection);
     }
 }

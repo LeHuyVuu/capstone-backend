@@ -1,5 +1,6 @@
 using capstone_backend.Business.DTOs.Collection;
 using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Business.DTOs.Post;
 
 namespace capstone_backend.Business.Interfaces;
 
@@ -17,4 +18,6 @@ public interface ICollectionService
     Task<CollectionResponse?> AddVenueToCollectionAsync(int collectionId, int memberId, int venueId, CancellationToken cancellationToken = default);
     Task<CollectionResponse?> AddVenuesToCollectionAsync(int collectionId, int memberId, PatchCollectionRequest request, CancellationToken cancellationToken = default);
     Task<CollectionResponse?> RemoveVenuesFromCollectionAsync(int collectionId, int memberId, PatchCollectionRequest request, CancellationToken cancellationToken = default);
+    Task<ShareLinkResponse> GetCollectionShareLinkAsync(int collectionId, CancellationToken cancellationToken = default);
+    Task<CollectionResponse?> GetCollectionByShareLinkAsync(string shareCode, CancellationToken cancellationToken = default);
 }
