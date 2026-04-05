@@ -21,10 +21,24 @@ public class CollectionService : ICollectionService
 
     public async Task<CollectionResponse> CreateCollectionAsync(int memberId, CreateCollectionRequest request, CancellationToken cancellationToken = default)
     {
+        var normalizedCollectionName = NormalizeCollectionName(request.CollectionName);
+
+        var nameExists = await _unitOfWork.Context.Set<Collection>()
+            .AnyAsync(c => c.MemberId == memberId
+                && c.IsDeleted != true
+                && c.CollectionName != null
+                && c.CollectionName.Trim().ToLower() == normalizedCollectionName,
+                cancellationToken);
+
+        if (nameExists)
+        {
+            throw new InvalidOperationException($"Collection name '{request.CollectionName}' already exists.");
+        }
+
         var collection = new Collection()
         {
             MemberId = memberId,
-            CollectionName = request.CollectionName,
+            CollectionName = request.CollectionName.Trim(),
             Description = request.Description,
             Img = request.Img,
             Status = request.Status,
@@ -168,8 +182,25 @@ public class CollectionService : ICollectionService
             throw new InvalidOperationException("Không thể đổi tên collection mặc định");
         }
 
-        if (!string.IsNullOrEmpty(request.CollectionName))
-            collection.CollectionName = request.CollectionName;
+        if (!string.IsNullOrWhiteSpace(request.CollectionName))
+        {
+            var normalizedNewName = NormalizeCollectionName(request.CollectionName);
+
+            var duplicateNameExists = await _unitOfWork.Context.Set<Collection>()
+                .AnyAsync(c => c.MemberId == memberId
+                    && c.Id != collectionId
+                    && c.IsDeleted != true
+                    && c.CollectionName != null
+                    && c.CollectionName.Trim().ToLower() == normalizedNewName,
+                    cancellationToken);
+
+            if (duplicateNameExists)
+            {
+                throw new InvalidOperationException($"Collection name '{request.CollectionName}' already exists.");
+            }
+
+            collection.CollectionName = request.CollectionName.Trim();
+        }
         
         if (request.Description != null)
             collection.Description = request.Description;
@@ -445,5 +476,15 @@ public class CollectionService : ICollectionService
         }
 
         return new List<string> { trimmed };
+    }
+
+    private static string NormalizeCollectionName(string collectionName)
+    {
+        if (string.IsNullOrWhiteSpace(collectionName))
+        {
+            throw new InvalidOperationException("Collection name is required.");
+        }
+
+        return collectionName.Trim().ToLower();
     }
 }
