@@ -2414,6 +2414,28 @@ public class VenueLocationService : IVenueLocationService
                 try
                 {
                     await _meilisearchService.IndexVenueLocationAsync(request.VenueId);
+
+                    try
+                    {
+                        var syncedCount = await MeilisearchSyncDataUtil.SyncVenueByIdLikeOldAsync(
+                            request.VenueId,
+                            indexName: "venue_locations",
+                            targetHost: MeilisearchSyncDataUtil.DefaultHost);
+
+                        _logger.LogInformation(
+                            "Synced APPROVED ACTIVE venue {VenueId} to external Meilisearch host {Host}. SyncedCount={SyncedCount}",
+                            request.VenueId,
+                            MeilisearchSyncDataUtil.DefaultHost,
+                            syncedCount);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(
+                            ex,
+                            "Failed to sync APPROVED ACTIVE venue {VenueId} to external Meilisearch host {Host}",
+                            request.VenueId,
+                            MeilisearchSyncDataUtil.DefaultHost);
+                    }
                 }
                 catch
                 {
