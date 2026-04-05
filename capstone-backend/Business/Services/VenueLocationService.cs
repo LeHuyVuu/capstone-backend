@@ -2672,4 +2672,147 @@ public class VenueLocationService : IVenueLocationService
 
         return true;
     }
+
+    public async Task<VenueStatusChangeByAdminResponse> AdminChangeVenueStatusAsync(int venueId, int adminUserId, string newStatus, string? reason)
+    {
+        var status = newStatus?.ToUpper();
+        if (status != VenueLocationStatus.ACTIVE.ToString() && status != VenueLocationStatus.INACTIVE.ToString())
+        {
+            throw new ArgumentException("Invalid status. Only 'ACTIVE' or 'INACTIVE' are allowed.");
+        }
+
+        var venue = await _unitOfWork.VenueLocations.GetByIdWithDetailsAsync(venueId);
+        
+        if (venue == null || venue.IsDeleted == true)
+        {
+            throw new KeyNotFoundException($"Venue with ID {venueId} not found");
+        }
+
+        if (venue.Status == status)
+        {
+            throw new ArgumentException($"Venue is already {status}");
+        }
+
+        if (venue.Status == VenueLocationStatus.ACTIVE.ToString() && status != VenueLocationStatus.INACTIVE.ToString())
+        {
+            throw new ArgumentException("ACTIVE venues can only be changed to INACTIVE");
+        }
+
+        if (venue.Status == VenueLocationStatus.INACTIVE.ToString() && status != VenueLocationStatus.ACTIVE.ToString())
+        {
+            throw new ArgumentException("INACTIVE venues can only be changed to ACTIVE");
+        }
+
+        if (venue.Status != VenueLocationStatus.ACTIVE.ToString() && venue.Status != VenueLocationStatus.INACTIVE.ToString())
+        {
+            throw new ArgumentException($"Cannot change status from {venue.Status}. Only ACTIVE and INACTIVE venues can use this endpoint.");
+        }
+
+        if (status == VenueLocationStatus.INACTIVE.ToString() && string.IsNullOrWhiteSpace(reason))
+        {
+            throw new ArgumentException("Reason is required when setting venue to INACTIVE");
+        }
+
+        var previousStatus = venue.Status;
+        int affectedAds = 0;
+        
+        venue.Status = status;
+        venue.UpdatedAt = DateTime.UtcNow;
+
+        if (status == VenueLocationStatus.INACTIVE.ToString() && !string.IsNullOrWhiteSpace(reason))
+        {
+            var deactivationRecord = new
+            {
+                Reason = reason,
+                DeactivatedAt = DateTime.UtcNow.ToString("o"),
+                DeactivatedBy = $"ADMIN:{adminUserId}"
+            };
+            venue.RejectReason = JsonSerializer.Serialize(deactivationRecord);
+
+            var activeAds = await _unitOfWork.Context.Set<VenueLocationAdvertisement>()
+                .Where(vla => vla.VenueId == venueId && vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString())
+                .ToListAsync();
+
+            foreach (var ad in activeAds)
+            {
+                ad.Status = VenueLocationAdvertisementStatus.EXPIRED.ToString();
+                ad.UpdatedAt = DateTime.UtcNow;
+                affectedAds++;
+            }
+            
+            _logger.LogInformation("Admin {AdminId} set venue {VenueId} to INACTIVE. Expired {AdCount} active ads. Reason: {Reason}", 
+                adminUserId, venueId, affectedAds, reason);
+        }
+        else if (status == VenueLocationStatus.ACTIVE.ToString())
+        {
+            venue.RejectReason = null;
+            _logger.LogInformation("Admin {AdminId} activated venue {VenueId}", adminUserId, venueId);
+        }
+
+        _unitOfWork.VenueLocations.Update(venue);
+        await _unitOfWork.SaveChangesAsync();
+
+        bool reindexSuccess = false;
+        try
+        {
+            reindexSuccess = await _meilisearchService.IndexVenueLocationAsync(venueId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to reindex venue {VenueId} in Meilisearch", venueId);
+        }
+
+        var owner = await _unitOfWork.Context.Set<VenueOwnerProfile>()
+            .Include(vo => vo.User)
+            .FirstOrDefaultAsync(vo => vo.Id == venue.VenueOwnerId);
+
+        if (owner?.User != null && !string.IsNullOrEmpty(owner.User.Email))
+        {
+            try
+            {
+                var subject = status == VenueLocationStatus.ACTIVE.ToString()
+                    ? "✅ Địa điểm của bạn đã được kích hoạt lại"
+                    : "⚠️ Địa điểm của bạn đã bị tạm ngừng hoạt động";
+
+                var body = status == VenueLocationStatus.ACTIVE.ToString()
+                    ? $@"<h2>Thông báo kích hoạt địa điểm</h2>
+                        <p>Kính gửi {owner.User.DisplayName},</p>
+                        <p>Địa điểm <strong>{venue.Name}</strong> của bạn đã được kích hoạt lại và hiển thị trên hệ thống.</p>
+                        <p><strong>Thời gian:</strong> {DateTime.UtcNow:dd/MM/yyyy HH:mm:ss}</p>"
+                    : $@"<h2>Thông báo tạm ngừng hoạt động</h2>
+                        <p>Kính gửi {owner.User.DisplayName},</p>
+                        <p>Địa điểm <strong>{venue.Name}</strong> của bạn đã bị tạm ngừng hoạt động bởi quản trị viên.</p>
+                        <p><strong>Lý do:</strong> {reason}</p>
+                        <p><strong>Thời gian:</strong> {DateTime.UtcNow:dd/MM/yyyy HH:mm:ss}</p>
+                        <p>Vui lòng liên hệ hỗ trợ để biết thêm chi tiết.</p>";
+
+                var emailRequest = new capstone_backend.Business.DTOs.Email.SendEmailRequest
+                {
+                    To = owner.User.Email,
+                    Subject = subject,
+                    HtmlBody = body
+                };
+
+                await _emailService.SendEmailAsync(emailRequest);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to send status change email for venue {VenueId}", venueId);
+            }
+        }
+
+        return new VenueStatusChangeByAdminResponse
+        {
+            VenueId = venueId,
+            VenueName = venue.Name,
+            VenueOwnerId = venue.VenueOwnerId,
+            VenueOwnerName = owner?.User?.DisplayName,
+            PreviousStatus = previousStatus!,
+            NewStatus = status,
+            Reason = reason,
+            UpdatedAt = venue.UpdatedAt ?? DateTime.UtcNow,
+            AffectedAdvertisements = affectedAds,
+            ReindexedInMeilisearch = reindexSuccess
+        };
+    }
 }

@@ -1,6 +1,7 @@
 ﻿using capstone_backend.Business.DTOs.Admin;
 using capstone_backend.Business.DTOs.TestType;
 using capstone_backend.Business.DTOs.Wallet;
+using capstone_backend.Business.DTOs.VenueLocation;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Services;
 using capstone_backend.Data.Enums;
@@ -20,11 +21,13 @@ namespace capstone_backend.Api.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly WalletService _walletService;
+        private readonly IVenueLocationService _venueLocationService;
 
-        public AdminController(IUnitOfWork unitOfWork, WalletService walletService)
+        public AdminController(IUnitOfWork unitOfWork, WalletService walletService, IVenueLocationService venueLocationService)
         {
             _unitOfWork = unitOfWork;
             _walletService = walletService;
+            _venueLocationService = venueLocationService;
         }
 
         [HttpGet]
@@ -322,6 +325,39 @@ namespace capstone_backend.Api.Controllers
             catch (Exception ex)
             {
                 return BadRequestResponse($"Error retrieving transactions: {ex.Message}");
+            }
+        }
+
+        [HttpPatch("venues/{id}/status")]
+        [Authorize(Roles = "ADMIN")]
+        public async Task<IActionResult> ChangeVenueStatus([FromRoute] int id, [FromBody] ChangeVenueStatusByAdminRequest request)
+        {
+            var adminUserId = GetCurrentUserId();
+            if (!adminUserId.HasValue)
+            {
+                return UnauthorizedResponse("Admin not authenticated");
+            }
+
+            try
+            {
+                var result = await _venueLocationService.AdminChangeVenueStatusAsync(id, adminUserId.Value, request.Status, request.Reason);
+                return OkResponse(result, $"Venue status changed to {result.NewStatus} successfully");
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFoundResponse(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse($"Error changing venue status: {ex.Message}");
             }
         }
     }

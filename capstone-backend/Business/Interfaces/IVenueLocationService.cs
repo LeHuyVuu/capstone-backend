@@ -165,4 +165,14 @@ public interface IVenueLocationService
     /// <param name="venueId">Venue location ID</param>
     /// <returns>Venue location with KYC documents and owner profile or null if not found</returns>
     Task<VenueLocationWithKycResponse?> GetVenueLocationWithKycAsync(int venueId);
+
+    /// <summary>
+    /// Admin changes venue status between ACTIVE and INACTIVE
+    /// </summary>
+    /// <param name="venueId">Venue location ID</param>
+    /// <param name="adminUserId">Admin user ID</param>
+    /// <param name="newStatus">Target status</param>
+    /// <param name="reason">Reason for status change</param>
+    /// <returns>Status change result</returns>
+    Task<VenueStatusChangeByAdminResponse> AdminChangeVenueStatusAsync(int venueId, int adminUserId, string newStatus, string? reason);
 }
