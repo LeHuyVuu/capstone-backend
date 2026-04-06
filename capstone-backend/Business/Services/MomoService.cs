@@ -79,13 +79,6 @@ namespace capstone_backend.Business.Services
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                Transaction? recentTransaction = await _unitOfWork.Transactions.GetRecentPendingAsync(userId, request.PackageId, now.AddMinutes(-30));
-
-                if (recentTransaction != null)
-                {
-                    recentTransaction.Status = TransactionStatus.CANCELLED.ToString();
-                    _unitOfWork.Transactions.Update(recentTransaction);
-                }
 
                 // 1. Create subscription record
                 subscription = new MemberSubscriptionPackage
@@ -451,15 +444,6 @@ namespace capstone_backend.Business.Services
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                // Cancel any pending wallet top-up transactions in the last 30 minutes
-                Transaction? recentTransaction = await _unitOfWork.Transactions.GetWalletTopupPendingAsync(userId, now.AddMinutes(-30));
-                if (recentTransaction != null)
-                {
-                    recentTransaction.Status = TransactionStatus.CANCELLED.ToString();
-                    _unitOfWork.Transactions.Update(recentTransaction);
-                    await _unitOfWork.SaveChangesAsync();
-                }
-
                 transaction = new Transaction
                 {
                     UserId = userId,
