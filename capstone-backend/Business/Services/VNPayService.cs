@@ -1,7 +1,10 @@
 ﻿using capstone_backend.Business.DTOs.Momo;
 using capstone_backend.Business.DTOs.VNPay;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
+using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -16,7 +19,7 @@ namespace capstone_backend.Business.Services
         private readonly string _baseUrl = Environment.GetEnvironmentVariable("VNPAY_ENDPOINT") ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
         private readonly string _tmnCode = Environment.GetEnvironmentVariable("VNPAY_TMN_CODE");
         private readonly string _hashSecret = Environment.GetEnvironmentVariable("VNPAY_HASH_SECRET");
-        private readonly string _returnUrl = "https://kusl.io.vn/payment-result";
+        private readonly string _returnUrl = Environment.GetEnvironmentVariable("PAYMENT_REDIRECT_URL");
 
         public VNPayService(IUnitOfWork unitOfWork, IHttpContextAccessor httpContextAccessor)
         {
@@ -26,7 +29,86 @@ namespace capstone_backend.Business.Services
 
         public async Task<VNPayLinkResponse> ProcessMemberSubscriptionPaymentAsync(int userId, ProcessMemberSubscriptionPaymentRequest request)
         {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null) throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var package = await _unitOfWork.SubscriptionPackages.GetByIdAsync(request.PackageId);
+            if (package == null || package.IsDeleted == true || package.IsActive == false)
+                throw new Exception("Gói đăng ký không tồn tại hoặc không hợp lệ");
+
+            if (!package.DurationDays.HasValue || package.DurationDays.Value <= 0)
+                throw new Exception("Gói đăng ký không có thời hạn hợp lệ");
+
+            if ((package.Price ?? 0) <= 0)
+                throw new Exception("Gói miễn phí không hỗ trợ thanh toán qua VNPAY");
+
+            var activeSub = await _unitOfWork.MemberSubscriptionPackages.GetCurrentActiveSubscriptionAsync(member.Id);
+            if (activeSub != null)
+            {
+                var isCurrentFreeDefault = activeSub.Package != null && activeSub.Package.IsDefault == true && (activeSub.Package.Price ?? 0) <= 0;
+                if (!isCurrentFreeDefault && activeSub.Package != null)
+                {
+                    if ((activeSub.Package.DurationDays ?? 0) > (package.DurationDays ?? 0))
+                        throw new Exception("Không thể chuyển xuống gói thấp hơn khi gói hiện tại còn hiệu lực. Vui lòng chờ hết hạn.");
+                }
+            }
+
             var now = DateTime.UtcNow;
+            MemberSubscriptionPackage subscription;
+            Transaction transaction;
+            string orderId;
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var recentTransaction = await _unitOfWork.Transactions.GetRecentPendingAsync(userId, request.PackageId, now.AddMinutes(-30));
+                if (recentTransaction != null)
+                {
+                    recentTransaction.Status = TransactionStatus.CANCELLED.ToString();
+                    _unitOfWork.Transactions.Update(recentTransaction);
+                }
+
+                subscription = new MemberSubscriptionPackage
+                {
+                    MemberId = member.Id,
+                    PackageId = package.Id,
+                    StartDate = now,
+                    EndDate = now.AddDays(package.DurationDays.Value),
+                    Status = MemberSubscriptionPackageStatus.INACTIVE.ToString()
+                };
+                await _unitOfWork.MemberSubscriptionPackages.AddAsync(subscription);
+                await _unitOfWork.SaveChangesAsync();
+
+                transaction = new Transaction
+                {
+                    UserId = userId,
+                    DocNo = subscription.Id,
+                    PaymentMethod = PaymentMethod.VNPAY.ToString(),
+                    TransType = 3,
+                    Description = $"Thanh toan goi dang ky {RemoveDiacritics(package.PackageName)}",
+                    Amount = package.Price.Value,
+                    Currency = "VND",
+                    Status = TransactionStatus.PENDING.ToString(),
+                };
+                await _unitOfWork.Transactions.AddAsync(transaction);
+                await _unitOfWork.SaveChangesAsync();
+
+                orderId = $"CM_T_{IdEncoder.Encode(transaction.Id)}";
+
+                // Lưu metadata nếu cần (giống MoMo)
+                var metadata = new { OrderId = orderId, SubscriptionId = subscription.Id };
+                transaction.ExternalRefCode = JsonConverterUtil.Serialize(metadata);
+                _unitOfWork.Transactions.Update(transaction);
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+
             var nowVn = TimezoneUtil.ToVietNamTime(now);
 
             var vnpayParams = new SortedList<string, string>(new VnPayCompare())
@@ -34,16 +116,16 @@ namespace capstone_backend.Business.Services
                 { "vnp_Version", "2.1.0" },
                 { "vnp_Command", "pay" },
                 { "vnp_TmnCode", _tmnCode },
-                { "vnp_Amount", $"{99000 * 100}" },
+                { "vnp_Amount", ((long)(package.Price.Value * 100)).ToString() },
                 { "vnp_CreateDate", nowVn.ToString("yyyyMMddHHmmss") },
                 { "vnp_CurrCode", "VND" },
                 { "vnp_IpAddr", GetIpAddress() },
                 { "vnp_Locale", "vn" },
-                { "vnp_OrderInfo", $"Thanh toan goi 1" },
+                { "vnp_OrderInfo", $"Thanh toan goi dang ky {RemoveDiacritics(package.PackageName)}" },
                 { "vnp_OrderType", "other" },
                 { "vnp_ReturnUrl", _returnUrl },
                 //{ "vnp_ExpireDate", nowVn.AddMinutes(15).ToString("yyyyMMddHHmmss") },
-                { "vnp_TxnRef", $"{DateTime.Now.Ticks}" }
+                { "vnp_TxnRef", orderId }
             };
 
             var response = new VNPayLinkResponse
@@ -52,6 +134,150 @@ namespace capstone_backend.Business.Services
             };
 
             return response;
+        }
+
+        public async Task<VNPayReturnDto?> VerifyPaymentProcessingAsync(IQueryCollection requestData)
+        {
+            var vnp_SecureHash = requestData["vnp_SecureHash"].ToString();
+
+            if (string.IsNullOrEmpty(vnp_SecureHash))
+                return null;
+
+            var vnpayData = new SortedList<string, string>(new VnPayCompare());
+
+            foreach (var key in requestData.Keys)
+            {
+                if (!string.IsNullOrEmpty(key) && key.StartsWith("vnp_") && key != "vnp_SecureHash" && key != "vnp_SecureHashType")
+                {
+                    vnpayData.Add(key, requestData[key].ToString());
+                }
+            }
+
+            var signData = new StringBuilder();
+            foreach (var kv in vnpayData)
+            {
+                if (!string.IsNullOrEmpty(kv.Value))
+                {
+                    signData.Append(WebUtility.UrlEncode(kv.Key) + "=" + WebUtility.UrlEncode(kv.Value) + "&");
+                }
+            }
+
+            var signDataString = signData.ToString();
+            if (signDataString.Length > 0)
+            {
+                signDataString = signDataString.Remove(signDataString.Length - 1, 1);
+            }
+
+            var myChecksum = HmacSHA512(_hashSecret, signDataString);
+
+            if (!myChecksum.Equals(vnp_SecureHash, StringComparison.OrdinalIgnoreCase))
+            {
+                return new VNPayReturnDto
+                {
+                    RspCode = "97",
+                    Message = "Chữ ký không hợp lệ."
+                };
+            }
+
+            // Get information
+            var orderId = requestData["vnp_TxnRef"].ToString();
+            var responseCode = vnpayData.GetValueOrDefault("vnp_ResponseCode");
+            var transactionStatus = vnpayData.GetValueOrDefault("vnp_TransactionStatus");
+
+            if (string.IsNullOrEmpty(orderId))
+                {
+                return new VNPayReturnDto
+                {
+                    RspCode = "01",
+                    Message = "Không tìm thấy mã đơn hàng"
+                };
+            }
+
+            var parts = orderId.Split('_');
+            if (parts.Length < 3)
+                {
+                return new VNPayReturnDto
+                {
+                    RspCode = "01",
+                    Message = "Mã đơn hàng không hợp lệ"
+                };
+            }
+            var txId = IdEncoder.Decode(parts[2]);
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var tx = await _unitOfWork.Transactions.GetByIdAsync((int)txId);
+                if (tx == null || tx.Status == TransactionStatus.SUCCESS.ToString())
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return new VNPayReturnDto
+                    {
+                        RspCode = "02",
+                        Message = "Giao dịch đã hoàn thành trước đó"
+                    };
+                }
+
+                bool isSuccess = responseCode == "00" && transactionStatus == "00";
+
+                if (isSuccess)
+                {
+                    tx.Status = TransactionStatus.SUCCESS.ToString();
+
+                    if (tx.TransType == 3) // Subscription
+                    {
+                        var sub = await _unitOfWork.MemberSubscriptionPackages.GetByIdAsync(tx.DocNo);
+                        if (sub != null)
+                        {
+                            var package = await _unitOfWork.SubscriptionPackages.GetByIdAsync(sub.PackageId);
+                            // Deactivate old sub
+                            var currentActiveSub = await _unitOfWork.MemberSubscriptionPackages.GetCurrentActiveSubscriptionAsync(sub.MemberId);
+                            if (currentActiveSub != null && currentActiveSub.Id != sub.Id)
+                            {
+                                currentActiveSub.Status = MemberSubscriptionPackageStatus.INACTIVE.ToString();
+                                _unitOfWork.MemberSubscriptionPackages.Update(currentActiveSub);
+                            }
+
+                            sub.StartDate = DateTime.UtcNow;
+                            sub.EndDate = DateTime.UtcNow.AddDays(package?.DurationDays ?? 0);
+                            sub.Status = MemberSubscriptionPackageStatus.ACTIVE.ToString();
+                            _unitOfWork.MemberSubscriptionPackages.Update(sub);
+                        }
+                    }
+                    else if (tx.TransType == 4) // Wallet
+                    {
+                        var wallet = await _unitOfWork.Wallets.GetByIdAsync(tx.DocNo);
+                        if (wallet != null)
+                        {
+                            wallet.Balance += tx.Amount;
+                            _unitOfWork.Wallets.Update(wallet);
+                        }
+                    }
+                }
+                else
+                {
+                    tx.Status = TransactionStatus.FAILED.ToString();
+                }
+
+                _unitOfWork.Transactions.Update(tx);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new VNPayReturnDto
+                {
+                    RspCode = "00",
+                    Message = GetResponseMessage(responseCode)
+                };
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return new VNPayReturnDto
+                {
+                    RspCode = "99",
+                    Message = "Lỗi xử lý giao dịch"
+                };
+            }
         }
 
         private string GenerateVnPayUrl(SortedList<string, string> parameters, string baseUrl, string hashSecret)
@@ -114,56 +340,28 @@ namespace capstone_backend.Business.Services
             return string.IsNullOrEmpty(ip) ? "127.0.0.1" : ip;
         }
 
-        public async Task<VNPayReturnDto?> VerifyPaymentProcessing(IQueryCollection requestData)
+        private static string RemoveDiacritics(string text)
         {
-            var vnp_SecureHash = requestData["vnp_SecureHash"].ToString();
+            if (string.IsNullOrEmpty(text))
+                return text;
 
-            if (string.IsNullOrEmpty(vnp_SecureHash))
-                return null;
+            var normalized = text.Normalize(NormalizationForm.FormD);
+            var sb = new StringBuilder();
 
-            var vnpayData = new SortedList<string, string>(new VnPayCompare());
-
-            foreach (var key in requestData.Keys)
+            foreach (var c in normalized)
             {
-                if (!string.IsNullOrEmpty(key) && key.StartsWith("vnp_") && key != "vnp_SecureHash" && key != "vnp_SecureHashType")
+                var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
+                if (unicodeCategory != UnicodeCategory.NonSpacingMark)
                 {
-                    vnpayData.Add(key, requestData[key].ToString());
+                    sb.Append(c);
                 }
             }
 
-            var signData = new StringBuilder();
-            foreach (var kv in vnpayData)
-            {
-                if (!string.IsNullOrEmpty(kv.Value))
-                {
-                    signData.Append(WebUtility.UrlEncode(kv.Key) + "=" + WebUtility.UrlEncode(kv.Value) + "&");
-                }
-            }
+            var result = sb.ToString().Normalize(NormalizationForm.FormC);
 
-            var signDataString = signData.ToString();
-            if (signDataString.Length > 0)
-            {
-                signDataString = signDataString.Remove(signDataString.Length - 1, 1);
-            }
+            result = result.Replace('đ', 'd').Replace('Đ', 'D');
 
-            var myChecksum = HmacSHA512(_hashSecret, signDataString);
-
-            if (myChecksum.Equals(vnp_SecureHash, StringComparison.OrdinalIgnoreCase))
-            {
-                return new VNPayReturnDto
-                {
-                    RspCode = requestData["vnp_ResponseCode"].ToString(),
-                    Message = GetResponseMessage(requestData["vnp_ResponseCode"].ToString())
-                };
-            }
-            else
-            {
-                return new VNPayReturnDto
-                {
-                    RspCode = "97",
-                    Message = "Chữ ký không hợp lệ."
-                };
-            }
+            return result;
         }
 
         private static string GetResponseMessage(string responseCode)

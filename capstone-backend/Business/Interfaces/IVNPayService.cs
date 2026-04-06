@@ -6,6 +6,6 @@ namespace capstone_backend.Business.Interfaces
     public interface IVNPayService
     {
         Task<VNPayLinkResponse> ProcessMemberSubscriptionPaymentAsync(int userId, ProcessMemberSubscriptionPaymentRequest request);
-        Task<VNPayReturnDto?> VerifyPaymentProcessing(IQueryCollection requestData);
+        Task<VNPayReturnDto?> VerifyPaymentProcessingAsync(IQueryCollection requestData);
     }
 }

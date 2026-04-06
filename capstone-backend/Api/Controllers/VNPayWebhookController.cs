@@ -41,7 +41,7 @@ namespace capstone_backend.Api.Controllers
                     });
                 }
 
-                var result = await _vnPayService.VerifyPaymentProcessing(Request.Query);
+                var result = await _vnPayService.VerifyPaymentProcessingAsync(Request.Query);
 
                 if (result == null)
                 {
