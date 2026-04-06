@@ -43,7 +43,7 @@ namespace capstone_backend.Business.Services
                 { "vnp_OrderType", "other" },
                 { "vnp_ReturnUrl", _returnUrl },
                 //{ "vnp_ExpireDate", nowVn.AddMinutes(15).ToString("yyyyMMddHHmmss") },
-                { "vnp_TxnRef", IdEncoder.Encode(new Random().Next()) }
+                { "vnp_TxnRef", $"{DateTime.Now.Ticks}" }
             };
 
             var response = new VNPayLinkResponse
