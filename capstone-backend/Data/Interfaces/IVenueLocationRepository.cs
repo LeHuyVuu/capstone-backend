@@ -86,4 +86,6 @@ public interface IVenueLocationRepository : IGenericRepository<VenueLocation>
         decimal? lat = null,
         decimal? lon = null,
         double distanceKm = 15.0);
+
+    Task<VenueLocation?> GetActiveByIdAsync(int id);
 }

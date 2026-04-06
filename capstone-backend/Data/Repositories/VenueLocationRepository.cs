@@ -22,6 +22,12 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
             .FirstOrDefaultAsync();
     }
 
+    public async Task<VenueLocation?> GetActiveByIdAsync(int id)
+    {
+        return await _dbSet
+            .FirstOrDefaultAsync(vl => vl.Id == id && vl.IsDeleted == false && vl.Status == VenueLocationStatus.ACTIVE.ToString());
+    }
+
     /// <summary>
     /// Get venue location by ID with all related entities and opening hours for today
     /// </summary>
