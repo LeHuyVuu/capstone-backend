@@ -23,7 +23,7 @@ namespace capstone_backend.Business.Services
         private readonly string _baseUrl = Environment.GetEnvironmentVariable("VNPAY_ENDPOINT") ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
         private readonly string _tmnCode = Environment.GetEnvironmentVariable("VNPAY_TMN_CODE");
         private readonly string _hashSecret = Environment.GetEnvironmentVariable("VNPAY_HASH_SECRET");
-        private readonly string _returnUrl = Environment.GetEnvironmentVariable("PAYMENT_REDIRECT_URL");
+        private readonly string _returnUrl = Environment.GetEnvironmentVariable("VNPAY_RETURN_URL");
 
         public VNPayService(IUnitOfWork unitOfWork, IHttpContextAccessor httpContextAccessor, IMapper mapper)
         {
