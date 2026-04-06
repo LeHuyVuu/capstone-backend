@@ -371,6 +371,7 @@ public class AdvertisementService : IAdvertisementService
             return new AdvertisementDetailResponse
             {
                 Id = updated.Id,
+                IsDeleted = updated.IsDeleted == true,
                 VenueOwnerId = updated.VenueOwnerId,
                 Title = updated.Title ?? string.Empty,
                 Content = updated.Content,
@@ -419,6 +420,7 @@ public class AdvertisementService : IAdvertisementService
             return new MyAdvertisementResponse
             {
                 Id = ad.Id,
+                IsDeleted = ad.IsDeleted == true,
                 Title = ad.Title ?? string.Empty,
                 BannerUrl = ad.BannerUrl ?? string.Empty,
                 PlacementType = ad.PlacementType ?? string.Empty,
@@ -991,6 +993,7 @@ public class AdvertisementService : IAdvertisementService
         return new AdvertisementDetailResponse
         {
             Id = ad.Id,
+            IsDeleted = ad.IsDeleted == true,
             VenueOwnerId = ad.VenueOwnerId,
             Title = ad.Title ?? string.Empty,
             Content = ad.Content,
@@ -1679,6 +1682,7 @@ public class AdvertisementService : IAdvertisementService
             return new MyAdvertisementResponse
             {
                 Id = ad.Id,
+                IsDeleted = ad.IsDeleted == true,
                 Title = ad.Title ?? string.Empty,
                 BannerUrl = ad.BannerUrl ?? string.Empty,
                 PlacementType = ad.PlacementType ?? string.Empty,
@@ -1843,6 +1847,7 @@ public class AdvertisementService : IAdvertisementService
                 Advertisement = ao.Advertisement != null ? new AdvertisementInfo
                 {
                     Id = ao.Advertisement.Id,
+                    IsDeleted = ao.Advertisement.IsDeleted == true,
                     Title = ao.Advertisement.Title ?? string.Empty,
                     Content = ao.Advertisement.Content,
                     BannerUrl = ao.Advertisement.BannerUrl ?? string.Empty,

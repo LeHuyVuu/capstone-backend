@@ -3,6 +3,7 @@ namespace capstone_backend.Business.DTOs.Advertisement;
 public class AdvertisementDetailResponse
 {
     public int Id { get; set; }
+    public bool IsDeleted { get; set; }
     public int VenueOwnerId { get; set; }
     public string Title { get; set; } = null!;
     public string? Content { get; set; }

@@ -3,6 +3,7 @@ namespace capstone_backend.Business.DTOs.Advertisement;
 public class MyAdvertisementResponse
 {
     public int Id { get; set; }
+    public bool IsDeleted { get; set; }
     public string Title { get; set; } = null!;
     public string BannerUrl { get; set; } = null!;
     public string PlacementType { get; set; } = null!;
