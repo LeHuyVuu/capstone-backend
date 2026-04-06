@@ -1,4 +1,5 @@
 ﻿using capstone_backend.Business.DTOs.VNPay;
+using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,10 +12,12 @@ namespace capstone_backend.Api.Controllers
     public class VNPayWebhookController : BaseController
     {
         private readonly ILogger<VNPayWebhookController> _logger;
+        private readonly IVNPayService _vnPayService;
 
-        public VNPayWebhookController(ILogger<VNPayWebhookController> logger)
+        public VNPayWebhookController(ILogger<VNPayWebhookController> logger, IVNPayService vnPayService)
         {
             _logger = logger;
+            _vnPayService = vnPayService;
         }
 
         /// <summary>
@@ -22,19 +25,42 @@ namespace capstone_backend.Api.Controllers
         /// </summary>
         [HttpGet("callback")]
         [AllowAnonymous]
-        public async Task<IActionResult> HandleVNPayCallback([FromQuery] VNPayIpnRequest request)
+        public async Task<IActionResult> HandleVNPayCallback()
         {
-            _logger.LogInformation("Received VNPay IPN: {@Request}", System.Text.Json.JsonSerializer.Serialize(request, new System.Text.Json.JsonSerializerOptions
+            try
             {
-                WriteIndented = true
-            }));
-            // Implement logic to verify and process the payment notification from VNPay
-            // You can call your service layer here to handle the business logic
-            return Ok(new
+                _logger.LogInformation("[VNPAY IPN] Raw QueryString: {QueryString}", Request.QueryString.Value);
+
+                if (!Request.Query.Any())
+                {
+                    _logger.LogWarning("[VNPAY IPN] Request rỗng!");
+                    return Ok(new VNPayReturnDto
+                    {
+                        RspCode = "99",
+                        Message = "Empty request"
+                    });
+                }
+
+                var result = await _vnPayService.VerifyPaymentProcessing(Request.Query);
+
+                if (result == null)
+                {
+                    return Ok(new VNPayReturnDto
+                    {
+                        RspCode = "99",
+                        Message = "Verification failed or processing error"
+                    });
+                }
+                else
+                {
+                    return Ok(result);
+                }
+            }
+            catch (Exception ex)
             {
-                RspCode = "00",
-                Message = "IPN received successfully"
-            });
+                _logger.LogError(ex, "[VNPAY IPN] Lỗi exception bung bét khi nhận Webhook");
+                return Ok(new { RspCode = "99", Message = "Unknown error" });
+            }
         }
     }
 }

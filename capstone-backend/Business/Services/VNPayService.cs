@@ -113,6 +113,79 @@ namespace capstone_backend.Business.Services
             }
             return string.IsNullOrEmpty(ip) ? "127.0.0.1" : ip;
         }
+
+        public async Task<VNPayReturnDto?> VerifyPaymentProcessing(IQueryCollection requestData)
+        {
+            var vnp_SecureHash = requestData["vnp_SecureHash"].ToString();
+
+            if (string.IsNullOrEmpty(vnp_SecureHash))
+                return null;
+
+            var vnpayData = new SortedList<string, string>(new VnPayCompare());
+
+            foreach (var key in requestData.Keys)
+            {
+                if (!string.IsNullOrEmpty(key) && key.StartsWith("vnp_") && key != "vnp_SecureHash" && key != "vnp_SecureHashType")
+                {
+                    vnpayData.Add(key, requestData[key].ToString());
+                }
+            }
+
+            var signData = new StringBuilder();
+            foreach (var kv in vnpayData)
+            {
+                if (!string.IsNullOrEmpty(kv.Value))
+                {
+                    signData.Append(WebUtility.UrlEncode(kv.Key) + "=" + WebUtility.UrlEncode(kv.Value) + "&");
+                }
+            }
+
+            var signDataString = signData.ToString();
+            if (signDataString.Length > 0)
+            {
+                signDataString = signDataString.Remove(signDataString.Length - 1, 1);
+            }
+
+            var myChecksum = HmacSHA512(_hashSecret, signDataString);
+
+            if (myChecksum.Equals(vnp_SecureHash, StringComparison.OrdinalIgnoreCase))
+            {
+                return new VNPayReturnDto
+                {
+                    RspCode = requestData["vnp_ResponseCode"].ToString(),
+                    Message = GetResponseMessage(requestData["vnp_ResponseCode"].ToString())
+                };
+            }
+            else
+            {
+                return new VNPayReturnDto
+                {
+                    RspCode = "97",
+                    Message = "Chữ ký không hợp lệ."
+                };
+            }
+        }
+
+        private static string GetResponseMessage(string responseCode)
+        {
+            return responseCode switch
+            {
+                "00" => "Giao dịch thành công",
+                "07" => "Trừ tiền thành công. Giao dịch bị nghi ngờ.",
+                "09" => "Thẻ/Tài khoản chưa đăng ký dịch vụ InternetBanking.",
+                "10" => "Xác thực thông tin thẻ/tài khoản không đúng quá 3 lần.",
+                "11" => "Đã hết hạn chờ thanh toán.",
+                "12" => "Thẻ/Tài khoản bị khóa.",
+                "13" => "Nhập sai mật khẩu xác thực giao dịch (OTP).",
+                "24" => "Khách hàng hủy giao dịch.",
+                "51" => "Tài khoản không đủ số dư.",
+                "65" => "Tài khoản đã vượt quá hạn mức giao dịch trong ngày.",
+                "75" => "Ngân hàng thanh toán đang bảo trì.",
+                "79" => "Nhập sai mật khẩu thanh toán quá số lần quy định.",
+                "99" => "Lỗi không xác định.",
+                _ => $"Lỗi không xác định (mã: {responseCode})",
+            };
+        }
     }
 
     public class VnPayCompare : IComparer<string>
