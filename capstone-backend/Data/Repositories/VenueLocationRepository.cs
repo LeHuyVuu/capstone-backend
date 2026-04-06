@@ -42,7 +42,7 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
             .Include(v => v.VenueOwner)
             .Include(v => v.VenueOpeningHours.Where(oh => oh.Day == todayDbFormat))
             .AsSplitQuery()
-            .FirstOrDefaultAsync(v => v.Id == id && v.IsDeleted != true);
+            .FirstOrDefaultAsync(v => v.Id == id && v.IsDeleted != true && v.Status == VenueLocationStatus.ACTIVE.ToString());
     }
 
     /// <summary>

@@ -412,7 +412,11 @@ public class AdvertisementService : IAdvertisementService
 
         var responses = advertisements.Select(ad =>
         {
-            var activeVenueAd = ad.VenueLocationAdvertisements
+            var visibleVenueLocationAds = ad.VenueLocationAdvertisements
+                .Where(IsVenueLocationVisible)
+                .ToList();
+
+            var activeVenueAd = visibleVenueLocationAds
                 .Where(vla => vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString() && vla.EndDate >= DateTime.UtcNow)
                 .OrderByDescending(vla => vla.StartDate)
                 .FirstOrDefault();
@@ -431,7 +435,7 @@ public class AdvertisementService : IAdvertisementService
                 DesiredStartDate = ad.DesiredStartDate,
                 CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
                 UpdatedAt = ad.UpdatedAt,
-                VenueLocationCount = ad.VenueLocationAdvertisements.Count,
+                VenueLocationCount = visibleVenueLocationAds.Count,
                 ActiveVenueAd = activeVenueAd != null ? new ActiveVenueLocationAd
                 {
                     Id = activeVenueAd.Id,
@@ -1007,7 +1011,9 @@ public class AdvertisementService : IAdvertisementService
             DesiredStartDate = ad.DesiredStartDate,
             CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
             UpdatedAt = ad.UpdatedAt,
-            VenueLocationAds = ad.VenueLocationAdvertisements?.Select(vla => new VenueLocationAdInfo
+            VenueLocationAds = ad.VenueLocationAdvertisements?
+                .Where(IsVenueLocationVisible)
+                .Select(vla => new VenueLocationAdInfo
             {
                 Id = vla.Id,
                 VenueId = vla.VenueId,
@@ -1587,7 +1593,9 @@ public class AdvertisementService : IAdvertisementService
             .Where(vla => vla.AdvertisementId == advertisementId 
                 && vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString()
                 && vla.Advertisement.IsDeleted != true
-                && vla.Advertisement.Status == AdvertisementStatus.APPROVED.ToString())
+                && vla.Advertisement.Status == AdvertisementStatus.APPROVED.ToString()
+                && vla.Venue.IsDeleted != true
+                && vla.Venue.Status == VenueLocationStatus.ACTIVE.ToString())
             .ToListAsync();
 
         if (venueLocationAds == null || !venueLocationAds.Any())
@@ -1674,7 +1682,11 @@ public class AdvertisementService : IAdvertisementService
 
         var responses = advertisements.Select(ad =>
         {
-            var activeVenueAd = ad.VenueLocationAdvertisements
+            var visibleVenueLocationAds = ad.VenueLocationAdvertisements
+                .Where(IsVenueLocationVisible)
+                .ToList();
+
+            var activeVenueAd = visibleVenueLocationAds
                 .Where(vla => vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString() && vla.EndDate >= DateTime.UtcNow)
                 .OrderByDescending(vla => vla.StartDate)
                 .FirstOrDefault();
@@ -1691,7 +1703,7 @@ public class AdvertisementService : IAdvertisementService
                 DesiredStartDate = ad.DesiredStartDate,
                 CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
                 UpdatedAt = ad.UpdatedAt,
-                VenueLocationCount = ad.VenueLocationAdvertisements.Count,
+                VenueLocationCount = visibleVenueLocationAds.Count,
                 ActiveVenueAd = activeVenueAd != null ? new ActiveVenueLocationAd
                 {
                     Id = activeVenueAd.Id,
@@ -1857,6 +1869,7 @@ public class AdvertisementService : IAdvertisementService
                     DesiredStartDate = ao.Advertisement.DesiredStartDate
                 } : null,
                 VenueLocationAds = ao.Advertisement?.VenueLocationAdvertisements?
+                    .Where(IsVenueLocationVisible)
                     .Select(vla => new VenueLocationAdInfo
                     {
                         Id = vla.Id,
@@ -1871,6 +1884,13 @@ public class AdvertisementService : IAdvertisementService
         }).ToList();
 
         return responses;
+    }
+
+    private static bool IsVenueLocationVisible(VenueLocationAdvertisement venueLocationAd)
+    {
+        return venueLocationAd.Venue != null
+            && venueLocationAd.Venue.IsDeleted != true
+            && venueLocationAd.Venue.Status == VenueLocationStatus.ACTIVE.ToString();
     }
 
     #endregion

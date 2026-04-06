@@ -4,6 +4,7 @@ using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NanoidDotNet;
@@ -418,7 +419,9 @@ public class CollectionService : ICollectionService
             Status = collection.Status,
             CreatedAt = collection.CreatedAt,
             UpdatedAt = collection.UpdatedAt,
-            Venues = collection.Venues?.Select(v => new VenueSimpleResponse
+            Venues = collection.Venues?
+                .Where(v => v.IsDeleted != true && v.Status == VenueLocationStatus.ACTIVE.ToString())
+                .Select(v => new VenueSimpleResponse
             {
                 Id = v.Id,
                 Name = v.Name,

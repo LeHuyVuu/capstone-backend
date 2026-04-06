@@ -175,7 +175,7 @@ public class VenueLocationService : IVenueLocationService
 
         if (venue == null)
         {
-            _logger.LogWarning("Venue location with ID {VenueId} not found or deleted", venueId);
+            _logger.LogWarning("Venue location tạm thời không tồn tại hoặc đã bị xóa", venueId);
             return null;
         }
 

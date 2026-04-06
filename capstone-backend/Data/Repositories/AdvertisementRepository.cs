@@ -38,7 +38,9 @@ public class AdvertisementRepository : GenericRepository<Advertisement>, IAdvert
         return await _context.Advertisements
             .Include(a => a.MoodType)
             .Include(a => a.VenueLocationAdvertisements
-                .Where(vla => vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString()))
+                .Where(vla => vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString()
+                    && vla.Venue.IsDeleted != true
+                    && vla.Venue.Status == VenueLocationStatus.ACTIVE.ToString()))
                 .ThenInclude(vla => vla.Venue)
             .Include(a => a.AdsOrders)
                 .ThenInclude(ao => ao.Package)
