@@ -1,5 +1,6 @@
 using capstone_backend.Business.DTOs.Auth;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Enums;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -13,11 +14,13 @@ namespace capstone_backend.Api.Controllers;
 public class AuthController : BaseController
 {
     private readonly IUserService _userService;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<AuthController> _logger;
 
-    public AuthController(IUserService userService, ILogger<AuthController> logger)
+    public AuthController(IUserService userService, IUnitOfWork unitOfWork, ILogger<AuthController> logger)
     {
         _userService = userService;
+        _unitOfWork = unitOfWork;
         _logger = logger;
     }
 
@@ -30,6 +33,10 @@ public class AuthController : BaseController
 
         if (loginResponse == null)
             return UnauthorizedResponse("Invalid email or password");
+
+        var staffVenueGuardResult = await ValidateStaffVenueAccessAsync(loginResponse.AccessToken);
+        if (staffVenueGuardResult != null)
+            return staffVenueGuardResult;
 
         // Decode JWT token to get user claims
         var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
@@ -410,6 +417,10 @@ public class AuthController : BaseController
             if (loginResponse == null)
                 return UnauthorizedResponse("Google authentication failed");
 
+            var staffVenueGuardResult = await ValidateStaffVenueAccessAsync(loginResponse.AccessToken);
+            if (staffVenueGuardResult != null)
+                return staffVenueGuardResult;
+
             return OkResponse(loginResponse, "Login successful");
         }
         catch (InvalidOperationException ex)
@@ -439,6 +450,10 @@ public class AuthController : BaseController
             if (loginResponse == null)
                 return UnauthorizedResponse("Google mobile authentication failed");
 
+            var staffVenueGuardResult = await ValidateStaffVenueAccessAsync(loginResponse.AccessToken);
+            if (staffVenueGuardResult != null)
+                return staffVenueGuardResult;
+
             return OkResponse(loginResponse, "Mobile login successful");
         }
         catch (Exception ex)
@@ -446,5 +461,37 @@ public class AuthController : BaseController
             _logger.LogError(ex, "Google mobile login error");
             return InternalServerErrorResponse($"Google mobile login failed: {ex.Message}");
         }
+    }
+
+    private async Task<IActionResult?> ValidateStaffVenueAccessAsync(string accessToken)
+    {
+        const string blockedMessage = "Venue tạm thời không tồn tại hoặc bị xóa bởi admin, vui lòng liên hệ";
+
+        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+        var jwtToken = handler.ReadJwtToken(accessToken);
+
+        var role = jwtToken.Claims
+            .FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role")
+            ?.Value;
+
+        if (!string.Equals(role, "STAFF", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var email = jwtToken.Claims
+            .FirstOrDefault(c => c.Type == "email" || c.Type == ClaimTypes.Email)
+            ?.Value;
+
+        if (string.IsNullOrWhiteSpace(email))
+            return UnauthorizedResponse(blockedMessage);
+
+        var currentUser = await _unitOfWork.Users.GetByEmailAsync(email);
+        if (currentUser == null || !currentUser.AssignedVenueLocationId.HasValue)
+            return UnauthorizedResponse(blockedMessage);
+
+        var assignedVenue = await _unitOfWork.VenueLocations.GetByIdAsync(currentUser.AssignedVenueLocationId.Value);
+        if (assignedVenue == null || !string.Equals(assignedVenue.Status, VenueLocationStatus.ACTIVE.ToString(), StringComparison.OrdinalIgnoreCase))
+            return UnauthorizedResponse(blockedMessage);
+
+        return null;
     }
 }
