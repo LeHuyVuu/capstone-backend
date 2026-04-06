@@ -406,7 +406,7 @@ namespace capstone_backend.Business.Services
             return BitConverter.ToString(hmac.ComputeHash(messageBytes)).Replace("-", "").ToLower();
         }
 
-        public async Task<TransactionResponse?> CheckWalletTopupStatusAsync(int userId, string appTransId)
+        public async Task<TransactionResponse> CheckZaloTransactionStatusAsync(int userId, string appTransId)
         {
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)

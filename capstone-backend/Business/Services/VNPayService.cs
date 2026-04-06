@@ -1,5 +1,8 @@
-﻿using capstone_backend.Business.DTOs.Momo;
+﻿using AutoMapper;
+using capstone_backend.Business.DTOs.MemberSubscription;
+using capstone_backend.Business.DTOs.Momo;
 using capstone_backend.Business.DTOs.VNPay;
+using capstone_backend.Business.DTOs.Wallet;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
@@ -14,6 +17,7 @@ namespace capstone_backend.Business.Services
     public class VNPayService : IVNPayService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         private readonly string _baseUrl = Environment.GetEnvironmentVariable("VNPAY_ENDPOINT") ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
@@ -21,16 +25,20 @@ namespace capstone_backend.Business.Services
         private readonly string _hashSecret = Environment.GetEnvironmentVariable("VNPAY_HASH_SECRET");
         private readonly string _returnUrl = Environment.GetEnvironmentVariable("PAYMENT_REDIRECT_URL");
 
-        public VNPayService(IUnitOfWork unitOfWork, IHttpContextAccessor httpContextAccessor)
+        public VNPayService(IUnitOfWork unitOfWork, IHttpContextAccessor httpContextAccessor, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
             _httpContextAccessor = httpContextAccessor;
+            _mapper = mapper;
         }
 
         public async Task<VNPayLinkResponse> ProcessMemberSubscriptionPaymentAsync(int userId, ProcessMemberSubscriptionPaymentRequest request)
         {
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null) throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            if (request.PaymentMethod != PaymentMethod.VNPAY.ToString())
+                throw new Exception("Phương thức thanh toán không hợp lệ");
 
             var package = await _unitOfWork.SubscriptionPackages.GetByIdAsync(request.PackageId);
             if (package == null || package.IsDeleted == true || package.IsActive == false)
@@ -85,7 +93,7 @@ namespace capstone_backend.Business.Services
                     DocNo = subscription.Id,
                     PaymentMethod = PaymentMethod.VNPAY.ToString(),
                     TransType = 3,
-                    Description = $"Thanh toan goi dang ky {RemoveDiacritics(package.PackageName)}",
+                    Description = $"Thanh toan goi dang ky {package.PackageName}",
                     Amount = package.Price.Value,
                     Currency = "VND",
                     Status = TransactionStatus.PENDING.ToString(),
@@ -95,8 +103,10 @@ namespace capstone_backend.Business.Services
 
                 orderId = $"CM_T_{IdEncoder.Encode(transaction.Id)}";
 
-                // Lưu metadata nếu cần (giống MoMo)
-                var metadata = new { OrderId = orderId, SubscriptionId = subscription.Id };
+                var metadata = new VNPayTxMetadata
+                {
+                    OrderId = orderId
+                };
                 transaction.ExternalRefCode = JsonConverterUtil.Serialize(metadata);
                 _unitOfWork.Transactions.Update(transaction);
 
@@ -125,6 +135,91 @@ namespace capstone_backend.Business.Services
                 { "vnp_OrderType", "other" },
                 { "vnp_ReturnUrl", _returnUrl },
                 //{ "vnp_ExpireDate", nowVn.AddMinutes(15).ToString("yyyyMMddHHmmss") },
+                { "vnp_TxnRef", orderId }
+            };
+
+            var response = new VNPayLinkResponse
+            {
+                PayUrl = GenerateVnPayUrl(vnpayParams, _baseUrl, _hashSecret)
+            };
+
+            return response;
+        }
+
+        public async Task<VNPayLinkResponse> ProcessMemberWalletTopupAsync(int userId, CreateWalletTopupRequest request)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null) throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var wallet = await _unitOfWork.Wallets.GetByUserIdAsync(userId);
+            if (wallet == null) throw new Exception("Ví của thành viên không tồn tại");
+
+            if (request.Amount < 1000) throw new Exception("Số tiền nạp tối thiểu là 1.000 VND");
+
+            var now = DateTime.UtcNow;
+            Transaction transaction;
+            string orderId;
+
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var recentTx = await _unitOfWork.Transactions.GetWalletTopupPendingAsync(userId, now.AddMinutes(-30));
+                if (recentTx != null)
+                {
+                    recentTx.Status = TransactionStatus.CANCELLED.ToString();
+                    _unitOfWork.Transactions.Update(recentTx);
+                    await _unitOfWork.SaveChangesAsync();
+                }
+
+                transaction = new Transaction
+                {
+                    UserId = userId,
+                    DocNo = wallet.Id,
+                    PaymentMethod = PaymentMethod.VNPAY.ToString(),
+                    TransType = 4,
+                    Description = "Nạp tiền vào ví qua VNPAY",
+                    Amount = request.Amount,
+                    Currency = "VND",
+                    ExternalRefCode = null,
+                    Status = TransactionStatus.PENDING.ToString()
+                };
+
+                await _unitOfWork.Transactions.AddAsync(transaction);
+                await _unitOfWork.SaveChangesAsync();
+
+                orderId = $"CM_T_{IdEncoder.Encode(transaction.Id)}";
+
+                var metadata = new VNPayTxMetadata
+                {
+                    OrderId = orderId
+                };
+                transaction.ExternalRefCode = JsonConverterUtil.Serialize(metadata);
+                _unitOfWork.Transactions.Update(transaction);
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+
+            var nowVn = TimezoneUtil.ToVietNamTime(now);
+
+            var vnpayParams = new SortedList<string, string>(new VnPayCompare())
+            {
+                { "vnp_Version", "2.1.0" },
+                { "vnp_Command", "pay" },
+                { "vnp_TmnCode", _tmnCode },
+                { "vnp_Amount", ((long)(request.Amount * 100)).ToString() },
+                { "vnp_CreateDate", nowVn.ToString("yyyyMMddHHmmss") },
+                { "vnp_CurrCode", "VND" },
+                { "vnp_IpAddr", GetIpAddress() },
+                { "vnp_Locale", "vn" },
+                { "vnp_OrderInfo", $"Nap tien vao vi Couplemood" },
+                { "vnp_OrderType", "other" },
+                { "vnp_ReturnUrl", _returnUrl },
                 { "vnp_TxnRef", orderId }
             };
 
@@ -223,6 +318,14 @@ namespace capstone_backend.Business.Services
                 if (isSuccess)
                 {
                     tx.Status = TransactionStatus.SUCCESS.ToString();
+
+                    // Update trans no to ref
+                    var metadata = JsonConverterUtil.DeserializeOrDefault<VNPayTxMetadata>(tx.ExternalRefCode);
+                    if (metadata != null)
+                    {
+                        metadata.TransactionNo = requestData["vnp_TransactionNo"].ToString();
+                        tx.ExternalRefCode = JsonConverterUtil.Serialize(metadata);
+                    }
 
                     if (tx.TransType == 3) // Subscription
                     {
@@ -362,6 +465,42 @@ namespace capstone_backend.Business.Services
             result = result.Replace('đ', 'd').Replace('Đ', 'D');
 
             return result;
+        }
+
+        public async Task<TransactionResponse> CheckVNPAYTransactionStatusAsync(int userId, string orderId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var parts = orderId.Split('_');
+            if (parts.Length < 3)
+                throw new Exception("Mã giao dịch VNPAY (vnp_TxnRef) không hợp lệ");
+
+            var transactionId = IdEncoder.Decode(parts[2]);
+
+            var tx = await _unitOfWork.Transactions.GetByIdAsync((int)transactionId);
+            if (tx == null || tx.UserId != userId)
+                throw new Exception("Giao dịch không tồn tại hoặc không thuộc về người dùng");
+
+            if (tx.TransType != 3 && tx.TransType != 4)
+                throw new Exception("Giao dịch không hợp lệ (sai TransType)");
+
+            var response = _mapper.Map<TransactionResponse>(tx);
+
+            if (tx.TransType == 3)
+            {
+                var sub = await _unitOfWork.MemberSubscriptionPackages.GetByIdAsync(tx.DocNo);
+                if (sub == null)
+                    throw new Exception("Không tìm thấy gói đăng ký của member");
+
+                response.MemberSubscriptionId = tx.DocNo;
+                response.StartDate = sub.StartDate;
+                response.EndDate = sub.EndDate;
+                response.IsActive = sub.Status == MemberSubscriptionPackageStatus.ACTIVE.ToString();
+            }
+
+            return response;
         }
 
         private static string GetResponseMessage(string responseCode)
