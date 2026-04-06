@@ -422,12 +422,20 @@ namespace capstone_backend.Business.Services
         {
             var context = _httpContextAccessor.HttpContext;
             if (context == null) return "127.0.0.1";
-            var ip = context.Connection.RemoteIpAddress?.ToString();
-            if (context.Request.Headers.ContainsKey("X-Forwarded-For"))
+
+            var ipAddress = context.Connection.RemoteIpAddress?.ToString();
+
+            if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor))
             {
-                ip = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+                var ips = forwardedFor.ToString().Split(',');
+                if (ips.Length > 0)
+                    ipAddress = ips[0].Trim();
             }
-            return string.IsNullOrEmpty(ip) ? "127.0.0.1" : ip;
+
+            if (ipAddress == "::1" || string.IsNullOrEmpty(ipAddress))
+                ipAddress = "127.0.0.1";
+
+            return ipAddress;
         }
 
         private static string RemoveDiacritics(string text)
