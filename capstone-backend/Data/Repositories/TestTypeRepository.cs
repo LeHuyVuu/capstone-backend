@@ -23,7 +23,7 @@ namespace capstone_backend.Data.Repositories
         {
             return await _dbSet
                 .AsNoTracking()
-                .Where(t => t.IsDeleted == false && t.IsActive == true)
+                .Where(t => t.IsDeleted == false && t.IsActive == true && t.CurrentVersion != null)
                 .ToListAsync();
         }
 
