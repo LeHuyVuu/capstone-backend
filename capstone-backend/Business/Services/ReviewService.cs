@@ -44,7 +44,7 @@ namespace capstone_backend.Business.Services
             if (member == null)
                 throw new Exception("Không tìm thấy hồ sơ thành viên");
 
-            var venue = await _unitOfWork.VenueLocations.GetByIdAsync(request.VenueLocationId);
+            var venue = await _unitOfWork.VenueLocations.GetActiveByIdAsync(request.VenueLocationId);
             if (venue == null)
                 throw new Exception("Không tìm thấy địa điểm");
 
@@ -183,7 +183,7 @@ namespace capstone_backend.Business.Services
             if (member == null)
                 throw new Exception("Không tìm thấy hồ sơ thành viên");
 
-            var venue = await _unitOfWork.VenueLocations.GetByIdWithDetailsAsync(request.VenueLocationId);
+            var venue = await _unitOfWork.VenueLocations.GetActiveByIdAsync(request.VenueLocationId);
             if (venue == null)
                 throw new Exception("Không tìm thấy địa điểm");
 
@@ -441,7 +441,7 @@ namespace capstone_backend.Business.Services
             if (member == null)
                 throw new Exception("Không tìm thấy hồ sơ thành viên");
 
-            var venue = await _unitOfWork.VenueLocations.GetByIdAsync(request.VenueLocationId);
+            var venue = await _unitOfWork.VenueLocations.GetActiveByIdAsync(request.VenueLocationId);
             if (venue == null)
                 throw new Exception("Không tìm thấy địa điểm");
 
