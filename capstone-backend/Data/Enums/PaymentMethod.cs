@@ -4,6 +4,7 @@
     {
         MOMO,
         ZALOPAY,
+        VNPAY,
         SYSTEM
     }
 }

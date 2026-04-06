@@ -23,19 +23,22 @@ public class PaymentController : BaseController
     private readonly IMomoService _momoService;
     private readonly WalletService _walletService;
     private readonly IZaloPayService _zaloPayService;
+    private readonly IVNPayService _vnPayService;
 
     public PaymentController(
         IUnitOfWork unitOfWork,
         ILogger<PaymentController> logger,
         IMomoService momoService,
         WalletService walletService,
-        IZaloPayService zaloPayService)
+        IZaloPayService zaloPayService,
+        IVNPayService vnPayService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
         _momoService = momoService;
         _walletService = walletService;
         _zaloPayService = zaloPayService;
+        _vnPayService = vnPayService;
     }
 
     /// <summary>
@@ -285,7 +288,7 @@ public class PaymentController : BaseController
     /// Process subscription payment (For Members)
     /// </summary>
     [HttpPost("member/zalo-pay")]
-    public async Task<IActionResult> ProcessMemberSubscriptionPaymentVnPay([FromBody] ProcessMemberSubscriptionPaymentRequest request)
+    public async Task<IActionResult> ProcessMemberSubscriptionPaymentZaloPay([FromBody] ProcessMemberSubscriptionPaymentRequest request)
     {
         try
         {
@@ -330,10 +333,58 @@ public class PaymentController : BaseController
     }
 
     /// <summary>
+    /// Process subscription payment (For Members)
+    /// </summary>
+    [HttpPost("member/vnpay")]
+    public async Task<IActionResult> ProcessMemberSubscriptionPaymentVnPay([FromBody] ProcessMemberSubscriptionPaymentRequest request)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null)
+        {
+            return UnauthorizedResponse("Unauthorized");
+        }
+        try
+        {
+            var result = await _vnPayService.ProcessMemberSubscriptionPaymentAsync(userId.Value, request);
+            if (result == null)
+                return BadRequestResponse("Lấy link thanh toán thất bại");
+            return OkResponse(result, "Lấy link thanh toán thành công");
+        }
+        catch (Exception ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Process wallet top-up payment (For Members)
+    /// </summary>
+    [HttpPost("member/vnpay-topup")]
+    public async Task<IActionResult> ProcessMemberWalletTopupZaloPay([FromBody] CreateWalletTopupRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return UnauthorizedResponse("Unauthorized");
+            }
+            var result = await _vnPayService.ProcessMemberWalletTopupAsync(userId.Value, request);
+            if (result == null)
+                return BadRequestResponse("Lấy link thanh toán thất bại");
+            return OkResponse(result, "Lấy link thanh toán thành công");
+        }
+        catch (Exception ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
+
+    /// <summary>
     /// Check payment status (For Members)
     /// </summary>
     [HttpGet("member/status/{orderId}")]
-    public async Task<IActionResult> CheckWalletTopupStatus([FromRoute] string orderId, [FromQuery] string PaymentMethod = "MOMO")
+    public async Task<IActionResult> CheckWalletTopupStatus([FromRoute] string orderId, [FromQuery] string PaymentMethod)
     {
         try
         {
@@ -350,7 +401,15 @@ public class PaymentController : BaseController
             }
             else if (PaymentMethod.ToUpper() == "ZALOPAY")
             {
-                result = await _zaloPayService.CheckWalletTopupStatusAsync(userId.Value, orderId);
+                result = await _zaloPayService.CheckZaloTransactionStatusAsync(userId.Value, orderId);
+            }
+            else if (PaymentMethod.ToUpper() == "VNPAY")
+            {
+                result = await _vnPayService.CheckVNPAYTransactionStatusAsync(userId.Value, orderId);
+            }
+            else
+            {
+                return BadRequestResponse("Phương thức thanh toán không hợp lệ");
             }
 
             if (result == null)

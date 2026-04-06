@@ -72,12 +72,6 @@ namespace capstone_backend.Business.Services
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var recentTx = await _unitOfWork.Transactions.GetRecentPendingAsync(userId, request.PackageId, now.AddMinutes(-30));
-                if (recentTx != null)
-                {
-                    recentTx.Status = TransactionStatus.CANCELLED.ToString();
-                    _unitOfWork.Transactions.Update(recentTx);
-                }
 
                 subscription = new MemberSubscriptionPackage
                 {
@@ -193,13 +187,6 @@ namespace capstone_backend.Business.Services
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var recentTx = await _unitOfWork.Transactions.GetWalletTopupPendingAsync(userId, now.AddMinutes(-30));
-                if (recentTx != null)
-                {
-                    recentTx.Status = TransactionStatus.CANCELLED.ToString();
-                    _unitOfWork.Transactions.Update(recentTx);
-                    await _unitOfWork.SaveChangesAsync();
-                }
 
                 transaction = new Transaction
                 {
@@ -406,7 +393,7 @@ namespace capstone_backend.Business.Services
             return BitConverter.ToString(hmac.ComputeHash(messageBytes)).Replace("-", "").ToLower();
         }
 
-        public async Task<TransactionResponse?> CheckWalletTopupStatusAsync(int userId, string appTransId)
+        public async Task<TransactionResponse> CheckZaloTransactionStatusAsync(int userId, string appTransId)
         {
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)

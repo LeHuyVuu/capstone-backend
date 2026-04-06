@@ -190,7 +190,7 @@ public static class ServiceExtensions
 
         // Đăng ký AWS S3 Service để upload files
         services.AddAwsS3Service();
-        
+
         // Register new services
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IMoodTypeService, MoodTypeService>();
@@ -230,16 +230,16 @@ public static class ServiceExtensions
 
         // Register Couple Invitation Service
         services.AddScoped<ICoupleInvitationService, CoupleInvitationService>();
-        
+
         // Register Couple Profile Service
         services.AddScoped<ICoupleProfileService, CoupleProfileService>();
-        
+
         // Register Venue Owner Dashboard Service
         services.AddScoped<IVenueOwnerDashboardService, VenueOwnerDashboardService>();
-        
+
         // Register Venue Owner Profile Service
         services.AddScoped<IVenueOwnerProfileService, VenueOwnerProfileService>();
-        
+
         // Register Hangfire Jobs
         services.AddScoped<IDatePlanWorker, DatePlanWorker>();
         services.AddScoped<IReviewWorker, ReviewWorker>();
@@ -257,12 +257,14 @@ public static class ServiceExtensions
         services.AddScoped<IMemberSubscriptionWorker, MemberSubscriptionWorker>();
 
         // Register Messaging Service
-        services.AddScoped<IMessagingService, MessagingService>();     
+        services.AddScoped<IMessagingService, MessagingService>();
 
         // Register Sepay Service for payment (generates VietQR codes + receives webhooks)
         services.AddScoped<SepayService>();
 
         services.AddScoped<IZaloPayService, ZaloPayService>();
+
+        services.AddScoped<IVNPayService, VNPayService>();
 
         // Register Refund Service (reusable for all refund scenarios)
         services.AddScoped<RefundService>();
@@ -283,7 +285,7 @@ public static class ServiceExtensions
         services.AddScoped<IVoucherCodeGenerator, VoucherCodeGenerator>();
 
         services.AddScoped<WalletService>();
-        
+
         // Register Wallet Payment Service (for instant wallet payments)
         services.AddScoped<WalletPaymentService>();
 
@@ -332,39 +334,39 @@ public static class ServiceExtensions
     /// Đăng ký AWS S3 Service
     /// Đọc credentials từ environment variables
     /// </summary>
-  public static IServiceCollection AddAwsS3Service(this IServiceCollection services)
-{
-    // Đọc AWS credentials từ environment variables (ĐÚNG TÊN)
-    var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
-    var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
-    var awsRegion = Environment.GetEnvironmentVariable("AWS_REGION") ?? "ap-southeast-2";
-    var s3BucketName = Environment.GetEnvironmentVariable("AWS_S3_BUCKET_NAME");
-
-    if (string.IsNullOrWhiteSpace(awsAccessKey) || string.IsNullOrWhiteSpace(awsSecretKey))
-        throw new Exception("[ERROR] Missing AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY for S3");
-
-    if (string.IsNullOrWhiteSpace(s3BucketName))
-        throw new Exception("[ERROR] Missing AWS_S3_BUCKET_NAME");
-
-    Console.WriteLine($"🪣 S3 Bucket: {s3BucketName}");
-    Console.WriteLine($"🌍 S3 Region: {awsRegion}");
-
-    var awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
-
-    var s3Config = new Amazon.S3.AmazonS3Config
+    public static IServiceCollection AddAwsS3Service(this IServiceCollection services)
     {
-        RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(awsRegion)
-    };
+        // Đọc AWS credentials từ environment variables (ĐÚNG TÊN)
+        var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+        var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+        var awsRegion = Environment.GetEnvironmentVariable("AWS_REGION") ?? "ap-southeast-2";
+        var s3BucketName = Environment.GetEnvironmentVariable("AWS_S3_BUCKET_NAME");
 
-    services.AddSingleton<Amazon.S3.IAmazonS3>(
-        new Amazon.S3.AmazonS3Client(awsCredentials, s3Config)
-    );
+        if (string.IsNullOrWhiteSpace(awsAccessKey) || string.IsNullOrWhiteSpace(awsSecretKey))
+            throw new Exception("[ERROR] Missing AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY for S3");
 
-    // Bạn đang DI IS3Service/S3Service, OK
-    services.AddScoped<S3StorageService>();
+        if (string.IsNullOrWhiteSpace(s3BucketName))
+            throw new Exception("[ERROR] Missing AWS_S3_BUCKET_NAME");
 
-    return services;
-}
+        Console.WriteLine($"🪣 S3 Bucket: {s3BucketName}");
+        Console.WriteLine($"🌍 S3 Region: {awsRegion}");
+
+        var awsCredentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
+
+        var s3Config = new Amazon.S3.AmazonS3Config
+        {
+            RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(awsRegion)
+        };
+
+        services.AddSingleton<Amazon.S3.IAmazonS3>(
+            new Amazon.S3.AmazonS3Client(awsCredentials, s3Config)
+        );
+
+        // Bạn đang DI IS3Service/S3Service, OK
+        services.AddScoped<S3StorageService>();
+
+        return services;
+    }
 
 
     /// <summary>
@@ -659,7 +661,7 @@ public static class ServiceExtensions
             options.WorkerCount = Environment.ProcessorCount * 2;
         });
 
-        Console.WriteLine("[INFO] Hangfire: Configured with PostgreSQL");      
+        Console.WriteLine("[INFO] Hangfire: Configured with PostgreSQL");
 
         return services;
     }
