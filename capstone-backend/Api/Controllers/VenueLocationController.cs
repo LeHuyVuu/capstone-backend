@@ -77,7 +77,7 @@ public class VenueLocationController : BaseController
     [ProducesResponseType(typeof(ApiResponse<object>), 403)]
     public async Task<IActionResult> GetMyVenueLocationsByStatus([FromQuery] VenueLocationStatus? status, [FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-          if(status.HasValue && status == VenueLocationStatus.DRAFTED)
+        if(status.HasValue && status == VenueLocationStatus.DRAFTED)
         {
             return BadRequestResponse("Không thể lọc địa điểm ở trạng thái DRAFTED vì chỉ có chủ sở hữu mới có thể xem và quản lý các địa điểm này.");
         }
