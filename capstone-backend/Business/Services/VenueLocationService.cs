@@ -1188,7 +1188,9 @@ public class VenueLocationService : IVenueLocationService
             page,
             pageSize,
             v => v.IsDeleted != true
-                && (!status.HasValue || v.Status == status.Value.ToString())
+                && (status.HasValue
+                    ? v.Status == status.Value.ToString()
+                    : v.Status != VenueLocationStatus.DRAFTED.ToString())
                 && (!hasSearch
                     || (v.Name != null && EF.Functions.Like(v.Name, likePattern!))
                     || (v.Description != null && EF.Functions.Like(v.Description, likePattern!))
