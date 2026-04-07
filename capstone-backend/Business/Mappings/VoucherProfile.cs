@@ -27,7 +27,8 @@ namespace capstone_backend.Business.Mappings
                 .ForMember(dest => dest.Locations, opt => opt.MapFrom(src => src.VoucherLocations.Select(vl => new VoucherLocationItemResponse
                 {
                     VenueLocationId = vl.VenueLocationId,
-                    VenueLocationName = vl.VenueLocation.Name
+                    VenueLocationName = vl.VenueLocation.Name,
+                    IsActive = vl.VenueLocation.Status == VenueLocationStatus.ACTIVE.ToString()
                 }).ToList()));
 
             CreateMap<Voucher, VoucherSummaryResponse>();

@@ -143,12 +143,20 @@ namespace capstone_backend.Business.Services
 
         public async Task<int> ApproveVoucherAsync(int voucherId)
         {
-            var voucher = await _unitOfWork.Vouchers.GetByIdAsync(voucherId);
+            var voucher = await _unitOfWork.Vouchers.GetIncludeByIdAsync(voucherId);
             if (voucher == null)
                 throw new Exception("Không tìm thấy voucher");
 
             if (voucher.Status != VoucherStatus.PENDING.ToString())
                 throw new Exception("Voucher không ở trạng thái chờ duyệt (PENDING)");
+
+            var inactiveLocations = voucher.VoucherLocations
+                .Where(vl => vl.VenueLocation.Status != VenueLocationStatus.ACTIVE.ToString() || vl.VenueLocation.IsDeleted == true)
+                .Select(vl => vl.VenueLocation.Name)
+                .ToList();
+
+            if (inactiveLocations.Any())
+                throw new Exception($"Không thể duyệt! Các địa điểm sau đã ngừng hoạt động: {string.Join(", ", inactiveLocations)}. Hãy yêu cầu Owner cập nhật lại.");
 
             var now = DateTime.UtcNow;
 
