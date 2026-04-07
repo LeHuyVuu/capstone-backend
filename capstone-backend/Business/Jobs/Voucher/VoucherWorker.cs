@@ -254,5 +254,13 @@ namespace capstone_backend.Business.Jobs.Voucher
                 _logger.LogError(ex, $"Lỗi hoàn tiền Voucher {voucherEntity.Id}");
             }
         }
+
+        public async Task EndOutOfStockVoucherAsync()
+        {
+            var voucher = await _unitOfWork.Vouchers.GetAsync(
+                v => v.Status == VoucherStatus.ACTIVE.ToString() && v.IsDeleted == false,
+                include: q => q.Include(v => v.VoucherItems)
+            );
+        }
     }
 }

@@ -6,5 +6,6 @@
         Task EndVoucherAsync(int voucherId);
         Task ExpireVoucherItemAsync(int voucherItemId);
         Task ScanAndRefundInactiveVouchersAsync();
+        Task EndOutOfStockVoucherAsync();
     }
 }

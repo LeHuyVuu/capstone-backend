@@ -333,7 +333,7 @@ namespace capstone_backend.Business.Services
             var (vouchers, totalCount) = await _unitOfWork.Vouchers.GetPagedAsync(
                     pageNumber,
                     pageSize,
-                    v => v.IsDeleted == false && v.Status == VoucherStatus.ACTIVE.ToString() &&
+                    v => v.IsDeleted == false && v.Status == VoucherStatus.ACTIVE.ToString() && v.Quantity > 0 && v.RemainingQuantity > 0 &&
                          (string.IsNullOrEmpty(keyword) || (
                             v.Code != null && v.Code.ToLower().Contains(keyword) ||
                             v.Title != null && v.Title.ToLower().Contains(keyword) ||
