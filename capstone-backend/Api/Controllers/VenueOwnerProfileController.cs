@@ -22,15 +22,15 @@ public class VenueOwnerProfileController : BaseController
     {
         var userId = GetCurrentUserId();
         if (userId == null)
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
 
         try
         {
             var result = await _venueOwnerProfileService.UpdateVenueOwnerProfileAsync(userId.Value, request);
             if (result == null)
-                return NotFoundResponse("Venue owner profile not found");
+                return NotFoundResponse("Không tìm thấy hồ sơ chủ địa điểm");
 
-            return OkResponse(result, "Venue owner profile updated successfully");
+            return OkResponse(result, "Cập nhật hồ sơ chủ địa điểm thành công");
         }
         catch (UnauthorizedAccessException ex)
         {

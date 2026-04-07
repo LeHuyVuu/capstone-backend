@@ -42,7 +42,7 @@ public class SearchHistoryController : BaseController
 
         // Only allow users to see their own history or admin can see anyone's
         if (currentUserId != memberId && !User.IsInRole("admin"))
-            return ForbiddenResponse("You don't have permission to view this member's search history");
+            return ForbiddenResponse("Bạn không có quyền xem lịch sử tìm kiếm của thành viên này");
 
         var histories = await _searchHistoryService.GetSearchHistoriesByMemberAsync(memberId, page, pageSize);
         return OkResponse(histories);
@@ -60,9 +60,9 @@ public class SearchHistoryController : BaseController
 
         var result = await _searchHistoryService.DeleteSearchHistoryAsync(id, memberId.Value);
         if (!result)
-            return NotFoundResponse("Search history not found or you don't have permission to delete it");
+            return NotFoundResponse("Không tìm thấy lịch sử tìm kiếm hoặc bạn không có quyền xóa");
 
-        return OkResponse<object?>(null, "Search history deleted successfully");
+        return OkResponse<object?>(null, "Xóa lịch sử tìm kiếm thành công");
     }
 
     /// <summary>
@@ -76,6 +76,6 @@ public class SearchHistoryController : BaseController
             return UnauthorizedResponse();
 
         await _searchHistoryService.ClearSearchHistoryAsync(memberId.Value);
-        return OkResponse<object?>(null, "Search history cleared successfully");
+        return OkResponse<object?>(null, "Xóa toàn bộ lịch sử tìm kiếm thành công");
     }
 }

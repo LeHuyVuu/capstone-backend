@@ -336,7 +336,7 @@ public class UserService : IUserService
         CreateUserRequest request, int? createdBy = null)
     {
         if (await _unitOfWork.Users.EmailExistsAsync(request.Email))
-            throw new InvalidOperationException($"Email '{request.Email}' already exists");
+            throw new InvalidOperationException($"Email '{request.Email}' đã tồn tại");
 
         var normalizedRole = request.Role?.Trim().ToUpperInvariant();
         if (normalizedRole != "STAFF")

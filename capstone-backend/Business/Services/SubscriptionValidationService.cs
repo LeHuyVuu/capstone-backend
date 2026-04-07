@@ -90,7 +90,7 @@ public class SubscriptionValidationService : ISubscriptionValidationService
             if (memberProfile == null)
             {
                 _logger.LogWarning("Member profile not found for user ID: {UserId}", userId);
-                return (false, "Member profile not found");
+                return (false, "Không tìm thấy hồ sơ thành viên");
             }
 
             // 2. Check for active subscription
@@ -167,7 +167,7 @@ public class SubscriptionValidationService : ISubscriptionValidationService
             if (venueOwner == null)
             {
                 _logger.LogWarning("Venue owner profile not found for user ID: {UserId}", userId);
-                return (false, "Venue owner profile not found");
+                return (false, "Không tìm thấy hồ sơ chủ địa điểm");
             }
 
             // 2. Check user-level subscription (OwnerId = venueOwner.Id, VenueId = null)

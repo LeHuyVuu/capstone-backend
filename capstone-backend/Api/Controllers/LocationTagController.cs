@@ -29,6 +29,6 @@ public class LocationTagController : BaseController
 
         var tags = await _venueLocationService.GetAllLocationTagsAsync();
 
-        return OkResponse(tags, $"Retrieved {tags.Count} location tags");
+        return OkResponse(tags, $"Đã lấy {tags.Count} thẻ vị trí");
     }
 }

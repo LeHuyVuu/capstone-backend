@@ -70,6 +70,6 @@ public class UsersController : BaseController
     {
         var success = await _userService.DeleteUserAsync(id);
         if (!success) return NotFoundResponse();
-        return OkResponse<object?>(null, "Deleted successfully");
+        return OkResponse<object?>(null, "Xóa thành công");
     }
 }

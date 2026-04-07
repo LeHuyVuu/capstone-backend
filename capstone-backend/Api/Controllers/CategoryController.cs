@@ -40,7 +40,7 @@ public class CategoryController : BaseController
 
         var result = await _categoryService.GetCategoriesAsync(page, pageSize, isActive);
 
-        return OkResponse(result, $"Retrieved {result.Items.Count()} categories");
+        return OkResponse(result, $"Đã lấy {result.Items.Count()} danh mục");
     }
 
     [HttpGet("{id}")]
@@ -55,7 +55,7 @@ public class CategoryController : BaseController
         if (category == null)
             return NotFoundResponse($"Không tìm thấy danh mục có ID {id}");
 
-        return OkResponse(category, "Category retrieved successfully");
+        return OkResponse(category, "Lấy thông tin danh mục thành công");
     }
 
     [HttpPost]
@@ -74,7 +74,7 @@ public class CategoryController : BaseController
         try
         {
             var category = await _categoryService.CreateCategoryAsync(request);
-            return CreatedResponse(category, "Category created successfully");
+            return CreatedResponse(category, "Tạo danh mục thành công");
         }
         catch (InvalidOperationException ex)
         {
@@ -104,7 +104,7 @@ public class CategoryController : BaseController
             if (category == null)
                 return NotFoundResponse($"Không tìm thấy danh mục có ID {id}");
 
-            return OkResponse(category, "Category updated successfully");
+            return OkResponse(category, "Cập nhật danh mục thành công");
         }
         catch (InvalidOperationException ex)
         {
@@ -128,6 +128,6 @@ public class CategoryController : BaseController
         if (!result)
             return NotFoundResponse($"Không tìm thấy danh mục có ID {id}");
 
-        return OkResponse(true, "Category deleted successfully");
+        return OkResponse(true, "Xóa danh mục thành công");
     }
 }

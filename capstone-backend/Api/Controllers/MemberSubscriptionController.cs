@@ -28,7 +28,7 @@ namespace capstone_backend.Api.Controllers
                 var userId = GetCurrentUserId();
                 if (userId == null)
                 {
-                    return UnauthorizedResponse("Unauthorized");
+                    return UnauthorizedResponse("Không có quyền truy cập");
                 }
 
                 var result = await _memberSubscriptionService.CheckPaymentStatusAsync(userId.Value, orderId);
@@ -56,7 +56,7 @@ namespace capstone_backend.Api.Controllers
                 var userId = GetCurrentUserId();
                 if (userId == null)
                 {
-                    return UnauthorizedResponse("Unauthorized");
+                    return UnauthorizedResponse("Không có quyền truy cập");
                 }
                 var result = await _memberSubscriptionService.GetCurrentSubscriptionAsync(userId.Value);
                 if (result == null)
@@ -99,7 +99,7 @@ namespace capstone_backend.Api.Controllers
                 var userId = GetCurrentUserId();
                 if (userId == null)
                 {
-                    return UnauthorizedResponse("Unauthorized");
+                    return UnauthorizedResponse("Không có quyền truy cập");
                 }
                 var result = await _memberSubscriptionService.GetTransactionHistoryAsync(userId.Value, pageNumber, pageSize);
                 return OkResponse(result, "Lấy lịch sử giao dịch thành công");
@@ -121,7 +121,7 @@ namespace capstone_backend.Api.Controllers
         //        var userId = GetCurrentUserId();
         //        if (userId == null)
         //        {
-        //            return UnauthorizedResponse("Unauthorized");
+        //            return UnauthorizedResponse("Không có quyền truy cập");
         //        }
         //        var result = await _memberSubscriptionService.CancelSubscriptionAsync(userId.Value);
         //        if (!result)

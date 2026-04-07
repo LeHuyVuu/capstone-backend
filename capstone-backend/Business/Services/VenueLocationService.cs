@@ -463,7 +463,7 @@ public class VenueLocationService : IVenueLocationService
         if (venue == null || venue.IsDeleted == true)
         {
             _logger.LogWarning("Venue {VenueId} not found or deleted", venueId);
-            throw new InvalidOperationException($"Venue location with ID {venueId} not found");
+            throw new InvalidOperationException($"Không tìm thấy địa điểm có ID {venueId}");
         }
 
         // Lấy danh sách reviews kèm review likes (có phân trang)
@@ -648,7 +648,7 @@ public class VenueLocationService : IVenueLocationService
         {
             _logger.LogWarning("Venue location with name {VenueName} and address {Address} already exists for user {UserId}", 
                 request.Name, request.Address, userId);
-            throw new InvalidOperationException($"A venue with name '{request.Name}' at address '{request.Address}' already exists for your account.");
+            throw new InvalidOperationException($"Địa điểm có tên '{request.Name}' tại địa chỉ '{request.Address}' đã tồn tại trong tài khoản của bạn.");
         }
 
         // Create new venue location entity
@@ -2086,24 +2086,24 @@ public class VenueLocationService : IVenueLocationService
         var status = request.Status?.ToUpper();
         if (status != VenueLocationStatus.ACTIVE.ToString() && status != VenueLocationStatus.DRAFTED.ToString())
         {
-            return new VenueSubmissionResult { IsSuccess = false, Message = "Invalid status. Only 'ACTIVE' or 'DRAFTED' are allowed." };
+            return new VenueSubmissionResult { IsSuccess = false, Message = "Trạng thái không hợp lệ. Chỉ chấp nhận 'ACTIVE' hoặc 'DRAFTED'." };
         }
 
         var venue = await _unitOfWork.VenueLocations.GetByIdAsync(request.VenueId);
         
         if (venue == null || venue.IsDeleted == true)
         {
-            return new VenueSubmissionResult { IsSuccess = false, Message = "Venue not found" };
+            return new VenueSubmissionResult { IsSuccess = false, Message = "Không tìm thấy địa điểm" };
         }
 
         if (venue.Status != VenueLocationStatus.PENDING.ToString())
         {
-             return new VenueSubmissionResult { IsSuccess = false, Message = $"Cannot approve/reject venue with status '{venue.Status}'. Only 'PENDING' venues can be processed." };
+             return new VenueSubmissionResult { IsSuccess = false, Message = $"Không thể duyệt/từ chối địa điểm ở trạng thái '{venue.Status}'. Chỉ địa điểm trạng thái 'PENDING' mới có thể xử lý." };
         }
 
         if (status == VenueLocationStatus.DRAFTED.ToString() && string.IsNullOrWhiteSpace(request.Reason))
         {
-            return new VenueSubmissionResult { IsSuccess = false, Message = "Reason is required when rejecting venue to DRAFTED status." };
+            return new VenueSubmissionResult { IsSuccess = false, Message = "Bắt buộc có lý do khi từ chối địa điểm về trạng thái DRAFTED." };
         }
 
         using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
@@ -2710,12 +2710,12 @@ public class VenueLocationService : IVenueLocationService
         
         if (venue == null || venue.IsDeleted == true)
         {
-            throw new KeyNotFoundException($"Venue with ID {venueId} not found");
+            throw new KeyNotFoundException($"Không tìm thấy địa điểm có ID {venueId}");
         }
 
         if (venue.Status == status)
         {
-            throw new ArgumentException($"Venue is already {status}");
+            throw new ArgumentException($"Địa điểm đã ở trạng thái {status}");
         }
 
         if (venue.Status == VenueLocationStatus.ACTIVE.ToString() && status != VenueLocationStatus.INACTIVE.ToString())
@@ -2730,7 +2730,7 @@ public class VenueLocationService : IVenueLocationService
 
         if (venue.Status != VenueLocationStatus.ACTIVE.ToString() && venue.Status != VenueLocationStatus.INACTIVE.ToString())
         {
-            throw new ArgumentException($"Cannot change status from {venue.Status}. Only ACTIVE and INACTIVE venues can use this endpoint.");
+            throw new ArgumentException($"Không thể chuyển trạng thái từ {venue.Status}. Chỉ địa điểm ở trạng thái ACTIVE và INACTIVE mới dùng được endpoint này.");
         }
 
         if (status == VenueLocationStatus.INACTIVE.ToString() && string.IsNullOrWhiteSpace(reason))

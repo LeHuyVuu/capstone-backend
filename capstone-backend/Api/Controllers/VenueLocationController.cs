@@ -41,10 +41,10 @@ public class VenueLocationController : BaseController
         
         if (venue == null)
         {
-            return NotFoundResponse($"Venue location with ID {id} not found");
+            return NotFoundResponse($"Không tìm thấy địa điểm có ID {id}");
         }
 
-        return OkResponse(venue, "Venue location retrieved successfully");
+        return OkResponse(venue, "Lấy thông tin địa điểm thành công");
     }
 
     /// <summary>
@@ -60,14 +60,14 @@ public class VenueLocationController : BaseController
         var currentUserId = GetCurrentUserId();
         if (!currentUserId.HasValue)
         {
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         }
 
         _logger.LogInformation("User {UserId} requesting their venue locations", currentUserId.Value);
 
         var venues = await _venueLocationService.GetVenueLocationsByVenueOwnerAsync(currentUserId.Value);
 
-        return OkResponse(venues, $"Retrieved {venues.Count} venue locations");
+        return OkResponse(venues, $"Đã lấy {venues.Count} địa điểm");
     }
 
     [HttpGet("my-venues/by-status")]
@@ -92,8 +92,8 @@ public class VenueLocationController : BaseController
         var venues = await _venueLocationService.GetVenueLocationsByVenueOwnerAndStatusAsync(status, search, page, pageSize);
 
         var message = status.HasValue
-            ? $"Retrieved {venues.Items.Count()} venue locations with status {status}"
-            : $"Retrieved {venues.Items.Count()} venue locations";
+            ? $"Đã lấy {venues.Items.Count()} địa điểm với trạng thái {status}"
+            : $"Đã lấy {venues.Items.Count()} địa điểm";
 
         return OkResponse(venues, message);
     }
@@ -113,7 +113,7 @@ public class VenueLocationController : BaseController
         var currentUserId = GetCurrentUserId();
         if (!currentUserId.HasValue)
         {
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         }
 
         _logger.LogInformation("User {UserId} requesting venue location detail for ID: {VenueId}", currentUserId.Value, id);
@@ -122,10 +122,10 @@ public class VenueLocationController : BaseController
 
         if (venue == null)
         {
-            return NotFoundResponse($"Venue location with ID {id} not found or you don't have permission to access it");
+            return NotFoundResponse($"Không tìm thấy địa điểm có ID {id} hoặc bạn không có quyền truy cập");
         }
 
-        return OkResponse(venue, "Venue location retrieved successfully");
+        return OkResponse(venue, "Lấy thông tin địa điểm thành công");
     }
 
     /// <summary>
@@ -138,7 +138,7 @@ public class VenueLocationController : BaseController
 
         var response = await _venueLocationService.GetReviewsByVenueIdAsync(id, page, pageSize);
 
-        return OkResponse(response, $"Retrieved {response.Reviews.Items.Count()} reviews with summary for venue location");
+        return OkResponse(response, $"Đã lấy {response.Reviews.Items.Count()} đánh giá kèm tổng quan cho địa điểm");
     }
 
     /// <summary>
@@ -171,17 +171,17 @@ public class VenueLocationController : BaseController
         // Validate date filter parameters (nếu có)
         if (month.HasValue && !year.HasValue)
         {
-            return BadRequestResponse("Year is required when month is provided");
+            return BadRequestResponse("Bắt buộc có năm khi truyền tháng");
         }
 
         if (month.HasValue && (month.Value < 1 || month.Value > 12))
         {
-            return BadRequestResponse("Month must be between 1 and 12");
+            return BadRequestResponse("Tháng phải nằm trong khoảng từ 1 đến 12");
         }
 
         if (year.HasValue && (year.Value < 2000 || year.Value > 2100))
         {
-            return BadRequestResponse("Year must be between 2000 and 2100");
+            return BadRequestResponse("Năm phải nằm trong khoảng từ 2000 đến 2100");
         }
 
         var filterDescription = date.HasValue
@@ -203,7 +203,7 @@ public class VenueLocationController : BaseController
 
             var sortOrder = sortDescending ? "newest first" : "oldest first";
             return OkResponse(response,
-                $"Retrieved {response.Reviews.Items.Count()} reviews ({filterDescription}) with likes for venue location (sorted by time, {sortOrder})");
+                $"Đã lấy {response.Reviews.Items.Count()} đánh giá ({filterDescription}) kèm lượt thích cho địa điểm (sắp xếp theo thời gian, {sortOrder})");
         }
         catch (InvalidOperationException ex)
         {
@@ -213,7 +213,7 @@ public class VenueLocationController : BaseController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving reviews for venue {VenueId}", id);
-            return BadRequestResponse("Failed to retrieve reviews");
+            return BadRequestResponse("Lấy danh sách đánh giá thất bại");
         }
     }
 
@@ -227,7 +227,7 @@ public class VenueLocationController : BaseController
         var currentUserId = GetCurrentUserId();
         if (!currentUserId.HasValue)
         {
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         }
 
         _logger.LogInformation("User {UserId} attempting to register venue location: {VenueName}", currentUserId, request.Name);
@@ -235,7 +235,7 @@ public class VenueLocationController : BaseController
         try
         {
             var venue = await _venueLocationService.CreateVenueLocationAsync(request, currentUserId.Value);
-            return CreatedResponse(venue, "Venue location registered successfully");
+            return CreatedResponse(venue, "Đăng ký địa điểm thành công");
         }
         catch (InvalidOperationException ex)
         {
@@ -245,7 +245,7 @@ public class VenueLocationController : BaseController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error registering venue location for user {UserId}", currentUserId);
-            return BadRequestResponse("Failed to register venue location");
+            return BadRequestResponse("Đăng ký địa điểm thất bại");
         }
     }
 
@@ -262,10 +262,10 @@ public class VenueLocationController : BaseController
 
         if (!result)
         {
-            return NotFoundResponse("Tag not found for this venue or cannot delete last tag");
+            return NotFoundResponse("Không tìm thấy thẻ của địa điểm này hoặc không thể xóa thẻ cuối cùng");
         }
 
-        return OkResponse(true, "Tag deleted successfully");
+        return OkResponse(true, "Xóa thẻ thành công");
     }
 
     /// <summary>
@@ -280,10 +280,10 @@ public class VenueLocationController : BaseController
         
         if (venue == null)
         {
-            return NotFoundResponse($"Venue location with ID {id} not found");
+            return NotFoundResponse($"Không tìm thấy địa điểm có ID {id}");
         }
 
-        return OkResponse(venue, "Venue location updated successfully");
+        return OkResponse(venue, "Cập nhật địa điểm thành công");
     }
 
     /// <summary>
@@ -297,7 +297,7 @@ public class VenueLocationController : BaseController
 
         var moodTypes = await _venueLocationService.GetAllCoupleMoodTypesAsync();
 
-        return OkResponse(moodTypes, $"Retrieved {moodTypes.Count} couple mood types");
+        return OkResponse(moodTypes, $"Đã lấy {moodTypes.Count} loại tâm trạng cặp đôi");
     }
 
     /// <summary>
@@ -310,7 +310,7 @@ public class VenueLocationController : BaseController
 
         var personalityTypes = await _venueLocationService.GetAllCouplePersonalityTypesAsync();
 
-        return OkResponse(personalityTypes, $"Retrieved {personalityTypes.Count} couple personality types");
+        return OkResponse(personalityTypes, $"Đã lấy {personalityTypes.Count} loại tính cách cặp đôi");
     }
 
     [HttpPost("opening-hours/update-all")]
@@ -325,14 +325,14 @@ public class VenueLocationController : BaseController
 
         if (!ModelState.IsValid)
         {
-            return BadRequestResponse("Invalid request data");
+            return BadRequestResponse("Dữ liệu yêu cầu không hợp lệ");
         }
 
         var result = await _venueLocationService.UpdateVenueOpeningHoursAsync(request);
 
         if (!result)
         {
-            return NotFoundResponse("Venue not found");
+            return NotFoundResponse("Không tìm thấy địa điểm");
         }
 
         return OkResponse<object>(null, "Cập nhật giờ mở cửa thành công");
@@ -351,7 +351,7 @@ public class VenueLocationController : BaseController
         var currentUserId = GetCurrentUserId();
         if (!currentUserId.HasValue)
         {
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         }
         
         _logger.LogInformation("User {UserId} submitting venue {VenueId} for approval", currentUserId, id);
@@ -360,15 +360,15 @@ public class VenueLocationController : BaseController
         
         if (!result.IsSuccess)
         {
-            if (result.Message == "Venue not found") return NotFoundResponse(result.Message);
-            if (result.Message == "Unauthorized access") return ForbiddenResponse(result.Message);
+            if (result.Message == "Venue not found") return NotFoundResponse("Không tìm thấy địa điểm");
+            if (result.Message == "Unauthorized access") return ForbiddenResponse("Bạn không có quyền truy cập");
             
             // For validation errors, we return the result object so the client can see MissingFields
             // Using OkResponse (200) but IsSuccess is false in the DTO
             return OkResponse(result, result.Message);
         }
         
-        return OkResponse(result, "Venue submitted successfully");
+        return OkResponse(result, "Gửi địa điểm thành công");
     }
 
 
@@ -383,7 +383,7 @@ public class VenueLocationController : BaseController
         var currentUserId = GetCurrentUserId();
         if (!currentUserId.HasValue)
         {
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         }
         
         _logger.LogInformation("User {UserId} submitting venue {VenueId} with payment", currentUserId, id);
@@ -396,7 +396,7 @@ public class VenueLocationController : BaseController
             return OkResponse(result, result.Message);
         }
         
-        return OkResponse(result, "Payment QR code generated. Please scan to complete payment.");
+        return OkResponse(result, "Đã tạo mã QR thanh toán. Vui lòng quét để hoàn tất thanh toán.");
     }
 
     [HttpPost("subscription-only/submit-with-payment")]
@@ -410,7 +410,7 @@ public class VenueLocationController : BaseController
         var currentUserId = GetCurrentUserId();
         if (!currentUserId.HasValue)
         {
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         }
 
         _logger.LogInformation("User {UserId} creating user-level subscription with payment", currentUserId);
@@ -422,7 +422,7 @@ public class VenueLocationController : BaseController
             return OkResponse(result, result.Message);
         }
 
-        return OkResponse(result, "Payment QR code generated. Please scan to complete payment.");
+        return OkResponse(result, "Đã tạo mã QR thanh toán. Vui lòng quét để hoàn tất thanh toán.");
     }
     
     /// <summary>ADMIN get list venue pending</summary>
@@ -437,7 +437,7 @@ public class VenueLocationController : BaseController
 
         var result = await _venueLocationService.GetPendingVenuesAsync(page, pageSize);
 
-        return OkResponse(result, $"Retrieved {result.Items.Count()} pending venues");
+        return OkResponse(result, $"Đã lấy {result.Items.Count()} địa điểm đang chờ duyệt");
     }
 
         /// <summary>ADMIN</summary>
@@ -455,14 +455,14 @@ public class VenueLocationController : BaseController
 
         if (!ModelState.IsValid)
         {
-            return BadRequestResponse("Invalid request data");
+            return BadRequestResponse("Dữ liệu yêu cầu không hợp lệ");
         }
 
         var result = await _venueLocationService.ApproveVenueAsync(request);
 
         if (!result.IsSuccess)
         {
-            if (result.Message == "Venue not found") return NotFoundResponse(result.Message);
+            if (result.Message == "Venue not found") return NotFoundResponse("Không tìm thấy địa điểm");
             return BadRequestResponse(result.Message);
         }
 
@@ -505,12 +505,12 @@ public class VenueLocationController : BaseController
                 }
             };
 
-            return OkResponse(stats, "Retrieved search statistics");
+            return OkResponse(stats, "Lấy thống kê tìm kiếm thành công");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting search statistics");
-            return BadRequestResponse("Error retrieving statistics");
+            return BadRequestResponse("Lỗi khi lấy dữ liệu thống kê");
         }
     }
 
@@ -528,10 +528,10 @@ public class VenueLocationController : BaseController
         
         if (venue == null)
         {
-            return NotFoundResponse($"Venue location with ID {id} not found");
+            return NotFoundResponse($"Không tìm thấy địa điểm có ID {id}");
         }
 
-        return OkResponse(venue, "Venue location with KYC retrieved successfully");
+        return OkResponse(venue, "Lấy thông tin địa điểm kèm KYC thành công");
     }
 
      [HttpGet("my-subscriptions")]
@@ -543,12 +543,12 @@ public class VenueLocationController : BaseController
             var userId = GetCurrentUserId();
             if (!userId.HasValue)
             {
-                return UnauthorizedResponse("User not authenticated");
+                return UnauthorizedResponse("Người dùng chưa được xác thực");
             }
 
             var packages = await _subscriptionPackageService.GetVenueSubscriptionPackagesByOwnerUserIdAsync(userId.Value);
             
-            return OkResponse(packages, $"Successfully retrieved {packages.Count} venue subscription packages");
+            return OkResponse(packages, $"Lấy thành công {packages.Count} gói đăng ký của địa điểm");
         }
         catch (InvalidOperationException ex)
         {
@@ -558,7 +558,7 @@ public class VenueLocationController : BaseController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting venue subscription packages for current user");
-            return InternalServerErrorResponse("An error occurred while retrieving venue subscription packages");
+            return InternalServerErrorResponse("Đã xảy ra lỗi khi lấy gói đăng ký của địa điểm");
         }
     }
 }

@@ -25,14 +25,14 @@ public class WalletController : BaseController
     {
         var userId = GetCurrentUserId();
         if (!userId.HasValue)
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
 
         var balance = await _walletService.GetWalletBalanceAsync(userId.Value);
 
         if (balance == null)
             return NotFoundResponse("Không tìm thấy ví");
 
-        return OkResponse(balance, "Wallet balance retrieved successfully");
+        return OkResponse(balance, "Lấy số dư ví thành công");
     }
 
     /// <summary>VENUE OWNER - Tạo giao dịch nạp tiền vào wallet qua VietQR (chỉ xử lý transaction)</summary>
@@ -42,12 +42,12 @@ public class WalletController : BaseController
     {
         var userId = GetCurrentUserId();
         if (!userId.HasValue)
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
 
         try
         {
             var result = await _walletService.CreateVenueOwnerWalletTopupAsync(userId.Value, request);
-            return OkResponse(result, "Top-up transaction created successfully");
+            return OkResponse(result, "Tạo giao dịch nạp tiền thành công");
         }
         catch (InvalidOperationException ex)
         {
@@ -62,12 +62,12 @@ public class WalletController : BaseController
     {
         var userId = GetCurrentUserId();
         if (!userId.HasValue)
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
 
         try
         {
             var withdrawRequest = await _walletService.CreateWithdrawRequestAsync(userId.Value, request);
-            return CreatedResponse(withdrawRequest, "Withdraw request created successfully");
+            return CreatedResponse(withdrawRequest, "Tạo yêu cầu rút tiền thành công");
         }
         catch (InvalidOperationException ex)
         {
@@ -82,10 +82,10 @@ public class WalletController : BaseController
     {
         var userId = GetCurrentUserId();
         if (!userId.HasValue)
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
 
         var requests = await _walletService.GetMyWithdrawRequestsAsync(userId.Value);
-        return OkResponse(requests, $"Retrieved {requests.Count} withdraw request(s)");
+        return OkResponse(requests, $"Đã lấy {requests.Count} yêu cầu rút tiền");
     }
 
     /// <summary>VENUE OWNER - Lấy lịch sử giao dịch biến động số dư wallet</summary>
@@ -97,10 +97,10 @@ public class WalletController : BaseController
     {
         var userId = GetCurrentUserId();
         if (!userId.HasValue)
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
 
         var history = await _walletService.GetWalletTransactionHistoryAsync(userId.Value, pageNumber, pageSize);
-        return OkResponse(history, $"Retrieved {history.Items.Count()} transaction(s) from page {pageNumber}");
+        return OkResponse(history, $"Đã lấy {history.Items.Count()} giao dịch ở trang {pageNumber}");
     }
 
     /// <summary>
@@ -112,11 +112,11 @@ public class WalletController : BaseController
     {
         var userId = GetCurrentUserId();
         if (!userId.HasValue)
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         try
         {
             var result = await _walletService.ConvertMoneyToPointAsync(userId.Value, request);
-            return OkResponse(result, "Money converted to points successfully");
+            return OkResponse(result, "Quy đổi tiền sang điểm thành công");
         }
         catch (Exception ex)
         {
@@ -135,9 +135,9 @@ public class WalletController : BaseController
     {
         var userId = GetCurrentUserId();
         if (!userId.HasValue)
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         var history = await _walletService.GetMemberWalletTransactionHistoryAsync(userId.Value, pageNumber, pageSize);
-        return OkResponse(history, $"Retrieved {history.Items.Count()} transaction(s) from page {pageNumber}");
+        return OkResponse(history, $"Đã lấy {history.Items.Count()} giao dịch ở trang {pageNumber}");
     }
 
     /// <summary>
@@ -149,8 +149,8 @@ public class WalletController : BaseController
     {
         var userId = GetCurrentUserId();
         if (!userId.HasValue)
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         var exchangeRate = await _walletService.GetMoneyToPointExchangeRateAsync(userId.Value);
-        return OkResponse(exchangeRate, "Retrieved money to point exchange rate successfully");
+        return OkResponse(exchangeRate, "Lấy tỷ lệ quy đổi tiền sang điểm thành công");
     }
 }

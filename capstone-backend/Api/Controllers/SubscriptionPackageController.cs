@@ -36,12 +36,12 @@ public class SubscriptionPackageController : BaseController
         {
             if (string.IsNullOrWhiteSpace(type))
             {
-                return BadRequestResponse("Type parameter is required");
+                return BadRequestResponse("Tham số loại là bắt buộc");
             }
 
             var packages = await _subscriptionPackageService.GetSubscriptionPackagesByTypeAsync(type);
             
-            return OkResponse(packages, $"Successfully retrieved {packages.Count} subscription packages");
+            return OkResponse(packages, $"Lấy thành công {packages.Count} gói đăng ký");
         }
         catch (ArgumentException ex)
         {
@@ -51,7 +51,7 @@ public class SubscriptionPackageController : BaseController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting subscription packages by type: {Type}", type);
-            return InternalServerErrorResponse("An error occurred while retrieving subscription packages");
+            return InternalServerErrorResponse("Đã xảy ra lỗi khi lấy danh sách gói đăng ký");
         }
     }
 
@@ -76,12 +76,12 @@ public class SubscriptionPackageController : BaseController
         {
             if (!ModelState.IsValid)
             {
-                return BadRequestResponse("Invalid request data");
+                return BadRequestResponse("Dữ liệu yêu cầu không hợp lệ");
             }
 
             var updatedPackage = await _subscriptionPackageService.UpdateSubscriptionPackageAsync(id, request);
             
-            return OkResponse(updatedPackage, "Subscription package updated successfully");
+            return OkResponse(updatedPackage, "Cập nhật gói đăng ký thành công");
         }
         catch (InvalidOperationException ex)
         {
@@ -91,7 +91,7 @@ public class SubscriptionPackageController : BaseController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating subscription package with ID: {Id}", id);
-            return InternalServerErrorResponse("An error occurred while updating the subscription package");
+            return InternalServerErrorResponse("Đã xảy ra lỗi khi cập nhật gói đăng ký");
         }
     }
 
@@ -111,17 +111,17 @@ public class SubscriptionPackageController : BaseController
         {
             if (venueId <= 0)
             {
-                return BadRequestResponse("Invalid venue ID");
+                return BadRequestResponse("Venue ID không hợp lệ");
             }
 
             var packages = await _subscriptionPackageService.GetVenueSubscriptionPackagesByVenueIdAsync(venueId);
             
-            return OkResponse(packages, $"Successfully retrieved {packages.Count} venue subscription packages");
+            return OkResponse(packages, $"Lấy thành công {packages.Count} gói đăng ký của địa điểm");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting venue subscription packages for venue ID: {VenueId}", venueId);
-            return InternalServerErrorResponse("An error occurred while retrieving venue subscription packages");
+            return InternalServerErrorResponse("Đã xảy ra lỗi khi lấy gói đăng ký của địa điểm");
         }
     }
 }

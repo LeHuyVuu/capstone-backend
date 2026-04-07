@@ -35,6 +35,6 @@ public class UploadController : BaseController
 
         var url = await _s3Service.UploadFileAsync(file, userId.Value, type.ToString());
 
-        return Ok(ApiResponse<object>.Success(url, "File uploaded successfully"));
+        return Ok(ApiResponse<object>.Success(url, "Tải tệp lên thành công"));
     }
 }

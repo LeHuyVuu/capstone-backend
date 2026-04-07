@@ -155,7 +155,7 @@ namespace capstone_backend.Api.Controllers
                 var userId = GetCurrentUserId();
                 var result = await _personalityTestService.HandleTestAsync(GetCurrentUserId().Value, testTypeId, request);
 
-                return OkResponse(result, "Test submitted successfully");
+                return OkResponse(result, "Nộp bài kiểm tra thành công");
             }
             catch (Exception ex)
             {

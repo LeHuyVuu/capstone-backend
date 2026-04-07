@@ -35,7 +35,7 @@ public class UserContextController : BaseController
 
         if (!int.TryParse(userIdClaim, out var userId))
         {
-            return UnauthorizedResponse("Invalid token user id");
+            return UnauthorizedResponse("ID người dùng trong token không hợp lệ");
         }
 
         var memberProfile = await _dbContext.MemberProfiles
@@ -44,7 +44,7 @@ public class UserContextController : BaseController
 
         if (memberProfile == null)
         {
-            return NotFoundResponse("Member profile not found");
+            return NotFoundResponse("Không tìm thấy hồ sơ thành viên");
         }
 
         var latestInteraction = await _dbContext.Interactions
@@ -104,11 +104,11 @@ public class UserContextController : BaseController
         {
             userContext = "suggest popular and diverse venues";
             _logger.LogInformation("[USER CONTEXT] fallback default context for new member {MemberId}: {UserContext}", memberProfile.Id, userContext);
-            return OkResponse(userContext, "New user context generated successfully");
+            return OkResponse(userContext, "Tạo ngữ cảnh người dùng mới thành công");
         }
 
         _logger.LogInformation("[USER CONTEXT] userContext for member {MemberId}: {UserContext}", memberProfile.Id, userContext);
 
-        return OkResponse(userContext, "User context retrieved successfully");
+        return OkResponse(userContext, "Lấy ngữ cảnh người dùng thành công");
     }
 }

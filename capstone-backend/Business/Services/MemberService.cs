@@ -43,7 +43,7 @@ public class MemberService : IMemberService
                 throw new InvalidOperationException("Current user does not have a member profile");
             
             if (currentMemberProfile.IsDeleted == true)
-                throw new InvalidOperationException("Current user profile is deleted");
+                throw new InvalidOperationException("Hồ sơ người dùng hiện tại đã bị xóa");
 
             // 2. Tìm member profile theo invite code được nhập vào (người nam - người được mời)
             var partnerMemberProfile = await _unitOfWork.MembersProfile.GetByInviteCodeAsync(inviteCode);
@@ -51,7 +51,7 @@ public class MemberService : IMemberService
                 throw new InvalidOperationException($"No member found with invite code '{inviteCode}'");
             
             if (partnerMemberProfile.IsDeleted == true)
-                throw new InvalidOperationException("The member you are trying to invite is deleted");
+                throw new InvalidOperationException("Thành viên bạn muốn mời đã bị xóa");
 
         // 3. Kiểm tra không thể invite chính mình
         if (currentMemberProfile.Id == partnerMemberProfile.Id)
@@ -60,16 +60,16 @@ public class MemberService : IMemberService
         // 3.1. Kiểm tra gender - chỉ cho phép nam + nữ
         if (string.IsNullOrWhiteSpace(currentMemberProfile.Gender) || 
             string.IsNullOrWhiteSpace(partnerMemberProfile.Gender))
-            throw new InvalidOperationException("Both members must have gender specified");
+            throw new InvalidOperationException("Cả hai thành viên phải có thông tin giới tính");
             
         if (currentMemberProfile.Gender == partnerMemberProfile.Gender)
             throw new InvalidOperationException("Can only create couple with different genders");
 
         if (currentMemberProfile.RelationshipStatus == RelationshipStatus.IN_RELATIONSHIP.ToString())
-            throw new InvalidOperationException("You are already marked as in a relationship");
+            throw new InvalidOperationException("Bạn đã được đánh dấu đang trong mối quan hệ");
             
         if (partnerMemberProfile.RelationshipStatus == RelationshipStatus.IN_RELATIONSHIP.ToString())
-            throw new InvalidOperationException("The member you are trying to invite is already marked as in a relationship");
+            throw new InvalidOperationException("Thành viên bạn muốn mời đã được đánh dấu đang trong mối quan hệ");
 
         var currentMemberInCouple = await _unitOfWork.Context.CoupleProfiles
             .Where(c => c.IsDeleted != true &&
@@ -87,7 +87,7 @@ public class MemberService : IMemberService
             .FirstOrDefaultAsync();
 
         if (partnerInCouple != null)
-            throw new InvalidOperationException("The member you are trying to invite is already in an active couple.");
+            throw new InvalidOperationException("Thành viên bạn muốn mời đã thuộc một cặp đôi đang hoạt động.");
 
         // 5. Tạo couple profile mới
         // Đảm bảo member_id_1 < member_id_2 để thỏa constraint ck_member_order
@@ -202,7 +202,7 @@ public class MemberService : IMemberService
             throw new InvalidOperationException("Không tìm thấy hồ sơ thành viên");
 
         if (memberProfile.IsDeleted == true)
-            throw new InvalidOperationException("Member profile is deleted");
+            throw new InvalidOperationException("Hồ sơ thành viên đã bị xóa");
 
         // Check if at least one field is provided
         bool hasUpdates = false;
@@ -223,7 +223,7 @@ public class MemberService : IMemberService
         if (!string.IsNullOrWhiteSpace(request.Gender))
         {
             if (request.Gender != "MALE" && request.Gender != "FEMALE")
-                throw new ArgumentException("Gender must be MALE or FEMALE");
+                throw new ArgumentException("Giới tính phải là MALE hoặc FEMALE");
             
             // Check if user is in a couple - cannot change gender if in couple
             var isInCouple = await _unitOfWork.Context.CoupleProfiles
@@ -298,11 +298,11 @@ public class MemberService : IMemberService
                 
                 // Vietnamese phone: 10 digits starting with 0, or 9 digits without 0
                 if (cleanPhone.Length < 9 || cleanPhone.Length > 11)
-                    throw new ArgumentException("Phone number must be 9-11 digits");
+                    throw new ArgumentException("Số điện thoại phải có từ 9 đến 11 chữ số");
                 
                 // Must start with 0 if 10 digits
                 if (cleanPhone.Length == 10 && !cleanPhone.StartsWith("0"))
-                    throw new ArgumentException("10-digit phone number must start with 0");
+                    throw new ArgumentException("Số điện thoại 10 chữ số phải bắt đầu bằng số 0");
                 
                 // Valid prefixes for Vietnamese mobile: 03, 05, 07, 08, 09
                 if (cleanPhone.StartsWith("0"))

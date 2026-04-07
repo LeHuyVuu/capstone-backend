@@ -31,11 +31,11 @@ namespace capstone_backend.Api.Controllers
             {
                 var role = GetCurrentUserRole();
                 if (role != "ADMIN")
-                    return ForbiddenResponse("You do not have permission to access this resource");
+                    return ForbiddenResponse("Bạn không có quyền truy cập tài nguyên này");
 
                 var response = await _testTypeService.GetAllTestTypeAsync();
 
-                return OkResponse(response, "Test types retrieved successfully");
+                return OkResponse(response, "Lấy danh sách loại bài test thành công");
             }
             catch (Exception ex)
             {
@@ -53,11 +53,11 @@ namespace capstone_backend.Api.Controllers
             {
                 var role = GetCurrentUserRole();
                 if (role != "ADMIN")
-                    return ForbiddenResponse("You do not have permission to access this resource");
+                    return ForbiddenResponse("Bạn không có quyền truy cập tài nguyên này");
 
                 var response = await _testTypeService.GetByIdAsync(id);
 
-                return OkResponse(response, "Test type retrieved successfully");
+                return OkResponse(response, "Lấy thông tin loại bài test thành công");
             }
             catch (Exception ex)
             {
@@ -75,13 +75,13 @@ namespace capstone_backend.Api.Controllers
             {
                 var isAdmin = IsCurrentUserInRole("ADMIN");
                 if (!isAdmin)
-                    return ForbiddenResponse("You do not have permission to access this resource");
+                    return ForbiddenResponse("Bạn không có quyền truy cập tài nguyên này");
 
                 var response = await _testTypeService.CreateTestTypeAsync(request);
                 if (response > 0)
-                    return CreatedResponse("Test type created successfully");
+                    return CreatedResponse("Tạo loại bài test thành công");
                 else
-                    return BadRequestResponse("Failed to create test type");
+                    return BadRequestResponse("Tạo loại bài test thất bại");
             }
             catch (Exception ex)
             {
@@ -99,12 +99,12 @@ namespace capstone_backend.Api.Controllers
             {
                 var isAdmin = IsCurrentUserInRole("ADMIN");
                 if (!isAdmin)
-                    return ForbiddenResponse("You do not have permission to access this resource");
+                    return ForbiddenResponse("Bạn không có quyền truy cập tài nguyên này");
                 var response = await _testTypeService.UpdateTestTypeAsync(id, request);
                 if (response > 0)
-                    return OkResponse("Test type updated successfully");
+                    return OkResponse("Cập nhật loại bài test thành công");
                 else
-                    return BadRequestResponse("Failed to update test type");
+                    return BadRequestResponse("Cập nhật loại bài test thất bại");
             }
             catch (Exception ex)
             {
@@ -122,12 +122,12 @@ namespace capstone_backend.Api.Controllers
             {
                 var isAdmin = IsCurrentUserInRole("ADMIN");
                 if (!isAdmin)
-                    return ForbiddenResponse("You do not have permission to access this resource");
+                    return ForbiddenResponse("Bạn không có quyền truy cập tài nguyên này");
                 var response = await _testTypeService.DeleteTestTypeAsync(id);
                 if (response > 0)
-                    return OkResponse("Test type deleted successfully");
+                    return OkResponse("Xóa loại bài test thành công");
                 else
-                    return BadRequestResponse("Failed to delete test type");
+                    return BadRequestResponse("Xóa loại bài test thất bại");
             }
             catch (Exception ex)
             {
@@ -146,7 +146,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var isAdmin = IsCurrentUserInRole("ADMIN");
                 if (!isAdmin)
-                    return ForbiddenResponse("You do not have permission to access this resource");
+                    return ForbiddenResponse("Bạn không có quyền truy cập tài nguyên này");
 
                 if (request.File == null || request.File.Length == 0)
                     return BadRequest("Tệp là bắt buộc.");
@@ -178,10 +178,10 @@ namespace capstone_backend.Api.Controllers
             {
                 var role = GetCurrentUserRole();
                 if (role != "ADMIN")
-                    return ForbiddenResponse("You do not have permission to access this resource");
+                    return ForbiddenResponse("Bạn không có quyền truy cập tài nguyên này");
 
                 var questions = await _questionService.GetAllQuestionsByVersionAsync(id, version);
-                return OkResponse(questions, "Questions retrieved successfully");
+                return OkResponse(questions, "Lấy danh sách câu hỏi thành công");
             }
             catch (Exception ex)
             {
@@ -199,12 +199,12 @@ namespace capstone_backend.Api.Controllers
             {
                 var isAdmin = IsCurrentUserInRole("ADMIN");
                 if (!isAdmin)
-                    return ForbiddenResponse("You do not have permission to access this resource");
+                    return ForbiddenResponse("Bạn không có quyền truy cập tài nguyên này");
                 var response = await _questionService.ActivateVersionAsync(id, version);
                 if (response > 0)
-                    return OkResponse("Question version activated successfully");
+                    return OkResponse("Kích hoạt phiên bản câu hỏi thành công");
                 else
-                    return BadRequestResponse("Failed to activate question version");
+                    return BadRequestResponse("Kích hoạt phiên bản câu hỏi thất bại");
             }
             catch (Exception ex)
             {

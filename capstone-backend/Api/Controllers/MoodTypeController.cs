@@ -38,7 +38,7 @@ public class MoodTypeController : BaseController
     {
         var moodType = await _moodTypeService.GetMoodTypeByIdAsync(id, gender);
         if (moodType == null)
-            return NotFoundResponse("Mood type not found");
+            return NotFoundResponse("Không tìm thấy loại tâm trạng");
 
         return OkResponse(moodType);
     }

@@ -48,7 +48,7 @@ namespace capstone_backend.Api.Controllers
                 {
                     if (!Enum.TryParse<WithdrawRequestStatus>(status, true, out var s))
                         return BadRequestResponse(
-                            "Invalid status. Allowed: PENDING, APPROVED, COMPLETED, REJECTED, CANCELLED");
+                            "Trạng thái không hợp lệ. Chỉ chấp nhận: PENDING, APPROVED, COMPLETED, REJECTED, CANCELLED");
 
                     parsedStatus = s;
                 }
@@ -96,7 +96,7 @@ namespace capstone_backend.Api.Controllers
 
                 var result = new PagedResult<WithdrawRequestResponse>(items, pageNumber, pageSize, totalCount);
 
-                return OkResponse(result, $"Retrieved {items.Count} withdraw request(s)");
+                return OkResponse(result, $"Đã lấy {items.Count} yêu cầu rút tiền");
             }
             catch (Exception ex)
             {
@@ -122,7 +122,7 @@ namespace capstone_backend.Api.Controllers
 
                 var currentStatus = withdrawRequest.Status ?? WithdrawRequestStatus.PENDING.ToString();
                 if (!string.Equals(currentStatus, WithdrawRequestStatus.PENDING.ToString(), StringComparison.OrdinalIgnoreCase))
-                    return BadRequestResponse($"Cannot reject withdraw request in '{currentStatus}' status. Only PENDING can be rejected");
+                    return BadRequestResponse($"Không thể từ chối yêu cầu rút tiền ở trạng thái '{currentStatus}'. Chỉ trạng thái PENDING mới có thể bị từ chối");
 
                 withdrawRequest.Status = WithdrawRequestStatus.REJECTED.ToString();
                 withdrawRequest.RejectionReason = request.Reason.Trim();
@@ -132,7 +132,7 @@ namespace capstone_backend.Api.Controllers
                 _unitOfWork.WithdrawRequests.Update(withdrawRequest);
                 await _unitOfWork.SaveChangesAsync();
 
-                return OkResponse(MapWithdrawRequestResponse(withdrawRequest), "Withdraw request rejected successfully");
+                return OkResponse(MapWithdrawRequestResponse(withdrawRequest), "Từ chối yêu cầu rút tiền thành công");
             }
             catch (Exception ex)
             {
@@ -159,7 +159,7 @@ namespace capstone_backend.Api.Controllers
 
                 var currentStatus = withdrawRequest.Status ?? WithdrawRequestStatus.PENDING.ToString();
                 if (!string.Equals(currentStatus, WithdrawRequestStatus.PENDING.ToString(), StringComparison.OrdinalIgnoreCase))
-                    return BadRequestResponse($"Cannot approve withdraw request in '{currentStatus}' status. Only PENDING can be approved");
+                    return BadRequestResponse($"Không thể duyệt yêu cầu rút tiền ở trạng thái '{currentStatus}'. Chỉ trạng thái PENDING mới có thể được duyệt");
 
                 withdrawRequest.Status = WithdrawRequestStatus.APPROVED.ToString();
                 withdrawRequest.RejectionReason = null;
@@ -222,7 +222,7 @@ namespace capstone_backend.Api.Controllers
                     Console.WriteLine($"[WARNING] Failed to send approve withdraw email: {emailEx.Message}");
                 }
 
-                return OkResponse(MapWithdrawRequestResponse(withdrawRequest), "Withdraw request approved successfully");
+                return OkResponse(MapWithdrawRequestResponse(withdrawRequest), "Duyệt yêu cầu rút tiền thành công");
             }
             catch (Exception ex)
             {
@@ -247,7 +247,7 @@ namespace capstone_backend.Api.Controllers
 
                 if (!Enum.TryParse<WithdrawRequestStatus>(request.Status, true, out var targetStatus) ||
                     targetStatus != WithdrawRequestStatus.COMPLETED)
-                    return BadRequestResponse("Invalid status. This API only allows status COMPLETED");
+                    return BadRequestResponse("Trạng thái không hợp lệ. API này chỉ chấp nhận trạng thái COMPLETED");
 
                 if (string.IsNullOrWhiteSpace(request.ProofImageUrl))
                     return BadRequestResponse("URL ảnh minh chứng là bắt buộc");
@@ -268,13 +268,13 @@ namespace capstone_backend.Api.Controllers
                 if (!Enum.TryParse<WithdrawRequestStatus>(currentStatusText, true, out var currentStatus))
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return BadRequestResponse($"Current withdraw request status '{currentStatusText}' is invalid");
+                    return BadRequestResponse($"Trạng thái hiện tại của yêu cầu rút tiền '{currentStatusText}' không hợp lệ");
                 }
 
                 if (currentStatus != WithdrawRequestStatus.APPROVED)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return BadRequestResponse($"Cannot complete withdraw request in '{currentStatus}' status. Only APPROVED can be completed");
+                    return BadRequestResponse($"Không thể hoàn tất yêu cầu rút tiền ở trạng thái '{currentStatus}'. Chỉ trạng thái APPROVED mới có thể hoàn tất");
                 }
 
                 if (withdrawRequest.Amount == null || withdrawRequest.Amount <= 0)
@@ -293,7 +293,7 @@ namespace capstone_backend.Api.Controllers
                 if (wallet.IsActive != true)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return BadRequestResponse("Wallet is not active");
+                    return BadRequestResponse("Ví chưa được kích hoạt");
                 }
 
                 var currentBalance = wallet.Balance ?? 0;

@@ -24,7 +24,7 @@ public class SpecialEventController : BaseController
     public async Task<IActionResult> CreateSpecialEvent([FromBody] CreateSpecialEventRequest request)
     {
         var specialEvent = await _specialEventService.CreateSpecialEventAsync(request);
-        return CreatedResponse(specialEvent, "Special event created successfully");
+        return CreatedResponse(specialEvent, "Tạo sự kiện đặc biệt thành công");
     }
 
     /// <summary>
@@ -37,7 +37,7 @@ public class SpecialEventController : BaseController
     {
         var specialEvent = await _specialEventService.GetSpecialEventByIdAsync(id);
         if (specialEvent == null)
-            return NotFoundResponse("Special event not found");
+            return NotFoundResponse("Không tìm thấy sự kiện đặc biệt");
 
         return OkResponse(specialEvent);
     }
@@ -73,9 +73,9 @@ public class SpecialEventController : BaseController
     {
         var specialEvent = await _specialEventService.UpdateSpecialEventAsync(id, request);
         if (specialEvent == null)
-            return NotFoundResponse("Special event not found");
+            return NotFoundResponse("Không tìm thấy sự kiện đặc biệt");
 
-        return OkResponse(specialEvent, "Special event updated successfully");
+        return OkResponse(specialEvent, "Cập nhật sự kiện đặc biệt thành công");
     }
 
     /// <summary>
@@ -88,9 +88,9 @@ public class SpecialEventController : BaseController
         // PATCH uses same DTO as PUT but fields are optional
         var specialEvent = await _specialEventService.UpdateSpecialEventAsync(id, request);
         if (specialEvent == null)
-            return NotFoundResponse("Special event not found");
+            return NotFoundResponse("Không tìm thấy sự kiện đặc biệt");
 
-        return OkResponse(specialEvent, "Special event patched successfully");
+        return OkResponse(specialEvent, "Cập nhật một phần sự kiện đặc biệt thành công");
     }
 
     /// <summary>
@@ -102,8 +102,8 @@ public class SpecialEventController : BaseController
     {
         var result = await _specialEventService.DeleteSpecialEventAsync(id);
         if (!result)
-            return NotFoundResponse("Special event not found");
+            return NotFoundResponse("Không tìm thấy sự kiện đặc biệt");
 
-        return OkResponse<object?>(null, "Special event deleted successfully");
+        return OkResponse<object?>(null, "Xóa sự kiện đặc biệt thành công");
     }
 }

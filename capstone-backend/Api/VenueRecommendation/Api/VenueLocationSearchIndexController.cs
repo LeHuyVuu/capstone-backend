@@ -41,10 +41,10 @@ public class VenueLocationSearchIndexController : BaseController
 
         if (!result)
         {
-            return NotFoundResponse($"Venue location with ID {id} not found or could not be indexed");
+            return NotFoundResponse($"Không tìm thấy địa điểm có ID {id} hoặc không thể lập chỉ mục");
         }
 
-        return OkResponse(result, "Venue indexed successfully");
+        return OkResponse(result, "Lập chỉ mục địa điểm thành công");
     }
 
     [HttpDelete("search/index/clear")]
@@ -53,6 +53,6 @@ public class VenueLocationSearchIndexController : BaseController
     public async Task<IActionResult> ClearSearchIndex()
     {
         var result = await _meilisearchService.ClearIndexAsync();
-        return OkResponse(result, "Search index cleared successfully");
+        return OkResponse(result, "Xóa chỉ mục tìm kiếm thành công");
     }
 }

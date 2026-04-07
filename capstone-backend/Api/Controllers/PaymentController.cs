@@ -52,7 +52,7 @@ public class PaymentController : BaseController
         var userId = GetCurrentUserId();
         if (userId == null)
         {
-            return UnauthorizedResponse("Unauthorized");
+            return UnauthorizedResponse("Không có quyền truy cập");
         }
 
         var transaction = await _unitOfWork.Context.Set<Transaction>()
@@ -60,7 +60,7 @@ public class PaymentController : BaseController
 
         if (transaction == null)
         {
-            return NotFoundResponse("Transaction not found");
+            return NotFoundResponse("Không tìm thấy giao dịch");
         }
 
         // Get subscription info if payment is for venue subscription
@@ -115,7 +115,7 @@ public class PaymentController : BaseController
         var userId = GetCurrentUserId();
         if (userId == null)
         {
-            return UnauthorizedResponse("Unauthorized");
+            return UnauthorizedResponse("Không có quyền truy cập");
         }
 
         var transaction = await _unitOfWork.Context.Set<Transaction>()
@@ -125,12 +125,12 @@ public class PaymentController : BaseController
 
         if (transaction == null)
         {
-            return NotFoundResponse("Transaction not found or already completed");
+            return NotFoundResponse("Không tìm thấy giao dịch hoặc giao dịch đã hoàn tất");
         }
 
         if (string.IsNullOrEmpty(transaction.ExternalRefCode))
         {
-            return BadRequestResponse("QR code info not available");
+            return BadRequestResponse("Thông tin mã QR không khả dụng");
         }
 
         var externalRef = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(transaction.ExternalRefCode);
@@ -157,7 +157,7 @@ public class PaymentController : BaseController
         var userId = GetCurrentUserId();
         if (userId == null)
         {
-            return UnauthorizedResponse("Unauthorized");
+            return UnauthorizedResponse("Không có quyền truy cập");
         }
 
         var transaction = await _unitOfWork.Context.Set<Transaction>()
@@ -167,7 +167,7 @@ public class PaymentController : BaseController
 
         if (transaction == null)
         {
-            return NotFoundResponse("Transaction not found or already completed");
+            return NotFoundResponse("Không tìm thấy giao dịch hoặc giao dịch đã hoàn tất");
         }
 
         using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
@@ -223,13 +223,13 @@ public class PaymentController : BaseController
             await _unitOfWork.SaveChangesAsync();
             await dbTransaction.CommitAsync();
 
-            return OkResponse(new { message = "Payment cancelled successfully" });
+            return OkResponse(new { message = "Hủy thanh toán thành công" });
         }
         catch (Exception ex)
         {
             await dbTransaction.RollbackAsync();
             _logger.LogError(ex, "Error cancelling payment");
-            return InternalServerErrorResponse("Failed to cancel payment");
+            return InternalServerErrorResponse("Hủy thanh toán thất bại");
         }
     }
 
@@ -245,7 +245,7 @@ public class PaymentController : BaseController
             var userId = GetCurrentUserId();
             if (userId == null)
             {
-                return UnauthorizedResponse("Unauthorized");
+                return UnauthorizedResponse("Không có quyền truy cập");
             }
 
             var result = await _momoService.ProcessMemberSubscriptionPaymentAsync(userId.Value, request);
@@ -271,7 +271,7 @@ public class PaymentController : BaseController
             var userId = GetCurrentUserId();
             if (userId == null)
             {
-                return UnauthorizedResponse("Unauthorized");
+                return UnauthorizedResponse("Không có quyền truy cập");
             }
             var result = await _momoService.ProcessMemberWalletTopupAsync(userId.Value, request);
             if (result == null)
@@ -295,7 +295,7 @@ public class PaymentController : BaseController
             var userId = GetCurrentUserId();
             if (userId == null)
             {
-                return UnauthorizedResponse("Unauthorized");
+                return UnauthorizedResponse("Không có quyền truy cập");
             }
             var result = await _zaloPayService.ProcessMemberSubscriptionPaymentAsync(userId.Value, request);
             if (result == null)
@@ -319,7 +319,7 @@ public class PaymentController : BaseController
             var userId = GetCurrentUserId();
             if (userId == null)
             {
-                return UnauthorizedResponse("Unauthorized");
+                return UnauthorizedResponse("Không có quyền truy cập");
             }
             var result = await _zaloPayService.ProcessMemberWalletTopupAsync(userId.Value, request);
             if (result == null)
@@ -341,7 +341,7 @@ public class PaymentController : BaseController
         var userId = GetCurrentUserId();
         if (userId == null)
         {
-            return UnauthorizedResponse("Unauthorized");
+            return UnauthorizedResponse("Không có quyền truy cập");
         }
         try
         {
@@ -367,7 +367,7 @@ public class PaymentController : BaseController
             var userId = GetCurrentUserId();
             if (userId == null)
             {
-                return UnauthorizedResponse("Unauthorized");
+                return UnauthorizedResponse("Không có quyền truy cập");
             }
             var result = await _vnPayService.ProcessMemberWalletTopupAsync(userId.Value, request);
             if (result == null)
@@ -391,7 +391,7 @@ public class PaymentController : BaseController
             var userId = GetCurrentUserId();
             if (userId == null)
             {
-                return UnauthorizedResponse("Unauthorized");
+                return UnauthorizedResponse("Không có quyền truy cập");
             }
             TransactionResponse result = null;
 

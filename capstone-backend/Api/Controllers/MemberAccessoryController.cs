@@ -28,7 +28,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 if (userId == null)
-                    return UnauthorizedResponse("User not authenticated");
+                    return UnauthorizedResponse("Người dùng chưa được xác thực");
 
                 var result = await _accessoryService.GetShopAsync(userId.Value, query);
                 return OkResponse(result, "Lấy thông tin thành công");
@@ -49,7 +49,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 if (userId == null)
-                    return UnauthorizedResponse("User not authenticated");
+                    return UnauthorizedResponse("Người dùng chưa được xác thực");
                 var result = await _accessoryService.GetDetailAsync(userId.Value, accessoryId);
                 if (result == null)
                     return NotFoundResponse("Không tìm thấy phụ kiện");
@@ -71,7 +71,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 if (userId == null)
-                    return UnauthorizedResponse("User not authenticated");
+                    return UnauthorizedResponse("Người dùng chưa được xác thực");
 
                 var result = await _accessoryService.PurchaseAccessoryAsync(userId.Value, accessoryId);
                 if (result == null)
@@ -95,7 +95,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 if (userId == null)
-                    return UnauthorizedResponse("User not authenticated");
+                    return UnauthorizedResponse("Người dùng chưa được xác thực");
 
                 var result = await _accessoryService.GetMyAccessoryAsync(userId.Value, query);
 
@@ -117,7 +117,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 if (userId == null)
-                    return UnauthorizedResponse("User not authenticated");
+                    return UnauthorizedResponse("Người dùng chưa được xác thực");
                 var result = await _accessoryService.GetMyAccessoryDetailAsync(userId.Value, memberAccessoryId);
                 if (result == null)
                     return NotFoundResponse("Không tìm thấy phụ kiện trong kho của bạn");
@@ -139,7 +139,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 if (userId == null)
-                    return UnauthorizedResponse("User not authenticated");
+                    return UnauthorizedResponse("Người dùng chưa được xác thực");
 
                 var result = await _accessoryService.EquipAccessoryAsync(userId.Value, memberAccessoryId);
                 if (result == null)
@@ -163,7 +163,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 if (userId == null)
-                    return UnauthorizedResponse("User not authenticated");
+                    return UnauthorizedResponse("Người dùng chưa được xác thực");
                 var result = await _accessoryService.UnequipAccessoryAsync(userId.Value, memberAccessoryId);
 
                 if (result == null)
@@ -186,7 +186,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 if (userId == null)
-                    return UnauthorizedResponse("User not authenticated");
+                    return UnauthorizedResponse("Người dùng chưa được xác thực");
 
                 var result = await _accessoryService.GetPurchaseHistoriesAsync(userId.Value, query);
                 return OkResponse(result, "Lấy thông tin thành công");

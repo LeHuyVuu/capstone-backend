@@ -27,7 +27,7 @@ namespace capstone_backend.Api.Controllers
         {
             if (!Enum.IsDefined(typeof(SystemConfigKeys), key))
             {
-                return BadRequestResponse("Invalid key");
+                return BadRequestResponse("Khóa cấu hình không hợp lệ");
             }
 
             var result = await _systemConfigService.GetByKeyAsync(key.ToString());

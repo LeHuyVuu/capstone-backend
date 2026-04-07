@@ -58,7 +58,7 @@ public class WalletService
             throw new InvalidOperationException("Ví chưa được kích hoạt");
 
         if (request.Amount <= 0)
-            throw new InvalidOperationException("Amount must be greater than 0");
+            throw new InvalidOperationException("Số tiền phải lớn hơn 0");
 
         if (request.Amount > wallet.Balance)
             throw new InvalidOperationException($"Insufficient balance. Available: {wallet.Balance:N0} VND");

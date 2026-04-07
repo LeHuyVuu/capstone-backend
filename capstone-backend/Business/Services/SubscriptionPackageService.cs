@@ -35,7 +35,7 @@ public class SubscriptionPackageService : ISubscriptionPackageService
             // Validate type is either MEMBER or VENUE
             if (normalizedType != "MEMBER" && normalizedType != "VENUE" && normalizedType != "VENUEOWNER")
             {
-                throw new ArgumentException("Type must be either MEMBER, VENUE, or VENUEOWNER", nameof(type));
+                throw new ArgumentException("Loại phải là MEMBER, VENUE hoặc VENUEOWNER", nameof(type));
             }
 
             _logger.LogInformation("Getting subscription packages for type: {Type}", normalizedType);
@@ -88,7 +88,7 @@ public class SubscriptionPackageService : ISubscriptionPackageService
 
             if (package == null)
             {
-                throw new InvalidOperationException($"Subscription package with ID {id} not found or has been deleted");
+                throw new InvalidOperationException($"Không tìm thấy gói đăng ký có ID {id} hoặc gói đã bị xóa");
             }
 
             var normalizedPackageName = request.PackageName.Trim();
@@ -100,7 +100,7 @@ public class SubscriptionPackageService : ISubscriptionPackageService
 
             if (duplicatedNameExists)
             {
-                throw new InvalidOperationException("Package name already exists. PackageName must be unique.");
+                throw new InvalidOperationException("Tên gói đã tồn tại. PackageName phải là duy nhất.");
             }
 
             // Update package properties
@@ -201,7 +201,7 @@ public class SubscriptionPackageService : ISubscriptionPackageService
 
             if (venueOwner == null)
             {
-                throw new InvalidOperationException($"Venue owner profile not found for user ID {userId}");
+                throw new InvalidOperationException($"Không tìm thấy hồ sơ chủ địa điểm cho người dùng ID {userId}");
             }
 
             // Get all venues owned by this venue owner
@@ -336,7 +336,7 @@ public class SubscriptionPackageService : ISubscriptionPackageService
 
         if (duplicatedNameExists)
         {
-            throw new InvalidOperationException("Package name already exists. PackageName must be unique.");
+            throw new InvalidOperationException("Tên gói đã tồn tại. PackageName phải là duy nhất.");
         }
 
         var now = DateTime.UtcNow;
@@ -383,7 +383,7 @@ public class SubscriptionPackageService : ISubscriptionPackageService
 
         if (package == null)
         {
-            throw new InvalidOperationException($"Subscription package with ID {id} not found or has been deleted");
+            throw new InvalidOperationException($"Không tìm thấy gói đăng ký có ID {id} hoặc gói đã bị xóa");
         }
         package.IsActive = false;
         package.UpdatedAt = DateTime.UtcNow;
@@ -407,7 +407,7 @@ public class SubscriptionPackageService : ISubscriptionPackageService
 
         if (normalizedType != "MEMBER" && normalizedType != "VENUE" && normalizedType != "VENUEOWNER")
         {
-            throw new ArgumentException("Type must be either MEMBER, VENUE, or VENUEOWNER", nameof(type));
+            throw new ArgumentException("Loại phải là MEMBER, VENUE hoặc VENUEOWNER", nameof(type));
         }
 
         return normalizedType;

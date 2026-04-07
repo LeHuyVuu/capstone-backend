@@ -32,7 +32,7 @@ public class ReportTypeController : BaseController
             return BadRequestResponse("Kích thước trang phải trong khoảng từ 1 đến 100");
 
         var result = await _reportTypeService.GetReportTypesAsync(page, pageSize, isActive);
-        return OkResponse(result, $"Retrieved {result.Items.Count()} report types");
+        return OkResponse(result, $"Đã lấy {result.Items.Count()} loại báo cáo");
     }
 
     [HttpGet("{id}")]
@@ -45,7 +45,7 @@ public class ReportTypeController : BaseController
         if (reportType == null)
             return NotFoundResponse($"Không tìm thấy loại báo cáo có ID {id}");
 
-        return OkResponse(reportType, "Report type retrieved successfully");
+        return OkResponse(reportType, "Lấy thông tin loại báo cáo thành công");
     }
     [Authorize(Roles = "ADMIN")]
 
@@ -58,7 +58,7 @@ public class ReportTypeController : BaseController
             return BadRequestResponse("Dữ liệu yêu cầu không hợp lệ");
 
         var reportType = await _reportTypeService.CreateReportTypeAsync(request);
-        return CreatedResponse(reportType, "Report type created successfully");
+        return CreatedResponse(reportType, "Tạo loại báo cáo thành công");
     }
 [Authorize(Roles = "ADMIN")]
 
@@ -76,7 +76,7 @@ public class ReportTypeController : BaseController
         if (reportType == null)
             return NotFoundResponse($"Không tìm thấy loại báo cáo có ID {id}");
 
-        return OkResponse(reportType, "Report type updated successfully");
+        return OkResponse(reportType, "Cập nhật loại báo cáo thành công");
     }
 [Authorize(Roles = "ADMIN")]
 
@@ -90,6 +90,6 @@ public class ReportTypeController : BaseController
         if (!result)
             return NotFoundResponse($"Không tìm thấy loại báo cáo có ID {id}");
 
-        return OkResponse(true, "Report type deleted successfully");
+        return OkResponse(true, "Xóa loại báo cáo thành công");
     }
 }

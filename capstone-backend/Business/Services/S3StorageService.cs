@@ -92,7 +92,7 @@ public class S3StorageService
         catch (AmazonS3Exception ex)
         {
 
-            throw new Exception($"S3 error: {ex.Message}");
+            throw new Exception($"Lỗi S3: {ex.Message}");
         }
     }
 }

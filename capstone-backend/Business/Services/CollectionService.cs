@@ -35,7 +35,7 @@ public class CollectionService : ICollectionService
 
         if (nameExists)
         {
-            throw new InvalidOperationException($"Collection name '{request.CollectionName}' already exists.");
+            throw new InvalidOperationException($"Tên bộ sưu tập '{request.CollectionName}' đã tồn tại.");
         }
 
         var collection = new Collection()
@@ -199,7 +199,7 @@ public class CollectionService : ICollectionService
 
             if (duplicateNameExists)
             {
-                throw new InvalidOperationException($"Collection name '{request.CollectionName}' already exists.");
+                throw new InvalidOperationException($"Tên bộ sưu tập '{request.CollectionName}' đã tồn tại.");
             }
 
             collection.CollectionName = request.CollectionName.Trim();

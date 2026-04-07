@@ -63,7 +63,7 @@ public class CategoryService : ICategoryService
         if (existingCategory != null)
         {
             _logger.LogWarning("Category with name '{CategoryName}' already exists", request.Name);
-            throw new InvalidOperationException($"Category with name '{request.Name}' already exists");
+            throw new InvalidOperationException($"Danh mục có tên '{request.Name}' đã tồn tại");
         }
 
         var category = new Category
@@ -102,7 +102,7 @@ public class CategoryService : ICategoryService
             if (existingCategory != null && existingCategory.Id != id)
             {
                 _logger.LogWarning("Category with name '{CategoryName}' already exists", request.Name);
-                throw new InvalidOperationException($"Category with name '{request.Name}' already exists");
+                throw new InvalidOperationException($"Danh mục có tên '{request.Name}' đã tồn tại");
             }
             category.Name = request.Name;
         }

@@ -198,7 +198,7 @@ public static class MeilisearchSyncDataUtil
 
             if (string.Equals(status, "failed", StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException($"Meilisearch task {taskUid} failed: {taskBody}");
+                throw new InvalidOperationException($"Tác vụ Meilisearch {taskUid} thất bại: {taskBody}");
             }
 
             await Task.Delay(delayMs, cancellationToken);

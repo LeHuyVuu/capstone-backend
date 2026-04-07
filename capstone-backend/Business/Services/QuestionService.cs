@@ -144,7 +144,7 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Test type has no questions");
 
             if (testType.CurrentVersion == version)
-                throw new Exception("This version is already active");
+                throw new Exception("Phiên bản này đã được kích hoạt");
 
             testType.CurrentVersion = version;
 

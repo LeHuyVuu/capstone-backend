@@ -46,7 +46,7 @@ public class MeilisearchPersonalizeController : BaseController
 
         if (!int.TryParse(userIdClaim, out var userId))
         {
-            return UnauthorizedResponse("Invalid token user id");
+            return UnauthorizedResponse("ID người dùng trong token không hợp lệ");
         }
 
         var memberProfile = await _dbContext.MemberProfiles
@@ -55,7 +55,7 @@ public class MeilisearchPersonalizeController : BaseController
 
         if (memberProfile == null)
         {
-            return NotFoundResponse("Member profile not found");
+            return NotFoundResponse("Không tìm thấy hồ sơ thành viên");
         }
 
         var latestInteraction = await _dbContext.Interactions
@@ -120,12 +120,12 @@ public class MeilisearchPersonalizeController : BaseController
 
         if (string.IsNullOrWhiteSpace(userContext))
         {
-            return BadRequestResponse("Cannot build user context from interactions or mood");
+            return BadRequestResponse("Không thể tạo ngữ cảnh người dùng từ tương tác hoặc tâm trạng");
         }
 
         if (string.IsNullOrWhiteSpace(request.IndexUid))
         {
-            return BadRequestResponse("IndexUid is required");
+            return BadRequestResponse("IndexUid là bắt buộc");
         }
 
         var body = new Dictionary<string, object?>
@@ -168,13 +168,13 @@ public class MeilisearchPersonalizeController : BaseController
             _logger.LogError("[MEILI TEST] Personalized search failed with status {StatusCode}: {ResponseBody}", (int)response.StatusCode, responseBody);
             return StatusCode(
                 (int)response.StatusCode,
-                ApiResponse<object>.ErrorData(responseBody, "Meilisearch personalized search failed", (int)response.StatusCode, GetTraceId()));
+                ApiResponse<object>.ErrorData(responseBody, "Tìm kiếm cá nhân hóa Meilisearch thất bại", (int)response.StatusCode, GetTraceId()));
         }
 
         var meilisearchResponse = JsonConvert.DeserializeObject<MeilisearchSearchResponse<VenueLocationQueryResult>>(responseBody);
         if (meilisearchResponse == null)
         {
-            return InternalServerErrorResponse("Invalid Meilisearch response");
+            return InternalServerErrorResponse("Phản hồi từ Meilisearch không hợp lệ");
         }
 
         var hits = meilisearchResponse.Hits ?? new List<VenueLocationQueryResult>();
@@ -187,7 +187,7 @@ public class MeilisearchPersonalizeController : BaseController
         var result = new VenueLocationQueryResponse
         {
             Recommendations = new PagedResult<VenueLocationQueryResult>(hits, pageNumber, pageSize, totalCount),
-            Explanation = "Personalized search results based on the latest viewed venue category and latest mood.",
+            Explanation = "Kết quả tìm kiếm cá nhân hóa dựa trên danh mục địa điểm đã xem gần nhất và tâm trạng gần nhất.",
             ProcessingTimeMs = meilisearchResponse.ProcessingTimeMs,
             Query = request.Q,
             PersonalityTags = !string.IsNullOrWhiteSpace(latestInteraction?.CategoryInteraction)
@@ -196,7 +196,7 @@ public class MeilisearchPersonalizeController : BaseController
             CoupleMoodType = latestMood?.MoodName
         };
 
-        return OkResponse(result, $"Found {result.Recommendations.TotalCount} venues in {result.ProcessingTimeMs}ms");
+        return OkResponse(result, $"Tìm thấy {result.Recommendations.TotalCount} địa điểm trong {result.ProcessingTimeMs}ms");
     }
 
     private sealed class MeilisearchSearchResponse<T>

@@ -49,27 +49,27 @@ public class SepayWebhookController : ControllerBase
             if (webhook == null)
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Webhook data is null", requestId);
-                return BadRequest(new { message = "Invalid webhook data" });
+                return BadRequest(new { message = "Dữ liệu webhook không hợp lệ" });
             }
 
             // 1. Validate amount (prevent negative/zero/too large)
             if (webhook.TransferAmount <= 0)
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Invalid amount: {Amount}", requestId, webhook.TransferAmount);
-                return BadRequest(new { message = "Amount must be positive" });
+                return BadRequest(new { message = "Số tiền phải lớn hơn 0" });
             }
 
             if (webhook.TransferAmount > 1_000_000_000) // 1 billion VND
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Amount too large: {Amount}", requestId, webhook.TransferAmount);
-                return BadRequest(new { message = "Amount exceeds maximum limit" });
+                return BadRequest(new { message = "Số tiền vượt quá giới hạn tối đa" });
             }
 
             // 2. Validate transfer type (chỉ xử lý tiền vào)
             if (webhook.TransferType != "in")
             {
                 _logger.LogInformation("[{RequestId}] ℹ️ Ignoring webhook - TransferType is not 'in': {Type}", requestId, webhook.TransferType);
-                return Ok(new { message = "Only 'in' transfers are processed" });
+                return Ok(new { message = "Chỉ xử lý giao dịch tiền vào (in)" });
             }
 
             // 3. Validate webhook data - Sepay có thể gửi trong OrderCode hoặc Content
@@ -85,7 +85,7 @@ public class SepayWebhookController : ControllerBase
             if (string.IsNullOrWhiteSpace(paymentCode))
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Invalid webhook - missing OrderCode and Content", requestId);
-                return BadRequest(new { message = "Invalid webhook data" });
+                return BadRequest(new { message = "Dữ liệu webhook không hợp lệ" });
             }
 
             // 4. Parse payment code (format: VSP{subscriptionId} or ADO{adsOrderId} or WTO{transactionId})
@@ -107,13 +107,13 @@ public class SepayWebhookController : ControllerBase
                 if (string.IsNullOrEmpty(digits) || !int.TryParse(digits, out paymentId))
                 {
                     _logger.LogWarning("[{RequestId}] ⚠️ Cannot parse subscription ID from payment code: {Code}", requestId, paymentCode);
-                    return BadRequest(new { message = "Invalid subscription ID format" });
+                    return BadRequest(new { message = "Định dạng mã gói đăng ký không hợp lệ" });
                 }
                 
                 if (paymentId <= 0 || paymentId > int.MaxValue)
                 {
                     _logger.LogWarning("[{RequestId}] ⚠️ Invalid subscription ID: {SubId}", requestId, paymentId);
-                    return BadRequest(new { message = "Invalid subscription ID" });
+                    return BadRequest(new { message = "Mã gói đăng ký không hợp lệ" });
                 }
                 
                 _logger.LogInformation("[{RequestId}] 📋 Extracted subscription ID: {SubId} from payment code: {Code}", requestId, paymentId, paymentCode);
@@ -128,13 +128,13 @@ public class SepayWebhookController : ControllerBase
                 if (string.IsNullOrEmpty(digits) || !int.TryParse(digits, out paymentId))
                 {
                     _logger.LogWarning("[{RequestId}] ⚠️ Cannot parse ads order ID from payment code: {Code}", requestId, paymentCode);
-                    return BadRequest(new { message = "Invalid ads order ID format" });
+                    return BadRequest(new { message = "Định dạng mã đơn quảng cáo không hợp lệ" });
                 }
                 
                 if (paymentId <= 0 || paymentId > int.MaxValue)
                 {
                     _logger.LogWarning("[{RequestId}] ⚠️ Invalid ads order ID: {AdoId}", requestId, paymentId);
-                    return BadRequest(new { message = "Invalid ads order ID" });
+                    return BadRequest(new { message = "Mã đơn quảng cáo không hợp lệ" });
                 }
                 
                 _logger.LogInformation("[{RequestId}] 📋 Extracted ads order ID: {AdoId} from payment code: {Code}", requestId, paymentId, paymentCode);
@@ -149,13 +149,13 @@ public class SepayWebhookController : ControllerBase
                 if (string.IsNullOrEmpty(digits) || !int.TryParse(digits, out paymentId))
                 {
                     _logger.LogWarning("[{RequestId}] ⚠️ Cannot parse wallet top-up transaction ID from payment code: {Code}", requestId, paymentCode);
-                    return BadRequest(new { message = "Invalid wallet top-up transaction ID format" });
+                    return BadRequest(new { message = "Định dạng mã giao dịch nạp ví không hợp lệ" });
                 }
 
                 if (paymentId <= 0 || paymentId > int.MaxValue)
                 {
                     _logger.LogWarning("[{RequestId}] ⚠️ Invalid wallet top-up transaction ID: {TxId}", requestId, paymentId);
-                    return BadRequest(new { message = "Invalid wallet top-up transaction ID" });
+                    return BadRequest(new { message = "Mã giao dịch nạp ví không hợp lệ" });
                 }
 
                 _logger.LogInformation("[{RequestId}] 📋 Extracted wallet top-up transaction ID: {TxId} from payment code: {Code}", requestId, paymentId, paymentCode);
@@ -163,7 +163,7 @@ public class SepayWebhookController : ControllerBase
             else
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Invalid payment code - VSP, ADO, or WTO not found: {Code}", requestId, paymentCode);
-                return BadRequest(new { message = "Payment code must contain VSP, ADO, or WTO" });
+                return BadRequest(new { message = "Mã thanh toán phải chứa VSP, ADO hoặc WTO" });
             }
             
             // Route to appropriate handler
@@ -183,12 +183,12 @@ public class SepayWebhookController : ControllerBase
         catch (DbUpdateConcurrencyException ex)
         {
             _logger.LogError(ex, "[{RequestId}] ❌ Concurrency conflict - another request may have processed this payment", requestId);
-            return Conflict(new { message = "Payment is being processed by another request" });
+            return Conflict(new { message = "Thanh toán đang được xử lý bởi yêu cầu khác" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{RequestId}] ❌ Webhook processing failed", requestId);
-            return StatusCode(500, new { message = "Internal server error", requestId });
+            return StatusCode(500, new { message = "Lỗi máy chủ nội bộ", requestId });
         }
     }
 
@@ -208,7 +208,7 @@ public class SepayWebhookController : ControllerBase
             if (subscription == null)
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Subscription not found: {Id}", requestId, subscriptionId);
-                return NotFound(new { message = $"Subscription {subscriptionId} not found" });
+                return NotFound(new { message = $"Không tìm thấy gói đăng ký {subscriptionId}" });
             }
 
             if (subscription.Status == VenueSubscriptionPackageStatus.ACTIVE.ToString() || subscription.Status == VenueSubscriptionPackageStatus.COMPLETED.ToString())
@@ -223,7 +223,7 @@ public class SepayWebhookController : ControllerBase
             if (transaction == null)
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Transaction not found for subscription: {Id}", requestId, subscriptionId);
-                return NotFound(new { message = $"Transaction for subscription {subscriptionId} not found" });
+                return NotFound(new { message = $"Không tìm thấy giao dịch cho gói đăng ký {subscriptionId}" });
             }
 
             // ========== IDEMPOTENCY & STATE VALIDATION ==========
@@ -233,7 +233,7 @@ public class SepayWebhookController : ControllerBase
             {
                 _logger.LogInformation("[{RequestId}] ℹ️ Transaction already processed: {Id}. Returning success (idempotent).", requestId, transaction.Id);
                 return Ok(new { 
-                    message = "Transaction already processed",
+                    message = "Giao dịch đã được xử lý trước đó",
                     transactionId = transaction.Id,
                     subscriptionId = subscription.Id,
                     status = TransactionStatus.SUCCESS.ToString(),
@@ -245,20 +245,20 @@ public class SepayWebhookController : ControllerBase
             if (transaction.Status == TransactionStatus.EXPIRED.ToString())
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Transaction expired: {Id}", requestId, transaction.Id);
-                return BadRequest(new { message = "Transaction has expired" });
+                return BadRequest(new { message = "Giao dịch đã hết hạn" });
             }
 
             if (transaction.Status == TransactionStatus.CANCELLED.ToString())
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Transaction cancelled: {Id}", requestId, transaction.Id);
-                return BadRequest(new { message = "Transaction has been cancelled" });
+                return BadRequest(new { message = "Giao dịch đã bị hủy" });
             }
 
             if (transaction.Status != TransactionStatus.PENDING.ToString())
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Unexpected transaction status: {Status} for transaction {Id}", 
                     requestId, transaction.Status, transaction.Id);
-                return BadRequest(new { message = $"Transaction status is {transaction.Status}" });
+                return BadRequest(new { message = $"Trạng thái giao dịch hiện tại là {transaction.Status}" });
             }
 
             // 8. Validate amount (CRITICAL SECURITY CHECK)
@@ -273,7 +273,7 @@ public class SepayWebhookController : ControllerBase
                 _unitOfWork.Context.Set<Transaction>().Update(transaction);
                 await _unitOfWork.SaveChangesAsync();
                 
-                return BadRequest(new { message = "Payment amount mismatch" });
+                return BadRequest(new { message = "Số tiền thanh toán không khớp" });
             }
 
             // 9. Validate currency (ensure VND)
@@ -297,7 +297,7 @@ public class SepayWebhookController : ControllerBase
                     _unitOfWork.Context.Set<Transaction>().Update(transaction);
                     await _unitOfWork.SaveChangesAsync();
                     
-                    return BadRequest(new { message = "Transaction expired (created more than 24 hours ago)" });
+                    return BadRequest(new { message = "Giao dịch đã hết hạn (được tạo quá 24 giờ)" });
                 }
             }
 
@@ -315,7 +315,7 @@ public class SepayWebhookController : ControllerBase
                 _unitOfWork.Context.Set<VenueSubscriptionPackage>().Update(subscription);
                 await _unitOfWork.SaveChangesAsync();
                 
-                return Ok(new { message = "Payment failed, transaction status updated" });
+                return Ok(new { message = "Thanh toán thất bại, đã cập nhật trạng thái giao dịch" });
             }
 
             // ========== PROCESS SUCCESSFUL PAYMENT ==========
@@ -332,7 +332,7 @@ public class SepayWebhookController : ControllerBase
                 {
                     _logger.LogInformation("[{RequestId}] ℹ️ Transaction already processed by concurrent request: {Id}", requestId, transaction.Id);
                     await dbTransaction.RollbackAsync();
-                    return Ok(new { message = "Transaction already processed", idempotent = true });
+                    return Ok(new { message = "Giao dịch đã được xử lý trước đó", idempotent = true });
                 }
                 // 12. Update transaction with webhook data (store audit trail)
                 var externalRefData = new Dictionary<string, object>();
@@ -373,7 +373,7 @@ public class SepayWebhookController : ControllerBase
                 {
                     _logger.LogError("[{RequestId}] ❌ Package is no longer active: {PackageId}", requestId, subscription.PackageId);
                     await dbTransaction.RollbackAsync();
-                    return BadRequest(new { message = "Package is no longer available" });
+                    return BadRequest(new { message = "Gói dịch vụ không còn khả dụng" });
                 }
 
                 subscription.Status = VenueSubscriptionPackageStatus.ACTIVE.ToString();
@@ -416,7 +416,7 @@ public class SepayWebhookController : ControllerBase
                 // TODO: Send notification to venue owner via SignalR/Push notification
 
                 return Ok(new { 
-                    message = "Payment processed successfully",
+                    message = "Xử lý thanh toán thành công",
                     transactionId = transaction.Id,
                     subscriptionId = subscription.Id,
                     venueId = subscription.Venue?.Id,
@@ -435,12 +435,12 @@ public class SepayWebhookController : ControllerBase
         catch (DbUpdateConcurrencyException ex)
         {
             _logger.LogError(ex, "[{RequestId}] ❌ Concurrency conflict - another request may have processed this payment", requestId);
-            return Conflict(new { message = "Payment is being processed by another request" });
+            return Conflict(new { message = "Thanh toán đang được xử lý bởi yêu cầu khác" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{RequestId}] ❌ VSP webhook processing failed", requestId);
-            return StatusCode(500, new { message = "Internal server error", requestId });
+            return StatusCode(500, new { message = "Lỗi máy chủ nội bộ", requestId });
         }
     }
 
@@ -455,7 +455,7 @@ public class SepayWebhookController : ControllerBase
             if (transaction == null)
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Wallet top-up transaction not found: {Id}", requestId, transactionId);
-                return NotFound(new { message = $"Wallet top-up transaction {transactionId} not found" });
+                return NotFound(new { message = $"Không tìm thấy giao dịch nạp ví {transactionId}" });
             }
 
             if (transaction.Status == TransactionStatus.SUCCESS.ToString())
@@ -463,7 +463,7 @@ public class SepayWebhookController : ControllerBase
                 _logger.LogInformation("[{RequestId}] ℹ️ Wallet top-up transaction already processed: {Id}", requestId, transaction.Id);
                 return Ok(new
                 {
-                    message = "Wallet top-up transaction already processed",
+                    message = "Giao dịch nạp ví đã được xử lý trước đó",
                     transactionId = transaction.Id,
                     status = transaction.Status,
                     idempotent = true
@@ -472,17 +472,17 @@ public class SepayWebhookController : ControllerBase
 
             if (transaction.Status == TransactionStatus.EXPIRED.ToString())
             {
-                return BadRequest(new { message = "Transaction has expired" });
+                return BadRequest(new { message = "Giao dịch đã hết hạn" });
             }
 
             if (transaction.Status == TransactionStatus.CANCELLED.ToString())
             {
-                return BadRequest(new { message = "Transaction has been cancelled" });
+                return BadRequest(new { message = "Giao dịch đã bị hủy" });
             }
 
             if (transaction.Status != TransactionStatus.PENDING.ToString())
             {
-                return BadRequest(new { message = $"Transaction status is {transaction.Status}" });
+                return BadRequest(new { message = $"Trạng thái giao dịch hiện tại là {transaction.Status}" });
             }
 
             if (webhook.Amount != (int)transaction.Amount)
@@ -495,7 +495,7 @@ public class SepayWebhookController : ControllerBase
                 _unitOfWork.Context.Set<Transaction>().Update(transaction);
                 await _unitOfWork.SaveChangesAsync();
 
-                return BadRequest(new { message = "Payment amount mismatch" });
+                return BadRequest(new { message = "Số tiền thanh toán không khớp" });
             }
 
             if (transaction.CreatedAt.HasValue)
@@ -508,7 +508,7 @@ public class SepayWebhookController : ControllerBase
                     _unitOfWork.Context.Set<Transaction>().Update(transaction);
                     await _unitOfWork.SaveChangesAsync();
 
-                    return BadRequest(new { message = "Transaction expired (created more than 24 hours ago)" });
+                    return BadRequest(new { message = "Giao dịch đã hết hạn (được tạo quá 24 giờ)" });
                 }
             }
 
@@ -519,7 +519,7 @@ public class SepayWebhookController : ControllerBase
                 _unitOfWork.Context.Set<Transaction>().Update(transaction);
                 await _unitOfWork.SaveChangesAsync();
 
-                return Ok(new { message = "Payment failed, transaction status updated" });
+                return Ok(new { message = "Thanh toán thất bại, đã cập nhật trạng thái giao dịch" });
             }
 
             using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
@@ -530,7 +530,7 @@ public class SepayWebhookController : ControllerBase
                 if (transaction.Status == TransactionStatus.SUCCESS.ToString())
                 {
                     await dbTransaction.RollbackAsync();
-                    return Ok(new { message = "Transaction already processed", idempotent = true });
+                    return Ok(new { message = "Giao dịch đã được xử lý trước đó", idempotent = true });
                 }
 
                 var wallet = await _unitOfWork.Context.Set<Wallet>()
@@ -539,13 +539,13 @@ public class SepayWebhookController : ControllerBase
                 if (wallet == null)
                 {
                     await dbTransaction.RollbackAsync();
-                    return NotFound(new { message = "Wallet not found for this transaction" });
+                    return NotFound(new { message = "Không tìm thấy ví cho giao dịch này" });
                 }
 
                 if (wallet.IsActive != true)
                 {
                     await dbTransaction.RollbackAsync();
-                    return BadRequest(new { message = "Wallet is not active" });
+                    return BadRequest(new { message = "Ví chưa được kích hoạt" });
                 }
 
                 var balanceBefore = wallet.Balance ?? 0;
@@ -592,7 +592,7 @@ public class SepayWebhookController : ControllerBase
 
                 return Ok(new
                 {
-                    message = "Wallet top-up processed successfully",
+                    message = "Xử lý nạp ví thành công",
                     transactionId = transaction.Id,
                     userId = transaction.UserId,
                     walletId = wallet.Id,
@@ -611,12 +611,12 @@ public class SepayWebhookController : ControllerBase
         catch (DbUpdateConcurrencyException ex)
         {
             _logger.LogError(ex, "[{RequestId}] ❌ Concurrency conflict while processing wallet top-up", requestId);
-            return Conflict(new { message = "Payment is being processed by another request" });
+            return Conflict(new { message = "Thanh toán đang được xử lý bởi yêu cầu khác" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{RequestId}] ❌ WTO webhook processing failed", requestId);
-            return StatusCode(500, new { message = "Internal server error", requestId });
+            return StatusCode(500, new { message = "Lỗi máy chủ nội bộ", requestId });
         }
     }
 
@@ -637,7 +637,7 @@ public class SepayWebhookController : ControllerBase
             if (adsOrder == null)
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ AdsOrder not found: {Id}", requestId, adsOrderId);
-                return NotFound(new { message = $"AdsOrder {adsOrderId} not found" });
+                return NotFound(new { message = $"Không tìm thấy đơn quảng cáo {adsOrderId}" });
             }
 
             // Validate order status
@@ -653,7 +653,7 @@ public class SepayWebhookController : ControllerBase
             if (transaction == null)
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Transaction not found for ads order: {Id}", requestId, adsOrderId);
-                return NotFound(new { message = $"Transaction for ads order {adsOrderId} not found" });
+                return NotFound(new { message = $"Không tìm thấy giao dịch cho đơn quảng cáo {adsOrderId}" });
             }
 
             // ========== IDEMPOTENCY & STATE VALIDATION ==========
@@ -663,7 +663,7 @@ public class SepayWebhookController : ControllerBase
             {
                 _logger.LogInformation("[{RequestId}] ℹ️ Transaction already processed: {Id}. Returning success (idempotent).", requestId, transaction.Id);
                 return Ok(new { 
-                    message = "Transaction already processed",
+                    message = "Giao dịch đã được xử lý trước đó",
                     transactionId = transaction.Id,
                     adsOrderId = adsOrder.Id,
                     status = TransactionStatus.SUCCESS.ToString(),
@@ -675,20 +675,20 @@ public class SepayWebhookController : ControllerBase
             if (transaction.Status == TransactionStatus.EXPIRED.ToString())
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Transaction expired: {Id}", requestId, transaction.Id);
-                return BadRequest(new { message = "Transaction has expired" });
+                return BadRequest(new { message = "Giao dịch đã hết hạn" });
             }
 
             if (transaction.Status == TransactionStatus.CANCELLED.ToString())
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Transaction cancelled: {Id}", requestId, transaction.Id);
-                return BadRequest(new { message = "Transaction has been cancelled" });
+                return BadRequest(new { message = "Giao dịch đã bị hủy" });
             }
 
             if (transaction.Status != TransactionStatus.PENDING.ToString())
             {
                 _logger.LogWarning("[{RequestId}] ⚠️ Unexpected transaction status: {Status} for transaction {Id}", 
                     requestId, transaction.Status, transaction.Id);
-                return BadRequest(new { message = $"Transaction status is {transaction.Status}" });
+                return BadRequest(new { message = $"Trạng thái giao dịch hiện tại là {transaction.Status}" });
             }
 
             // 8. Validate amount (CRITICAL SECURITY CHECK)
@@ -702,7 +702,7 @@ public class SepayWebhookController : ControllerBase
                 _unitOfWork.Context.Set<Transaction>().Update(transaction);
                 await _unitOfWork.SaveChangesAsync();
                 
-                return BadRequest(new { message = "Payment amount mismatch" });
+                return BadRequest(new { message = "Số tiền thanh toán không khớp" });
             }
 
             // 9. Validate transaction not too old
@@ -719,7 +719,7 @@ public class SepayWebhookController : ControllerBase
                     _unitOfWork.Context.Set<Transaction>().Update(transaction);
                     await _unitOfWork.SaveChangesAsync();
                     
-                    return BadRequest(new { message = "Transaction expired (created more than 24 hours ago)" });
+                    return BadRequest(new { message = "Giao dịch đã hết hạn (được tạo quá 24 giờ)" });
                 }
             }
 
@@ -737,7 +737,7 @@ public class SepayWebhookController : ControllerBase
                 _unitOfWork.Context.Set<AdsOrder>().Update(adsOrder);
                 await _unitOfWork.SaveChangesAsync();
                 
-                return Ok(new { message = "Payment failed, transaction status updated" });
+                return Ok(new { message = "Thanh toán thất bại, đã cập nhật trạng thái giao dịch" });
             }
 
             // ========== PROCESS SUCCESSFUL PAYMENT ==========
@@ -754,7 +754,7 @@ public class SepayWebhookController : ControllerBase
                 {
                     _logger.LogInformation("[{RequestId}] ℹ️ Transaction already processed by concurrent request: {Id}", requestId, transaction.Id);
                     await dbTransaction.RollbackAsync();
-                    return Ok(new { message = "Transaction already processed", idempotent = true });
+                    return Ok(new { message = "Giao dịch đã được xử lý trước đó", idempotent = true });
                 }
 
                 // 12. Update transaction with webhook data
@@ -852,7 +852,7 @@ public class SepayWebhookController : ControllerBase
                     requestId, transaction.Id, adsOrder.Id, adsOrder.Advertisement?.Status ?? "N/A");
 
                 return Ok(new { 
-                    message = "Advertisement payment processed successfully",
+                    message = "Xử lý thanh toán quảng cáo thành công",
                     transactionId = transaction.Id,
                     adsOrderId = adsOrder.Id,
                     advertisementId = adsOrder.Advertisement?.Id,
@@ -870,12 +870,12 @@ public class SepayWebhookController : ControllerBase
         catch (DbUpdateConcurrencyException ex)
         {
             _logger.LogError(ex, "[{RequestId}] ❌ Concurrency conflict - another request may have processed this payment", requestId);
-            return Conflict(new { message = "Payment is being processed by another request" });
+            return Conflict(new { message = "Thanh toán đang được xử lý bởi yêu cầu khác" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{RequestId}] ❌ ADO webhook processing failed", requestId);
-            return StatusCode(500, new { message = "Internal server error", requestId });
+            return StatusCode(500, new { message = "Lỗi máy chủ nội bộ", requestId });
         }
     }
 }

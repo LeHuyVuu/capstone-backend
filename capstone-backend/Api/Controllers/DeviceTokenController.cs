@@ -29,7 +29,7 @@ namespace capstone_backend.Api.Controllers
                 var userId = GetCurrentUserId();
                 var result = await _deviceTokenService.RegisterDeviceTokenAsync(userId.Value, request);
 
-                return OkResponse(result, "Registered device successfully");
+                return OkResponse(result, "Đăng ký thiết bị thành công");
             }
             catch (Exception ex)
             {
@@ -47,7 +47,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 var result = await _deviceTokenService.DeleteDeviceTokenAsync(userId.Value, request.Token);
-                return OkResponse(result, "Unregistered device successfully");
+                return OkResponse(result, "Hủy đăng ký thiết bị thành công");
             }
             catch (Exception ex)
             {

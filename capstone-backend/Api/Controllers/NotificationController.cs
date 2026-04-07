@@ -53,7 +53,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 var result = await _notificationService.MarkReadAsync(notificationId, userId.Value);
-                return OkResponse(result, "Marked notification as read successfully");
+                return OkResponse(result, "Đánh dấu thông báo đã đọc thành công");
             }
             catch (Exception ex)
             {
@@ -71,7 +71,7 @@ namespace capstone_backend.Api.Controllers
             {
                 var userId = GetCurrentUserId();
                 var result = await _notificationService.MarkReadAllAsync(userId.Value);
-                return OkResponse(result, "Marked all notifications as read successfully");
+                return OkResponse(result, "Đánh dấu tất cả thông báo đã đọc thành công");
             }
             catch (Exception ex)
             {

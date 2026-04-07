@@ -59,7 +59,7 @@ namespace capstone_backend.Api.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[VNPAY IPN] Lỗi exception bung bét khi nhận Webhook");
-                return Ok(new { RspCode = "99", Message = "Unknown error" });
+                return Ok(new { RspCode = "99", Message = "Lỗi không xác định" });
             }
         }
     }

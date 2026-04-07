@@ -43,7 +43,7 @@ public class VenueLocationSearchSyncController : BaseController
 
         var count = await _meilisearchService.IndexAllVenueLocationsAsync();
 
-        return OkResponse(count, $"Successfully synced {count} venues to Meilisearch");
+        return OkResponse(count, $"Đồng bộ thành công {count} địa điểm lên Meilisearch");
     }
 
     /// <summary>
@@ -55,6 +55,6 @@ public class VenueLocationSearchSyncController : BaseController
     public async Task<IActionResult> VerifyMeilisearchSettings()
     {
         var result = await _meilisearchService.VerifyIndexSettingsAsync();
-        return OkResponse(result, "Settings verified");
+        return OkResponse(result, "Xác minh cấu hình thành công");
     }
 }

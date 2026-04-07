@@ -71,7 +71,7 @@ public class RequireActiveSubscriptionAttribute : ActionFilterAttribute
             if (validationService == null)
             {
                 context.Result = new ObjectResult(ApiResponse<object>.Error(
-                    "Subscription validation service not available",
+                    "Dịch vụ kiểm tra gói đăng ký hiện không khả dụng",
                     500,
                     context.HttpContext.TraceIdentifier))
                 {
@@ -87,7 +87,7 @@ public class RequireActiveSubscriptionAttribute : ActionFilterAttribute
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
                 context.Result = new ObjectResult(ApiResponse<object>.Error(
-                    "User not authenticated",
+                    "Người dùng chưa được xác thực",
                     401,
                     context.HttpContext.TraceIdentifier))
                 {
@@ -107,7 +107,7 @@ public class RequireActiveSubscriptionAttribute : ActionFilterAttribute
                 if (string.IsNullOrEmpty(roleClaim))
                 {
                     context.Result = new ObjectResult(ApiResponse<object>.Error(
-                        "User role not found",
+                        "Không tìm thấy vai trò người dùng",
                         403,
                         context.HttpContext.TraceIdentifier))
                     {
@@ -149,7 +149,7 @@ public class RequireActiveSubscriptionAttribute : ActionFilterAttribute
             logger?.LogError(ex, "Error in RequireActiveSubscriptionAttribute for user");
 
             context.Result = new ObjectResult(ApiResponse<object>.Error(
-                "An error occurred while validating subscription",
+                "Đã xảy ra lỗi khi kiểm tra gói đăng ký",
                 500,
                 context.HttpContext.TraceIdentifier))
             {

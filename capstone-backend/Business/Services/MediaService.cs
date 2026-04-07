@@ -51,7 +51,7 @@ namespace capstone_backend.Business.Services
                     await _s3Service.DeleteFileByKeyAsync(url);
                 }
 
-                throw new Exception("Error uploading media to S3.", ex);
+                throw new Exception("Lỗi khi tải media lên S3.", ex);
             }
             catch (Exception ex)
             {

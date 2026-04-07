@@ -11,7 +11,7 @@ namespace capstone_backend.Business.Validators
             RuleFor(x => x.Status)
             .Must(BeAValidStatus)
             .When(x => x.Status.HasValue)
-            .WithMessage("Status chỉ nhận: ACQUIRED, USED, EXPIRED.");
+            .WithMessage("Trạng thái chỉ chấp nhận: ACQUIRED, USED, EXPIRED.");
         }
 
         private bool BeAValidStatus(VoucherItemStatus? status)

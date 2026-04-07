@@ -63,14 +63,14 @@ public class MessagingService : IMessagingService
         {
             var user = await _unitOfWork.Users.GetByIdAsync(memberId);
             if (user == null)
-                throw new BadRequestException($"User with ID {memberId} not found", "USER_NOT_FOUND");
+                throw new BadRequestException($"Không tìm thấy người dùng có ID {memberId}", "USER_NOT_FOUND");
         }
 
         // For direct conversation, must have exactly 2 members
         if (request.Type == "DIRECT")
         {
             if (memberIds.Count != 2)
-                throw new Exception("Direct conversation must have exactly 2 members");
+                throw new Exception("Đoạn chat trực tiếp phải có đúng 2 thành viên");
 
             // Check if conversation already exists
             var otherUserId = memberIds.First(id => id != currentUserId);
@@ -81,7 +81,7 @@ public class MessagingService : IMessagingService
         else if (request.Type == "GROUP")
         {
             if (memberIds.Count < 2)
-                throw new Exception("Group conversation must have at least 2 members");
+                throw new Exception("Đoạn chat nhóm phải có ít nhất 2 thành viên");
 
             if (string.IsNullOrWhiteSpace(request.Name))
                 throw new Exception("Tên nhóm là bắt buộc");
@@ -150,7 +150,7 @@ public class MessagingService : IMessagingService
         // Validate other user exists
         var otherUser = await _unitOfWork.Users.GetByIdAsync(otherUserId);
         if (otherUser == null)
-            throw new BadRequestException($"User with ID {otherUserId} not found", "USER_NOT_FOUND");
+            throw new BadRequestException($"Không tìm thấy người dùng có ID {otherUserId}", "USER_NOT_FOUND");
 
         // Check if conversation exists
         var existing = await _conversationRepository.GetDirectConversationAsync(currentUserId, otherUserId, cancellationToken);
@@ -263,7 +263,7 @@ public class MessagingService : IMessagingService
         if ((request.MessageType == "IMAGE" || request.MessageType == "FILE" || 
              request.MessageType == "VIDEO" || request.MessageType == "AUDIO") && 
             string.IsNullOrWhiteSpace(request.FileUrl))
-            throw new BadRequestException($"File URL is required for {request.MessageType} messages. Please upload the file first using /api/upload endpoint.", "FILE_URL_REQUIRED");
+            throw new BadRequestException($"Bắt buộc có URL tệp cho tin nhắn loại {request.MessageType}. Vui lòng tải tệp lên trước qua endpoint /api/upload.", "FILE_URL_REQUIRED");
 
         // Build metadata JSON for file attachments or date plan
         string? metadata = request.Metadata;
