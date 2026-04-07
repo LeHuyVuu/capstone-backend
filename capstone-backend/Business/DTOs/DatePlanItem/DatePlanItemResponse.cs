@@ -15,5 +15,7 @@ namespace capstone_backend.Business.DTOs.DatePlanItem
         public string Status { get; set; } = null!;
         public DateTime? CreatedAt { get; set; }
         public int? Version { get; set; }
+
+        public bool IsVenueActive { get; set; } = true;
     }
 }

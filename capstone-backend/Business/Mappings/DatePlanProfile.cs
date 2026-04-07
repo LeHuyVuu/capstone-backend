@@ -2,6 +2,7 @@
 using capstone_backend.Business.DTOs.DatePlan;
 using capstone_backend.Business.DTOs.DatePlanItem;
 using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 
 namespace capstone_backend.Business.Mappings
@@ -48,7 +49,9 @@ namespace capstone_backend.Business.Mappings
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src =>
                     src.CreatedAt.HasValue
                         ? TimezoneUtil.ToVietNamTime(src.CreatedAt.Value)
-                        : (DateTime?)null));
+                        : (DateTime?)null))
+                .ForMember(dest => dest.IsVenueActive, opt => opt.MapFrom(src => src.VenueLocation.Status == VenueLocationStatus.ACTIVE.ToString
+                ()));
         }
     }
 }
