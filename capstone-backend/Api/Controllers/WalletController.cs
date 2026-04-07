@@ -30,7 +30,7 @@ public class WalletController : BaseController
         var balance = await _walletService.GetWalletBalanceAsync(userId.Value);
 
         if (balance == null)
-            return NotFoundResponse("Wallet not found");
+            return NotFoundResponse("Không tìm thấy ví");
 
         return OkResponse(balance, "Wallet balance retrieved successfully");
     }

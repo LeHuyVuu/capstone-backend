@@ -28,7 +28,7 @@ public static class MeilisearchSyncDataUtil
             return 0;
 
         if (string.IsNullOrWhiteSpace(indexName))
-            throw new ArgumentException("indexName is required", nameof(indexName));
+            throw new ArgumentException("indexName là bắt buộc", nameof(indexName));
 
         var targetHost = string.IsNullOrWhiteSpace(host) ? DefaultHost : host.Trim();
         var targetApiKey = apiKey ?? Environment.GetEnvironmentVariable("MEILI_MASTER_KEY") ?? string.Empty;

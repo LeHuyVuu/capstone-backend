@@ -46,7 +46,7 @@ public class AdvertisementController : BaseController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving rotating advertisements");
-            return BadRequestResponse("Failed to retrieve advertisements");
+            return BadRequestResponse("Không thể lấy danh sách quảng cáo");
         }
     }
 
@@ -72,7 +72,7 @@ public class AdvertisementController : BaseController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving advertisement packages");
-            return BadRequestResponse("Failed to retrieve advertisement packages");
+            return BadRequestResponse("Không thể lấy danh sách gói quảng cáo");
         }
     }
 
@@ -90,13 +90,13 @@ public class AdvertisementController : BaseController
         var currentUserId = GetCurrentUserId();
         if (!currentUserId.HasValue)
         {
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         }
 
         try
         {
             var advertisement = await _advertisementService.CreateAdvertisementAsync(request, currentUserId.Value);
-            return CreatedResponse(advertisement, "Advertisement created successfully in DRAFT status");
+            return CreatedResponse(advertisement, "Tạo quảng cáo ở trạng thái DRAFT thành công");
         }
         catch (InvalidOperationException ex)
         {
@@ -104,7 +104,7 @@ public class AdvertisementController : BaseController
         }
         catch (Exception)
         {
-            return BadRequestResponse("Failed to create advertisement");
+            return BadRequestResponse("Không thể tạo quảng cáo");
         }
     }
 
@@ -121,13 +121,13 @@ public class AdvertisementController : BaseController
         var currentUserId = GetCurrentUserId();
         if (!currentUserId.HasValue)
         {
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         }
 
         try
         {
             var advertisement = await _advertisementService.UpdateAdvertisementAndRevertToDraftAsync(id, currentUserId.Value, request);
-            return OkResponse(advertisement, "Advertisement updated successfully and reverted to DRAFT status. You can now resubmit with payment.");
+            return OkResponse(advertisement, "Cập nhật quảng cáo thành công và đã chuyển về trạng thái DRAFT. Bạn có thể gửi lại kèm thanh toán.");
         }
         catch (InvalidOperationException ex)
         {
@@ -135,7 +135,7 @@ public class AdvertisementController : BaseController
         }
         catch (Exception)
         {
-            return BadRequestResponse("Failed to update advertisement");
+            return BadRequestResponse("Không thể cập nhật quảng cáo");
         }
     }
 
@@ -150,7 +150,7 @@ public class AdvertisementController : BaseController
         var currentUserId = GetCurrentUserId();
         if (!currentUserId.HasValue)
         {
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         }
 
         _logger.LogInformation("VenueOwner {UserId} requesting their advertisements", currentUserId.Value);
@@ -158,12 +158,12 @@ public class AdvertisementController : BaseController
         try
         {
             var advertisements = await _advertisementService.GetMyAdvertisementsAsync(currentUserId.Value);
-            return OkResponse(advertisements, $"Retrieved {advertisements.Count} advertisements");
+            return OkResponse(advertisements, $"Đã lấy {advertisements.Count} quảng cáo");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving advertisements for user {UserId}", currentUserId);
-            return BadRequestResponse("Failed to retrieve advertisements");
+            return BadRequestResponse("Không thể lấy danh sách quảng cáo");
         }
     }
 
@@ -180,7 +180,7 @@ public class AdvertisementController : BaseController
         var currentUserId = GetCurrentUserId();
         if (!currentUserId.HasValue)
         {
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         }
 
         _logger.LogInformation("VenueOwner {UserId} requesting their ads orders (Status: {Status})", 
@@ -189,12 +189,12 @@ public class AdvertisementController : BaseController
         try
         {
             var adsOrders = await _advertisementService.GetMyAdsOrdersAsync(currentUserId.Value, status);
-            return OkResponse(adsOrders, $"Retrieved {adsOrders.Count} ads orders");
+            return OkResponse(adsOrders, $"Đã lấy {adsOrders.Count} đơn quảng cáo");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving ads orders for user {UserId}", currentUserId);
-            return BadRequestResponse("Failed to retrieve ads orders");
+            return BadRequestResponse("Không thể lấy danh sách đơn quảng cáo");
         }
     }
 
@@ -212,7 +212,7 @@ public class AdvertisementController : BaseController
         var currentUserId = GetCurrentUserId();
         if (!currentUserId.HasValue)
         {
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         }
 
         _logger.LogInformation("VenueOwner {UserId} requesting advertisement detail for ID: {AdId}", currentUserId, id);
@@ -223,15 +223,15 @@ public class AdvertisementController : BaseController
 
             if (advertisement == null)
             {
-                return NotFoundResponse($"Advertisement with ID {id} not found or you don't have permission to view it");
+                return NotFoundResponse($"Không tìm thấy quảng cáo có ID {id} hoặc bạn không có quyền xem");
             }
 
-            return OkResponse(advertisement, "Advertisement retrieved successfully");
+            return OkResponse(advertisement, "Lấy thông tin quảng cáo thành công");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving advertisement {AdId} for user {UserId}", id, currentUserId);
-            return BadRequestResponse("Failed to retrieve advertisement");
+            return BadRequestResponse("Không thể lấy thông tin quảng cáo");
         }
     }
 
@@ -250,7 +250,7 @@ public class AdvertisementController : BaseController
         var currentUserId = GetCurrentUserId();
         if (!currentUserId.HasValue)
         {
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         }
 
         _logger.LogInformation("VenueOwner {UserId} submitting advertisement {AdId} with payment", currentUserId, id);
@@ -265,7 +265,7 @@ public class AdvertisementController : BaseController
                 return OkResponse(result, result.Message);
             }
 
-            return OkResponse(result, "Payment QR code generated. Please scan to complete payment.");
+            return OkResponse(result, "Đã tạo mã QR thanh toán. Vui lòng quét để hoàn tất thanh toán.");
         }
         catch (InvalidOperationException ex)
         {
@@ -275,7 +275,7 @@ public class AdvertisementController : BaseController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error submitting advertisement {AdId} with payment for user {UserId}", id, currentUserId);
-            return BadRequestResponse("Failed to submit advertisement with payment");
+            return BadRequestResponse("Không thể gửi quảng cáo kèm thanh toán");
         }
     }
 
@@ -289,11 +289,11 @@ public class AdvertisementController : BaseController
         try
         {
             var advertisements = await _advertisementService.GetPendingAdvertisementsAsync();
-            return OkResponse(advertisements, $"Retrieved {advertisements.Count} pending advertisements");
+            return OkResponse(advertisements, $"Đã lấy {advertisements.Count} quảng cáo đang chờ duyệt");
         }
         catch (Exception)
         {
-            return BadRequestResponse("Failed to retrieve pending advertisements");
+            return BadRequestResponse("Không thể lấy danh sách quảng cáo đang chờ duyệt");
         }
     }
 
@@ -310,7 +310,7 @@ public class AdvertisementController : BaseController
 
         if (!ModelState.IsValid)
         {
-            return BadRequestResponse("Invalid request data");
+            return BadRequestResponse("Dữ liệu yêu cầu không hợp lệ");
         }
 
         var result = await _advertisementService.ApproveAdvertisementAsync(request);
@@ -338,7 +338,7 @@ public class AdvertisementController : BaseController
 
         if (!ModelState.IsValid)
         {
-            return BadRequestResponse("Invalid request data");
+            return BadRequestResponse("Dữ liệu yêu cầu không hợp lệ");
         }
 
         var result = await _advertisementService.RejectAdvertisementAsync(request);
@@ -364,16 +364,16 @@ public class AdvertisementController : BaseController
         var currentUserId = GetCurrentUserId();
         if (!currentUserId.HasValue)
         {
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         }
 
         var result = await _advertisementService.SoftDeleteAdvertisementAsync(id, currentUserId.Value);
         if (!result)
         {
-            return NotFoundResponse($"Advertisement with ID {id} not found or you don't have permission to delete it");
+            return NotFoundResponse($"Không tìm thấy quảng cáo có ID {id} hoặc bạn không có quyền xóa");
         }
 
-        return OkResponse(true, "Advertisement soft deleted successfully");
+        return OkResponse(true, "Xóa mềm quảng cáo thành công");
     }
 
     [HttpPost("{id}/restore")]
@@ -388,7 +388,7 @@ public class AdvertisementController : BaseController
         var currentUserId = GetCurrentUserId();
         if (!currentUserId.HasValue)
         {
-            return UnauthorizedResponse("User not authenticated");
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
         }
 
         var result = await _advertisementService.RestoreAdvertisementAsync(id, currentUserId.Value);
@@ -416,10 +416,10 @@ public class AdvertisementController : BaseController
         var result = await _advertisementService.HardDeleteAdvertisementAsync(id);
         if (!result)
         {
-            return NotFoundResponse($"Advertisement with ID {id} not found");
+            return NotFoundResponse($"Không tìm thấy quảng cáo có ID {id}");
         }
 
-        return OkResponse(true, "Advertisement hard deleted successfully");
+        return OkResponse(true, "Xóa vĩnh viễn quảng cáo thành công");
     }
 
     #region Public Detail Endpoints
@@ -438,7 +438,7 @@ public class AdvertisementController : BaseController
 
         if (string.IsNullOrWhiteSpace(type))
         {
-            return BadRequestResponse("Type parameter is required (ADVERTISEMENT or SPECIAL_EVENT)");
+            return BadRequestResponse("Tham số loại là bắt buộc (ADVERTISEMENT hoặc SPECIAL_EVENT)");
         }
 
         var typeUpper = type.Trim().ToUpper();
@@ -448,16 +448,16 @@ public class AdvertisementController : BaseController
             if (typeUpper == "ADVERTISEMENT")
             {
                 var detail = await _advertisementService.GetPublicAdvertisementDetailAsync(id);
-                return OkResponse(detail, "Advertisement detail retrieved successfully");
+                return OkResponse(detail, "Lấy chi tiết quảng cáo thành công");
             }
             else if (typeUpper == "SPECIAL_EVENT")
             {
                 var detail = await _advertisementService.GetSpecialEventDetailAsync(id);
-                return OkResponse(detail, "Special event detail retrieved successfully");
+                return OkResponse(detail, "Lấy chi tiết sự kiện đặc biệt thành công");
             }
             else
             {
-                return BadRequestResponse($"Invalid type '{type}'. Must be ADVERTISEMENT or SPECIAL_EVENT");
+                return BadRequestResponse($"Loại '{type}' không hợp lệ. Chỉ chấp nhận ADVERTISEMENT hoặc SPECIAL_EVENT");
             }
         }
         catch (KeyNotFoundException ex)
@@ -468,7 +468,7 @@ public class AdvertisementController : BaseController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving {Type} detail for ID {Id}", typeUpper, id);
-            return BadRequestResponse($"Failed to retrieve {typeUpper.ToLower()} detail");
+            return BadRequestResponse($"Không thể lấy chi tiết {typeUpper.ToLower()}");
         }
     }
 

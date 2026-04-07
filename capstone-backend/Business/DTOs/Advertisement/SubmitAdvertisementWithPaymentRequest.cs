@@ -4,12 +4,12 @@ namespace capstone_backend.Business.DTOs.Advertisement;
 
 public class SubmitAdvertisementWithPaymentRequest
 {
-    [Required(ErrorMessage = "PackageId is required")]
-    [Range(1, int.MaxValue, ErrorMessage = "PackageId must be greater than 0")]
+    [Required(ErrorMessage = "PackageId là bắt buộc")]
+    [Range(1, int.MaxValue, ErrorMessage = "PackageId phải lớn hơn 0")]
     public int PackageId { get; set; }
 
-    [Required(ErrorMessage = "VenueIds is required")]
-    [MinLength(1, ErrorMessage = "At least one VenueId is required")]
+    [Required(ErrorMessage = "VenueIds là bắt buộc")]
+    [MinLength(1, ErrorMessage = "Cần ít nhất một VenueId")]
     public List<int> VenueIds { get; set; } = new List<int>();
 
     /// <summary>

@@ -28,14 +28,14 @@ public class CollectionController : BaseController
         
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
         {
-            throw new UnauthorizedAccessException("User ID not found in token");
+            throw new UnauthorizedAccessException("Không tìm thấy ID người dùng trong token");
         }
 
         // Query MemberId from database using UserId
         var memberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
         if (memberProfile == null)
         {
-            throw new UnauthorizedAccessException("Member profile not found for this user");
+            throw new UnauthorizedAccessException("Không tìm thấy hồ sơ thành viên của người dùng này");
         }
 
         return memberProfile.Id;
@@ -49,7 +49,7 @@ public class CollectionController : BaseController
     {
         var memberId = await GetCurrentMemberIdAsync();
         var collection = await _collectionService.CreateCollectionAsync(memberId, request);
-        return CreatedResponse(collection, "Collection created successfully");
+        return CreatedResponse(collection, "Tạo bộ sưu tập thành công");
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public class CollectionController : BaseController
     {
         var collection = await _collectionService.GetCollectionByIdAsync(id);
         if (collection == null)
-            return NotFoundResponse("Collection not found");
+            return NotFoundResponse("Không tìm thấy bộ sưu tập");
 
         return OkResponse(collection);
     }
@@ -107,9 +107,9 @@ public class CollectionController : BaseController
         var memberId = await GetCurrentMemberIdAsync();
         var collection = await _collectionService.UpdateCollectionAsync(id, memberId, request);
         if (collection == null)
-            return NotFoundResponse("Collection not found or you don't have permission to update it");
+            return NotFoundResponse("Không tìm thấy bộ sưu tập hoặc bạn không có quyền cập nhật");
 
-        return OkResponse(collection, "Collection updated successfully");
+        return OkResponse(collection, "Cập nhật bộ sưu tập thành công");
     }
 
     /// <summary>
@@ -121,9 +121,9 @@ public class CollectionController : BaseController
         var memberId = await GetCurrentMemberIdAsync();
         var collection = await _collectionService.UpdateCollectionStatusAsync(id, memberId, request);
         if (collection == null)
-            return NotFoundResponse("Collection not found or you don't have permission to update it");
+            return NotFoundResponse("Không tìm thấy bộ sưu tập hoặc bạn không có quyền cập nhật");
 
-        return OkResponse(collection, "Collection status updated successfully");
+        return OkResponse(collection, "Cập nhật trạng thái bộ sưu tập thành công");
     }
 
     /// <summary>
@@ -135,9 +135,9 @@ public class CollectionController : BaseController
         var memberId = await GetCurrentMemberIdAsync();
         var result = await _collectionService.DeleteCollectionAsync(id, memberId);
         if (!result)
-            return NotFoundResponse("Collection not found or you don't have permission to delete it");
+            return NotFoundResponse("Không tìm thấy bộ sưu tập hoặc bạn không có quyền xóa");
 
-        return OkResponse<object?>(null, "Collection deleted successfully");
+        return OkResponse<object?>(null, "Xóa bộ sưu tập thành công");
     }
 
     /// <summary>
@@ -149,9 +149,9 @@ public class CollectionController : BaseController
         var memberId = await GetCurrentMemberIdAsync();
         var collection = await _collectionService.AddVenueToCollectionAsync(id, memberId, venueId);
         if (collection == null)
-            return NotFoundResponse("Collection or venue not found, or you don't have permission to modify it");
+            return NotFoundResponse("Không tìm thấy bộ sưu tập hoặc địa điểm, hoặc bạn không có quyền chỉnh sửa");
 
-        return OkResponse(collection, "Venue added to collection successfully");
+        return OkResponse(collection, "Thêm địa điểm vào bộ sưu tập thành công");
     }
 
     /// <summary>
@@ -163,9 +163,9 @@ public class CollectionController : BaseController
         var memberId = await GetCurrentMemberIdAsync();
         var collection = await _collectionService.AddVenuesToCollectionAsync(id, memberId, request);
         if (collection == null)
-            return NotFoundResponse("Collection not found or you don't have permission to modify it");
+            return NotFoundResponse("Không tìm thấy bộ sưu tập hoặc bạn không có quyền chỉnh sửa");
 
-        return OkResponse(collection, "Venues added to collection successfully");
+        return OkResponse(collection, "Thêm nhiều địa điểm vào bộ sưu tập thành công");
     }
 
     /// <summary>
@@ -177,9 +177,9 @@ public class CollectionController : BaseController
         var memberId = await GetCurrentMemberIdAsync();
         var collection = await _collectionService.RemoveVenuesFromCollectionAsync(id, memberId, request);
         if (collection == null)
-            return NotFoundResponse("Collection not found or you don't have permission to modify it");
+            return NotFoundResponse("Không tìm thấy bộ sưu tập hoặc bạn không có quyền chỉnh sửa");
 
-        return OkResponse(collection, "Venues removed from collection successfully");
+        return OkResponse(collection, "Xóa địa điểm khỏi bộ sưu tập thành công");
     }
 
     /// <summary>

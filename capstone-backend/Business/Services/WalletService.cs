@@ -52,10 +52,10 @@ public class WalletService
         var wallet = await _unitOfWork.Wallets.GetByUserIdAsync(userId);
 
         if (wallet == null)
-            throw new InvalidOperationException("Wallet not found");
+            throw new InvalidOperationException("Không tìm thấy ví");
 
         if (wallet.IsActive != true)
-            throw new InvalidOperationException("Wallet is not active");
+            throw new InvalidOperationException("Ví chưa được kích hoạt");
 
         if (request.Amount <= 0)
             throw new InvalidOperationException("Amount must be greater than 0");
@@ -130,10 +130,10 @@ public class WalletService
 
         var wallet = await _unitOfWork.Wallets.GetByUserIdAsync(userId);
         if (wallet == null)
-            throw new InvalidOperationException("Wallet not found");
+            throw new InvalidOperationException("Không tìm thấy ví");
 
         if (wallet.IsActive != true)
-            throw new InvalidOperationException("Wallet is not active");
+            throw new InvalidOperationException("Ví chưa được kích hoạt");
 
         using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
@@ -172,7 +172,7 @@ public class WalletService
             if (sepayResponse.Data == null || string.IsNullOrEmpty(sepayResponse.Data.QrCode))
             {
                 await dbTransaction.RollbackAsync();
-                throw new InvalidOperationException("Failed to generate QR code. Please try again.");
+                throw new InvalidOperationException("Tạo mã QR thất bại. Vui lòng thử lại.");
             }
 
             var expireAt = DateTime.UtcNow.AddMinutes(5);

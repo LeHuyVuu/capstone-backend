@@ -93,7 +93,7 @@ public class CoupleProfileRepository : GenericRepository<CoupleProfile>, ICouple
             })
             .FirstOrDefaultAsync();
 
-        if (couple == null) throw new Exception("Couple not found");
+        if (couple == null) throw new Exception("Không tìm thấy cặp đôi");
 
         if (couple.Member1UserId == 0 || couple.Member2UserId == 0)
             throw new Exception("Couple members not valid");

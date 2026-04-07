@@ -2703,7 +2703,7 @@ public class VenueLocationService : IVenueLocationService
         var status = newStatus?.ToUpper();
         if (status != VenueLocationStatus.ACTIVE.ToString() && status != VenueLocationStatus.INACTIVE.ToString())
         {
-            throw new ArgumentException("Invalid status. Only 'ACTIVE' or 'INACTIVE' are allowed.");
+            throw new ArgumentException("Trạng thái không hợp lệ. Chỉ chấp nhận 'ACTIVE' hoặc 'INACTIVE'.");
         }
 
         var venue = await _unitOfWork.VenueLocations.GetByIdWithDetailsAsync(venueId);
@@ -2735,7 +2735,7 @@ public class VenueLocationService : IVenueLocationService
 
         if (status == VenueLocationStatus.INACTIVE.ToString() && string.IsNullOrWhiteSpace(reason))
         {
-            throw new ArgumentException("Reason is required when setting venue to INACTIVE");
+            throw new ArgumentException("Lý do là bắt buộc khi chuyển địa điểm sang INACTIVE");
         }
 
         var previousStatus = venue.Status;

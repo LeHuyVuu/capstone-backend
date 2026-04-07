@@ -10,7 +10,7 @@ public class InviteMemberRequest
     /// <summary>
     /// Invite code of the member to invite
     /// </summary>
-    [Required(ErrorMessage = "Invite code is required")]
-    [StringLength(10, ErrorMessage = "Invite code must not exceed 10 characters")]
+    [Required(ErrorMessage = "Mã mời là bắt buộc")]
+    [StringLength(10, ErrorMessage = "Mã mời không được vượt quá 10 ký tự")]
     public string InviteCode { get; set; } = string.Empty;
 }

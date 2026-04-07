@@ -33,14 +33,14 @@ public class MemberController : BaseController
             var currentUserId = GetCurrentUserId();
             if (!currentUserId.HasValue)
             {
-                return UnauthorizedResponse("User ID not found");
+                return UnauthorizedResponse("Không tìm thấy ID người dùng");
             }
 
             var coupleProfile = await _memberService.InviteMemberAsync(
                 currentUserId.Value,
                 request.InviteCode);
 
-            return OkResponse(coupleProfile, "Couple profile created successfully");
+            return OkResponse(coupleProfile, "Tạo hồ sơ cặp đôi thành công");
         }
         catch (InvalidOperationException ex)
         {
@@ -60,11 +60,11 @@ public class MemberController : BaseController
             var currentUserId = GetCurrentUserId();
             if (!currentUserId.HasValue)
             {
-                return UnauthorizedResponse("User ID not found");
+                return UnauthorizedResponse("Không tìm thấy ID người dùng");
             }
 
             var inviteInfo = await _memberService.GetInviteInfoAsync(currentUserId.Value);
-            return OkResponse(inviteInfo, "Invite info retrieved successfully");
+            return OkResponse(inviteInfo, "Lấy thông tin mã mời thành công");
         }
         catch (InvalidOperationException ex)
         {
@@ -80,11 +80,11 @@ public class MemberController : BaseController
             var currentUserId = GetCurrentUserId();
             if (!currentUserId.HasValue)
             {
-                return UnauthorizedResponse("User ID not found");
+                return UnauthorizedResponse("Không tìm thấy ID người dùng");
             }
 
             var updatedProfile = await _memberService.UpdateMemberProfileAsync(currentUserId.Value, request);
-            return OkResponse(updatedProfile, "Profile updated successfully");
+            return OkResponse(updatedProfile, "Cập nhật hồ sơ thành công");
         }
         catch (InvalidOperationException ex)
         {

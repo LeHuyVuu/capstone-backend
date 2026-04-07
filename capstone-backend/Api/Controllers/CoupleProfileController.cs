@@ -34,14 +34,14 @@ public class CoupleProfileController : BaseController
         
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
         {
-            throw new UnauthorizedAccessException("User ID not found in token");
+            throw new UnauthorizedAccessException("Không tìm thấy ID người dùng trong token");
         }
 
         // Query MemberId from database using UserId
         var memberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
         if (memberProfile == null)
         {
-            throw new UnauthorizedAccessException("Member profile not found for this user");
+            throw new UnauthorizedAccessException("Không tìm thấy hồ sơ thành viên của người dùng này");
         }
 
         return memberProfile.Id;

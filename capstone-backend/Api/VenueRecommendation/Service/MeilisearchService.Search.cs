@@ -578,7 +578,7 @@ public partial class MeilisearchService
             if (searchResult == null)
             {
                 _logger.LogError("[HYBRID SEARCH] Deserialization returned null");
-                throw new InvalidOperationException("Failed to deserialize Meilisearch hybrid search response");
+                throw new InvalidOperationException("Không thể phân tích phản hồi tìm kiếm kết hợp từ Meilisearch");
             }
             
             var totalDuration = (DateTime.UtcNow - startTime).TotalMilliseconds;

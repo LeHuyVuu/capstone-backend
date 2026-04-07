@@ -25,7 +25,7 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
         var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(userId);
         if (venueOwner == null)
         {
-            throw new UnauthorizedAccessException("Venue owner profile not found");
+            throw new UnauthorizedAccessException("Không tìm thấy hồ sơ chủ địa điểm");
         }
 
         // Get all venues của owner
@@ -227,13 +227,13 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
         var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(userId);
         if (venueOwner == null)
         {
-            throw new UnauthorizedAccessException("Venue owner profile not found");
+            throw new UnauthorizedAccessException("Không tìm thấy hồ sơ chủ địa điểm");
         }
 
         var venue = await _unitOfWork.VenueLocations.GetByIdAsync(venueId);
         if (venue == null || venue.VenueOwnerId != venueOwner.Id)
         {
-            throw new UnauthorizedAccessException("You don't have permission to view this venue");
+            throw new UnauthorizedAccessException("Bạn không có quyền xem địa điểm này");
         }
 
         var startDate = DateTime.UtcNow.AddDays(-days);

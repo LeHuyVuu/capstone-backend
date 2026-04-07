@@ -31,31 +31,31 @@ public abstract class BaseController : ControllerBase
     }
 
     // Responses thành công
-    protected IActionResult OkResponse<T>(T data, string message = "Success")
+    protected IActionResult OkResponse<T>(T data, string message = "Thành công")
         => Ok(ApiResponse<T>.Success(data, message, 200, GetTraceId()));
 
-    protected IActionResult OkResponse(string message = "Success")
+    protected IActionResult OkResponse(string message = "Thành công")
         => Ok(ApiResponse<object>.Success(null, message, 200, GetTraceId()));
 
-    protected IActionResult CreatedResponse<T>(T data, string message = "Created")
+    protected IActionResult CreatedResponse<T>(T data, string message = "Đã tạo")
         => StatusCode(201, ApiResponse<T>.Success(data, message, 201, GetTraceId()));
 
     // Responses lỗi
-    protected IActionResult BadRequestResponse(string message = "Bad request")
+    protected IActionResult BadRequestResponse(string message = "Yêu cầu không hợp lệ")
         => BadRequest(ApiResponse<object>.Error(message, 400, GetTraceId()));
 
-    protected IActionResult BadRequestResponse<T>(T data, string message = "Bad request")
+    protected IActionResult BadRequestResponse<T>(T data, string message = "Yêu cầu không hợp lệ")
         => BadRequest(ApiResponse<object>.ErrorData(data, message, 400, GetTraceId()));
 
-    protected IActionResult NotFoundResponse(string message = "Not found")
+    protected IActionResult NotFoundResponse(string message = "Không tìm thấy dữ liệu")
         => NotFound(ApiResponse<object>.Error(message, 404, GetTraceId()));
 
-    protected IActionResult UnauthorizedResponse(string message = "Unauthorized")
+    protected IActionResult UnauthorizedResponse(string message = "Không có quyền truy cập")
         => Unauthorized(ApiResponse<object>.Error(message, 401, GetTraceId()));
 
-    protected IActionResult ForbiddenResponse(string message = "Forbidden")
+    protected IActionResult ForbiddenResponse(string message = "Bị từ chối truy cập")
         => StatusCode(403, ApiResponse<object>.Error(message, 403, GetTraceId()));
 
-    protected IActionResult InternalServerErrorResponse(string message = "Internal server error")
+    protected IActionResult InternalServerErrorResponse(string message = "Lỗi máy chủ nội bộ")
         => StatusCode(500, ApiResponse<object>.Error(message, 500, GetTraceId()));
 }

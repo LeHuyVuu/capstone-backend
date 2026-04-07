@@ -37,7 +37,7 @@ namespace capstone_backend.Business.Services
                 // 0. Validate test type ID
                 var testType = await _unitOfWork.TestTypes.GetByIdAsync(testTypeId);
                 if (testType == null)
-                    throw new Exception("Test type not found");
+                    throw new Exception("Không tìm thấy loại bài test");
 
                 // 1. Read CSV rows
                 var rows = CsvReader(csvStream);
@@ -137,7 +137,7 @@ namespace capstone_backend.Business.Services
         {
             var testType = await _unitOfWork.TestTypes.GetByIdAsync(testTypeId);
             if (testType == null)
-                throw new Exception("Test type not found");
+                throw new Exception("Không tìm thấy loại bài test");
 
             var questions = await _unitOfWork.Questions.GetAllByVersionAsync(testTypeId, version);
             if (!questions.Any())
@@ -158,12 +158,12 @@ namespace capstone_backend.Business.Services
             {
                 var testType = await _unitOfWork.TestTypes.GetByIdAsync(testTypeId);
                 if (testType == null)
-                    throw new Exception("Test type not found");
+                    throw new Exception("Không tìm thấy loại bài test");
 
                 // Check version existence
                 var versions = await _unitOfWork.Questions.GetAllVersionsAsync(testTypeId);
                 if (!versions.Any(v => v.Version == version))
-                    throw new Exception("Version not found for this test type");
+                    throw new Exception("Không tìm thấy phiên bản cho loại bài test này");
 
                 var questions = await _unitOfWork.Questions.GetAllByVersionAsync(testTypeId, version);
                 if (!questions.Any())
@@ -200,12 +200,12 @@ namespace capstone_backend.Business.Services
                 // Check member existence
                 var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
                 if (member == null)
-                    throw new Exception("Member not found");
+                    throw new Exception("Không tìm thấy thành viên");
 
                 // Check test type existence
                 var testType = await _unitOfWork.TestTypes.GetByIdAsync(testTypeId);
                 if (testType == null)
-                    throw new Exception("Test type not found");
+                    throw new Exception("Không tìm thấy loại bài test");
 
                 var version = testType.CurrentVersion;
                 if (version == null)
@@ -375,7 +375,7 @@ namespace capstone_backend.Business.Services
                 "S/N" => ("S", "N"),
                 "T/F" => ("T", "F"),
                 "J/P" => ("J", "P"),
-                _ => throw new ArgumentException("Invalid dimension"),
+                _ => throw new ArgumentException("Chiều dữ liệu không hợp lệ"),
             };
         }
     }

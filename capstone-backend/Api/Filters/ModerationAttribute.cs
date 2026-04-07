@@ -57,7 +57,7 @@ namespace capstone_backend.Api.Filters
                 context.Result = new BadRequestObjectResult(new
                 {
                     StatusCode = 400,
-                    Error = "Content Moderation Failed",
+                    Error = "Kiểm duyệt nội dung thất bại",
                     Message = message,
                     Field = fieldName
                 });

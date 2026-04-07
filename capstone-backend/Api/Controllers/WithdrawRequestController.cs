@@ -114,11 +114,11 @@ namespace capstone_backend.Api.Controllers
             try
             {
                 if (request == null || string.IsNullOrWhiteSpace(request.Reason))
-                    return BadRequestResponse("Reject reason is required");
+                    return BadRequestResponse("Lý do từ chối là bắt buộc");
 
                 var withdrawRequest = await _unitOfWork.WithdrawRequests.GetByIdAsync(withdrawRequestId);
                 if (withdrawRequest == null)
-                    return NotFoundResponse("Withdraw request not found");
+                    return NotFoundResponse("Không tìm thấy yêu cầu rút tiền");
 
                 var currentStatus = withdrawRequest.Status ?? WithdrawRequestStatus.PENDING.ToString();
                 if (!string.Equals(currentStatus, WithdrawRequestStatus.PENDING.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -155,7 +155,7 @@ namespace capstone_backend.Api.Controllers
                     .FirstOrDefaultAsync(wr => wr.Id == withdrawRequestId);
 
                 if (withdrawRequest == null)
-                    return NotFoundResponse("Withdraw request not found");
+                    return NotFoundResponse("Không tìm thấy yêu cầu rút tiền");
 
                 var currentStatus = withdrawRequest.Status ?? WithdrawRequestStatus.PENDING.ToString();
                 if (!string.Equals(currentStatus, WithdrawRequestStatus.PENDING.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -240,17 +240,17 @@ namespace capstone_backend.Api.Controllers
             try
             {
                 if (request == null)
-                    return BadRequestResponse("Request body is required");
+                    return BadRequestResponse("Nội dung yêu cầu là bắt buộc");
 
                 if (string.IsNullOrWhiteSpace(request.Status))
-                    return BadRequestResponse("Status is required");
+                    return BadRequestResponse("Trạng thái là bắt buộc");
 
                 if (!Enum.TryParse<WithdrawRequestStatus>(request.Status, true, out var targetStatus) ||
                     targetStatus != WithdrawRequestStatus.COMPLETED)
                     return BadRequestResponse("Invalid status. This API only allows status COMPLETED");
 
                 if (string.IsNullOrWhiteSpace(request.ProofImageUrl))
-                    return BadRequestResponse("Proof image URL is required");
+                    return BadRequestResponse("URL ảnh minh chứng là bắt buộc");
 
                 await _unitOfWork.BeginTransactionAsync();
 
@@ -261,7 +261,7 @@ namespace capstone_backend.Api.Controllers
                 if (withdrawRequest == null)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return NotFoundResponse("Withdraw request not found");
+                    return NotFoundResponse("Không tìm thấy yêu cầu rút tiền");
                 }
 
                 var currentStatusText = withdrawRequest.Status ?? WithdrawRequestStatus.PENDING.ToString();
@@ -280,14 +280,14 @@ namespace capstone_backend.Api.Controllers
                 if (withdrawRequest.Amount == null || withdrawRequest.Amount <= 0)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return BadRequestResponse("Withdraw request amount is invalid");
+                    return BadRequestResponse("Số tiền yêu cầu rút không hợp lệ");
                 }
 
                 var wallet = withdrawRequest.Wallet;
                 if (wallet == null)
                 {
                     await _unitOfWork.RollbackTransactionAsync();
-                    return BadRequestResponse("Wallet not found for this withdraw request");
+                    return BadRequestResponse("Không tìm thấy ví cho yêu cầu rút tiền này");
                 }
 
                 if (wallet.IsActive != true)

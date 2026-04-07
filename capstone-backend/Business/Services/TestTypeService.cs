@@ -44,7 +44,7 @@ namespace capstone_backend.Business.Services
             {
                 var exist = await _unitOfWork.TestTypes.GetByIdAsync(id);
                 if (exist == null)
-                    throw new Exception("Test type not found");
+                    throw new Exception("Không tìm thấy loại bài test");
 
                 exist.IsDeleted = true;
                 exist.IsActive = false;
@@ -103,7 +103,7 @@ namespace capstone_backend.Business.Services
                 var testType = await _unitOfWork.TestTypes.GetByIdAsync(id);
 
                 if (testType == null)
-                    throw new Exception("Test type not found");
+                    throw new Exception("Không tìm thấy loại bài test");
 
                 var versions = await _unitOfWork.Questions.GetAllVersionsAsync(id);
 
@@ -125,7 +125,7 @@ namespace capstone_backend.Business.Services
             {
                 var exist = await _unitOfWork.TestTypes.GetByIdAsync(id);
                 if (exist == null)
-                    throw new Exception("Test type not found");
+                    throw new Exception("Không tìm thấy loại bài test");
 
                 // Mapping
                 _mapper.Map(request, exist);

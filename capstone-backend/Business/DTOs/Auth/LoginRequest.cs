@@ -15,16 +15,16 @@ public class LoginRequest
     /// User's email address
     /// </summary>
     /// <example>minidora2707@gmail.com</example>
-    [Required(ErrorMessage = "Email is required")]
-    [EmailAddress(ErrorMessage = "Invalid email format")]
+    [Required(ErrorMessage = "Email là bắt buộc")]
+    [EmailAddress(ErrorMessage = "Định dạng email không hợp lệ")]
     public string Email { get; set; } = string.Empty;
 
     /// <summary>
     /// User's password
     /// </summary>
     /// <example>string</example>
-    [Required(ErrorMessage = "Password is required")]
-    [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
+    [Required(ErrorMessage = "Mật khẩu là bắt buộc")]
+    [MinLength(6, ErrorMessage = "Mật khẩu phải có ít nhất 6 ký tự")]
     public string Password { get; set; } = string.Empty;
 
     /// <summary>

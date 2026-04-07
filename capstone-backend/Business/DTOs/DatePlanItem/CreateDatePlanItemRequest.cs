@@ -4,7 +4,7 @@ namespace capstone_backend.Business.DTOs.DatePlanItem
 {
     public class CreateDatePlanItemRequest
     {
-        [Required(ErrorMessage = "Venues cannot be empty")]
+        [Required(ErrorMessage = "Danh sách địa điểm không được để trống")]
         public List<DatePlanItemRequest> Venues { get; set; }
     }
 

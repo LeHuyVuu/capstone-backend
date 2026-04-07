@@ -48,10 +48,10 @@ public class MessagingService : IMessagingService
     {
         // Validation
         if (currentUserId <= 0)
-            throw new Exception("Invalid user");
+            throw new Exception("Người dùng không hợp lệ");
 
         if (request.MemberIds == null || !request.MemberIds.Any())
-            throw new Exception("At least one member is required");
+            throw new Exception("Cần ít nhất một thành viên");
 
         // Remove duplicates and ensure current user is included
         var memberIds = request.MemberIds.Distinct().ToList();
@@ -84,7 +84,7 @@ public class MessagingService : IMessagingService
                 throw new Exception("Group conversation must have at least 2 members");
 
             if (string.IsNullOrWhiteSpace(request.Name))
-                throw new Exception("Group name is required");
+                throw new Exception("Tên nhóm là bắt buộc");
         }
 
         // Create conversation
@@ -116,7 +116,7 @@ public class MessagingService : IMessagingService
         // Load lại conversation với đầy đủ User info
         var createdConversation = await _conversationRepository.GetByIdWithMembersAsync(conversation.Id, cancellationToken);
         if (createdConversation == null)
-            throw new Exception("Failed to load created conversation");
+            throw new Exception("Không thể tải cuộc trò chuyện vừa tạo");
 
         var response = await MapToConversationResponse(createdConversation, currentUserId, cancellationToken);
 
@@ -139,13 +139,13 @@ public class MessagingService : IMessagingService
     {
         // Validation
         if (currentUserId <= 0)
-            throw new Exception("Invalid user");
+            throw new Exception("Người dùng không hợp lệ");
 
         if (otherUserId <= 0)
-            throw new Exception("Invalid other user ID");
+            throw new Exception("ID người dùng còn lại không hợp lệ");
 
         if (currentUserId == otherUserId)
-            throw new Exception("Cannot create conversation with yourself");
+            throw new Exception("Không thể tạo cuộc trò chuyện với chính mình");
 
         // Validate other user exists
         var otherUser = await _unitOfWork.Users.GetByIdAsync(otherUserId);
@@ -172,7 +172,7 @@ public class MessagingService : IMessagingService
         CancellationToken cancellationToken = default)
     {
         if (currentUserId <= 0)
-            throw new Exception("Invalid user");
+            throw new Exception("Người dùng không hợp lệ");
 
         var conversations = await _conversationRepository.GetUserConversationsAsync(currentUserId, cancellationToken);
         
@@ -191,10 +191,10 @@ public class MessagingService : IMessagingService
         CancellationToken cancellationToken = default)
     {
         if (currentUserId <= 0)
-            throw new Exception("Invalid user");
+            throw new Exception("Người dùng không hợp lệ");
 
         if (conversationId <= 0)
-            throw new Exception("Invalid conversation ID");
+            throw new Exception("Conversation ID không hợp lệ");
 
         // Check if user is member
         var isMember = await _conversationRepository.IsUserMemberAsync(conversationId, currentUserId, cancellationToken);
@@ -203,7 +203,7 @@ public class MessagingService : IMessagingService
 
         var conversation = await _conversationRepository.GetByIdWithMembersAsync(conversationId, cancellationToken);
         if (conversation == null)
-            throw new Exception("Conversation not found");
+            throw new Exception("Không tìm thấy cuộc trò chuyện");
 
         return await MapToConversationResponse(conversation, currentUserId, cancellationToken);
     }
@@ -246,10 +246,10 @@ public class MessagingService : IMessagingService
     {
         // Validation
         if (currentUserId <= 0)
-            throw new Exception("Invalid user");
+            throw new Exception("Người dùng không hợp lệ");
 
         if (request.ConversationId <= 0)
-            throw new Exception("Invalid conversation ID");
+            throw new Exception("Conversation ID không hợp lệ");
 
         // Check if user is member
         var isMember = await _conversationRepository.IsUserMemberAsync(request.ConversationId, currentUserId, cancellationToken);
@@ -258,7 +258,7 @@ public class MessagingService : IMessagingService
 
         // Validate content based on message type
         if (request.MessageType == "TEXT" && string.IsNullOrWhiteSpace(request.Content))
-            throw new BadRequestException("Message content is required for text messages", "CONTENT_REQUIRED");
+            throw new BadRequestException("Nội dung tin nhắn là bắt buộc với tin nhắn văn bản", "CONTENT_REQUIRED");
 
         if ((request.MessageType == "IMAGE" || request.MessageType == "FILE" || 
              request.MessageType == "VIDEO" || request.MessageType == "AUDIO") && 
@@ -361,7 +361,7 @@ public class MessagingService : IMessagingService
         // Load sender info
         var messageWithSender = await _messageRepository.GetByIdWithSenderAsync(message.Id, cancellationToken);
         if (messageWithSender == null)
-            throw new Exception("Message not found after creation");
+            throw new Exception("Không tìm thấy tin nhắn sau khi tạo");
 
         // Notify conversation members via SignalR - create response for each member with correct IsMine
         var members = await _memberRepository.GetActiveConversationMembersAsync(request.ConversationId, cancellationToken);
@@ -468,10 +468,10 @@ public class MessagingService : IMessagingService
     {
         // Validation
         if (currentUserId <= 0)
-            throw new Exception("Invalid user");
+            throw new Exception("Người dùng không hợp lệ");
 
         if (conversationId <= 0)
-            throw new Exception("Invalid conversation ID");
+            throw new Exception("Conversation ID không hợp lệ");
 
         // Check if user is member
         var isMember = await _conversationRepository.IsUserMemberAsync(conversationId, currentUserId, cancellationToken);
@@ -529,10 +529,10 @@ public class MessagingService : IMessagingService
     {
         // Validation
         if (currentUserId <= 0)
-            throw new Exception("Invalid user");
+            throw new Exception("Người dùng không hợp lệ");
 
         if (request.ConversationId <= 0 || request.MessageId <= 0)
-            throw new Exception("Invalid conversation or message ID");
+            throw new Exception("Conversation ID hoặc Message ID không hợp lệ");
 
         // Check if user is member
         var isMember = await _conversationRepository.IsUserMemberAsync(request.ConversationId, currentUserId, cancellationToken);
@@ -558,18 +558,18 @@ public class MessagingService : IMessagingService
     {
         // Validation
         if (currentUserId <= 0)
-            throw new Exception("Invalid user");
+            throw new Exception("Người dùng không hợp lệ");
 
         if (request.ConversationId <= 0)
-            throw new Exception("Invalid conversation ID");
+            throw new Exception("Conversation ID không hợp lệ");
 
         if (request.MemberIds == null || !request.MemberIds.Any())
-            throw new Exception("At least one member is required");
+            throw new Exception("Cần ít nhất một thành viên");
 
         // Check conversation exists and is group
         var conversation = await _conversationRepository.GetByIdWithMembersAsync(request.ConversationId, cancellationToken);
         if (conversation == null)
-            throw new Exception("Conversation not found");
+            throw new Exception("Không tìm thấy cuộc trò chuyện");
 
         if (conversation.Type != "GROUP")
             throw new Exception("Can only add members to group conversations");
@@ -623,15 +623,15 @@ public class MessagingService : IMessagingService
     {
         // Validation
         if (currentUserId <= 0)
-            throw new Exception("Invalid user");
+            throw new Exception("Người dùng không hợp lệ");
 
         if (request.ConversationId <= 0 || request.MemberId <= 0)
-            throw new Exception("Invalid conversation or member ID");
+            throw new Exception("Conversation ID hoặc Member ID không hợp lệ");
 
         // Check conversation exists and is group
         var conversation = await _conversationRepository.GetByIdAsync(request.ConversationId);
         if (conversation == null)
-            throw new Exception("Conversation not found");
+            throw new Exception("Không tìm thấy cuộc trò chuyện");
 
         if (conversation.Type != "GROUP")
             throw new Exception("Can only remove members from group conversations");
@@ -647,7 +647,7 @@ public class MessagingService : IMessagingService
         // Remove member
         var member = await _memberRepository.GetMemberAsync(request.ConversationId, request.MemberId, cancellationToken);
         if (member == null || member.IsActive == false)
-            throw new Exception("Member not found");
+            throw new Exception("Không tìm thấy thành viên");
 
         member.IsActive = false;
         _memberRepository.Update(member);
@@ -677,14 +677,14 @@ public class MessagingService : IMessagingService
     {
         // Validation
         if (currentUserId <= 0)
-            throw new Exception("Invalid user");
+            throw new Exception("Người dùng không hợp lệ");
 
         if (messageId <= 0)
-            throw new Exception("Invalid message ID");
+            throw new Exception("Message ID không hợp lệ");
 
         var message = await _messageRepository.GetByIdAsync(messageId);
         if (message == null || message.IsDeleted == true)
-            throw new Exception("Message not found");
+            throw new Exception("Không tìm thấy tin nhắn");
 
         // // Only sender can delete
         // if (message.SenderId != currentUserId)
@@ -721,13 +721,13 @@ public class MessagingService : IMessagingService
     {
         // Validation
         if (currentUserId <= 0)
-            throw new Exception("Invalid user");
+            throw new Exception("Người dùng không hợp lệ");
 
         if (conversationId <= 0)
-            throw new Exception("Invalid conversation ID");
+            throw new Exception("Conversation ID không hợp lệ");
 
         if (string.IsNullOrWhiteSpace(searchTerm))
-            throw new Exception("Search term is required");
+            throw new Exception("Từ khóa tìm kiếm là bắt buộc");
 
         // Check if user is member
         var isMember = await _conversationRepository.IsUserMemberAsync(conversationId, currentUserId, cancellationToken);

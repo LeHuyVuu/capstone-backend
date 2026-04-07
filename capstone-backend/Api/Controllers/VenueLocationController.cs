@@ -79,12 +79,12 @@ public class VenueLocationController : BaseController
     {
         if (page < 1)
         {
-            return BadRequestResponse("Page number must be greater than 0");
+            return BadRequestResponse("Số trang phải lớn hơn 0");
         }
 
         if (pageSize < 1 || pageSize > 100)
         {
-            return BadRequestResponse("Page size must be between 1 and 100");
+            return BadRequestResponse("Kích thước trang phải trong khoảng từ 1 đến 100");
         }
 
         _logger.LogInformation("Requesting venue locations with status {Status} and search {Search}", status, search);
@@ -160,12 +160,12 @@ public class VenueLocationController : BaseController
         // Validate pagination parameters
         if (page < 1)
         {
-            return BadRequestResponse("Page number must be greater than 0");
+            return BadRequestResponse("Số trang phải lớn hơn 0");
         }
 
         if (pageSize < 1 || pageSize > 100)
         {
-            return BadRequestResponse("Page size must be between 1 and 100");
+            return BadRequestResponse("Kích thước trang phải trong khoảng từ 1 đến 100");
         }
 
         // Validate date filter parameters (nếu có)

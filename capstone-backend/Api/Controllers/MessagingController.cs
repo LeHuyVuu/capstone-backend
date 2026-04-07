@@ -258,7 +258,7 @@ public class MessagingController : BaseController
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
-            return BadRequest("Search term is required");
+            return BadRequest("Từ khóa tìm kiếm là bắt buộc");
 
         var userId = GetCurrentUserId() ?? 0;
         var result = await _messagingService.SearchMessagesAsync(userId, conversationId, searchTerm, cancellationToken);

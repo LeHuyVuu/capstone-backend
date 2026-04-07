@@ -26,10 +26,10 @@ public class ReportTypeController : BaseController
         [FromQuery] bool? isActive = null)
     {
         if (page < 1)
-            return BadRequestResponse("Page number must be greater than 0");
+            return BadRequestResponse("Số trang phải lớn hơn 0");
 
         if (pageSize < 1 || pageSize > 100)
-            return BadRequestResponse("Page size must be between 1 and 100");
+            return BadRequestResponse("Kích thước trang phải trong khoảng từ 1 đến 100");
 
         var result = await _reportTypeService.GetReportTypesAsync(page, pageSize, isActive);
         return OkResponse(result, $"Retrieved {result.Items.Count()} report types");
@@ -43,7 +43,7 @@ public class ReportTypeController : BaseController
         var reportType = await _reportTypeService.GetReportTypeByIdAsync(id);
 
         if (reportType == null)
-            return NotFoundResponse($"Report type with ID {id} not found");
+            return NotFoundResponse($"Không tìm thấy loại báo cáo có ID {id}");
 
         return OkResponse(reportType, "Report type retrieved successfully");
     }
@@ -55,7 +55,7 @@ public class ReportTypeController : BaseController
     public async Task<IActionResult> CreateReportType([FromBody] CreateReportTypeRequest request)
     {
         if (!ModelState.IsValid)
-            return BadRequestResponse("Invalid request data");
+            return BadRequestResponse("Dữ liệu yêu cầu không hợp lệ");
 
         var reportType = await _reportTypeService.CreateReportTypeAsync(request);
         return CreatedResponse(reportType, "Report type created successfully");
@@ -69,12 +69,12 @@ public class ReportTypeController : BaseController
     public async Task<IActionResult> UpdateReportType(int id, [FromBody] UpdateReportTypeRequest request)
     {
         if (!ModelState.IsValid)
-            return BadRequestResponse("Invalid request data");
+            return BadRequestResponse("Dữ liệu yêu cầu không hợp lệ");
 
         var reportType = await _reportTypeService.UpdateReportTypeAsync(id, request);
 
         if (reportType == null)
-            return NotFoundResponse($"Report type with ID {id} not found");
+            return NotFoundResponse($"Không tìm thấy loại báo cáo có ID {id}");
 
         return OkResponse(reportType, "Report type updated successfully");
     }
@@ -88,7 +88,7 @@ public class ReportTypeController : BaseController
         var result = await _reportTypeService.DeleteReportTypeAsync(id);
 
         if (!result)
-            return NotFoundResponse($"Report type with ID {id} not found");
+            return NotFoundResponse($"Không tìm thấy loại báo cáo có ID {id}");
 
         return OkResponse(true, "Report type deleted successfully");
     }

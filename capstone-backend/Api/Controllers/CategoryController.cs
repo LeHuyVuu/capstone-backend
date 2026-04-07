@@ -30,10 +30,10 @@ public class CategoryController : BaseController
         [FromQuery] bool? isActive = null)
     {
         if (page < 1)
-            return BadRequestResponse("Page number must be greater than 0");
+            return BadRequestResponse("Số trang phải lớn hơn 0");
 
         if (pageSize < 1 || pageSize > 100)
-            return BadRequestResponse("Page size must be between 1 and 100");
+            return BadRequestResponse("Kích thước trang phải trong khoảng từ 1 đến 100");
 
         _logger.LogInformation("Getting categories - Page: {Page}, PageSize: {PageSize}, IsActive: {IsActive}",
             page, pageSize, isActive);
@@ -53,7 +53,7 @@ public class CategoryController : BaseController
         var category = await _categoryService.GetCategoryByIdAsync(id);
 
         if (category == null)
-            return NotFoundResponse($"Category with ID {id} not found");
+            return NotFoundResponse($"Không tìm thấy danh mục có ID {id}");
 
         return OkResponse(category, "Category retrieved successfully");
     }
@@ -67,7 +67,7 @@ public class CategoryController : BaseController
     public async Task<IActionResult> CreateCategory([FromBody] CreateCategoryRequest request)
     {
         if (!ModelState.IsValid)
-            return BadRequestResponse("Invalid request data");
+            return BadRequestResponse("Dữ liệu yêu cầu không hợp lệ");
 
         _logger.LogInformation("Creating new category: {CategoryName}", request.Name);
 
@@ -93,7 +93,7 @@ public class CategoryController : BaseController
     public async Task<IActionResult> UpdateCategory(int id, [FromBody] UpdateCategoryRequest request)
     {
         if (!ModelState.IsValid)
-            return BadRequestResponse("Invalid request data");
+            return BadRequestResponse("Dữ liệu yêu cầu không hợp lệ");
 
         _logger.LogInformation("Updating category with ID: {CategoryId}", id);
 
@@ -102,7 +102,7 @@ public class CategoryController : BaseController
             var category = await _categoryService.UpdateCategoryAsync(id, request);
 
             if (category == null)
-                return NotFoundResponse($"Category with ID {id} not found");
+                return NotFoundResponse($"Không tìm thấy danh mục có ID {id}");
 
             return OkResponse(category, "Category updated successfully");
         }
@@ -126,7 +126,7 @@ public class CategoryController : BaseController
         var result = await _categoryService.DeleteCategoryAsync(id);
 
         if (!result)
-            return NotFoundResponse($"Category with ID {id} not found");
+            return NotFoundResponse($"Không tìm thấy danh mục có ID {id}");
 
         return OkResponse(true, "Category deleted successfully");
     }

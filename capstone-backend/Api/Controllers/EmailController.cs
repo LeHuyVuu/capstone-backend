@@ -22,11 +22,11 @@ namespace capstone_backend.Api.Controllers
             var result = await _emailService.SendEmailAsync(request, ct);
             if (result)
             {
-                return OkResponse(result, "Email sent successfully.");
+                return OkResponse(result, "Gửi email thành công.");
             }
             else
             {
-                return BadRequestResponse(result, "Failed to send email. Please check the request and try again.");
+                return BadRequestResponse(result, "Gửi email thất bại. Vui lòng kiểm tra lại yêu cầu và thử lại.");
             }
         }
     }

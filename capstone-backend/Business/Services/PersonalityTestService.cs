@@ -40,7 +40,7 @@ namespace capstone_backend.Business.Services
             {
                 var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
                 if (member == null)
-                    throw new Exception("Member profile not found");
+                    throw new Exception("Không tìm thấy hồ sơ thành viên");
 
                 var (tests, count) = await _unitOfWork.PersonalityTests.GetPagedAsync(pageNumber, pageSize, filter: (pt => pt.MemberId == member.Id && pt.IsDeleted == false), orderBy: (pt => pt.OrderByDescending(pt => pt.TakenAt ?? pt.CreatedAt)));
 
@@ -68,11 +68,11 @@ namespace capstone_backend.Business.Services
             {
                 var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
                 if (member == null)
-                    throw new Exception("Member profile not found");
+                    throw new Exception("Không tìm thấy hồ sơ thành viên");
 
                 var test = await _unitOfWork.PersonalityTests.GetByIdAndMemberIdAsync(id, member.Id);
                 if (test == null)
-                    throw new Exception("Personality test not found");
+                    throw new Exception("Không tìm thấy bài kiểm tra tính cách");
 
                 var jsonNode = JsonNode.Parse(test.ResultData);
                 var result = _mapper.Map<PersonalityTestDetailResponse>(test);
@@ -135,7 +135,7 @@ namespace capstone_backend.Business.Services
             {
                 var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
                 if (member == null)
-                    throw new Exception("Member profile not found");
+                    throw new Exception("Không tìm thấy hồ sơ thành viên");
 
                 var test = await _unitOfWork.PersonalityTests.GetCurrentPersonalityAsync(member.Id);
                 if (test == null)
@@ -158,12 +158,12 @@ namespace capstone_backend.Business.Services
                 // Check member existence
                 var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
                 if (member == null)
-                    throw new Exception("Member profile not found");
+                    throw new Exception("Không tìm thấy hồ sơ thành viên");
 
                 // Check test type existence
                 var testType = await _unitOfWork.TestTypes.GetByIdForMemberAsync(testTypeId);
                 if (testType == null)
-                    throw new Exception("Test type not found");
+                    throw new Exception("Không tìm thấy loại bài test");
 
                 // Validate answers
                 var unAnsweredQuestions = 0;
@@ -171,7 +171,7 @@ namespace capstone_backend.Business.Services
                 {
                     var invalidQuestionId = await ValidateAnswers(request, testTypeId);
                     if (invalidQuestionId != 0)
-                        throw new BadRequestException("Invalid answers submitted",
+                        throw new BadRequestException("Câu trả lời gửi lên không hợp lệ",
                             "400")
                         {
                             Data =
@@ -215,7 +215,7 @@ namespace capstone_backend.Business.Services
                         break;
 
                     default:
-                        throw new ArgumentOutOfRangeException("Invalid action");
+                        throw new ArgumentOutOfRangeException("Hành động không hợp lệ");
                 }
 
                 record.ResultData = json.ToJsonString();
@@ -299,11 +299,11 @@ namespace capstone_backend.Business.Services
             {
                 var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
                 if (member == null)
-                    throw new Exception("Member profile not found");
+                    throw new Exception("Không tìm thấy hồ sơ thành viên");
 
                 var testType = await _unitOfWork.TestTypes.GetByIdForMemberAsync(testTypeId);
                 if (testType == null)
-                    throw new Exception("Test type not found");
+                    throw new Exception("Không tìm thấy loại bài test");
 
                 var inProgressTest = await _unitOfWork.PersonalityTests.GetInProgressTestByUserAndTestTypeAsync(member.Id, testTypeId);
                 if (inProgressTest == null)

@@ -487,7 +487,7 @@ public class CollectionService : ICollectionService
     {
         if (string.IsNullOrWhiteSpace(collectionName))
         {
-            throw new InvalidOperationException("Collection name is required.");
+            throw new InvalidOperationException("Tên bộ sưu tập là bắt buộc.");
         }
 
         return collectionName.Trim().ToLower();

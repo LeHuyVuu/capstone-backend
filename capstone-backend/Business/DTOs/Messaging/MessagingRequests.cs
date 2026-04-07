@@ -7,13 +7,13 @@ namespace capstone_backend.Business.DTOs.Messaging;
 /// </summary>
 public class CreateConversationRequest
 {
-    [Required(ErrorMessage = "Conversation type is required")]
+    [Required(ErrorMessage = "Loại cuộc trò chuyện là bắt buộc")]
     public string Type { get; set; } = string.Empty;
     
     public string? Name { get; set; }
     
-    [Required(ErrorMessage = "At least one member is required")]
-    [MinLength(1, ErrorMessage = "At least one member is required")]
+    [Required(ErrorMessage = "Cần ít nhất một thành viên")]
+    [MinLength(1, ErrorMessage = "Cần ít nhất một thành viên")]
     public List<int> MemberIds { get; set; } = new();
 }
 
@@ -22,7 +22,7 @@ public class CreateConversationRequest
 /// </summary>
 public class SendMessageRequest
 {
-    [Required(ErrorMessage = "Conversation ID is required")]
+    [Required(ErrorMessage = "Conversation ID là bắt buộc")]
     public int ConversationId { get; set; }
     
     public string? Content { get; set; }
@@ -56,10 +56,10 @@ public class SendMessageRequest
 /// </summary>
 public class MarkAsReadRequest
 {
-    [Required(ErrorMessage = "Conversation ID is required")]
+    [Required(ErrorMessage = "Conversation ID là bắt buộc")]
     public int ConversationId { get; set; }
     
-    [Required(ErrorMessage = "Message ID is required")]
+    [Required(ErrorMessage = "Message ID là bắt buộc")]
     public int MessageId { get; set; }
 }
 
@@ -68,10 +68,10 @@ public class MarkAsReadRequest
 /// </summary>
 public class TypingIndicatorRequest
 {
-    [Required(ErrorMessage = "Conversation ID is required")]
+    [Required(ErrorMessage = "Conversation ID là bắt buộc")]
     public int ConversationId { get; set; }
     
-    [Required(ErrorMessage = "Is typing status is required")]
+    [Required(ErrorMessage = "Trạng thái đang nhập là bắt buộc")]
     public bool IsTyping { get; set; }
 }
 
@@ -80,11 +80,11 @@ public class TypingIndicatorRequest
 /// </summary>
 public class AddMembersRequest
 {
-    [Required(ErrorMessage = "Conversation ID is required")]
+    [Required(ErrorMessage = "Conversation ID là bắt buộc")]
     public int ConversationId { get; set; }
     
-    [Required(ErrorMessage = "At least one member is required")]
-    [MinLength(1, ErrorMessage = "At least one member is required")]
+    [Required(ErrorMessage = "Cần ít nhất một thành viên")]
+    [MinLength(1, ErrorMessage = "Cần ít nhất một thành viên")]
     public List<int> MemberIds { get; set; } = new();
 }
 
@@ -93,8 +93,8 @@ public class AddMembersRequest
 /// </summary>
 public class AddMembersBodyRequest
 {
-    [Required(ErrorMessage = "At least one member is required")]
-    [MinLength(1, ErrorMessage = "At least one member is required")]
+    [Required(ErrorMessage = "Cần ít nhất một thành viên")]
+    [MinLength(1, ErrorMessage = "Cần ít nhất một thành viên")]
     public List<int> MemberIds { get; set; } = new();
 }
 
@@ -103,9 +103,9 @@ public class AddMembersBodyRequest
 /// </summary>
 public class RemoveMemberRequest
 {
-    [Required(ErrorMessage = "Conversation ID is required")]
+    [Required(ErrorMessage = "Conversation ID là bắt buộc")]
     public int ConversationId { get; set; }
     
-    [Required(ErrorMessage = "Member ID is required")]
+    [Required(ErrorMessage = "Member ID là bắt buộc")]
     public int MemberId { get; set; }
 }

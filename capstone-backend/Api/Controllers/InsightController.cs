@@ -49,15 +49,15 @@ public class InsightController : BaseController
             if (cachedResult != null)
             {
                 _logger.LogInformation("Insights retrieved from cache for timeframe: {Timeframe}", timeframe ?? "all");
-                return OkResponse(cachedResult, "Insights retrieved successfully (cached)");
+                return OkResponse(cachedResult, "Lấy dữ liệu thống kê thành công (từ bộ nhớ đệm)");
             }
 
-            return InternalServerErrorResponse("Failed to retrieve insights");
+            return InternalServerErrorResponse("Không thể lấy dữ liệu thống kê");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving venue insights");
-            return InternalServerErrorResponse("Failed to retrieve insights");
+            return InternalServerErrorResponse("Không thể lấy dữ liệu thống kê");
         }
     }
 

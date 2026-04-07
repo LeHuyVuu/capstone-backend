@@ -233,7 +233,7 @@ public class AdvertisementService : IAdvertisementService
 
         if (selectedMoodType == null)
         {
-            throw new InvalidOperationException("Selected mood type is invalid or inactive");
+            throw new InvalidOperationException("Loại tâm trạng được chọn không hợp lệ hoặc đã ngừng hoạt động");
         }
 
         // Find VenueOwnerProfile from userId
@@ -250,12 +250,12 @@ public class AdvertisementService : IAdvertisementService
         var now = DateTime.UtcNow;
         if (request.DesiredStartDate < now.AddHours(-1)) // Allow 1 hour grace period for timezone issues
         {
-            throw new InvalidOperationException("Desired start date cannot be in the past");
+            throw new InvalidOperationException("Ngày bắt đầu mong muốn không được ở trong quá khứ");
         }
 
         if (request.DesiredStartDate > now.AddYears(1))
         {
-            throw new InvalidOperationException("Desired start date cannot be more than 1 year in the future");
+            throw new InvalidOperationException("Ngày bắt đầu mong muốn không được vượt quá 1 năm trong tương lai");
         }
 
         // Create advertisement (venue will be assigned when submitting payment)
@@ -304,12 +304,12 @@ public class AdvertisementService : IAdvertisementService
 
         if (advertisement == null || advertisement.IsDeleted == true)
         {
-            throw new InvalidOperationException("Advertisement not found");
+            throw new InvalidOperationException("Không tìm thấy quảng cáo");
         }
 
         if (advertisement.VenueOwnerId != venueOwnerProfile.Id)
         {
-            throw new InvalidOperationException("You don't have permission to update this advertisement");
+            throw new InvalidOperationException("Bạn không có quyền cập nhật quảng cáo này");
         }
 
         if (advertisement.Status != AdvertisementStatus.REJECTED.ToString() && advertisement.Status != AdvertisementStatus.DRAFT.ToString())
@@ -320,12 +320,12 @@ public class AdvertisementService : IAdvertisementService
         var now = DateTime.UtcNow;
         if (request.DesiredStartDate < now.AddHours(-1))
         {
-            throw new InvalidOperationException("Desired start date cannot be in the past");
+            throw new InvalidOperationException("Ngày bắt đầu mong muốn không được ở trong quá khứ");
         }
 
         if (request.DesiredStartDate > now.AddYears(1))
         {
-            throw new InvalidOperationException("Desired start date cannot be more than 1 year in the future");
+            throw new InvalidOperationException("Ngày bắt đầu mong muốn không được vượt quá 1 năm trong tương lai");
         }
 
         var selectedMoodType = await _unitOfWork.Context.Set<MoodType>()
@@ -334,7 +334,7 @@ public class AdvertisementService : IAdvertisementService
 
         if (selectedMoodType == null)
         {
-            throw new InvalidOperationException("Selected mood type is invalid or inactive");
+            throw new InvalidOperationException("Loại tâm trạng được chọn không hợp lệ hoặc đã ngừng hoạt động");
         }
 
         using var dbTransaction = await _unitOfWork.Context.Database.BeginTransactionAsync();

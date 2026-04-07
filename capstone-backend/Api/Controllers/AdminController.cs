@@ -34,9 +34,9 @@ namespace capstone_backend.Api.Controllers
         public async Task<IActionResult> GetRoleAdmin()
         {
             if (GetCurrentUserRole() != "ADMIN")
-                return ForbiddenResponse("You do not have permission to access this resource");
+                return ForbiddenResponse("Bạn không có quyền truy cập tài nguyên này");
             else
-                return OkResponse("You are an admin");
+                return OkResponse("Bạn là quản trị viên");
         }
 
         [HttpGet("dashboard")]
@@ -82,11 +82,11 @@ namespace capstone_backend.Api.Controllers
             }
             catch (ArgumentOutOfRangeException)
             {
-                return BadRequestResponse("Invalid date. Please check the day, month, and year values");
+                return BadRequestResponse("Ngày không hợp lệ. Vui lòng kiểm tra lại ngày, tháng và năm");
             }
             catch (Exception ex)
             {
-                return BadRequestResponse($"Error processing date parameters: {ex.Message}");
+                return BadRequestResponse($"Lỗi khi xử lý tham số ngày: {ex.Message}");
             }
 
             var totalUsers = await _unitOfWork.Context.Set<Data.Entities.UserAccount>()
@@ -324,7 +324,7 @@ namespace capstone_backend.Api.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequestResponse($"Error retrieving transactions: {ex.Message}");
+                return BadRequestResponse($"Lỗi khi lấy danh sách giao dịch: {ex.Message}");
             }
         }
 
@@ -335,13 +335,13 @@ namespace capstone_backend.Api.Controllers
             var adminUserId = GetCurrentUserId();
             if (!adminUserId.HasValue)
             {
-                return UnauthorizedResponse("Admin not authenticated");
+                return UnauthorizedResponse("Quản trị viên chưa được xác thực");
             }
 
             try
             {
                 var result = await _venueLocationService.AdminChangeVenueStatusAsync(id, adminUserId.Value, request.Status, request.Reason);
-                return OkResponse(result, $"Venue status changed to {result.NewStatus} successfully");
+                return OkResponse(result, $"Cập nhật trạng thái địa điểm sang {result.NewStatus} thành công");
             }
             catch (ArgumentException ex)
             {
@@ -357,7 +357,7 @@ namespace capstone_backend.Api.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequestResponse($"Error changing venue status: {ex.Message}");
+                return BadRequestResponse($"Lỗi khi thay đổi trạng thái địa điểm: {ex.Message}");
             }
         }
     }

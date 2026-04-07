@@ -149,7 +149,7 @@ namespace capstone_backend.Api.Controllers
                     return ForbiddenResponse("You do not have permission to access this resource");
 
                 if (request.File == null || request.File.Length == 0)
-                    return BadRequest("File is required.");
+                    return BadRequest("Tệp là bắt buộc.");
 
                 var result = await _questionService.GenerateQuestionAsync(
                     id,

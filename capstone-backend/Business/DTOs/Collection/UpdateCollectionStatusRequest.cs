@@ -7,6 +7,6 @@ namespace capstone_backend.Business.DTOs.Collection;
 /// </summary>
 public class UpdateCollectionStatusRequest
 {
-    [Required(ErrorMessage = "Status is required")]
+    [Required(ErrorMessage = "Trạng thái là bắt buộc")]
     public string Status { get; set; } = null!;
 }

@@ -141,7 +141,7 @@ namespace capstone_backend.Business.Services
             {
                 var notification = await _unitOfWork.Notifications.GetByIdAndUserIdAsync(notificationId, userId);
                 if (notification == null)
-                    throw new Exception("Notification not found.");
+                    throw new Exception("Không tìm thấy thông báo.");
 
                 if (notification.IsRead == true)
                     return 0;

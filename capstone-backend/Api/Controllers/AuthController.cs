@@ -32,7 +32,7 @@ public class AuthController : BaseController
         var loginResponse = await _userService.LoginAsync(request);
 
         if (loginResponse == null)
-            return UnauthorizedResponse("Invalid email or password");
+            return UnauthorizedResponse("Email hoặc mật khẩu không đúng");
 
         var staffVenueGuardResult = await ValidateStaffVenueAccessAsync(loginResponse.AccessToken);
         if (staffVenueGuardResult != null)
@@ -63,7 +63,7 @@ public class AuthController : BaseController
             });
 
         // Return full response with JWT tokens (for mobile) and user info (for web)
-        return OkResponse(loginResponse, "Login successful");
+        return OkResponse(loginResponse, "Đăng nhập thành công");
     }
 
 
@@ -100,7 +100,7 @@ public class AuthController : BaseController
                 });
 
             // Return full response with JWT tokens (for mobile) and user info (for web)
-            return OkResponse(registerResponse, "Registration successful");
+            return OkResponse(registerResponse, "Đăng ký thành công");
         }
         catch (InvalidOperationException ex)
         {
@@ -108,7 +108,7 @@ public class AuthController : BaseController
         }
         catch (Exception ex)
         {
-            return InternalServerErrorResponse($"Registration failed: {ex.Message}");
+            return InternalServerErrorResponse($"Đăng ký thất bại: {ex.Message}");
         }
     }
 
@@ -146,7 +146,7 @@ public class AuthController : BaseController
                 });
 
             // Return full response with JWT tokens (for mobile) and user info (for web)
-            return OkResponse(registerResponse, "VenueOwner registration successful");
+            return OkResponse(registerResponse, "Đăng ký chủ địa điểm thành công");
         }
         catch (InvalidOperationException ex)
         {
@@ -154,7 +154,7 @@ public class AuthController : BaseController
         }
         catch (Exception ex)
         {
-            return InternalServerErrorResponse($"VenueOwner registration failed: {ex.Message}");
+            return InternalServerErrorResponse($"Đăng ký chủ địa điểm thất bại: {ex.Message}");
         }
     }
 
@@ -172,7 +172,7 @@ public class AuthController : BaseController
         // For JWT (mobile), client will remove tokens from storage
         // TODO: Implement token blacklist if needed
         
-        return OkResponse<object?>(null, "Logout successful");
+        return OkResponse<object?>(null, "Đăng xuất thành công");
     }
 
 
@@ -205,7 +205,7 @@ public class AuthController : BaseController
 
             // Validate request
             if (request == null)
-                return BadRequestResponse("Request body không được để trống");
+                return BadRequestResponse("Nội dung yêu cầu không được để trống");
 
             if (string.IsNullOrWhiteSpace(request.CurrentPassword))
                 return BadRequestResponse("Mật khẩu hiện tại không được để trống");
@@ -264,7 +264,7 @@ public class AuthController : BaseController
         {
             // Validate request
             if (request == null)
-                return BadRequestResponse("Request body không được để trống");
+                return BadRequestResponse("Nội dung yêu cầu không được để trống");
 
             if (string.IsNullOrWhiteSpace(request.Email))
                 return BadRequestResponse("Email không được để trống");
@@ -302,7 +302,7 @@ public class AuthController : BaseController
         {
             // Validate request
             if (request == null)
-                return BadRequestResponse("Request body không được để trống");
+                return BadRequestResponse("Nội dung yêu cầu không được để trống");
 
             if (string.IsNullOrWhiteSpace(request.Email))
                 return BadRequestResponse("Email không được để trống");
@@ -346,7 +346,7 @@ public class AuthController : BaseController
         {
             // Validate request
             if (request == null)
-                return BadRequestResponse("Request body không được để trống");
+                return BadRequestResponse("Nội dung yêu cầu không được để trống");
 
             if (string.IsNullOrWhiteSpace(request.Email))
                 return BadRequestResponse("Email không được để trống");
@@ -415,13 +415,13 @@ public class AuthController : BaseController
             var loginResponse = await _userService.GoogleLoginAsync(request);
 
             if (loginResponse == null)
-                return UnauthorizedResponse("Google authentication failed");
+                return UnauthorizedResponse("Xác thực Google thất bại");
 
             var staffVenueGuardResult = await ValidateStaffVenueAccessAsync(loginResponse.AccessToken);
             if (staffVenueGuardResult != null)
                 return staffVenueGuardResult;
 
-            return OkResponse(loginResponse, "Login successful");
+            return OkResponse(loginResponse, "Đăng nhập thành công");
         }
         catch (InvalidOperationException ex)
         {
@@ -430,7 +430,7 @@ public class AuthController : BaseController
         catch (Exception ex)
         {
             _logger.LogError(ex, "Google login error");
-            return InternalServerErrorResponse($"Google login failed: {ex.Message}");
+            return InternalServerErrorResponse($"Đăng nhập Google thất bại: {ex.Message}");
         }
     }
 
@@ -448,18 +448,18 @@ public class AuthController : BaseController
             var loginResponse = await _userService.GoogleMobileLoginAsync(request);
 
             if (loginResponse == null)
-                return UnauthorizedResponse("Google mobile authentication failed");
+                return UnauthorizedResponse("Xác thực Google trên thiết bị di động thất bại");
 
             var staffVenueGuardResult = await ValidateStaffVenueAccessAsync(loginResponse.AccessToken);
             if (staffVenueGuardResult != null)
                 return staffVenueGuardResult;
 
-            return OkResponse(loginResponse, "Mobile login successful");
+            return OkResponse(loginResponse, "Đăng nhập trên thiết bị di động thành công");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Google mobile login error");
-            return InternalServerErrorResponse($"Google mobile login failed: {ex.Message}");
+            return InternalServerErrorResponse($"Đăng nhập Google trên thiết bị di động thất bại: {ex.Message}");
         }
     }
 

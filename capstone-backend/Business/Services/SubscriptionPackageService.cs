@@ -26,7 +26,7 @@ public class SubscriptionPackageService : ISubscriptionPackageService
             // Validate type
             if (string.IsNullOrWhiteSpace(type))
             {
-                throw new ArgumentException("Type cannot be null or empty", nameof(type));
+                throw new ArgumentException("Loại gói không được để trống", nameof(type));
             }
 
             // Normalize type to uppercase
@@ -400,7 +400,7 @@ public class SubscriptionPackageService : ISubscriptionPackageService
                 return null;
             }
 
-            throw new ArgumentException("Type cannot be null or empty", nameof(type));
+            throw new ArgumentException("Loại gói không được để trống", nameof(type));
         }
 
         var normalizedType = type.ToUpper().Trim();

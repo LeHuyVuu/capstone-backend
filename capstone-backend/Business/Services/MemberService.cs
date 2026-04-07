@@ -30,7 +30,7 @@ public class MemberService : IMemberService
     {
         // 0. Validate invite code
         if (string.IsNullOrWhiteSpace(inviteCode))
-            throw new ArgumentException("Invite code cannot be empty");
+            throw new ArgumentException("Mã mời không được để trống");
 
         // Sử dụng transaction để tránh race condition
         using var transaction = await _unitOfWork.Context.Database.BeginTransactionAsync();
@@ -55,7 +55,7 @@ public class MemberService : IMemberService
 
         // 3. Kiểm tra không thể invite chính mình
         if (currentMemberProfile.Id == partnerMemberProfile.Id)
-            throw new InvalidOperationException("Cannot invite yourself");
+            throw new InvalidOperationException("Không thể tự mời chính mình");
 
         // 3.1. Kiểm tra gender - chỉ cho phép nam + nữ
         if (string.IsNullOrWhiteSpace(currentMemberProfile.Gender) || 
@@ -78,7 +78,7 @@ public class MemberService : IMemberService
             .FirstOrDefaultAsync();
 
         if (currentMemberInCouple != null)
-            throw new InvalidOperationException("You are already in an active couple. Cannot invite another member.");
+            throw new InvalidOperationException("Bạn đang ở trong một cặp đôi đang hoạt động. Không thể mời thêm thành viên khác.");
 
         var partnerInCouple = await _unitOfWork.Context.CoupleProfiles
             .Where(c => c.IsDeleted != true &&
@@ -161,7 +161,7 @@ public class MemberService : IMemberService
     {
         var memberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(currentUserId);
         if (memberProfile == null)
-            throw new InvalidOperationException("Member profile not found");
+            throw new InvalidOperationException("Không tìm thấy hồ sơ thành viên");
 
         if (string.IsNullOrEmpty(memberProfile.InviteCode))
             throw new InvalidOperationException("Invite code not generated for this user");
@@ -199,7 +199,7 @@ public class MemberService : IMemberService
             .FirstOrDefaultAsync(m => m.UserId == currentUserId);
             
         if (memberProfile == null)
-            throw new InvalidOperationException("Member profile not found");
+            throw new InvalidOperationException("Không tìm thấy hồ sơ thành viên");
 
         if (memberProfile.IsDeleted == true)
             throw new InvalidOperationException("Member profile is deleted");
@@ -232,7 +232,7 @@ public class MemberService : IMemberService
                              (c.MemberId1 == memberProfile.Id || c.MemberId2 == memberProfile.Id));
             
             if (isInCouple && memberProfile.Gender != request.Gender)
-                throw new InvalidOperationException("Cannot change gender while in a couple");
+                throw new InvalidOperationException("Không thể đổi giới tính khi đang trong cặp đôi");
             
             memberProfile.Gender = request.Gender;
             hasUpdates = true;
@@ -309,7 +309,7 @@ public class MemberService : IMemberService
                 {
                     var prefix = cleanPhone.Substring(0, 2);
                     if (prefix != "03" && prefix != "05" && prefix != "07" && prefix != "08" && prefix != "09")
-                        throw new ArgumentException("Invalid Vietnamese phone number prefix");
+                        throw new ArgumentException("Đầu số điện thoại Việt Nam không hợp lệ");
                 }
                 
                 memberProfile.User.PhoneNumber = cleanPhone;
