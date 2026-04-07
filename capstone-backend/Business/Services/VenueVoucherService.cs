@@ -206,13 +206,6 @@ namespace capstone_backend.Business.Services
             if (request.VenueLocationIds == null || !request.VenueLocationIds.Any())
                 throw new Exception("Voucher phải áp dụng cho ít nhất 1 địa điểm");
 
-            foreach (var locId in request.VenueLocationIds)
-            {
-                var locationIds = venueOwner.VenueLocations.Select(vl => vl.Id).ToList();
-                if (!locationIds.Contains(locId))
-                    throw new Exception($"Địa điểm ID {locId} không thuộc quyền sở hữu của bạn");
-            }
-
             var now = DateTime.UtcNow;
 
             // Check date validity
@@ -243,7 +236,31 @@ namespace capstone_backend.Business.Services
             voucher.Code = await GenerateUniqueVoucherCodeAsync(prefix);
 
             // Create VoucherLocation entries
+            // Check valid locations
             var distinctLocationIds = request.VenueLocationIds.Distinct().ToList();
+
+            var invalidLocations = distinctLocationIds
+                .Select(id => new
+                {
+                    Id = id,
+                    Location = venueOwner.VenueLocations.FirstOrDefault(loc =>
+                        loc.Id == id &&
+                        loc.Status == VenueLocationStatus.ACTIVE.ToString() &&
+                        loc.IsDeleted == false)
+                })
+                .Where(x => x.Location == null)
+                .ToList();
+
+            if (invalidLocations.Any())
+            {
+                var errorMessages = invalidLocations.Select(x => {
+                    var existingLoc = venueOwner.VenueLocations.FirstOrDefault(l => l.Id == x.Id);
+                    return existingLoc != null ? $"'{existingLoc.Name}' (ID: {x.Id})" : $"(ID: {x.Id} - Không tồn tại)";
+                });
+
+                throw new Exception($"Các địa điểm sau không hợp lệ hoặc ngưng hoạt động: {string.Join(", ", errorMessages)}");
+            }
+
             voucher.VoucherLocations = distinctLocationIds.Select(locId => new VoucherLocation
             {
                 VenueLocationId = locId
@@ -327,6 +344,14 @@ namespace capstone_backend.Business.Services
             if (voucher.VoucherLocations == null || !voucher.VoucherLocations.Any())
                 throw new Exception("Voucher phải áp dụng cho ít nhất 1 địa điểm");
 
+            var inactiveLocations = voucher.VoucherLocations
+                .Where(vl => vl.VenueLocation.Status != VenueLocationStatus.ACTIVE.ToString() || vl.VenueLocation.IsDeleted == true)
+                .Select(vl => vl.VenueLocation.Name)
+                .ToList();
+
+            if (inactiveLocations.Any())
+                throw new Exception($"Không thể gửi duyệt. Các địa điểm sau đang ngưng hoạt động: {string.Join(", ", inactiveLocations)}");
+
             // Check quantity
             if (voucher.Quantity <= 0)
                 throw new Exception("Số lượng phải lớn hơn 0");
@@ -407,14 +432,6 @@ namespace capstone_backend.Business.Services
             {
                 if (!request.VenueLocationIds.Any())
                     throw new Exception("Voucher phải áp dụng cho ít nhất 1 địa điểm");
-
-                var ownerLocationIds = venueOwner.VenueLocations.Select(vl => vl.Id).ToHashSet();
-
-                foreach (var locId in request.VenueLocationIds.Distinct())
-                {
-                    if (!ownerLocationIds.Contains(locId))
-                        throw new Exception($"Địa điểm ID {locId} không thuộc quyền sở hữu của bạn");
-                }
             }
 
             // Map
@@ -423,6 +440,28 @@ namespace capstone_backend.Business.Services
             if (request.VenueLocationIds != null)
             {
                 var distinctLocationIds = request.VenueLocationIds.Distinct().ToList();
+                var invalidInfo = distinctLocationIds
+                    .Select(id => new
+                    {
+                        Id = id,
+                        Location = venueOwner.VenueLocations.FirstOrDefault(loc =>
+                            loc.Id == id &&
+                            loc.Status == VenueLocationStatus.ACTIVE.ToString() &&
+                            loc.IsDeleted == false)
+                    })
+                    .Where(x => x.Location == null)
+                    .ToList();
+
+                if (invalidInfo.Any())
+                {
+                    var errorMessages = invalidInfo.Select(x => {
+                        var exist = venueOwner.VenueLocations.FirstOrDefault(l => l.Id == x.Id);
+                        return exist != null ? $"'{exist.Name}'" : $"ID:{x.Id}";
+                    });
+
+                    throw new Exception($"Các địa điểm sau không hợp lệ hoặc ngưng hoạt động: {string.Join(", ", errorMessages)}");
+                }
+
                 voucher.VoucherLocations = distinctLocationIds.Select(locId => new VoucherLocation
                 {
                     VenueLocationId = locId
@@ -490,6 +529,20 @@ namespace capstone_backend.Business.Services
 
             if (voucher.Status != VoucherStatus.APPROVED.ToString())
                 throw new Exception("Chỉ có thể kích hoạt voucher ở trạng thái APPROVED");
+
+            var inactiveLocations = voucher.VoucherLocations
+                .Where(vl => vl.VenueLocation.Status != VenueLocationStatus.ACTIVE.ToString() || vl.VenueLocation.IsDeleted == true)
+                .Select(vl => vl.VenueLocation.Name)
+                .ToList();
+
+            var inactiveCount = voucher.VoucherLocations
+                .Count(vl => vl.VenueLocation.Status != VenueLocationStatus.ACTIVE.ToString() || vl.VenueLocation.IsDeleted == true);
+
+            if (inactiveCount > 0 && inactiveCount == voucher.VoucherLocations.Count)
+                throw new Exception("Không thể kích hoạt voucher vì TẤT CẢ địa điểm áp dụng đều đã ngưng hoạt động.");
+
+            if (inactiveLocations.Any())
+                throw new Exception($"Không thể kích hoạt voucher. Các địa điểm sau đang ngưng hoạt động: {string.Join(", ", inactiveLocations)}");
 
             var now = DateTime.UtcNow;
 
@@ -626,12 +679,12 @@ namespace capstone_backend.Business.Services
             var voucherLocations = voucherItem.Voucher.VoucherLocations;
             if (voucherLocations != null && voucherLocations.Any())
             {
-                var isValidLocation = voucherLocations.Any(vl => vl.VenueLocationId == request.VenueLocationId);
+                var isValidLocation = voucherLocations.Any(vl => vl.VenueLocationId == request.VenueLocationId && vl.VenueLocation.Status == VenueLocationStatus.ACTIVE.ToString());
 
                 if (!isValidLocation)
                 {
                     response.IsValid = false;
-                    response.ValidationMessage = "Mã voucher không áp dụng cho địa điểm này";
+                    response.ValidationMessage = "Mã voucher không áp dụng cho địa điểm này hoặc địa điểm không hoạt động";
                     return response;
                 }
             }
@@ -700,12 +753,12 @@ namespace capstone_backend.Business.Services
             var voucherLocations = voucherItem.Voucher.VoucherLocations;
             if (voucherLocations != null && voucherLocations.Any())
             {
-                var isValidLocation = voucherLocations.Any(vl => vl.VenueLocationId == request.VenueLocationId);
+                var isValidLocation = voucherLocations.Any(vl => vl.VenueLocationId == request.VenueLocationId && vl.VenueLocation.Status == VenueLocationStatus.ACTIVE.ToString());
 
                 if (!isValidLocation)
                 {
                     response.IsValid = false;
-                    response.ValidationMessage = "Mã voucher không áp dụng cho địa điểm này";
+                    response.ValidationMessage = "Mã voucher không áp dụng cho địa điểm này hoặc địa điểm không hoạt động";
                     return response;
                 }
             }

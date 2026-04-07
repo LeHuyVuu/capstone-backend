@@ -22,12 +22,32 @@ namespace capstone_backend.Business.Jobs.Voucher
         {
             var now = DateTime.UtcNow;
 
-            var voucher = await _unitOfWork.Vouchers.GetByIdAsync(voucherId);
+            var voucher = await _unitOfWork.Vouchers.GetIncludeByIdAsync(voucherId);
             if (voucher == null || voucher.IsDeleted == true)
                 return;
 
             if (voucher.Status != VoucherStatus.APPROVED.ToString())
                 return;
+
+            var inactiveLocations = voucher.VoucherLocations
+                .Where(vl => vl.VenueLocation.Status != VenueLocationStatus.ACTIVE.ToString() || vl.VenueLocation.IsDeleted == true)
+                .Select(vl => vl.VenueLocation.Name)
+                .ToList();
+
+            var inactiveCount = voucher.VoucherLocations
+                .Count(vl => vl.VenueLocation.Status != VenueLocationStatus.ACTIVE.ToString() || vl.VenueLocation.IsDeleted == true);
+
+            if (inactiveCount > 0 && inactiveCount == voucher.VoucherLocations.Count)
+            {
+                _logger.LogWarning($"[Auto-Activate Job] Hủy kích hoạt Voucher {voucherId} vì TẤT CẢ địa điểm đều đã ngưng hoạt động.");
+                voucher.Status = VoucherStatus.ENDED.ToString();
+                voucher.UpdatedAt = now;
+
+                _unitOfWork.Vouchers.Update(voucher);
+                await CleanupJobAsync(voucherId, VoucherJobType.ACTIVATE_VOUCHER.ToString());
+                await _unitOfWork.SaveChangesAsync();
+                return;
+            }
 
             voucher.Status = VoucherStatus.ACTIVE.ToString();
             voucher.UpdatedAt = now;
