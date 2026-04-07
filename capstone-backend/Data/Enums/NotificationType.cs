@@ -9,6 +9,7 @@
         CHAT,
         SYSTEM,
         SOCIAL,
-        MAP
+        MAP,
+        Transaction,
     }
 }

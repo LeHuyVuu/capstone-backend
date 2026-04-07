@@ -17,6 +17,9 @@
         public decimal? DiscountAmount { get; set; }
         public decimal? DiscountPercent { get; set; }
 
+        public bool IsUsable { get; set; } = false;
+        public string StatusNote = string.Empty;
+
         public List<MemberVoucherLocationItemResponse> Locations { get; set; } = new();
     }
 }

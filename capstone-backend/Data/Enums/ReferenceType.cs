@@ -9,6 +9,7 @@
         REVIEW,
         POST,
         COMMENT,
-        CHALLENGE
+        CHALLENGE,
+        WALLET
     }
 }

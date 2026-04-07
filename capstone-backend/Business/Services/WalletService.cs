@@ -485,6 +485,11 @@ public class WalletService
                 item.Direction = "OUT";
                 item.BalanceChange = -item.Amount;
             }
+            else if (item.TransactionType == TransactionType.MEMBER_SUBSCRIPTION.ToString() && item.PaymentMethod == PaymentMethod.SYSTEM.ToString())
+            {
+                item.Direction = "OUT";
+                item.BalanceChange = -item.Amount;
+            }
             else
             {
                 item.Direction = "IN";

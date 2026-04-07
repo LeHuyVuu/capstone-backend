@@ -1,7 +1,11 @@
 ﻿
+using capstone_backend.Business.Common;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Services;
+using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Hangfire;
+using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Jobs.Voucher
 {
@@ -10,12 +14,14 @@ namespace capstone_backend.Business.Jobs.Voucher
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<VoucherWorker> _logger;
         private readonly IVoucherItemService _voucherItemService;
+        private readonly IFcmService? _fcmService;
 
-        public VoucherWorker(IUnitOfWork unitOfWork, ILogger<VoucherWorker> logger, IVoucherItemService voucherItemService)
+        public VoucherWorker(IUnitOfWork unitOfWork, ILogger<VoucherWorker> logger, IVoucherItemService voucherItemService, IServiceProvider serviceProvider)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
             _voucherItemService = voucherItemService;
+            _fcmService = serviceProvider.GetService<IFcmService>();
         }
 
         public async Task ActivateVoucherAsync(int voucherId)  
@@ -122,6 +128,131 @@ namespace capstone_backend.Business.Jobs.Voucher
                 return;
 
             _unitOfWork.VoucherItemJobs.Delete(job);
+        }
+
+        public async Task ScanAndRefundInactiveVouchersAsync()
+        {
+            var vouchersToCheck = await _unitOfWork.Vouchers.GetAsync(
+                v => v.Status == VoucherStatus.ACTIVE.ToString() && v.IsDeleted == false,
+                include: q => q.Include(v => v.VoucherLocations).ThenInclude(vl => vl.VenueLocation)
+            );
+
+            foreach (var voucher in vouchersToCheck)
+            {
+                var totalLocs = voucher.VoucherLocations.Count;
+                var inactiveLocs = voucher.VoucherLocations.Count(vl =>
+                    vl.VenueLocation.Status != VenueLocationStatus.ACTIVE.ToString() || vl.VenueLocation.IsDeleted == true);
+
+                if (totalLocs > 0 && inactiveLocs == totalLocs)
+                {
+                    _logger.LogWarning($"[ScanAndRefundInactiveVouchersAsync Job] Voucher {voucher.Id} has all inactive locations. Processing refund...");
+
+                    await ProcessRefundForVoucherAsync(voucher);
+                }
+            }
+        }
+
+        private async Task ProcessRefundForVoucherAsync(Data.Entities.Voucher voucherEntity)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var itemsToRefund = await _unitOfWork.VoucherItems.GetAsync(
+                    vi => vi.VoucherId == voucherEntity.Id && vi.Status == VoucherItemStatus.ACQUIRED.ToString(),
+                    include: q => q.Include(vi => vi.VoucherItemMember).ThenInclude(vimm => vimm.Member)
+                );
+
+                if (!itemsToRefund.Any())
+                    goto EndVoucher;
+
+                foreach (var item in itemsToRefund)
+                {
+                    if (item.VoucherItemMember == null)
+                    {
+                        _logger.LogWarning($"VoucherItem {item.Id} has no associated VoucherItemMember. Skipping refund.");
+                        continue;
+                    }
+
+                    var userId = item.VoucherItemMember.Member.UserId;
+                    var points = item.VoucherItemMember.TotalPointsUsed;
+
+                    // 1. Refund points to user's wallet
+                    var wallet = await _unitOfWork.Wallets.GetByUserIdAsync(userId);
+                    wallet.Points += points;
+                    _unitOfWork.Wallets.Update(wallet);
+
+                    // 2. Update item status
+                    item.Status = VoucherItemStatus.ENDED.ToString();
+                    _unitOfWork.VoucherItems.Update(item);
+
+                    // 3. Create transaction history for refund
+                    var transaction = new Transaction
+                    {
+                        Amount = points.HasValue ? (decimal)points.Value : 0,
+                        Currency = "POINTS",
+                        UserId = userId,
+                        PaymentMethod = PaymentMethod.SYSTEM.ToString(),
+                        Description = $"Hoàn tiền voucher '{voucherEntity.Title}' về ví do tất cả địa điểm ngưng hoạt động",
+                        DocNo = wallet.Id,
+                        TransType = (int)TransactionType.REFUND,
+                        ExternalRefCode = null,
+                        Status = TransactionStatus.SUCCESS.ToString(),
+                    };
+                    await _unitOfWork.Transactions.AddAsync(transaction);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // 4. Create Notification
+                    var notification = new Data.Entities.Notification
+                    {
+                        UserId = userId,
+                        Title = NotificationTemplate.Voucher.TitleRefundInactiveVoucher,
+                        Message = NotificationTemplate.Voucher.GetRefundInactiveVoucherBody(voucherEntity.Title, points.Value.ToString()),
+                        Type = NotificationType.Transaction.ToString(),
+                        ReferenceType = ReferenceType.WALLET.ToString(),
+                        ReferenceId = wallet.Id,
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow,
+                    };
+
+                    await _unitOfWork.Notifications.AddAsync(notification);
+
+                    // Send FCM notification to user about refund
+                    if (_fcmService != null)
+                    {
+                        var deviceTokens = await _unitOfWork.DeviceTokens.GetTokensByUserId(userId);
+
+                        if (deviceTokens.Any())
+                        {
+                            _ = _fcmService.SendMultiNotificationAsync(deviceTokens, new DTOs.Notification.SendNotificationRequest
+                            {
+                                Title = NotificationTemplate.Voucher.TitleRefundInactiveVoucher,
+                                Body = NotificationTemplate.Voucher.GetRefundInactiveVoucherBody(voucherEntity.Title, points.ToString()),
+                                Data = new Dictionary<string, string>
+                                {
+                                    { NotificationKeys.Type, NotificationType.Transaction.ToString() },
+                                    { NotificationKeys.RefType, ReferenceType.WALLET.ToString() },
+                                    { NotificationKeys.RefId, wallet.Id.ToString() },
+                                }
+                            });
+                        }
+                    }
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                EndVoucher:
+                    voucherEntity.Status = VoucherStatus.ENDED.ToString();
+                    voucherEntity.UpdatedAt = DateTime.UtcNow;
+                    _unitOfWork.Vouchers.Update(voucherEntity);
+
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, $"Lỗi hoàn tiền Voucher {voucherEntity.Id}");
+            }
         }
     }
 }

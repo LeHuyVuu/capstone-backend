@@ -129,5 +129,14 @@
                 return $"Tiến độ thử thách \"{challengeTitle}\" đã được cập nhật! {partnerName} đã tăng tiến độ lên {current}/{target}";
             }
         }
+
+        public static class Voucher
+        {
+            public const string TitleRefundInactiveVoucher = "Hoàn tiền voucher";
+            public static string GetRefundInactiveVoucherBody(string voucherTitle, string points)
+            {
+                return $"Voucher {voucherTitle} đã bị hủy do tất cả địa điểm liên kết đều ngưng hoạt động. Số điểm : {points} đã được hoàn lại vào ví của bạn.";
+            }
+        }
     }
 }

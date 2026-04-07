@@ -109,6 +109,13 @@ namespace capstone_backend.Business.Services
                 if (availableCount < reqItem.Quantity)
                     throw new Exception($"Voucher '{voucher.Title}' chỉ còn {availableCount} mã, không đủ để đổi");
 
+                var hasActiveLocation = voucher.VoucherLocations.Any(vl =>
+                    vl.VenueLocation.Status == VenueLocationStatus.ACTIVE.ToString() &&
+                    vl.VenueLocation.IsDeleted == false);
+
+                if (!hasActiveLocation)
+                    throw new Exception($"Voucher '{voucher.Title}' hiện không có địa điểm nào hoạt động để áp dụng.");
+
                 if (voucher.UsageLimitPerMember.HasValue && voucher.UsageLimitPerMember > 0)
                 {
                     var memberUsedCount = await _unitOfWork.VoucherItems.CountMemberAcquiredVoucherAsync(member.Id, voucher.Id);
@@ -273,6 +280,13 @@ namespace capstone_backend.Business.Services
             if (voucher == null || voucher.Status != VoucherStatus.ACTIVE.ToString())
                 throw new Exception("Không tìm thấy voucher");
 
+            var hasActiveLocation = voucher.VoucherLocations.Any(vl =>
+                vl.VenueLocation.Status == VenueLocationStatus.ACTIVE.ToString() &&
+                vl.VenueLocation.IsDeleted == false);
+
+            if (!hasActiveLocation)
+                throw new Exception("Voucher hiện không khả dụng do các địa điểm áp dụng đều đã ngưng hoạt động");
+
             var response = _mapper.Map<MemberVoucherDetailResponse>(voucher);
             if ((voucher.RemainingQuantity ?? 0) <= 0)
             {
@@ -325,7 +339,13 @@ namespace capstone_backend.Business.Services
                             v.Title != null && v.Title.ToLower().Contains(keyword) ||
                             v.Description != null && v.Description.ToLower().Contains(keyword)
                          )) &&
-                         (!request.LocationId.HasValue || v.VoucherLocations.Any(x => x.VenueLocationId == request.LocationId.Value)),
+                         v.VoucherLocations.Any(vl =>
+                            vl.VenueLocation.Status == VenueLocationStatus.ACTIVE.ToString() &&
+                            vl.VenueLocation.IsDeleted == false) &&
+                         (!request.LocationId.HasValue || v.VoucherLocations.Any(x =>
+                            x.VenueLocationId == request.LocationId.Value &&
+                            x.VenueLocation.Status == VenueLocationStatus.ACTIVE.ToString() &&
+                            x.VenueLocation.IsDeleted == false)),
                     orderBy,
                     v => v.Include(v => v.VoucherLocations).ThenInclude(vl => vl.VenueLocation)
                 );
@@ -407,7 +427,7 @@ namespace capstone_backend.Business.Services
                             vi.Voucher.Description != null && vi.Voucher.Description.ToLower().Contains(keyword)
                          )),
                     orderBy,
-                    vi => vi.Include(vi => vi.Voucher)
+                    vi => vi.Include(vi => vi.Voucher).ThenInclude(v => v.VoucherLocations).ThenInclude(vl => vl.VenueLocation)
                 );
 
             var response = _mapper.Map<List<MemberVoucherItemResponse>>(voucherItems);
@@ -420,6 +440,13 @@ namespace capstone_backend.Business.Services
                     item.DiscountAmount = voucher.DiscountAmount;
                     item.DiscountPercent = voucher.DiscountPercent;
                 }
+
+                var originalItem = voucherItems.First(vi => vi.Id == item.VoucherItemId);
+
+                item.IsUsable = originalItem.Status == VoucherItemStatus.ACQUIRED.ToString() &&
+                        originalItem.Voucher.VoucherLocations.Any(vl =>
+                            vl.VenueLocation.Status == VenueLocationStatus.ACTIVE.ToString() &&
+                            vl.VenueLocation.IsDeleted == false);
             }
 
             return new PagedResult<MemberVoucherItemResponse>
@@ -445,6 +472,21 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Bạn không có quyền truy cập voucher này");
 
             var response = _mapper.Map<MemberVoucherItemDetailResponse>(voucherItem);
+
+            if (voucherItem.Voucher != null)
+            {
+                var activeLocations = voucherItem.Voucher.VoucherLocations
+                    .Where(vl => vl.VenueLocation.Status == VenueLocationStatus.ACTIVE.ToString() && vl.VenueLocation.IsDeleted == false)
+                    .ToList();
+
+                response.IsUsable = voucherItem.Status == VoucherItemStatus.ACQUIRED.ToString() && activeLocations.Any();
+
+                if (!activeLocations.Any() && voucherItem.Status == VoucherItemStatus.ACQUIRED.ToString())
+                {
+                    response.StatusNote = "Tất cả địa điểm áp dụng hiện đang tạm ngưng hoạt động";
+                }
+            }
+
             return response;
         }
 

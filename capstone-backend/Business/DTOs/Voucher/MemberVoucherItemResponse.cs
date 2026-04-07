@@ -18,5 +18,7 @@ namespace capstone_backend.Business.DTOs.Voucher
         public string? DiscountType { get; set; }
         public decimal? DiscountAmount { get; set; }
         public decimal? DiscountPercent { get; set; }
+
+        public bool IsUsable { get; set; } = false;
     }
 }

@@ -77,14 +77,16 @@ namespace capstone_backend.Business.Mappings
                 .ForMember(dest => dest.Locations, opt => opt.MapFrom(src => src.VoucherLocations.Select(vl => new MemberVoucherLocationItemResponse
                 {
                     VenueLocationId = vl.VenueLocationId,
-                    VenueLocationName = vl.VenueLocation.Name
+                    VenueLocationName = vl.VenueLocation.Name,
+                    IsActive = vl.VenueLocation.Status == VenueLocationStatus.ACTIVE.ToString()
                 }).ToList()));
 
             CreateMap<Voucher, MemberVoucherDetailResponse>()
                 .ForMember(dest => dest.Locations, opt => opt.MapFrom(src => src.VoucherLocations.Select(vl => new MemberVoucherLocationItemResponse
                 {
                     VenueLocationId = vl.VenueLocationId,
-                    VenueLocationName = vl.VenueLocation.Name
+                    VenueLocationName = vl.VenueLocation.Name,
+                    IsActive = vl.VenueLocation.Status == VenueLocationStatus.ACTIVE.ToString()
                 }).ToList()));
 
             CreateMap<VoucherItem, ExchangeVoucherItemResult>()
@@ -106,7 +108,8 @@ namespace capstone_backend.Business.Mappings
                 .ForMember(dest => dest.Locations, opt => opt.MapFrom(src => src.Voucher.VoucherLocations.Select(vl => new MemberVoucherLocationItemResponse
                 {
                     VenueLocationId = vl.VenueLocationId,
-                    VenueLocationName = vl.VenueLocation.Name
+                    VenueLocationName = vl.VenueLocation.Name,
+                    IsActive = vl.VenueLocation.Status == VenueLocationStatus.ACTIVE.ToString()
                 }).ToList()));
 
             CreateMap<VoucherItemMember, MemberVoucherTransactionListItemResponse>()

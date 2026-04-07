@@ -11,6 +11,7 @@ using capstone_backend.Business.Jobs.Payment;
 using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Business.Jobs.VenueSettlement;
 using capstone_backend.Business.Jobs.VenueSubscription;
+using capstone_backend.Business.Jobs.Voucher;
 using capstone_backend.Business.Mappings;
 using capstone_backend.Extensions;
 using capstone_backend.Hubs;
@@ -299,6 +300,15 @@ using (var scope = serviceProvider.CreateScope())
         "auto-incomplete-challenge",
         job => job.AutoInCompleteChallengeAsync(),
         Cron.Daily(),
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
+    RecurringJob.AddOrUpdate<IVoucherWorker>(
+        "auto-scan-refund-voucher",
+        job => job.ScanAndRefundInactiveVouchersAsync(),
+        Cron.Hourly(),
         new RecurringJobOptions
         {
             TimeZone = vnTz
