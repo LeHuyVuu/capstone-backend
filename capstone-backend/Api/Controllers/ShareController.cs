@@ -10,8 +10,25 @@ namespace capstone_backend.Api.Controllers
         [HttpGet("p/{code}")]
         public IActionResult SharePost([FromRoute] string code)
         {
-            var title = "CoupleMood Post";
-            var description = "Xem bài viết này trên CoupleMood 💜";
+            return GenerateShareHtml(
+                title: "CoupleMood Post",
+                description: "Xem bài viết này trên CoupleMood 💜",
+                schemeUrl: $"couplemood://post/{code}"
+            );
+        }
+
+        [HttpGet("c/{code}")]
+        public IActionResult ShareCollection([FromRoute] string code)
+        {
+            return GenerateShareHtml(
+                title: "CoupleMood Collection",
+                description: "Khám phá bộ sưu tập này trên CoupleMood 💜",
+                schemeUrl: $"couplemood://collection/{code}"
+            );
+        }
+
+        private ContentResult GenerateShareHtml(string title, string description, string schemeUrl)
+        {
             var imageUrl = "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/system/logo.png";
 
             var html = $@"
@@ -27,6 +44,9 @@ namespace capstone_backend.Api.Controllers
     <meta property='og:type' content='article' />
 
     <title>{title}</title>
+    <script>
+        window.location.href = '{schemeUrl}';
+    </script>
 </head>
 <body>
     <p>{description}</p>
