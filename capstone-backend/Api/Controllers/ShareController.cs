@@ -13,6 +13,8 @@ namespace capstone_backend.Api.Controllers
             var title = "CoupleMood Post";
             var description = "Xem bài viết này trên CoupleMood 💜";
             var imageUrl = "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/system/logo.png";
+            var deepLink = $"couplemood://post/{code}";
+            var fallback = $"https://couplemood.io.vn/app/post/{code}"; // web fallback nếu có
 
             var html = $@"
 <!DOCTYPE html>
@@ -21,12 +23,23 @@ namespace capstone_backend.Api.Controllers
     <meta charset='utf-8' />
     <meta name='viewport' content='width=device-width, initial-scale=1' />
 
+    <!-- Open Graph -->
     <meta property='og:title' content='{title}' />
     <meta property='og:description' content='{description}' />
     <meta property='og:image' content='{imageUrl}' />
     <meta property='og:type' content='article' />
 
     <title>{title}</title>
+
+    <script>
+        // thử mở app
+        window.location.href = '{deepLink}';
+
+        // fallback nếu app không mở
+        setTimeout(function() {{
+            window.location.href = '{fallback}';
+        }}, 1500);
+    </script>
 </head>
 <body>
     <p>{description}</p>
