@@ -43,6 +43,7 @@ public class VenueLocationProfile : Profile
                         {
                             Id = mt.Id,
                             Name = mt.Name,
+                            Description = mt.Description,
                         })
                         .ToList();
 
@@ -56,6 +57,7 @@ public class VenueLocationProfile : Profile
                         {
                             Id = pt.Id,
                             Name = pt.Name,
+                            Description = pt.Description,
                         })
                         .ToList();
                 }
