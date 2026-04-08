@@ -1,3 +1,4 @@
+using capstone_backend.Business.DTOs.VenueLocation;
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
@@ -344,34 +345,58 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
             .FirstOrDefaultAsync(vl => vl.Id == id);
     }
 
-    public async Task<IEnumerable<VenueLocation>> GetNamesByIdsAsync(List<string> venueIds)
+    public async Task<IEnumerable<VenueBasicInfoDto>> GetVenueBasicInfoByIdsAsync(List<string> venueIds)
     {
-        var query = _dbSet
+        if (venueIds == null || !venueIds.Any())
+            return new List<VenueBasicInfoDto>();
+
+        return await _dbSet
             .AsNoTracking()
-            .Where(v => venueIds.Contains(v.Id.ToString()) && v.IsDeleted == false && v.Status == VenueLocationStatus.ACTIVE.ToString())
-            .Select(v => new VenueLocation
+            .Where(v => venueIds.Contains(v.Id.ToString()))
+            .Select(v => new VenueBasicInfoDto
             {
                 Id = v.Id,
-                Name = v.Name
-            });
-
-        return await query.Distinct().ToListAsync();
+                Name = v.Name,
+                IsActive = v.Status == VenueLocationStatus.ACTIVE.ToString() && v.IsDeleted == false
+            })
+            .ToListAsync();
     }
 
-    public async Task<List<string>> GetInvalidVenueIdsAsync(List<string> venueIds)
+    public async Task<List<(string Id, string? Name)>> GetInvalidVenueAsync(List<string> venueIds)
     {
-        if (venueIds == null || !venueIds.Any()) 
-            return new List<string>();
+        if (venueIds == null || !venueIds.Any())
+            return new List<(string, string?)>();
 
-        var validVenueIds = await _dbSet
+        var venues = await _dbSet
             .AsNoTracking()
-            .Where(v => venueIds.Contains(v.Id.ToString()) && v.Status == VenueLocationStatus.ACTIVE.ToString() && v.IsDeleted == false)
-            .Select(v => v.Id.ToString())
+            .Where(v => venueIds.Contains(v.Id.ToString()))
+            .Select(v => new
+            {
+                Id = v.Id.ToString(),
+                Name = v.Name,
+                IsValid = v.Status == VenueLocationStatus.ACTIVE.ToString() && v.IsDeleted == false
+            })
             .ToListAsync();
 
-        var invalidIds = venueIds.Except(validVenueIds).ToList();
-        
-        return invalidIds;
+        // valid ids
+        var validIds = venues
+            .Where(v => v.IsValid)
+            .Select(v => v.Id)
+            .ToHashSet();
+
+        // invalid trong DB (có nhưng inactive / deleted)
+        var invalidInDb = venues
+            .Where(v => !v.IsValid)
+            .Select(v => (v.Id, v.Name))
+            .ToList();
+
+        // invalid không tồn tại trong DB
+        var notFoundIds = venueIds
+            .Except(venues.Select(v => v.Id))
+            .Select(id => (Id: id, Name: (string?)null))
+            .ToList();
+
+        return invalidInDb.Concat(notFoundIds).ToList();
     }
 
     public IQueryable<VenueLocation> BuildAiCandidatesQuery(
@@ -423,5 +448,12 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
         //    ));
 
         return query;
+    }
+
+    public async Task<bool> IsVenueActiveAsync(int venueId)
+    {
+        return await _dbSet
+            .AsNoTracking()
+            .AnyAsync(v => v.Id == venueId && v.IsDeleted == false && v.Status == VenueLocationStatus.ACTIVE.ToString());
     }
 }

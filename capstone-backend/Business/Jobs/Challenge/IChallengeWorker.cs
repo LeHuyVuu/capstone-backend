@@ -5,5 +5,6 @@
         Task RenewDailyCheckinChallengesAsync();
         Task AutoEndChallengeAsync();
         Task AutoInCompleteChallengeAsync();
+        Task SyncInactiveVenuesAsync();
     }
 }

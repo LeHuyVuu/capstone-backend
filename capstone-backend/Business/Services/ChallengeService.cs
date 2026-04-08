@@ -221,10 +221,15 @@ namespace capstone_backend.Business.Services
                                 if (intList != null && intList.Any())
                                 {
                                     var uniqueIds = intList.Distinct().Select(x => x.ToString()).ToList();
-                                    var invalidIds = await _unitOfWork.VenueLocations.GetInvalidVenueIdsAsync(uniqueIds);
-                                    if (invalidIds.Any())
+                                    var invalidVenues = await _unitOfWork.VenueLocations.GetInvalidVenueAsync(uniqueIds);
+
+                                    if (invalidVenues.Any())
                                     {
-                                        throw new Exception($"Các địa điểm sau không tồn tại hoặc chưa kích hoạt: {string.Join(", ", invalidIds)}");
+                                        var message = string.Join(", ", invalidVenues.Select(v =>
+                                            v.Name != null ? $"{v.Name} ({v.Id})" : $"ID: {v.Id}"
+                                        ));
+
+                                        throw new Exception($"Các địa điểm sau không tồn tại hoặc đã ngưng hoạt động: {message}");
                                     }
 
                                     rawValue = uniqueIds;
@@ -329,8 +334,8 @@ namespace capstone_backend.Business.Services
             }
 
             // Get venue names
-            var venueLookup = await _unitOfWork.VenueLocations.GetNamesByIdsAsync(allVenueIds);
-            var venueIdToName = venueLookup.ToDictionary(v => v.Id.ToString(), v => v.Name);
+            var venueInfoLookup = await _unitOfWork.VenueLocations.GetVenueBasicInfoByIdsAsync(allVenueIds);
+            var venueMap = venueInfoLookup.ToDictionary(v => v.Id.ToString(), v => v);
 
             var items = challenges.ToList();
 
@@ -364,11 +369,42 @@ namespace capstone_backend.Business.Services
                             {
                                 if (r.Value is JsonElement valElement && valElement.ValueKind == JsonValueKind.Array)
                                 {
-                                    var ids = JsonSerializer.Deserialize<List<string>>(valElement);
-                                    var names = ids?.Select(id => venueIdToName.ContainsKey(id) ? venueIdToName[id] : id.ToString());
-                                    var venueNameStr = names != null ? string.Join(", ", names) : "N/A";
+                                    //var ids = JsonSerializer.Deserialize<List<string>>(valElement);
+                                    //var names = ids?.Select(id => venueIdToName.ContainsKey(id) ? venueIdToName[id] : id.ToString());
+                                    //var venueNameStr = names != null ? string.Join(", ", names) : "N/A";
 
-                                    targetDto.Instructions.Add($"📍 Thử thách yêu cầu check-in tại địa điểm: {venueNameStr}");
+                                    //targetDto.Instructions.Add($"📍 Thử thách yêu cầu check-in tại địa điểm: {venueNameStr}");
+
+                                    var ids = JsonSerializer.Deserialize<List<string>>(valElement) ?? new();
+
+                                    var venueDescriptions = ids.Select(id =>
+                                    {
+                                        if (venueMap.TryGetValue(id, out var info))
+                                        {
+                                            return new
+                                            {
+                                                Text = info.IsActive
+                                                    ? info.Name
+                                                    : $"{info.Name} [Ngưng hoạt động]",
+                                                IsInactive = !info.IsActive
+                                            };
+                                        }
+
+                                        return new
+                                        {
+                                            Text = $"Unknown({id})",
+                                            IsInactive = false
+                                        };
+                                    }).ToList();
+
+                                    var venueNameStr = string.Join(", ", venueDescriptions.Select(v => v.Text));
+
+                                    targetDto.Instructions.Add($"📍 Thử thách tại: {venueNameStr}");
+
+                                    if (venueDescriptions.Any(v => v.IsInactive) && items[i].Status == ChallengeStatus.ACTIVE.ToString())
+                                    {
+                                        targetDto.Instructions.Add("⚠️ Lưu ý: Một số địa điểm đã ngưng hoạt động, hãy kiểm tra trước khi thực hiện thử thách. Hệ thống sẽ tự động cập nhật lại trạng thái thử thách trong thời gian tới");
+                                    }
                                 }
                             }
                             else if (r.Key == ChallengeConstants.RuleKeys.HAS_IMAGE && r.Value is JsonElement val && val.ValueKind == JsonValueKind.True)
@@ -495,7 +531,7 @@ namespace capstone_backend.Business.Services
             return challenge.Id;
         }
 
-        private class ChallengeRuleWrapper
+        public class ChallengeRuleWrapper
         {
             [JsonPropertyName("logic")]
             public string Logic { get; set; }
@@ -504,7 +540,7 @@ namespace capstone_backend.Business.Services
             public List<ChallengeRuleItem> Rules { get; set; }
         }
 
-        private class ChallengeRuleItem
+        public class ChallengeRuleItem
         {
             [JsonPropertyName("key")]
             public string Key { get; set; }
@@ -1625,9 +1661,16 @@ namespace capstone_backend.Business.Services
             if (coupleChallenges == null || !coupleChallenges.Any())
                 return;
 
+            bool isVenueActive = true;
+            if (venueId.HasValue)
+                isVenueActive = await _unitOfWork.VenueLocations.IsVenueActiveAsync(venueId.Value);
+
             // 3. Process each challenge
             foreach (var coupleChallenge in coupleChallenges)
             {
+                if (venueId.HasValue && !isVenueActive)
+                    continue;
+
                 var challenge = coupleChallenge.Challenge;
                 var memberKey = member.Id.ToString();
                 if (challenge == null)
@@ -1934,7 +1977,8 @@ namespace capstone_backend.Business.Services
                 if (!venueId.HasValue)
                     return false;
 
-                var uniqueKey = $"venueId:{venueId.Value}";
+                //var uniqueKey = $"venueId:{venueId.Value}";
+                var uniqueKey = venueId.Value.ToString();
 
                 if (progress.Unique.Items.Contains(uniqueKey))
                     return false;
@@ -1996,11 +2040,18 @@ namespace capstone_backend.Business.Services
             if (coupleChallenges == null || !coupleChallenges.Any())
                 return;
 
+            bool isVenueActive = true;
+            if (venueId.HasValue)
+                isVenueActive = await _unitOfWork.VenueLocations.IsVenueActiveAsync(venueId.Value);
+
             // 3. Process each challenge
             foreach (var coupleChallenge in coupleChallenges)
             {
                 var challenge = coupleChallenge.Challenge;
                 if (challenge == null)
+                    continue;
+
+                if (venueId.HasValue && !isVenueActive)
                     continue;
 
                 var memberKey = member.Id.ToString();

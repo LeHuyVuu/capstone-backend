@@ -314,6 +314,15 @@ using (var scope = serviceProvider.CreateScope())
             TimeZone = vnTz
         });
 
+    RecurringJob.AddOrUpdate<IChallengeWorker>(
+        "cleanup-challenges-job",
+        job => job.SyncInactiveVenuesAsync(),
+        "0 2 * * *",
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
     app.Logger.LogInformation("[INFO] Hangfire recurring jobs configured");
 }
 

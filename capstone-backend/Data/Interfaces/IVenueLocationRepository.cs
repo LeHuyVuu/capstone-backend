@@ -1,3 +1,4 @@
+using capstone_backend.Business.DTOs.VenueLocation;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using System.Linq.Expressions;
@@ -74,8 +75,8 @@ public interface IVenueLocationRepository : IGenericRepository<VenueLocation>
     Task<(List<VenueLocation> Venues, int TotalCount)> GetPendingVenuesAsync(int page, int pageSize);
     Task<VenueLocation?> GetByIdWithOwnerAsync(int id);
 
-    Task<IEnumerable<VenueLocation>> GetNamesByIdsAsync(List<string> venueIds);
-    Task<List<string>> GetInvalidVenueIdsAsync(List<string> venueIds);
+    Task<IEnumerable<VenueBasicInfoDto>> GetVenueBasicInfoByIdsAsync(List<string> venueIds);
+    Task<List<(string Id, string? Name)>> GetInvalidVenueAsync(List<string> venueIds);
 
     IQueryable<VenueLocation> BuildAiCandidatesQuery(
         decimal estimatedBudget,
@@ -88,4 +89,5 @@ public interface IVenueLocationRepository : IGenericRepository<VenueLocation>
         double distanceKm = 15.0);
 
     Task<VenueLocation?> GetActiveByIdAsync(int id);
+    Task<bool> IsVenueActiveAsync(int venueId);
 }

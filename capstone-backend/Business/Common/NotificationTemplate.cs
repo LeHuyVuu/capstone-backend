@@ -104,6 +104,8 @@
 
             public const string TitleChallengeProgress = "Tiến độ thử thách của bạn đã được cập nhật!";
 
+            public const string TitleCompleteChallengeSoon = "Thử thách hoàn thành sớm! 🏆";
+
             public static string GetNewChallengeBody(string challengeTitle)
             {
                 return $"Bạn đã tham gia thử thách \"{challengeTitle}\"! Hãy hoàn thành thử thách để nhận phần thưởng nhé!";
@@ -127,6 +129,11 @@
             public static string GetPartnerChallengeProgressBody(string partnerName, string challengeTitle, int current, int target)
             {
                 return $"Tiến độ thử thách \"{challengeTitle}\" đã được cập nhật! {partnerName} đã tăng tiến độ lên {current}/{target}";
+            }
+
+            public static string GetCompleteChallengeSoonBody(string challengeTitle)
+            {
+                return $"Do hệ thống cập nhật lại các địa điểm, cặp đôi của bạn đã về đích sớm trong thử thách [{challengeTitle}]. Check phần thưởng ngay thôi!";
             }
         }
 
