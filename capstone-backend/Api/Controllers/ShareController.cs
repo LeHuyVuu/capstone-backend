@@ -13,6 +13,7 @@ namespace capstone_backend.Api.Controllers
             var title = "CoupleMood Post";
             var description = "Xem bài viết này trên CoupleMood 💜";
             var imageUrl = "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/system/logo.png";
+            var customeSchemeUrl = $"couplemood://post/{code}";
 
             var html = $@"
 <!DOCTYPE html>
@@ -27,6 +28,9 @@ namespace capstone_backend.Api.Controllers
     <meta property='og:type' content='article' />
 
     <title>{title}</title>
+    <script>
+        window.location.href = '{customeSchemeUrl}';
+    </script>
 </head>
 <body>
     <p>{description}</p>
