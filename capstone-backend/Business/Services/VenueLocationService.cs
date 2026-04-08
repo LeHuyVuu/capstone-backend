@@ -921,9 +921,16 @@ public class VenueLocationService : IVenueLocationService
         _unitOfWork.VenueLocations.Update(venue);
         await _unitOfWork.SaveChangesAsync();
 
-        _logger.LogInformation("Venue location {VenueId} updated successfully", id);
 
-        return await GetVenueLocationDetailByIdAsync(id);
+        // Do not re-fetch via GetVenueLocationDetailByIdAsync because it only returns ACTIVE venues.
+        // Venue owners can update DRAFTED/PENDING venues too, otherwise client gets false 404 after successful update.
+        var response = _mapper.Map<VenueLocationDetailResponse>(venue);
+        response.Category = DeserializeCategory(venue.Category);
+        response.CoverImage = DeserializeImages(venue.CoverImage);
+        response.InteriorImage = DeserializeImages(venue.InteriorImage);
+        response.FullPageMenuImage = DeserializeImages(venue.FullPageMenuImage);
+
+        return response;
     }
 
     /// <summary>
