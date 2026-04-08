@@ -1419,8 +1419,12 @@ public class VenueLocationService : IVenueLocationService
         _logger.LogInformation("Submitting venue {VenueId} with payment - UserId: {UserId}, PackageId: {PackageId}, Qty: {Qty}",
             venueId, userId, request.PackageId, request.Quantity);
 
-        // 1. Validate venue (giống SubmitVenueToAdminAsync)
-        var venue = await _unitOfWork.VenueLocations.GetByIdWithDetailsAsync(venueId);
+        // 1. Validate venue
+        // Query inline here to avoid ACTIVE-only filter in repository details method.
+        var venue = await _unitOfWork.Context.Set<VenueLocation>()
+            .AsNoTracking()
+            .Include(v => v.VenueLocationTags)
+            .FirstOrDefaultAsync(v => v.Id == venueId && v.IsDeleted != true);
         
         if (venue == null || venue.IsDeleted == true)
         {
