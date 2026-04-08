@@ -35,10 +35,6 @@ namespace capstone_backend.Api.Controllers
         // thử mở app
         window.location.href = '{deepLink}';
 
-        // fallback nếu app không mở
-        setTimeout(function() {{
-            window.location.href = '{fallback}';
-        }}, 1500);
     </script>
 </head>
 <body>
