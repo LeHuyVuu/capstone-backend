@@ -587,7 +587,6 @@ public static class ServiceExtensions
         services.AddControllers(options =>
         {
             options.Filters.Add<ValidationFilter>();
-            options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
         })
             .AddJsonOptions(opts =>
             {
