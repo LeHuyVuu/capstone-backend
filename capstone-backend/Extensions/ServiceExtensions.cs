@@ -30,6 +30,7 @@ using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 using OpenAI.Moderations;
@@ -583,13 +584,23 @@ public static class ServiceExtensions
     /// </summary>
     public static IServiceCollection AddValidationFilter(this IServiceCollection services)
     {
-        services.AddControllers(options => { options.Filters.Add<ValidationFilter>(); })
+        services.AddControllers(options =>
+        {
+            options.Filters.Add<ValidationFilter>();
+            options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
+        })
             .AddJsonOptions(opts =>
             {
                 opts.JsonSerializerOptions.Converters.Add(
                     new JsonStringEnumConverter()
                     );
             });
+
+        services.Configure<ApiBehaviorOptions>(options =>
+        {
+            // Let ValidationFilter shape validation errors to the custom response format.
+            options.SuppressModelStateInvalidFilter = true;
+        });
 
         return services;
     }

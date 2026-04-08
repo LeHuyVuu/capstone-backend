@@ -1,4 +1,3 @@
-using capstone_backend.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -18,23 +17,24 @@ public class ValidationFilter : IActionFilter
     {
         if (!context.ModelState.IsValid)
         {
-            var errors = context.ModelState
-                .Where(x => x.Value?.Errors.Count > 0)
-                .ToDictionary(
-                    kvp => kvp.Key,
-                    kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToArray() ?? Array.Empty<string>()
-                );
+            // Get first validation error message
+            var errorMessage = "Dữ liệu đầu vào không hợp lệ";
+            var firstError = context.ModelState.Values
+                .FirstOrDefault(x => x?.Errors.Count > 0);
+            
+            if (firstError?.Errors.Count > 0)
+            {
+                errorMessage = firstError.Errors.First().ErrorMessage;
+            }
 
-            var traceId = context.HttpContext.Items["TraceId"]?.ToString()
-                          ?? context.HttpContext.TraceIdentifier;
-
-            // Sử dụng ApiResponse.ErrorData để trả về validation errors
-            var response = ApiResponse<object>.ErrorData(
-                errors, 
-                "Validation failed", 
-                400, 
-                traceId
-            );
+            var response = new
+            {
+                message = errorMessage,
+                code = 400,
+                data = (object?)null,
+                traceId = context.HttpContext.TraceIdentifier,
+                timestamp = DateTime.UtcNow.ToString("O")
+            };
 
             context.Result = new BadRequestObjectResult(response);
         }

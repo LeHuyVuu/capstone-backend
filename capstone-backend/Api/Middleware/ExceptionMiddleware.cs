@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using capstone_backend.Business.Exceptions;
 
 namespace capstone_backend.Api.Middleware;
 
@@ -35,6 +36,7 @@ public class ExceptionMiddleware
         // Xác định status code và message dựa vào loại exception
         var (statusCode, message) = exception switch
         {
+            BadRequestException badReqEx => (HttpStatusCode.BadRequest, badReqEx.Message),
             InvalidOperationException => (HttpStatusCode.BadRequest, exception.Message),
             UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "Không có quyền truy cập"),
             KeyNotFoundException => (HttpStatusCode.NotFound, "Không tìm thấy"),
@@ -49,7 +51,8 @@ public class ExceptionMiddleware
             message = message,
             code = (int)statusCode,
             data = (object?)null,
-            traceId = context.TraceIdentifier
+            traceId = context.TraceIdentifier,
+            timestamp = DateTime.UtcNow.ToString("O")
         };
 
         var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
