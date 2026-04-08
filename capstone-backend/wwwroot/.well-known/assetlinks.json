@@ -1,11 +1,11 @@
 [
   {
-    "relation": [ "delegate_permission/common.handle_all_urls" ],
+    "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
       "package_name": "com.example.couple_mood_mobile",
       "sha256_cert_fingerprints": [
-        "9C:0D:B5:CB:7C:F3:B7:16:4B:BD:E6:DA:99:9C:24:11:92:8C:55:11:36:AB:38:30:D3:41:67:E5:8D:90:3D:6B"
+        "2E:7A:B7:38:32:B2:15:D7:7B:26:59:E8:71:11:0B:2B:09:BA:64:B1:A0:A8:84:21:E5:4E:1F:20:A7:ED:1A:B6"
       ]
     }
   }
