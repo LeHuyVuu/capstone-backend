@@ -98,7 +98,7 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
 
         // Voucher metrics
         var totalVoucherItems = allVouchers.SelectMany(v => v.VoucherItems).ToList();
-        var exchangedVouchers = totalVoucherItems.Count(vi => vi.Status != VoucherItemStatus.AVAILABLE.ToString());
+        var exchangedVouchers = totalVoucherItems.Count(vi => vi.Status != VoucherItemStatus.ACQUIRED.ToString());
         var usedVouchers = totalVoucherItems.Count(vi => vi.Status == VoucherItemStatus.USED.ToString());
         
         var exchangeRate = totalVoucherItems.Count > 0 
