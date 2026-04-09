@@ -65,10 +65,16 @@ public class AdvertisementService : IAdvertisementService
             }
         }
 
-        // Lấy quảng cáo active
-        var venueLocationAds = await _unitOfWork.Advertisements.GetActiveAdvertisementsAsync();
+        // Lấy advertisement trước, venue-location ads sẽ được gắn vào sau (nếu có)
+        var advertisements = await _unitOfWork.Context.Set<Advertisement>()
+            .AsNoTracking()
+            .Where(a =>
+                a.Status == AdvertisementStatus.APPROVED.ToString() &&
+                a.IsDeleted == false)
+            .OrderByDescending(a => a.CreatedAt)
+            .ToListAsync();
 
-        _logger.LogInformation("Total active ads before filter: {Count}", venueLocationAds.Count);
+        _logger.LogInformation("Total approved ads before filter: {Count}", advertisements.Count);
 
         // Filter by placement type nếu có (case-insensitive)
         if (!string.IsNullOrEmpty(placementType))
@@ -81,13 +87,10 @@ public class AdvertisementService : IAdvertisementService
                 return new List<AdvertisementResponse>();
             }
 
-            venueLocationAds = venueLocationAds
-                .Where(vla => !string.IsNullOrEmpty(vla.Advertisement.PlacementType) && 
-                             vla.Advertisement.PlacementType.Trim().ToUpper() == normalizedPlacementType)
+            advertisements = advertisements
+                .Where(ad => !string.IsNullOrEmpty(ad.PlacementType) &&
+                             ad.PlacementType.Trim().ToUpper() == normalizedPlacementType)
                 .ToList();
-            
-            _logger.LogInformation("Filtered ads by PlacementType '{PlacementType}': {Count} ads found", 
-                placementType, venueLocationAds.Count);
         }
 
         if (_currentUser.UserId.HasValue)
@@ -100,28 +103,78 @@ public class AdvertisementService : IAdvertisementService
 
                 if (latestMoodLog != null)
                 {
-                    venueLocationAds = venueLocationAds
-                        .Where(vla => vla.Advertisement.MoodTypeId == latestMoodLog.MoodTypeId)
+                    var moodMatchedAds = advertisements
+                        .Where(ad => ad.MoodTypeId == latestMoodLog.MoodTypeId)
                         .ToList();
+
+                    if (moodMatchedAds.Any())
+                    {
+                        advertisements = moodMatchedAds;
+                    }
+                    else
+                    {
+                        _logger.LogInformation(
+                            "No ads matched member mood {MoodTypeId}. Fallback to all eligible ads without mood filter.",
+                            latestMoodLog.MoodTypeId);
+                    }
 
                     _logger.LogInformation(
                         "Filtered ads by current member mood {MoodTypeId}: {Count} ads found",
                         latestMoodLog.MoodTypeId,
-                        venueLocationAds.Count);
+                        moodMatchedAds.Count);
                 }
             }
         }
 
         if (hasPremiumMemberSubscription)
         {
-            venueLocationAds = venueLocationAds
-                .Where(vla => !string.Equals(vla.Advertisement.PlacementType?.Trim(), "POPUP", StringComparison.OrdinalIgnoreCase))
+            advertisements = advertisements
+                .Where(ad => !string.Equals(ad.PlacementType?.Trim(), "POPUP", StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
 
+        var advertisementIds = advertisements.Select(ad => ad.Id).ToList();
+        var venueLocationAds = new List<VenueLocationAdvertisement>();
+
+        if (advertisementIds.Any())
+        {
+            var now = DateTime.UtcNow;
+            venueLocationAds = await _unitOfWork.Context.Set<VenueLocationAdvertisement>()
+                .AsNoTracking()
+                .Include(vla => vla.Venue)
+                .Where(vla =>
+                    advertisementIds.Contains(vla.AdvertisementId) &&
+                    vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString() &&
+                    vla.StartDate <= now &&
+                    vla.EndDate >= now &&
+                    vla.Venue.IsDeleted == false &&
+                    vla.Venue.Status == VenueLocationStatus.ACTIVE.ToString())
+                .ToListAsync();
+        }
+
+        // Với mỗi ad: nếu có venue-location ad thì lấy theo venue; nếu không có vẫn giữ ad (VenueId = null)
+        var adCandidates = advertisements
+            .SelectMany(ad =>
+            {
+                var linkedVenueAds = venueLocationAds.Where(vla => vla.AdvertisementId == ad.Id).ToList();
+
+                if (!linkedVenueAds.Any())
+                {
+                    return new[] { new { Advertisement = ad, VenueId = (int?)null, Priority = 0 } };
+                }
+
+                return linkedVenueAds.Select(vla => new
+                {
+                    Advertisement = ad,
+                    VenueId = (int?)vla.VenueId,
+                    Priority = vla.PriorityScore ?? 0
+                });
+            })
+            .ToList();
+
         // Nhóm quảng cáo theo priority score
-        var groupedByPriority = venueLocationAds
-            .GroupBy(vla => vla.PriorityScore ?? 0)
+        var groupedByPriority = adCandidates
+            .GroupBy(item => item.Priority)
             .OrderByDescending(g => g.Key)
             .ToList();
 
@@ -144,16 +197,16 @@ public class AdvertisementService : IAdvertisementService
                         .Concat(adsInGroup.Take(startIndex))
                         .ToList();
 
-                    foreach (var vla in rotated)
+                    foreach (var item in rotated)
                     {
                         rotatedAds.Add(new AdvertisementResponse
                         {
                             Type = "ADVERTISEMENT",
-                            AdvertisementId = vla.Advertisement.Id,
-                            VenueId = vla.Venue.Id,
+                            AdvertisementId = item.Advertisement.Id,
+                            VenueId = item.VenueId,
                             SpecialEventId = null,
-                            BannerUrl = vla.Advertisement.BannerUrl,
-                            PlacementType = vla.Advertisement.PlacementType
+                            BannerUrl = item.Advertisement.BannerUrl,
+                            PlacementType = item.Advertisement.PlacementType
                         });
                     }
 
