@@ -1,5 +1,6 @@
 using capstone_backend.Api.Filters;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OpenAI.Chat;
@@ -93,7 +94,16 @@ public class InsightController : BaseController
             .ToListAsync();
 
         var totalMoodLogs = hotMoods.Sum(x => x.Count);
-        var hotMoodInsights = hotMoods.Take(3).Select(hm => new { hm.MoodTypeId, hm.MoodName, hm.Count, Percentage = totalMoodLogs > 0 ? Math.Round((double)hm.Count / totalMoodLogs * 100, 0) : 0 }).ToList();
+        var hotMoodInsights = hotMoods
+            .Take(3)
+            .Select(hm => new
+            {
+                hm.MoodTypeId,
+                MoodName = FaceEmotionService.MapEmotionToVietnamese(hm.MoodName),
+                hm.Count,
+                Percentage = totalMoodLogs > 0 ? Math.Round((double)hm.Count / totalMoodLogs * 100, 0) : 0
+            })
+            .ToList();
 
         var yearAgo = now.AddYears(-1);
         var moodTrends = await _unitOfWork.Context.CoupleMoodLogs
