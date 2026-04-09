@@ -1,12 +1,12 @@
-﻿using capstone_backend.Business.DTOs.Voucher;
+using capstone_backend.Business.DTOs.Voucher;
 using capstone_backend.Data.Enums;
 using FluentValidation;
 
 namespace capstone_backend.Business.Validators
 {
-    public class GetMyVouchersRequestValidator : AbstractValidator<GetMyVouchersRequest>
+    public class GetVoucherItemsRequestValidator : AbstractValidator<GetVoucherItemsRequest>
     {
-        public GetMyVouchersRequestValidator()
+        public GetVoucherItemsRequestValidator()
         {
             RuleFor(x => x.PageNumber)
                 .GreaterThan(0).WithMessage("PageNumber phải lớn hơn 0");
@@ -14,19 +14,15 @@ namespace capstone_backend.Business.Validators
             RuleFor(x => x.PageSize)
                 .GreaterThan(0).WithMessage("PageSize phải lớn hơn 0");
 
-            RuleFor(x => x.VoucherId)
-                .GreaterThan(0).WithMessage("VoucherId phải lớn hơn 0")
-                .When(x => x.VoucherId.HasValue);
-
             RuleFor(x => x.Status)
-            .Must(BeAValidStatus)
-            .When(x => x.Status.HasValue)
-            .WithMessage("Trạng thái chỉ chấp nhận: ACQUIRED, USED, EXPIRED.");
+                .Must(BeAValidStatus)
+                .When(x => x.Status.HasValue)
+                .WithMessage("Trạng thái chỉ chấp nhận: AVAILABLE, ACQUIRED, USED, EXPIRED, ENDED.");
 
             RuleFor(x => x.SortBy)
                 .Must(BeValidSortBy)
                 .When(x => !string.IsNullOrWhiteSpace(x.SortBy))
-                .WithMessage("SortBy chỉ chấp nhận: createdAt, updatedAt, accquiredAt.");
+                .WithMessage("SortBy chỉ chấp nhận: createdAt hoặc updatedAt.");
 
             RuleFor(x => x.OrderBy)
                 .Must(BeValidOrderBy)
@@ -36,9 +32,11 @@ namespace capstone_backend.Business.Validators
 
         private bool BeAValidStatus(VoucherItemStatus? status)
         {
-            return status == VoucherItemStatus.ACQUIRED ||
+            return status == VoucherItemStatus.AVAILABLE ||
+                   status == VoucherItemStatus.ACQUIRED ||
                    status == VoucherItemStatus.USED ||
-                   status == VoucherItemStatus.EXPIRED;
+                   status == VoucherItemStatus.EXPIRED ||
+                   status == VoucherItemStatus.ENDED;
         }
 
         private bool BeValidSortBy(string? sortBy)
@@ -46,9 +44,7 @@ namespace capstone_backend.Business.Validators
             if (string.IsNullOrWhiteSpace(sortBy)) return true;
 
             var normalized = sortBy.Trim().ToLower();
-            return normalized == "createdat" ||
-                   normalized == "updatedat" ||
-                   normalized == "accquiredat";
+            return normalized == "createdat" || normalized == "updatedat";
         }
 
         private bool BeValidOrderBy(string? orderBy)

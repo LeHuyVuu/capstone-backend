@@ -15,6 +15,9 @@ namespace capstone_backend.Business.Validators
             RuleFor(x => x.Description)
                 .NotEmpty().WithMessage("Mô tả là bắt buộc");
 
+            RuleFor(x => x.VoucherPrice)
+                .GreaterThan(0).WithMessage("Giá voucher phải lớn hơn 0");
+
             // Check DiscountType
             RuleFor(x => x.DiscountType)
                 .Must(x => x == VoucherDiscountType.FIXED_AMOUNT.ToString() || x == VoucherDiscountType.PERCENTAGE.ToString())
@@ -45,10 +48,22 @@ namespace capstone_backend.Business.Validators
             RuleFor(x => x.Quantity)
                 .GreaterThan(0).WithMessage("Số lượng phải ít nhất là 1");
 
+            RuleFor(x => x.UsageLimitPerMember)
+                .GreaterThan(0).WithMessage("Giới hạn sử dụng mỗi thành viên phải lớn hơn 0")
+                .When(x => x.UsageLimitPerMember.HasValue);
+
             RuleFor(x => x.EndDate)
                 .GreaterThan(x => x.StartDate)
                 .WithMessage("Ngày kết thúc phải sau ngày bắt đầu")
                 .When(x => x.StartDate.HasValue && x.EndDate.HasValue);
+
+            RuleFor(x => x.StartDate)
+                .Must(x => !x.HasValue || x.Value >= DateTime.UtcNow.AddSeconds(-5))
+                .WithMessage("Ngày bắt đầu không được ở quá khứ");
+
+            RuleFor(x => x.EndDate)
+                .Must(x => !x.HasValue || x.Value >= DateTime.UtcNow.AddSeconds(-5))
+                .WithMessage("Ngày kết thúc không được ở quá khứ");
 
             RuleFor(x => x.VenueLocationIds)
                 .NotNull().WithMessage("VenueLocationIds không được null.")

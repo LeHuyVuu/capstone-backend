@@ -29,10 +29,6 @@ namespace capstone_backend.Api.Controllers
         {
             try
             {
-                // temp validate
-                if (query.Status.HasValue && query.Status == VoucherStatus.DRAFTED)
-                    return BadRequestResponse("Không thể lọc voucher theo trạng thái DRAFTED");
-
                 var result = await _adminVoucherService.GetAdminVouchersAsync(query);
                 return OkResponse(result, "Lấy danh sách voucher thành công");
             }
