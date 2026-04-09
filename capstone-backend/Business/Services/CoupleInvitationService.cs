@@ -559,6 +559,23 @@ public class CoupleInvitationService : ICoupleInvitationService
         }
 
         if (!candidates.Any())
+        {
+            // Fallback: nếu không có kết quả theo logic chính, trả về theo gender
+            var targetGender = currentMember.Gender == "MALE" ? "FEMALE" :
+                              currentMember.Gender == "FEMALE" ? "MALE" : null;
+
+            if (!string.IsNullOrWhiteSpace(targetGender))
+            {
+                candidates = await baseQuery
+                    .Where(m => m.Gender == targetGender)
+                    .OrderBy(m => m.FullName)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+            }
+        }
+
+        if (!candidates.Any())
             return new List<MemberProfileResponse>();
 
         return await BuildMemberResponsesAsync(currentMemberId, currentMember, candidates);
