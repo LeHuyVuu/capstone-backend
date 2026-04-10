@@ -2719,9 +2719,10 @@ public class VenueLocationService : IVenueLocationService
             throw new ArgumentException("Trạng thái không hợp lệ. Chỉ chấp nhận 'ACTIVE' hoặc 'INACTIVE'.");
         }
 
-        var venue = await _unitOfWork.VenueLocations.GetByIdWithDetailsAsync(venueId);
-        
-        if (venue == null || venue.IsDeleted == true)
+        var venue = await _unitOfWork.Context.Set<VenueLocation>()
+            .FirstOrDefaultAsync(v => v.Id == venueId && v.IsDeleted != true);
+
+        if (venue == null)
         {
             throw new KeyNotFoundException($"Không tìm thấy địa điểm có ID {venueId}");
         }
@@ -2790,7 +2791,6 @@ public class VenueLocationService : IVenueLocationService
             _logger.LogInformation("Admin {AdminId} activated venue {VenueId}", adminUserId, venueId);
         }
 
-        _unitOfWork.VenueLocations.Update(venue);
         await _unitOfWork.SaveChangesAsync();
 
         bool reindexSuccess = false;
