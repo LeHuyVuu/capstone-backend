@@ -125,8 +125,13 @@ public class WalletService
 
     public async Task<VenueOwnerWalletTopupResponse> CreateVenueOwnerWalletTopupAsync(int userId, CreateWalletTopupRequest request)
     {
+        const decimal maxTopupAmount = 100_000_000m;
+
         if (request.Amount < 1000)
             throw new InvalidOperationException("Số tiền nạp tối thiểu là 1.000 VND");
+
+        if (request.Amount > maxTopupAmount)
+            throw new InvalidOperationException("Số tiền nạp tối đa là 100.000.000 VND");
 
         var wallet = await _unitOfWork.Wallets.GetByUserIdAsync(userId);
         if (wallet == null)
