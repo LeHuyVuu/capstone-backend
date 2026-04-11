@@ -202,7 +202,7 @@ public class AdvertisementController : BaseController
     /// <param name="id">Advertisement ID</param>
     /// <returns>Advertisement detail</returns>
     [HttpGet("{id}")]
-    [Authorize(Roles = "VENUEOWNER")]
+    [Authorize(Roles = "VENUEOWNER, ADMIN")]
     [ProducesResponseType(typeof(ApiResponse<AdvertisementDetailResponse>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]
     [ProducesResponseType(typeof(ApiResponse<object>), 403)]
