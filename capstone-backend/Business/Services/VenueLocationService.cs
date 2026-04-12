@@ -2631,7 +2631,8 @@ public class VenueLocationService : IVenueLocationService
                 CitizenIdFrontUrl = venue.VenueOwner.User?.CitizenIdFrontUrl,
                 CitizenIdBackUrl = venue.VenueOwner.User?.CitizenIdBackUrl,
                 BusinessLicenseUrl = venue.VenueOwner.User?.BusinessLicenseUrl
-            }
+            },
+            Venue = await GetVenueLocationDetailByIdAsync(venueId)
         };
 
         _logger.LogInformation("Retrieved venue location with KYC for ID {VenueId}", venueId);

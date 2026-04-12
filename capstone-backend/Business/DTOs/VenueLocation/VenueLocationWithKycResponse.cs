@@ -13,6 +13,8 @@ public class VenueLocationWithKycResponse
     public string Status { get; set; } = null!;
     public string? BusinessLicenseUrl { get; set; }
     public VenueOwnerKycInfo VenueOwner { get; set; } = null!;
+
+    public VenueLocationDetailResponse? Venue { get; set; }
 }
 
 /// <summary>
