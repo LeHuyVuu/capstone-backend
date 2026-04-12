@@ -161,7 +161,10 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
                 FavoriteCount = venue.FavoriteCount ?? 0,
                 DatePlanCount = venueDatePlans,
                 CollectionCount = venueCollections,
-                CoverImage = venue.CoverImage
+                CoverImage = venue.CoverImage,
+                RejectionDetails = string.IsNullOrWhiteSpace(venue.RejectReason)
+                    ? null
+                    : System.Text.Json.JsonSerializer.Deserialize<List<Business.DTOs.VenueLocation.RejectionRecord>>(venue.RejectReason)
             });
         }
 

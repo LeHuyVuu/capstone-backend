@@ -1,3 +1,5 @@
+using capstone_backend.Business.DTOs.VenueLocation;
+
 namespace capstone_backend.Business.DTOs.VenueOwner;
 
 /// <summary>
@@ -80,4 +82,5 @@ public class VenuePerformanceSummary
     public int DatePlanCount { get; set; }
     public int CollectionCount { get; set; }
     public string? CoverImage { get; set; }
+    public List<RejectionRecord>? RejectionDetails { get; set; }
 }
