@@ -28,7 +28,10 @@ public partial class MeilisearchService : IMeilisearchService
                    ?? "http://167.99.68.193:7700";
         var apiKey = Environment.GetEnvironmentVariable("MEILI_MASTER_KEY") 
                      ?? "couplemood123";
-        _indexName = configuration["Meilisearch:IndexName"] ?? "venue_locations";
+        var configuredIndexName = configuration["Meilisearch:IndexName"];
+        _indexName = string.IsNullOrWhiteSpace(configuredIndexName)
+            ? "venue_locations"
+            : configuredIndexName.Trim();
 
         _meilisearchClient = new MeilisearchClient(host, apiKey);
         _venueLocationRepository = venueLocationRepository;

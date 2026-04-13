@@ -12,6 +12,8 @@ namespace capstone_backend.Api.VenueRecommendation.Api;
 [ApiController]
 public class VenueLocationSearchIndexController : BaseController
 {
+    private const string HardcodedIndexHost = "http://134.209.108.208:7700";
+
     private readonly IMeilisearchService _meilisearchService;
     private readonly ILogger<VenueLocationSearchIndexController> _logger;
 
@@ -45,6 +47,47 @@ public class VenueLocationSearchIndexController : BaseController
         }
 
         return OkResponse(result, "Lập chỉ mục địa điểm thành công");
+    }
+
+    /// <summary>
+    /// Index a single venue location to a hardcoded Meilisearch host.
+    /// </summary>
+    /// <param name="id">Venue location ID</param>
+    /// <returns>Success status</returns>
+    [HttpPost("v2/{id}/search/index")]
+    [Tags("Meilisearch")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> IndexVenueToMeilisearchHardcodedHost(int id)
+    {
+        _logger.LogInformation(
+            "Indexing venue {VenueId} to hardcoded Meilisearch host {Host}",
+            id,
+            HardcodedIndexHost);
+
+        try
+        {
+            var syncedCount = await MeilisearchSyncDataUtil.SyncVenueByIdLikeOldAsync(
+                id,
+                indexName: "venue_locations",
+                targetHost: HardcodedIndexHost);
+
+            if (syncedCount <= 0)
+            {
+                return NotFoundResponse($"Không tìm thấy địa điểm có ID {id} hoặc không thể lập chỉ mục");
+            }
+
+            return OkResponse(true, $"Lập chỉ mục địa điểm thành công lên host {HardcodedIndexHost}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Failed indexing venue {VenueId} to hardcoded Meilisearch host {Host}",
+                id,
+                HardcodedIndexHost);
+            return NotFoundResponse($"Không tìm thấy địa điểm có ID {id} hoặc không thể lập chỉ mục");
+        }
     }
 
     [HttpDelete("search/index/clear")]
