@@ -2602,15 +2602,78 @@ public class VenueLocationService : IVenueLocationService
     public async Task<VenueLocationWithKycResponse?> GetVenueLocationWithKycAsync(int venueId)
     {
         // Query trực tiếp từ DbContext để lấy đầy đủ thông tin citizen từ UserAccount
+        // và toàn bộ dữ liệu chi tiết venue (không phụ thuộc hàm chi tiết khác)
         var venue = await _unitOfWork.Context.Set<VenueLocation>()
             .Include(v => v.VenueOwner)
                 .ThenInclude(vo => vo.User)
+            .Include(v => v.VenueOpeningHours)
+            .Include(v => v.VenueLocationCategories)
+                .ThenInclude(vlc => vlc.Category)
             .FirstOrDefaultAsync(v => v.Id == venueId && v.IsDeleted != true);
 
         if (venue == null)
         {
             _logger.LogWarning("Venue location with ID {VenueId} not found or deleted", venueId);
             return null;
+        }
+
+        var venueDetail = _mapper.Map<VenueLocationDetailResponse>(venue);
+
+        venueDetail.Category = DeserializeCategory(venue.Category);
+        venueDetail.CoverImage = DeserializeImages(venue.CoverImage);
+        venueDetail.InteriorImage = DeserializeImages(venue.InteriorImage);
+        venueDetail.FullPageMenuImage = DeserializeImages(venue.FullPageMenuImage);
+
+        venueDetail.Categories = venue.VenueLocationCategories?
+            .Where(vlc => !vlc.IsDeleted && vlc.Category != null && !vlc.Category.IsDeleted)
+            .Select(vlc => new CategoryInfo
+            {
+                Id = vlc.Category.Id,
+                Name = vlc.Category.Name
+            })
+            .ToList();
+
+        var todayOpeningHour = venue.VenueOpeningHours?.FirstOrDefault();
+        if (todayOpeningHour != null)
+        {
+            var currentTimeVN = DateTime.UtcNow.AddHours(7);
+            venueDetail.TodayDayName = GetDayName(currentTimeVN.DayOfWeek);
+            venueDetail.TodayOpeningHour = _mapper.Map<TodayOpeningHourResponse>(todayOpeningHour);
+
+            if (todayOpeningHour.IsClosed)
+            {
+                venueDetail.TodayOpeningHour.Status = "Đã đóng cửa";
+            }
+            else
+            {
+                var currentTime = currentTimeVN.TimeOfDay;
+                var openTime = todayOpeningHour.OpenTime;
+                var closeTime = todayOpeningHour.CloseTime;
+
+                bool isOpen = closeTime < openTime
+                    ? (currentTime >= openTime || currentTime < closeTime)
+                    : (currentTime >= openTime && currentTime < closeTime);
+
+                venueDetail.TodayOpeningHour.Status = isOpen ? "Đang mở cửa" : "Đã đóng cửa";
+            }
+        }
+
+        if (_currentUser.UserId != null && _currentUser.Role == "MEMBER")
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
+            if (member != null)
+            {
+                var checkin = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(member.Id, venueId);
+                var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+                int? coupleProfileId = couple?.id;
+
+                venueDetail.UserState = new UserStateDto
+                {
+                    HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId, coupleProfileId),
+                    ActiceCheckInId = checkin != null ? checkin.Id : null,
+                    CanReview = checkin != null && checkin.IsValid == true
+                };
+            }
         }
 
         var response = new VenueLocationWithKycResponse
@@ -2632,7 +2695,7 @@ public class VenueLocationService : IVenueLocationService
                 CitizenIdBackUrl = venue.VenueOwner.User?.CitizenIdBackUrl,
                 BusinessLicenseUrl = venue.VenueOwner.User?.BusinessLicenseUrl
             },
-            Venue = await GetVenueLocationDetailByIdAsync(venueId)
+            Venue = venueDetail
         };
 
         _logger.LogInformation("Retrieved venue location with KYC for ID {VenueId}", venueId);
