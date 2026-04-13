@@ -1,5 +1,6 @@
 using capstone_backend.Api.VenueRecommendation.Api.DTOs;
 using capstone_backend.Data.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Api.VenueRecommendation.Service;
 
@@ -13,7 +14,19 @@ public partial class MeilisearchService
     {
         try
         {
-            var venue = await _venueLocationRepository.GetByIdWithDetailsAsync(venueId);
+            var venue = await _unitOfWork.Context.Set<Data.Entities.VenueLocation>()
+                .AsNoTracking()
+                .Include(v => v.VenueOwner)
+                .Include(v => v.VenueOpeningHours)
+                .Include(v => v.VenueLocationCategories)
+                    .ThenInclude(vlc => vlc.Category)
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vt => vt.LocationTag)
+                        .ThenInclude(lt => lt.CoupleMoodType)
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vt => vt.LocationTag)
+                        .ThenInclude(lt => lt.CouplePersonalityType)
+                .FirstOrDefaultAsync(v => v.Id == venueId);
 
             if (venue == null || venue.IsDeleted == true)
             {
