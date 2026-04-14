@@ -508,23 +508,27 @@ public class AdvertisementService : IAdvertisementService
     {
         _logger.LogInformation("Getting advertisement {AdId} for user {UserId}", id, userId);
 
-        // Find VenueOwnerProfile from userId
-        var venueOwnerProfile = await _unitOfWork.Context.Set<VenueOwnerProfile>()
-            .FirstOrDefaultAsync(vop => vop.UserId == userId && vop.IsDeleted != true);
+        // // Find VenueOwnerProfile from userId
+        // var venueOwnerProfile = await _unitOfWork.Context.Set<VenueOwnerProfile>()
+        //     .FirstOrDefaultAsync(vop => vop.UserId == userId && vop.IsDeleted != true);
 
-        if (venueOwnerProfile == null)
-        {
-            _logger.LogWarning("User {UserId} does not have a venue owner profile", userId);
-            return null;
-        }
+        // if (venueOwnerProfile == null)
+        // {
+        //     _logger.LogWarning("User {UserId} does not have a venue owner profile", userId);
+        //     return null;
+        // }
 
         var advertisement = await _unitOfWork.Advertisements.GetByIdWithDetailsAsync(id);
 
-        if (advertisement == null || advertisement.VenueOwnerId != venueOwnerProfile.Id)
+        // if (advertisement == null || advertisement.VenueOwnerId != venueOwnerProfile.Id)
+        // {
+        //     return null;
+        // }
+          if (advertisement == null)
         {
             return null;
         }
-
+        
         return MapToDetailResponse(advertisement);
     }
 
