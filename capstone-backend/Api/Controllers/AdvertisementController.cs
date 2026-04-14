@@ -296,6 +296,23 @@ public class AdvertisementController : BaseController
         }
     }
 
+    [HttpGet("all")]
+    [ProducesResponseType(typeof(ApiResponse<List<MyAdvertisementResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    public async Task<IActionResult> GetAllAdvertisements()
+    {
+        try
+        {
+            var advertisements = await _advertisementService.GetAllAdvertisementsAsync();
+            return OkResponse(advertisements, $"Đã lấy {advertisements.Count} quảng cáo");
+        }
+        catch (Exception)
+        {
+            return BadRequestResponse("Không thể lấy toàn bộ danh sách quảng cáo");
+        }
+    }
+
     [HttpPost("approve")]
     [Authorize(Roles = "ADMIN")]
     [ProducesResponseType(typeof(ApiResponse<AdvertisementApprovalResult>), 200)]
