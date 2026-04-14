@@ -1771,6 +1771,56 @@ public class AdvertisementService : IAdvertisementService
 
         return responses;
     }
+ 
+    public async Task<List<MyAdvertisementResponse>> GetAllAdvertisementsAsync()
+    {
+        var advertisements = await _unitOfWork.Context.Set<Advertisement>()
+            .Include(ad => ad.MoodType)
+            .Include(ad => ad.VenueLocationAdvertisements)
+                .ThenInclude(vla => vla.Venue)
+            .OrderByDescending(ad => ad.CreatedAt)
+            .ToListAsync();
+
+        var responses = advertisements.Select(ad =>
+        {
+            var visibleVenueLocationAds = ad.VenueLocationAdvertisements
+                .Where(IsVenueLocationVisible)
+                .ToList();
+
+            var activeVenueAd = visibleVenueLocationAds
+                .Where(vla => vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString() && vla.EndDate >= DateTime.UtcNow)
+                .OrderByDescending(vla => vla.StartDate)
+                .FirstOrDefault();
+
+            return new MyAdvertisementResponse
+            {
+                Id = ad.Id,
+                IsDeleted = ad.IsDeleted == true,
+                Title = ad.Title ?? string.Empty,
+                BannerUrl = ad.BannerUrl ?? string.Empty,
+                PlacementType = ad.PlacementType ?? string.Empty,
+                MoodTypeId = ad.MoodTypeId,
+                MoodTypeName = ad.MoodType?.Name,
+                Status = ad.Status ?? AdvertisementStatus.DRAFT.ToString(),
+                RejectionHistory = ParseRejectionHistory(ad.RejectionReason),
+                DesiredStartDate = ad.DesiredStartDate,
+                CreatedAt = ad.CreatedAt ?? DateTime.UtcNow,
+                UpdatedAt = ad.UpdatedAt,
+                VenueLocationCount = visibleVenueLocationAds.Count,
+                ActiveVenueAd = activeVenueAd != null ? new ActiveVenueLocationAd
+                {
+                    Id = activeVenueAd.Id,
+                    VenueId = activeVenueAd.VenueId,
+                    VenueName = activeVenueAd.Venue?.Name ?? "Unknown",
+                    StartDate = activeVenueAd.StartDate,
+                    EndDate = activeVenueAd.EndDate,
+                    PriorityScore = activeVenueAd.PriorityScore
+                } : null
+            };
+        }).ToList();
+
+        return responses;
+    }
 
     private static List<string> ParseImageField(string? imageField)
     {

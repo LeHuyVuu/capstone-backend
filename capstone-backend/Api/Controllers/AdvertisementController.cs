@@ -202,7 +202,6 @@ public class AdvertisementController : BaseController
     /// <param name="id">Advertisement ID</param>
     /// <returns>Advertisement detail</returns>
     [HttpGet("{id}")]
-    [Authorize(Roles = "VENUEOWNER, ADMIN")]
     [ProducesResponseType(typeof(ApiResponse<AdvertisementDetailResponse>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]
     [ProducesResponseType(typeof(ApiResponse<object>), 403)]
@@ -294,6 +293,23 @@ public class AdvertisementController : BaseController
         catch (Exception)
         {
             return BadRequestResponse("Không thể lấy danh sách quảng cáo đang chờ duyệt");
+        }
+    }
+
+    [HttpGet("all")]
+    [ProducesResponseType(typeof(ApiResponse<List<MyAdvertisementResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    public async Task<IActionResult> GetAllAdvertisements()
+    {
+        try
+        {
+            var advertisements = await _advertisementService.GetAllAdvertisementsAsync();
+            return OkResponse(advertisements, $"Đã lấy {advertisements.Count} quảng cáo");
+        }
+        catch (Exception)
+        {
+            return BadRequestResponse("Không thể lấy toàn bộ danh sách quảng cáo");
         }
     }
 

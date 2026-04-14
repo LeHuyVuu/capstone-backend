@@ -33,4 +33,6 @@ public class LoginResponse
 
     public decimal Balance { get; set; }
     public int Points { get; set; }
+
+    public int? LocationId { get; set; }
 }
