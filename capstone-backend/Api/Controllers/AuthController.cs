@@ -41,6 +41,17 @@ public class AuthController : BaseController
         // Decode JWT token to get user claims
         var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
         var jwtToken = handler.ReadJwtToken(loginResponse.AccessToken);
+        var roleClaim = jwtToken.Claims.First(c => c.Type == ClaimTypes.Role).Value;
+
+        var emailClaim = jwtToken.Claims
+            .FirstOrDefault(c => c.Type == "email" || c.Type == ClaimTypes.Email)
+            ?.Value;
+
+        if (!string.IsNullOrWhiteSpace(emailClaim))
+        {
+            var currentUser = await _unitOfWork.Users.GetByEmailAsync(emailClaim);
+            loginResponse.LocationId = currentUser?.AssignedVenueLocationId;
+        }
         
         // Create claims for cookie authentication from JWT token
         var claims = new List<Claim>
@@ -48,7 +59,7 @@ public class AuthController : BaseController
             new Claim(ClaimTypes.NameIdentifier, jwtToken.Claims.First(c => c.Type == "sub").Value),
             new Claim(ClaimTypes.Email, jwtToken.Claims.First(c => c.Type == "email").Value),
             new Claim(ClaimTypes.Name, jwtToken.Claims.First(c => c.Type == ClaimTypes.Name).Value),
-            new Claim(ClaimTypes.Role, jwtToken.Claims.First(c => c.Type == ClaimTypes.Role).Value)
+            new Claim(ClaimTypes.Role, roleClaim)
         };
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
