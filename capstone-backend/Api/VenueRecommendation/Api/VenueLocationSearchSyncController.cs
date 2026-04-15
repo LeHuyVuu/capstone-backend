@@ -47,6 +47,29 @@ public class VenueLocationSearchSyncController : BaseController
     }
 
     /// <summary>
+    /// Sync all venue locations to Meilisearch index (v2).
+    /// This will index all active venues to make them searchable.
+    /// Requires ADMIN role.
+    /// </summary>
+    /// <returns>Number of venues indexed</returns>
+    [HttpPost("v2/search/sync")]
+    [Tags("Meilisearch")]
+    [ProducesResponseType(typeof(ApiResponse<int>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    public async Task<IActionResult> SyncVenuesToMeilisearchV2()
+    {
+        _logger.LogInformation("Admin syncing all venues to Meilisearch");
+
+        // Configure index settings first
+        await _meilisearchService.ConfigureIndexSettingsAsync();
+
+        var count = await _meilisearchService.IndexAllVenueLocationsV2Async();
+
+        return OkResponse(count, $"Đồng bộ thành công {count} địa điểm lên Meilisearch");
+    }
+
+    /// <summary>
     /// Verify Meilisearch index settings
     /// </summary>
     [HttpGet("search/verify-settings")]

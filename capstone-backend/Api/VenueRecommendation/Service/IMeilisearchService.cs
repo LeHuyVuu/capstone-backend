@@ -21,6 +21,12 @@ public interface IMeilisearchService
     Task<int> IndexAllVenueLocationsAsync();
 
     /// <summary>
+    /// Index all venue locations to Meilisearch v2 host
+    /// </summary>
+    /// <returns>Number of venues indexed</returns>
+    Task<int> IndexAllVenueLocationsV2Async();
+
+    /// <summary>
     /// Query venue locations with filters
     /// </summary>
     /// <param name="request">Query request with filters</param>
@@ -44,6 +50,12 @@ public interface IMeilisearchService
     /// </summary>
     /// <returns>True if successful</returns>
     Task<bool> ClearIndexAsync();
+
+    /// <summary>
+    /// Clear all documents from Meilisearch v2 host index
+    /// </summary>
+    /// <returns>True if successful</returns>
+    Task<bool> ClearIndexV2Async();
 
     /// <summary>
     /// Configure index settings (searchable, filterable, sortable attributes)
