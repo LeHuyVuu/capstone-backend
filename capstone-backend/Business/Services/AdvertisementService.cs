@@ -1776,12 +1776,21 @@ public class AdvertisementService : IAdvertisementService
         return responses;
     }
  
-    public async Task<List<MyAdvertisementResponse>> GetAllAdvertisementsAsync()
+    public async Task<List<MyAdvertisementResponse>> GetAllAdvertisementsAsync(string? status = null)
     {
-        var advertisements = await _unitOfWork.Context.Set<Advertisement>()
+        var query = _unitOfWork.Context.Set<Advertisement>()
             .Include(ad => ad.MoodType)
             .Include(ad => ad.VenueLocationAdvertisements)
                 .ThenInclude(vla => vla.Venue)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            var normalizedStatus = status.Trim().ToUpperInvariant();
+            query = query.Where(ad => (ad.Status ?? string.Empty).ToUpper() == normalizedStatus);
+        }
+
+        var advertisements = await query
             .OrderByDescending(ad => ad.CreatedAt)
             .ToListAsync();
 

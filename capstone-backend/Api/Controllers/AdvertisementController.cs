@@ -300,11 +300,11 @@ public class AdvertisementController : BaseController
     [ProducesResponseType(typeof(ApiResponse<List<MyAdvertisementResponse>>), 200)]
     [ProducesResponseType(typeof(ApiResponse<object>), 401)]
     [ProducesResponseType(typeof(ApiResponse<object>), 403)]
-    public async Task<IActionResult> GetAllAdvertisements()
+    public async Task<IActionResult> GetAllAdvertisements([FromQuery] string? status = null)
     {
         try
         {
-            var advertisements = await _advertisementService.GetAllAdvertisementsAsync();
+            var advertisements = await _advertisementService.GetAllAdvertisementsAsync(status);
             return OkResponse(advertisements, $"Đã lấy {advertisements.Count} quảng cáo");
         }
         catch (Exception)
