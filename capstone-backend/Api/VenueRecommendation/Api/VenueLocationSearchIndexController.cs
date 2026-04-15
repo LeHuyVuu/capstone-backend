@@ -98,4 +98,13 @@ public class VenueLocationSearchIndexController : BaseController
         var result = await _meilisearchService.ClearIndexAsync();
         return OkResponse(result, "Xóa chỉ mục tìm kiếm thành công");
     }
+
+    [HttpDelete("v2/search/index/clear")]
+    [Tags("Meilisearch")]
+    [ProducesResponseType(typeof(ApiResponse<bool>), 200)]
+    public async Task<IActionResult> ClearSearchIndexV2()
+    {
+        var result = await _meilisearchService.ClearIndexV2Async();
+        return OkResponse(result, "Xóa chỉ mục tìm kiếm v2 thành công");
+    }
 }

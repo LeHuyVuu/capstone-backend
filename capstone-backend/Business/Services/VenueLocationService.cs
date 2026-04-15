@@ -2429,20 +2429,21 @@ public class VenueLocationService : IVenueLocationService
             {
                 try
                 {
-                    await _meilisearchService.IndexVenueLocationAsync(request.VenueId);
+                    // Admin duyệt venue sang ACTIVE -> index lại venue trên Meilisearch
+                    // await _meilisearchService.IndexVenueLocationAsync(request.VenueId);
 
                     try
                     {
-                        var syncedCount = await MeilisearchSyncDataUtil.SyncVenueByIdLikeOldAsync(
-                            request.VenueId,
-                            indexName: "venue_locations",
-                            targetHost: MeilisearchSyncDataUtil.DefaultHost);
+                        // var syncedCount = await MeilisearchSyncDataUtil.SyncVenueByIdLikeOldAsync(
+                        //     request.VenueId,
+                        //     indexName: "venue_locations",
+                        //     targetHost: MeilisearchSyncDataUtil.DefaultHost);
 
-                        _logger.LogInformation(
-                            "Synced APPROVED ACTIVE venue {VenueId} to external Meilisearch host {Host}. SyncedCount={SyncedCount}",
-                            request.VenueId,
-                            MeilisearchSyncDataUtil.DefaultHost,
-                            syncedCount);
+                        // _logger.LogInformation(
+                        //     "Synced APPROVED ACTIVE venue {VenueId} to external Meilisearch host {Host}. SyncedCount={SyncedCount}",
+                        //     request.VenueId,
+                        //     MeilisearchSyncDataUtil.DefaultHost,
+                        //     syncedCount);
                     }
                     catch (Exception ex)
                     {
@@ -2797,7 +2798,8 @@ public class VenueLocationService : IVenueLocationService
         bool reindexSuccess = false;
         try
         {
-            reindexSuccess = await _meilisearchService.IndexVenueLocationAsync(venueId);
+            // Admin đổi trạng thái ACTIVE/INACTIVE -> reindex venue trên Meilisearch
+            // reindexSuccess = await _meilisearchService.IndexVenueLocationAsync(venueId);
         }
         catch (Exception ex)
         {
@@ -2808,13 +2810,13 @@ public class VenueLocationService : IVenueLocationService
         {
             try
             {
-                var syncedCount = await MeilisearchSyncDataUtil.SyncVenueByIdLikeOldAsync(
-                    venueId,
-                    indexName: "venue_locations",
-                    targetHost: MeilisearchSyncDataUtil.DefaultHost);
+                // var syncedCount = await MeilisearchSyncDataUtil.SyncVenueByIdLikeOldAsync(
+                //     venueId,
+                //     indexName: "venue_locations",
+                //     targetHost: MeilisearchSyncDataUtil.DefaultHost);
 
-                    _logger.LogInformation("Synced INACTIVE status for venue {VenueId} to external Meilisearch host {Host}. SyncedCount={SyncedCount}", 
-                        venueId, MeilisearchSyncDataUtil.DefaultHost, syncedCount);
+                //     _logger.LogInformation("Synced INACTIVE status for venue {VenueId} to external Meilisearch host {Host}. SyncedCount={SyncedCount}", 
+                //         venueId, MeilisearchSyncDataUtil.DefaultHost, syncedCount);
             }
             catch (Exception ex)
             {

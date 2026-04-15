@@ -1,5 +1,6 @@
 using capstone_backend.Api.VenueRecommendation.Api.DTOs;
 using capstone_backend.Data.Enums;
+using Meilisearch;
 using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Api.VenueRecommendation.Service;
@@ -53,19 +54,29 @@ public partial class MeilisearchService
     {
         try
         {
-            var allVenues = await _venueLocationRepository.GetAllAsync();
-            var venues = allVenues.Where(v => v.IsDeleted != true && v.Status == VenueLocationStatus.ACTIVE.ToString()).ToList();
+            var venues = await _unitOfWork.Context.Set<Data.Entities.VenueLocation>()
+                .AsNoTracking()
+                .Include(v => v.VenueOwner)
+                .Include(v => v.VenueOpeningHours)
+                .Include(v => v.VenueLocationCategories)
+                    .ThenInclude(vlc => vlc.Category)
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vt => vt.LocationTag)
+                        .ThenInclude(lt => lt.CoupleMoodType)
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vt => vt.LocationTag)
+                        .ThenInclude(lt => lt.CouplePersonalityType)
+                .Where(v => v.IsDeleted != true &&
+                            (v.Status == VenueLocationStatus.ACTIVE.ToString() ||
+                             v.Status == VenueLocationStatus.INACTIVE.ToString()))
+                .ToListAsync();
 
             var documents = new List<VenueLocationQueryResult>();
 
             foreach (var venue in venues)
             {
-                var venueWithDetails = await _venueLocationRepository.GetByIdWithDetailsAsync(venue.Id);
-                if (venueWithDetails != null)
-                {
-                    var document = await MapToQueryResultAsync(venueWithDetails);
-                    documents.Add(document);
-                }
+                var document = await MapToQueryResultAsync(venue);
+                documents.Add(document);
             }
 
             var index = _meilisearchClient.Index(_indexName);
@@ -76,6 +87,59 @@ public partial class MeilisearchService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error indexing all venue locations to Meilisearch");
+            return 0;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> IndexAllVenueLocationsV2Async()
+    {
+        try
+        {
+            var venues = await _unitOfWork.Context.Set<Data.Entities.VenueLocation>()
+                .AsNoTracking()
+                .Include(v => v.VenueOwner)
+                .Include(v => v.VenueOpeningHours)
+                .Include(v => v.VenueLocationCategories)
+                    .ThenInclude(vlc => vlc.Category)
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vt => vt.LocationTag)
+                        .ThenInclude(lt => lt.CoupleMoodType)
+                .Include(v => v.VenueLocationTags)
+                    .ThenInclude(vt => vt.LocationTag)
+                        .ThenInclude(lt => lt.CouplePersonalityType)
+                .Where(v => v.IsDeleted != true &&
+                            (v.Status == VenueLocationStatus.ACTIVE.ToString()))
+                .ToListAsync();
+
+            var documents = new List<VenueLocationQueryResult>();
+
+            foreach (var venue in venues)
+            {
+                var document = await MapToQueryResultAsync(venue);
+                documents.Add(document);
+            }
+
+            var v2Host = Environment.GetEnvironmentVariable("MEILISEARCH_V2_HOST")
+                         ?? "http://134.209.108.208:7700";
+
+            var apiKey = Environment.GetEnvironmentVariable("MEILI_MASTER_KEY")
+                         ?? "couplemood123";
+
+            var v2Client = new MeilisearchClient(v2Host, apiKey);
+            var index = v2Client.Index(_indexName);
+            await index.AddDocumentsAsync(documents, "id");
+
+            _logger.LogInformation(
+                "Successfully indexed {Count} venue locations to Meilisearch v2 host {Host}",
+                documents.Count,
+                v2Host);
+
+            return documents.Count;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error indexing all venue locations to Meilisearch v2 host");
             return 0;
         }
     }
