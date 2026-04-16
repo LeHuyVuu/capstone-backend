@@ -259,9 +259,15 @@ namespace capstone_backend.Business.Services
                 )
             );
 
+            var responses = _mapper.Map<List<DatePlanResponse>>(items);
+            foreach (var item in responses)
+            {
+                item.IsCreator = item.OrganizerMemberId == member.Id;
+            }
+
             return (new PagedResult<DatePlanResponse>()
             {
-                Items = _mapper.Map<List<DatePlanResponse>>(items),
+                Items = responses,
                 PageNumber = pageNumber,
                 PageSize = pageSize,
                 TotalCount = totalCount

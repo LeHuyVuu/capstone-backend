@@ -14,6 +14,9 @@ namespace capstone_backend.Business.DTOs.DatePlan
         public string? Status { get; set; }
 
         public string? DurationMode { get; set; }
+
+        public int OrganizerMemberId { get; set; }
+        public bool IsCreator { get; set; }
     }
 
 }

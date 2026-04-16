@@ -104,6 +104,17 @@ public static class MeilisearchSyncDataUtil
             sourceBody = await sourceResponse.Content.ReadAsStringAsync(cancellationToken);
             lastStatusCode = (int)sourceResponse.StatusCode;
 
+            var contentType = sourceResponse.Content.Headers.ContentType?.MediaType;
+            Console.WriteLine($"""
+    [Meili DEBUG]
+    Attempt: {attempt}
+    URL: {sourceEndpoint}
+    Status: {lastStatusCode}
+    Content-Type: {contentType}
+    Body: {sourceBody}
+    -------------------------
+    """);
+
             if (sourceResponse.IsSuccessStatusCode)
             {
                 isLoaded = true;
