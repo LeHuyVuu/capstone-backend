@@ -137,6 +137,10 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
             })
             .ToList();
 
+        var normalizedAdvertisementStatuses = allAdvertisements
+            .Select(a => (a.Status ?? string.Empty).Trim().ToUpperInvariant())
+            .ToList();
+
         // Build venue performance summaries
         var venuePerformances = new List<VenuePerformanceSummary>();
         foreach (var venue in venues)
@@ -211,9 +215,13 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
 
             // Advertisement
             TotalAdvertisements = allAdvertisements.Count,
-            ActiveAdvertisements = allAdvertisements.Count(a => a.Status == "ACTIVE"),
-            PendingAdvertisements = allAdvertisements.Count(a => a.Status == "PENDING"),
-            RejectedAdvertisements = allAdvertisements.Count(a => a.Status == "REJECTED"),
+            // "Active" ads in dashboard should represent approved ads (with backward compatibility for legacy ACTIVE data).
+            ActiveAdvertisements = normalizedAdvertisementStatuses.Count(status =>
+                status == AdvertisementStatus.APPROVED.ToString() || status == "ACTIVE"),
+            PendingAdvertisements = normalizedAdvertisementStatuses.Count(status =>
+                status == AdvertisementStatus.PENDING.ToString()),
+            RejectedAdvertisements = normalizedAdvertisementStatuses.Count(status =>
+                status == AdvertisementStatus.REJECTED.ToString()),
             RecentAdvertisements = recentAds,
 
             // Top venue
