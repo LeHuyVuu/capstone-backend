@@ -55,7 +55,7 @@ public class WalletController : BaseController
         }
     }
 
-    /// <summary>VENUE OWNER</summary>
+    /// <summary>VENUE OWNER | MEMBER</summary>
     [HttpPost("withdraw")]
     [Authorize(Roles = "VENUEOWNER, MEMBER")]
     public async Task<IActionResult> CreateWithdrawRequest([FromBody] CreateWithdrawRequestRequest request)
@@ -75,9 +75,9 @@ public class WalletController : BaseController
         }
     }
 
-    /// <summary>VENUE OWNER</summary>
+    /// <summary>VENUE OWNER | MEMBER</summary>
     [HttpGet("withdraw-requests")]
-    [Authorize(Roles = "VENUEOWNER")]
+    [Authorize(Roles = "VENUEOWNER, MEMBER")]
     public async Task<IActionResult> GetMyWithdrawRequests()
     {
         var userId = GetCurrentUserId();
