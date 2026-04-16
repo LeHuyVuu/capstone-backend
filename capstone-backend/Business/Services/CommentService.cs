@@ -247,20 +247,23 @@ namespace capstone_backend.Business.Services
 
                 await _unitOfWork.SaveChangesAsync();
 
-                // Notify 
-                notification = new Notification
+                // Notify only when not liking own comment
+                if (comment.AuthorId != member.Id)
                 {
-                    UserId = comment.Author.UserId,
-                    Title = NotificationTemplate.Post.TitleNewLikeComment,
-                    Message = NotificationTemplate.Post.GetNewLikeCommentBody(member.FullName),
-                    Type = NotificationType.SOCIAL.ToString(),
-                    ReferenceId = comment.Id,
-                    ReferenceType = ReferenceType.COMMENT.ToString(),
-                    IsRead = false
-                };
+                    notification = new Notification
+                    {
+                        UserId = comment.Author.UserId,
+                        Title = NotificationTemplate.Post.TitleNewLikeComment,
+                        Message = NotificationTemplate.Post.GetNewLikeCommentBody(member.FullName),
+                        Type = NotificationType.SOCIAL.ToString(),
+                        ReferenceId = comment.Id,
+                        ReferenceType = ReferenceType.COMMENT.ToString(),
+                        IsRead = false
+                    };
 
-                await _unitOfWork.Notifications.AddAsync(notification);
-                await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.Notifications.AddAsync(notification);
+                    await _unitOfWork.SaveChangesAsync();
+                }
 
                 await _unitOfWork.CommitTransactionAsync();
             }
@@ -271,7 +274,10 @@ namespace capstone_backend.Business.Services
             }
 
             BackgroundJob.Enqueue<ILikeWorker>(j => j.RecountCommentLikeAsync(comment.Id));
-            BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(notification.Id));
+            if (comment.AuthorId != member.Id)
+            {
+                BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(notification.Id));
+            }
 
             return new CommentLikeResponse
             {
