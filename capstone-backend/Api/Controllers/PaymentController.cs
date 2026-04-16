@@ -312,7 +312,7 @@ public class PaymentController : BaseController
     /// Process wallet top-up payment (For Members)
     /// </summary>
     [HttpPost("member/zalo-topup")]
-    public async Task<IActionResult> ProcessMemberWalletTopupVnPay([FromBody] CreateWalletTopupRequest request)
+    public async Task<IActionResult> ProcessMemberWalletTopupZaloPay([FromBody] CreateWalletTopupRequest request)
     {
         try
         {
@@ -360,7 +360,7 @@ public class PaymentController : BaseController
     /// Process wallet top-up payment (For Members)
     /// </summary>
     [HttpPost("member/vnpay-topup")]
-    public async Task<IActionResult> ProcessMemberWalletTopupZaloPay([FromBody] CreateWalletTopupRequest request)
+    public async Task<IActionResult> ProcessMemberWalletTopupVNPay([FromBody] CreateWalletTopupRequest request)
     {
         try
         {
