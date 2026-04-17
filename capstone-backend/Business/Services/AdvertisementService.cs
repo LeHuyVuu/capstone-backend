@@ -139,6 +139,7 @@ public class AdvertisementService : IAdvertisementService
         if (advertisementIds.Any())
         {
             var now = DateTime.UtcNow;
+
             venueLocationAds = await _unitOfWork.Context.Set<VenueLocationAdvertisement>()
                 .AsNoTracking()
                 .Include(vla => vla.Venue)
@@ -152,25 +153,23 @@ public class AdvertisementService : IAdvertisementService
                 .ToListAsync();
         }
 
-        // Với mỗi ad: nếu có venue-location ad thì lấy theo venue; nếu không có vẫn giữ ad (VenueId = null)
-        var adCandidates = advertisements
-            .SelectMany(ad =>
+        // Only return ads that have active venue-location records in the purchased period.
+        var adCandidates = new List<(Advertisement Advertisement, int? VenueId, int Priority)>();
+        foreach (var ad in advertisements)
+        {
+            var linkedVenueAds = venueLocationAds.Where(vla => vla.AdvertisementId == ad.Id).ToList();
+
+            if (linkedVenueAds.Any())
             {
-                var linkedVenueAds = venueLocationAds.Where(vla => vla.AdvertisementId == ad.Id).ToList();
+                adCandidates.AddRange(linkedVenueAds.Select(vla =>
+                    (Advertisement: ad, VenueId: (int?)vla.VenueId, Priority: vla.PriorityScore ?? 0)));
+                continue;
+            }
 
-                if (!linkedVenueAds.Any())
-                {
-                    return new[] { new { Advertisement = ad, VenueId = (int?)null, Priority = 0 } };
-                }
-
-                return linkedVenueAds.Select(vla => new
-                {
-                    Advertisement = ad,
-                    VenueId = (int?)vla.VenueId,
-                    Priority = vla.PriorityScore ?? 0
-                });
-            })
-            .ToList();
+            _logger.LogInformation(
+                "Skipping advertisement {AdvertisementId} because it has no active venue mapping in current StartDate/EndDate window.",
+                ad.Id);
+        }
 
         // Nhóm quảng cáo theo priority score
         var groupedByPriority = adCandidates

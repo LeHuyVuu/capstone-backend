@@ -1,0 +1,9 @@
+﻿mood,HAPPY,DISGUSTED,SURPRISED,CALM,FEAR,CONFUSED,ANGRY,SAD
+HAPPY,Vui vẻ,Hòa hợp,Vui vẻ,Vui vẻ,Tình cảm,Tình cảm,Động lực,Tình cảm
+DISGUSTED,Hòa hợp,Thư giãn,Thư giãn,Thư giãn,Thư giãn,Thư giãn,Thư giãn,Hòa giải
+SURPRISED,Vui vẻ,Thư giãn,Khám phá,Khám phá,An tâm,Khám phá,Động lực,Cần an ủi
+CALM,Vui vẻ,Thư giãn,Khám phá,Yên tĩnh,An tâm,Yên tĩnh,Cân bằng,Cần an ủi
+FEAR,Tình cảm,Thư giãn,An tâm,An tâm,Cân bằng,Cân bằng,Cân bằng,Cần an ủi
+CONFUSED,Tình cảm,Thư giãn,Khám phá,Yên tĩnh,Cân bằng,Trung lập,Hòa giải,Cần an ủi
+ANGRY,Động lực,Thư giãn,Động lực,Cân bằng,Cân bằng,Hòa giải,Cân bằng,Hòa giải
+SAD,Tình cảm,Hòa giải,Cần an ủi,Cần an ủi,Cần an ủi,Cần an ủi,Hòa giải,Cần an ủi
