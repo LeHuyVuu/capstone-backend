@@ -40,7 +40,6 @@ public class RatingDistribution
     public decimal AverageRating { get; set; }
     public int TotalReviews { get; set; }
     public int ReviewsWithPhotos { get; set; }
-    public int ReviewsFromCouples { get; set; }
 }
 
 public class TimeSeriesData
@@ -54,10 +53,7 @@ public class CustomerInsights
 {
     public int TotalUniqueCustomers { get; set; }
     public int ReturningCustomers { get; set; }
-    public int CoupleCustomers { get; set; }
-    public int SingleCustomers { get; set; }
     public decimal ReturnRate { get; set; }
-    public decimal CoupleRate { get; set; }
 }
 
 public class PeakHourData
@@ -76,7 +72,6 @@ public class RecentReviewSummary
     public DateTime CreatedAt { get; set; }
     public int LikeCount { get; set; }
     public bool HasPhotos { get; set; }
-    public bool IsFromCouple { get; set; }
 }
 
 public class VoucherPerformance

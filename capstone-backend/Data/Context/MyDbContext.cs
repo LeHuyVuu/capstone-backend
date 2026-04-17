@@ -103,8 +103,6 @@ public partial class MyDbContext : DbContext
 
     public virtual DbSet<TestType> TestTypes { get; set; }
 
-    public virtual DbSet<TopSearch> TopSearches { get; set; }
-
     public virtual DbSet<Transaction> Transactions { get; set; }
 
     public virtual DbSet<UserAccount> UserAccounts { get; set; }
@@ -786,10 +784,10 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.LikeCount).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
 
-            entity.HasIndex(r => new { r.MemberId, r.VenueId, r.CoupleProfileId })
-                  .HasDatabaseName("idx_review_couple_profile")
-                  .IsUnique()
-                  .HasFilter("is_deleted = false");
+            entity.HasIndex(r => new { r.MemberId, r.VenueId })
+                 .HasDatabaseName("idx_review_member_venue")
+                 .IsUnique()
+                 .HasFilter("is_deleted = false");
 
             entity.HasOne(d => d.Member).WithMany(p => p.Reviews)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -880,15 +878,6 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.TotalQuestions).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");
-        });
-
-        modelBuilder.Entity<TopSearch>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("top_searches_pkey");
-
-            entity.Property(e => e.HitCount).HasDefaultValue(0);
-            entity.Property(e => e.IsActive).HasDefaultValue(true);
-            entity.Property(e => e.LastUpdatedAt).HasDefaultValueSql("now()");
         });
 
         modelBuilder.Entity<Transaction>(entity =>

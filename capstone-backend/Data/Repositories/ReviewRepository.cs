@@ -18,22 +18,14 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
     /// <summary>
     /// Lấy danh sách reviews theo venueId (có phân trang)
     /// </summary>
-    public async Task<(List<Review> Reviews, int TotalCount)> GetReviewsByVenueIdAsync(int venueId, int page, int pageSize, int? currentMemberId = null, int? currentCoupleId = null, int? partnerMemberId = null)
+    public async Task<(List<Review> Reviews, int TotalCount)> GetReviewsByVenueIdAsync(int venueId, int page, int pageSize)
     {
         var query = _context.Set<Review>()
-            .Include(r => r.ReviewLikes)
-            .Include(r => r.Member)
-                .ThenInclude(m => m!.User)
-            .Include(r => r.ReviewReply)
-            .Where(r => r.VenueId == venueId && r.IsDeleted != true && r.Status == ReviewStatus.PUBLISHED.ToString());
-
-        if (currentCoupleId.HasValue && partnerMemberId.HasValue && currentMemberId.HasValue)
-        {
-            query = query.Where(r =>
-                !(r.MemberId == partnerMemberId.Value && r.CoupleProfileId != null && r.CoupleProfileId != currentCoupleId.Value) &&
-                !(r.MemberId == currentMemberId.Value && r.CoupleProfileId != null && r.CoupleProfileId != currentCoupleId.Value)
-            );
-        }
+        .Include(r => r.ReviewLikes)
+        .Include(r => r.Member)
+            .ThenInclude(m => m!.User)
+        .Include(r => r.ReviewReply)
+        .Where(r => r.VenueId == venueId && r.IsDeleted != true && r.Status == ReviewStatus.PUBLISHED.ToString());
 
         var totalCount = await query.CountAsync();
         var reviews = await query
@@ -158,10 +150,12 @@ public class ReviewRepository : GenericRepository<Review>, IReviewRepository
         return (reviews, totalCount);
     }
 
-    public async Task<bool> HasMemberReviewedVenueAsync(int memberId, int venueId, int? coupleProfileId)
+    public async Task<bool> HasMemberReviewedVenueAsync(int memberId, int venueId)
     {
-        return await _dbSet
-            .AnyAsync(r => r.MemberId == memberId && r.VenueId == venueId && r.CoupleProfileId == coupleProfileId && r.IsDeleted != true && r.Status == ReviewStatus.PUBLISHED.ToString());
+        return await _dbSet.AnyAsync(r =>
+            r.MemberId == memberId &&
+            r.VenueId == venueId && r.Status == ReviewStatus.PUBLISHED.ToString() &&
+            r.IsDeleted == false);
     }
 
     public async Task<Review?> GetByIdAndMemberIdAsync(int reviewId, int memberId)

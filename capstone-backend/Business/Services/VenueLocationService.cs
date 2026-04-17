@@ -235,7 +235,7 @@ public class VenueLocationService : IVenueLocationService
 
             response.UserState = new UserStateDto
             {
-                HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId, coupleProfileId),
+                HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId),
                 ActiceCheckInId = checkin != null ? checkin.Id : null,
                 CanReview = checkin != null && checkin.IsValid == true
             };
@@ -288,7 +288,7 @@ public class VenueLocationService : IVenueLocationService
         }
 
         // Lấy danh sách reviews (có phân trang)
-        var (reviews, totalCount) = await _unitOfWork.Reviews.GetReviewsByVenueIdAsync(venueId, page, pageSize, currentMemberId, currentCoupleId, partnerMemberId);
+        var (reviews, totalCount) = await _unitOfWork.Reviews.GetReviewsByVenueIdAsync(venueId, page, pageSize);
 
         // Lấy tất cả ratings để tính summary
         var allRatings = await _unitOfWork.Reviews.GetAllRatingsByVenueIdAsync(venueId);
@@ -2670,7 +2670,7 @@ public class VenueLocationService : IVenueLocationService
 
                 venueDetail.UserState = new UserStateDto
                 {
-                    HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId, coupleProfileId),
+                    HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId),
                     ActiceCheckInId = checkin != null ? checkin.Id : null,
                     CanReview = checkin != null && checkin.IsValid == true
                 };

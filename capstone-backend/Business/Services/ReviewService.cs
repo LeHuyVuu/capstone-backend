@@ -51,11 +51,8 @@ namespace capstone_backend.Business.Services
             if (!venue.Latitude.HasValue || !venue.Longitude.HasValue)
                 throw new Exception("Địa điểm không có tọa độ hợp lệ");
 
-            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
-            int? coupleProfileId = couple?.id;
-
             // Check if review already exists
-            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId, coupleProfileId);
+            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId);
             if (hasReview)
                 throw new Exception("Bạn đã đánh giá địa điểm này rồi");
 
@@ -187,11 +184,8 @@ namespace capstone_backend.Business.Services
             if (venue == null)
                 throw new Exception("Không tìm thấy địa điểm");
 
-            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
-            int? currentCoupleId = couple?.id;
-
             // Check if review already exists
-            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId, currentCoupleId);
+            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId);
             if (hasReview)
                 throw new Exception("Bạn đã đánh giá địa điểm này rồi");
 
@@ -213,7 +207,6 @@ namespace capstone_backend.Business.Services
 
             var review = _mapper.Map<Review>(request);
             review.MemberId = member.Id;
-            review.CoupleProfileId = currentCoupleId;
             review.VenueId = request.VenueLocationId;
             review.Status = ReviewStatus.PENDING.ToString();
             review.IsAnonymous = request.IsAnonymous;
@@ -448,11 +441,8 @@ namespace capstone_backend.Business.Services
             if (!venue.Latitude.HasValue || !venue.Longitude.HasValue)
                 throw new Exception("Địa điểm không có tọa độ hợp lệ");
 
-            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
-            int? coupleProfileId = couple?.id;
-
             // Check if review already exists
-            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId, coupleProfileId);
+            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId);
             if (hasReview)
                 throw new Exception("Bạn đã đánh giá địa điểm này rồi");
 

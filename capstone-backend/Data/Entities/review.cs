@@ -16,8 +16,6 @@ public partial class Review
 
     public int MemberId { get; set; }
 
-    public int? CoupleProfileId { get; set; }
-
     public int? Rating { get; set; }
 
     public string? Content { get; set; }

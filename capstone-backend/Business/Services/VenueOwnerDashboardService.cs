@@ -272,8 +272,7 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
             OneStar = reviews.Count(r => r.Rating == 1),
             AverageRating = reviews.Any() ? (decimal)reviews.Average(r => r.Rating ?? 0) : 0,
             TotalReviews = reviews.Count,
-            ReviewsWithPhotos = reviews.Count(r => !string.IsNullOrEmpty(r.ImageUrls)),
-            ReviewsFromCouples = reviews.Count(r => r.CoupleProfileId.HasValue)
+            ReviewsWithPhotos = reviews.Count(r => !string.IsNullOrEmpty(r.ImageUrls))
         };
 
         // Review trend (group by date)
@@ -305,16 +304,12 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
         var returningCount = checkIns
             .GroupBy(c => c.MemberId)
             .Count(g => g.Count() > 1);
-        var coupleReviewCount = reviews.Count(r => r.CoupleProfileId.HasValue);
 
         var customerStats = new CustomerInsights
         {
             TotalUniqueCustomers = uniqueCustomerIds.Count,
             ReturningCustomers = returningCount,
-            CoupleCustomers = coupleReviewCount,
-            SingleCustomers = reviews.Count - coupleReviewCount,
-            ReturnRate = uniqueCustomerIds.Count > 0 ? (decimal)returningCount / uniqueCustomerIds.Count * 100 : 0,
-            CoupleRate = reviews.Count > 0 ? (decimal)coupleReviewCount / reviews.Count * 100 : 0
+            ReturnRate = uniqueCustomerIds.Count > 0 ? (decimal)returningCount / uniqueCustomerIds.Count * 100 : 0
         };
 
         // Peak hours (from check-ins)
@@ -342,8 +337,7 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
                 Content = r.Content,
                 CreatedAt = r.CreatedAt ?? DateTime.UtcNow,
                 LikeCount = r.LikeCount ?? 0,
-                HasPhotos = !string.IsNullOrEmpty(r.ImageUrls),
-                IsFromCouple = r.CoupleProfileId.HasValue
+                HasPhotos = !string.IsNullOrEmpty(r.ImageUrls)
             })
             .ToList();
 
