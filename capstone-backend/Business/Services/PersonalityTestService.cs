@@ -414,12 +414,12 @@ namespace capstone_backend.Business.Services
                 .ToList();
 
             if (!answerIds.Any())
-                throw new Exception("No answers to submit");
+                throw new Exception("Không có câu trả lời để gửi");
 
             if (missingQuestionIds.Any())
             {
                 throw new BadRequestException(
-                    $"Not all questions answered: {answerIds.Count}/{totalQuestions}",
+                    $"Chưa trả lời tất cả các câu hỏi: {answerIds.Count}/{totalQuestions}",
                     "400")
                 {
                     Data =
