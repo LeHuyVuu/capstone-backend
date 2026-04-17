@@ -33,8 +33,8 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse("Không có file nào được chọn.");
 
             long totalSize = files.Sum(f => f.Length);
-            if (totalSize > 10 * 1024 * 1024)
-                return BadRequestResponse("Tổng dung lượng ảnh quá lớn (Tối đa 10MB).");
+            if (totalSize > 500 * 1024 * 1024)
+                return BadRequestResponse("Tổng dung lượng ảnh quá lớn (Tối đa 500MB).");
 
             var userId = GetCurrentUserId();
             if (userId == null) 
