@@ -311,12 +311,17 @@ public class UserService : IUserService
     public async Task<PagedResult<UserResponse>> GetUsersAsync(
         int pageNumber, int pageSize, string? searchTerm = null)
     {
+        searchTerm = searchTerm?.Trim();
+
         var (users, totalCount) = await _unitOfWork.Users.GetPagedAsync(
             pageNumber,
             pageSize,
             filter: string.IsNullOrEmpty(searchTerm)
                 ? u => u.IsDeleted != true
-                : u => u.IsDeleted != true && (u.Email.Contains(searchTerm) || (u.DisplayName != null && u.DisplayName.Contains(searchTerm))),
+                : u => u.IsDeleted != true && (
+                    u.Email.Contains(searchTerm) ||
+                    (u.DisplayName != null && u.DisplayName.Contains(searchTerm)) ||
+                    (u.PhoneNumber != null && u.PhoneNumber.Contains(searchTerm))),
             orderBy: query => query.OrderByDescending(u => u.CreatedAt));
 
         var items = new List<UserResponse>();
