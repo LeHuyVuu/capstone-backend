@@ -217,10 +217,10 @@ namespace capstone_backend.Business.Services
                             op = ChallengeConstants.RuleOps.In;
                             if (key == ChallengeConstants.RuleKeys.VENUE_ID)
                             {
-                                var intList = JsonSerializer.Deserialize<List<int>>(element.GetRawText());
-                                if (intList != null && intList.Any())
+                                var uniqueIds = ParseVenueIdsFromJsonElement(element);
+
+                                if (uniqueIds.Any())
                                 {
-                                    var uniqueIds = intList.Distinct().Select(x => x.ToString()).ToList();
                                     var invalidVenues = await _unitOfWork.VenueLocations.GetInvalidVenueAsync(uniqueIds);
 
                                     if (invalidVenues.Any())
@@ -233,6 +233,7 @@ namespace capstone_backend.Business.Services
                                     }
 
                                     rawValue = uniqueIds;
+
                                     if (goalMetric == ChallengeConstants.GoalMetrics.UNIQUE_LIST)
                                         updatedTargetGoal = uniqueIds.Count;
                                 }
@@ -297,6 +298,43 @@ namespace capstone_backend.Business.Services
             }
 
             return (finalJson, updatedTargetGoal);
+        }
+
+        private static List<string> ParseVenueIdsFromJsonElement(JsonElement element)
+        {
+            var ids = new List<string>();
+
+            if (element.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in element.EnumerateArray())
+                {
+                    switch (item.ValueKind)
+                    {
+                        case JsonValueKind.String:
+                            var s = item.GetString()?.Trim();
+                            if (!string.IsNullOrWhiteSpace(s))
+                                ids.Add(s);
+                            break;
+
+                        case JsonValueKind.Number:
+                            if (item.TryGetInt32(out var n))
+                                ids.Add(n.ToString());
+                            break;
+                    }
+                }
+            }
+            else if (element.ValueKind == JsonValueKind.String)
+            {
+                var s = element.GetString()?.Trim();
+                if (!string.IsNullOrWhiteSpace(s))
+                    ids.Add(s);
+            }
+            else if (element.ValueKind == JsonValueKind.Number && element.TryGetInt32(out var n))
+            {
+                ids.Add(n.ToString());
+            }
+
+            return ids.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
 
         private async Task<List<ChallengeResponse>> EnrichChallengeResponseAsync(IEnumerable<Challenge> challenges)
