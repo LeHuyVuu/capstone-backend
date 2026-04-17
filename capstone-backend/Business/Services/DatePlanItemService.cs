@@ -70,7 +70,20 @@ namespace capstone_backend.Business.Services
                     .ToList();
 
                 if (existedIds.Any())
-                    throw new Exception($"Một số địa điểm đã có trong lịch trình: {string.Join(", ", existedIds)}");
+                {
+                    var existedVenues = await _unitOfWork.VenueLocations.GetAsync(v => existedIds.Contains(v.Id));
+
+                    var existedVenueMap = existedVenues.ToDictionary(v => v.Id, v => v.Name);
+
+                    var existedVenueDisplay = existedIds
+                        .Select(id =>
+                            existedVenueMap.TryGetValue(id, out var venueName) && !string.IsNullOrWhiteSpace(venueName)
+                                ? $"{venueName} ({id})"
+                                : $"ID: {id}")
+                        .ToList();
+
+                    throw new Exception($"Một số địa điểm đã có trong lịch trình: {string.Join(", ", existedVenueDisplay)}");
+                }
 
                 var venueLocations = await _unitOfWork.VenueLocations.GetAsync(
                     v => requestVenueIds.Contains(v.Id) &&
@@ -88,7 +101,20 @@ namespace capstone_backend.Business.Services
                     .ToList();
 
                 if (invalidVenueIds.Any())
-                    throw new Exception($"Một số địa điểm không tồn tại hoặc không hoạt động: {string.Join(", ", invalidVenueIds)}");
+                {
+                    var invalidVenues = await _unitOfWork.VenueLocations.GetAsync(v => invalidVenueIds.Contains(v.Id));
+
+                    var invalidVenueMap = invalidVenues.ToDictionary(v => v.Id, v => v.Name);
+
+                    var invalidVenueDisplay = invalidVenueIds
+                        .Select(id =>
+                            invalidVenueMap.TryGetValue(id, out var venueName) && !string.IsNullOrWhiteSpace(venueName)
+                                ? $"{venueName} ({id})"
+                                : $"ID: {id}")
+                        .ToList();
+
+                    throw new Exception($"Một số địa điểm không tồn tại hoặc không hoạt động: {string.Join(", ", invalidVenueDisplay)}");
+                }
 
                 var planStartVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedStartAt!.Value);
                 var planEndVn = TimezoneUtil.ToVietNamTime(datePlan.PlannedEndAt!.Value);
