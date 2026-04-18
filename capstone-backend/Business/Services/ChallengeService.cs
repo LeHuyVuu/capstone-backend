@@ -1239,11 +1239,12 @@ namespace capstone_backend.Business.Services
             if (coupleChallenge == null || coupleChallenge.CoupleId != couple.id || coupleChallenge.IsDeleted == true)
                 throw new Exception("Thử thách của cặp đôi không tồn tại");
 
+            if (coupleChallenge.ChallengeId == 14)
+                throw new Exception("Thử thách 'Check-in mood mỗi ngày' là thử thách đặc biệt, không thể rời khỏi");
+
             if (coupleChallenge.Status != CoupleProfileChallengeStatus.IN_PROGRESS.ToString())
                 throw new Exception("Chỉ có thể rời khỏi thử thách đang tiến hành (IN_PROGRESS)");
 
-            if (coupleChallenge.ChallengeId == 14)
-                throw new Exception("Thử thách 'Check-in mood mỗi ngày' là thử thách đặc biệt, không thể rời khỏi");
 
             var progressData = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(coupleChallenge.ProgressData);
             if (progressData?.MemberState == null)
