@@ -154,6 +154,12 @@ namespace capstone_backend.Business.Jobs.Moderation
 
             var venueLocation = await _unitOfWork.VenueLocations.GetByIdWithOwnerAsync(venueId.Value);
 
+            if (review.Status == ReviewStatus.FLAGGED.ToString())
+            {
+                await NotifyReviewFlaggedAsync(userId, review.Id, review.VenueId);
+                return;
+            }
+
             if (review.Status == ReviewStatus.PUBLISHED.ToString())
             {
                 // Only process challenge progress if the review is approved
@@ -173,6 +179,39 @@ namespace capstone_backend.Business.Jobs.Moderation
 
                     await _notificationService.SendNotificationAsync(venueLocation.VenueOwner.UserId, notification);
                 }
+            }
+        }
+
+        private async Task NotifyReviewFlaggedAsync(int authorUserId, int reviewId, int venueId)
+        {
+            try
+            {
+                var venueName = "địa điểm";
+                var venue = await _unitOfWork.VenueLocations.GetByIdAsync(venueId);
+                if (venue != null && !string.IsNullOrWhiteSpace(venue.Name))
+                {
+                    venueName = venue.Name;
+                }
+
+                var notification = new Data.Entities.Notification
+                {
+                    UserId = authorUserId,
+                    Type = NotificationType.SOCIAL.ToString(),
+                    ReferenceId = reviewId,
+                    ReferenceType = ReferenceType.REVIEW.ToString(),
+                    Title = NotificationTemplate.Review.TitleReviewFlagged,
+                    Message = NotificationTemplate.Review.GetReviewFlaggedBody(venueName),
+                    IsRead = false
+                };
+
+                await _unitOfWork.Notifications.AddAsync(notification);
+                await _unitOfWork.SaveChangesAsync();
+
+                BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(notification.Id));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[MODERATION WORKER] Failed to send flagged-review notification for reviewId={ReviewId}", reviewId);
             }
         }
     }

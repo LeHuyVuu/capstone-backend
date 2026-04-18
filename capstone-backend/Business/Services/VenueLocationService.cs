@@ -236,7 +236,7 @@ public class VenueLocationService : IVenueLocationService
             response.UserState = new UserStateDto
             {
                 HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId),
-                ActiceCheckInId = checkin != null ? checkin.Id : null,
+                ActiveCheckInId = checkin != null ? checkin.Id : null,
                 CanReview = checkin != null && checkin.IsValid == true
             };
         }
@@ -2671,7 +2671,7 @@ public class VenueLocationService : IVenueLocationService
                 venueDetail.UserState = new UserStateDto
                 {
                     HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId),
-                    ActiceCheckInId = checkin != null ? checkin.Id : null,
+                    ActiveCheckInId = checkin != null ? checkin.Id : null,
                     CanReview = checkin != null && checkin.IsValid == true
                 };
             }

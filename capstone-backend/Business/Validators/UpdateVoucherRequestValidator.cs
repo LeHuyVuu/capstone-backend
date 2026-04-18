@@ -18,7 +18,8 @@ namespace capstone_backend.Business.Validators
                 .When(x => x.Description != null);
 
             RuleFor(x => x.VoucherPrice)
-                .GreaterThan(0).WithMessage("Giá voucher phải lớn hơn 0");
+                .GreaterThan(0).WithMessage("Giá voucher phải lớn hơn 0")
+                .When(x => x.VoucherPrice.HasValue);
 
             RuleFor(x => x.DiscountType)
                 .Must(BeValidDiscountType)

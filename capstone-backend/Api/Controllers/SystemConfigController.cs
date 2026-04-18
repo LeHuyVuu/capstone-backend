@@ -60,6 +60,8 @@ namespace capstone_backend.Api.Controllers
         ///     - MONEY_TO_POINT_RATE
         /// 
         ///     - VENUE_COMMISSION_PERCENT
+        ///     
+        ///     - CHECKIN_REVIEW_NOTIFICATION_DELAY_SECONDS
         /// 
         /// Value: truyền string
         /// </remarks>

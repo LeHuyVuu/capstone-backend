@@ -123,9 +123,9 @@ public class MoodTypeService : IMoodTypeService
                 IsDeleted = false
             });
             _logger.LogInformation($"➕ Created new mood log for today VN (MoodType: {moodType.Name})");
-
-            await _challengeService.HandleCheckinChallengeProgressAsync(userId);
         }
+
+        await _challengeService.HandleCheckinChallengeProgressAsync(userId);
 
         await _unitOfWork.SaveChangesAsync();
 

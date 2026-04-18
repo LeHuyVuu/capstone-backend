@@ -52,8 +52,9 @@
 
         public static class Review
         {
-            public const string TitleReviewRequest = "⏳ Đã 10 phút rồi!";
+            public const string TitleReviewRequest = "⏳ Đến giờ đánh giá rồi!";
             public const string TitleReceiveNewReview = "Một đánh giá mới";
+            public const string TitleReviewFlagged = "Đánh giá của bạn đang được xem xét";
 
             public static string GetReviewRequestBody(string venueName)
             {
@@ -63,6 +64,11 @@
             public static string GetReceiveNewReviewBody(string fullName, string venueName)
             {
                 return $"{fullName} vừa đánh giá địa điểm {venueName} của bạn!";
+            }
+
+            public static string GetReviewFlaggedBody(string venueName)
+            {
+                return $"Đánh giá của bạn tại {venueName} đang được hệ thống kiểm duyệt thêm. Chúng tôi sẽ cập nhật sớm.";
             }
         }
 

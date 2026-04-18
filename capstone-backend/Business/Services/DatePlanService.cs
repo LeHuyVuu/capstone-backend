@@ -657,6 +657,8 @@ namespace capstone_backend.Business.Services
             var plannedStartAtVn = TimezoneUtil.ToVietNamTime(plannedStartAtUtc);
             var plannedEndAtVn = TimezoneUtil.ToVietNamTime(plannedEndAtUtc);
 
+            var targetVenueCount = GetTargetVenueCount(plannedStartAtVn, plannedEndAtVn);
+
             var startDayOfWeek = (int)request.PlannedStartAt.DayOfWeek + 1;
             var startTimeSpan = TimeOnly.FromDateTime(plannedStartAtVn).ToTimeSpan();
             var endTimeSpan = TimeOnly.FromDateTime(plannedEndAtVn).ToTimeSpan();
@@ -762,7 +764,7 @@ namespace capstone_backend.Business.Services
 
             var promptJsonContext = JsonConverterUtil.Serialize(aiPromptRequest);
 
-            var phase3SystemPrompt = BuildPhase3SystemPrompt();
+            var phase3SystemPrompt = BuildPhase3SystemPrompt(targetVenueCount);
             var p3Messages = new List<ChatMessage>()
             {
                 new SystemChatMessage(phase3SystemPrompt),
@@ -782,7 +784,14 @@ namespace capstone_backend.Business.Services
 
                 var finalPlan = JsonConverterUtil.DeserializeOrDefault<AIDatePlanItemResponse>(responseText);
 
-                if (finalPlan == null || finalPlan.Items == null || !finalPlan.Items.Any())
+                finalPlan.Items = finalPlan.Items
+                    .Where(i => i != null)
+                    .GroupBy(i => i.VenueLocationId)
+                    .Select(g => g.First())
+                    .Take(targetVenueCount)
+                    .ToList();
+
+                if (!finalPlan.Items.Any())
                     throw new Exception("AI không thể tạo lịch trình từ dữ liệu này.");
 
                 foreach (var item in finalPlan.Items)
@@ -809,6 +818,22 @@ namespace capstone_backend.Business.Services
             return aiCandidates;
         }
 
+        private static int GetTargetVenueCount(DateTime plannedStartAtVn, DateTime plannedEndAtVn)
+        {
+            var totalMinutes = Math.Max(0, (plannedEndAtVn - plannedStartAtVn).TotalMinutes);
+
+            // 1-2.5h => 1 điểm
+            if (totalMinutes <= 150)
+                return 1;
+
+            // >2.5h đến 5h => 2 điểm
+            if (totalMinutes <= 300)
+                return 2;
+
+            // >5h => 3 điểm
+            return 3;
+        }
+
         private static string BuildPhase1SystemPrompt(string validCategories)
         {
             return $@"Role: Dating Context Extractor.
@@ -821,9 +846,11 @@ Rules:
 {{""categories"":[""MatchedCategory""],""mood_tags"":[""vibe""],""time_hint"":""Tối nay"",""special_note"":null}}";
         }
 
-        private static string BuildPhase3SystemPrompt()
+        private static string BuildPhase3SystemPrompt(int targetVenueCount)
         {
-            return @"Role: Date Planner AI.
+            targetVenueCount = Math.Clamp(targetVenueCount, 1, 3);
+
+            return @$"Role: Date Planner AI.
 Task: Map 'raw_query', 'user_intent', 'venue_candidates' -> 3-item JSON itinerary.
 
 RULES (STRICT):
@@ -834,14 +861,14 @@ RULES (STRICT):
    - IGNORE the text order in 'raw_query'. Sort venues based on human logic and time of day.
    - Core Heuristics: Morning (Breakfast/Cafe) -> Afternoon (Sightseeing/Outdoor/Sunset) -> Evening (Dinner/Main Meal) -> Late Night (Bar/Lounge/Live Music).
    - Match venue categories to their optimal operating hours within the user's timeframe.
-3. ADAPTIVE SELECTION (EXACTLY 3 VENUES):
-   - MUST output exactly 3 distinct venues. No duplicate brands.
-   - If 'user_intent' has < 3 activities, AUTO-FILL the gaps with complementary venues from candidates to create a balanced date experience.
+3. ADAPTIVE SELECTION:
+   - MUST output exactly {targetVenueCount} distinct venues.
+   - If timeframe is short, prioritize fewer, better-matched stops.
 4. FORMAT:
    - 'note': < 15 words. Sharp and engaging. Vietnamese
    - OUTPUT PURE JSON. NO markdown. NO yapping.
 
-{""items"":[{""venueLocationId"":1,""startTime"":""HH:mm:ss"",""endTime"":""HH:mm:ss"",""note"":""string""}]}
+{{""items"":[{{""venueLocationId"":1,""startTime"":""HH:mm:ss"",""endTime"":""HH:mm:ss"",""note"":""string""}}]}}
 ";
         }
     }

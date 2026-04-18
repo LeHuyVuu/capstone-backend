@@ -203,20 +203,20 @@ namespace capstone_backend.Business.Services
             if (request == null)
                 throw new Exception("Dữ liệu không hợp lệ");
 
-            if (request.VenueLocationIds == null || !request.VenueLocationIds.Any())
-                throw new Exception("Voucher phải áp dụng cho ít nhất 1 địa điểm");
+            //if (request.VenueLocationIds == null || !request.VenueLocationIds.Any())
+            //    throw new Exception("Voucher phải áp dụng cho ít nhất 1 địa điểm");
 
             var now = DateTime.UtcNow;
 
             // Check date validity
-            if (request.StartDate.HasValue && request.EndDate.HasValue && request.StartDate > request.EndDate)
-                throw new Exception("Ngày bắt đầu phải trước ngày kết thúc");
+            //if (request.StartDate.HasValue && request.EndDate.HasValue && request.StartDate > request.EndDate)
+            //    throw new Exception("Ngày bắt đầu phải trước ngày kết thúc");
 
-            if (request.StartDate.HasValue && request.StartDate.Value < now)
-                throw new Exception("Ngày bắt đầu không được ở quá khứ");
+            //if (request.StartDate.HasValue && request.StartDate.Value < now)
+            //    throw new Exception("Ngày bắt đầu không được ở quá khứ");
 
-            if (request.EndDate.HasValue && request.EndDate.Value < now)
-                throw new Exception("Ngày kết thúc không được ở quá khứ");
+            //if (request.EndDate.HasValue && request.EndDate.Value < now)
+            //    throw new Exception("Ngày kết thúc không được ở quá khứ");
 
             var voucher = _mapper.Map<Voucher>(request);
             voucher.VenueOwnerId = venueOwner.Id;
@@ -237,37 +237,38 @@ namespace capstone_backend.Business.Services
 
             // Create VoucherLocation entries
             // Check valid locations
-            var distinctLocationIds = request.VenueLocationIds.Distinct().ToList();
+            //var distinctLocationIds = request.VenueLocationIds.Distinct().ToList();
 
-            var invalidLocations = distinctLocationIds
-                .Select(id => new
-                {
-                    Id = id,
-                    Location = venueOwner.VenueLocations.FirstOrDefault(loc =>
-                        loc.Id == id &&
-                        loc.Status == VenueLocationStatus.ACTIVE.ToString() &&
-                        loc.IsDeleted == false)
-                })
-                .Where(x => x.Location == null)
-                .ToList();
+            //var invalidLocations = distinctLocationIds
+            //    .Select(id => new
+            //    {
+            //        Id = id,
+            //        Location = venueOwner.VenueLocations.FirstOrDefault(loc =>
+            //            loc.Id == id &&
+            //            loc.Status == VenueLocationStatus.ACTIVE.ToString() &&
+            //            loc.IsDeleted == false)
+            //    })
+            //    .Where(x => x.Location == null)
+            //    .ToList();
 
-            if (invalidLocations.Any())
-            {
-                var errorMessages = invalidLocations.Select(x => {
-                    var existingLoc = venueOwner.VenueLocations.FirstOrDefault(l => l.Id == x.Id);
-                    return existingLoc != null ? $"'{existingLoc.Name}' (ID: {x.Id})" : $"(ID: {x.Id} - Không tồn tại)";
-                });
+            //if (invalidLocations.Any())
+            //{
+            //    var errorMessages = invalidLocations.Select(x => {
+            //        var existingLoc = venueOwner.VenueLocations.FirstOrDefault(l => l.Id == x.Id);
+            //        return existingLoc != null ? $"'{existingLoc.Name}' (ID: {x.Id})" : $"(ID: {x.Id} - Không tồn tại)";
+            //    });
 
-                throw new Exception($"Các địa điểm sau không hợp lệ hoặc ngưng hoạt động: {string.Join(", ", errorMessages)}");
-            }
+            //    throw new Exception($"Các địa điểm sau không hợp lệ hoặc ngưng hoạt động: {string.Join(", ", errorMessages)}");
+            //}
 
-            voucher.VoucherLocations = distinctLocationIds.Select(locId => new VoucherLocation
-            {
-                VenueLocationId = locId
-            }).ToList();
+            //voucher.VoucherLocations = distinctLocationIds.Select(locId => new VoucherLocation
+            //{
+            //    VenueLocationId = locId
+            //}).ToList();
 
             await _unitOfWork.Vouchers.AddAsync(voucher);
-            await _unitOfWork.CommitTransactionAsync();
+            await _unitOfWork.SaveChangesAsync();
+            //await _unitOfWork.CommitTransactionAsync();
 
             var response = _mapper.Map<VoucherResponse>(voucher);
             return response;
@@ -340,6 +341,8 @@ namespace capstone_backend.Business.Services
             if (voucher.Status != VoucherStatus.DRAFTED.ToString())
                 throw new Exception("Chỉ có thể voucher để xét duyệt ở trạng thái DRAFTED");
 
+            ValidateVoucherBeforeSubmit(voucher);
+
             // Check if have 1 location
             if (voucher.VoucherLocations == null || !voucher.VoucherLocations.Any())
                 throw new Exception("Voucher phải áp dụng cho ít nhất 1 địa điểm");
@@ -352,36 +355,36 @@ namespace capstone_backend.Business.Services
             if (inactiveLocations.Any())
                 throw new Exception($"Không thể gửi duyệt. Các địa điểm sau đang ngưng hoạt động: {string.Join(", ", inactiveLocations)}");
 
-            // Check quantity
-            if (voucher.Quantity <= 0)
-                throw new Exception("Số lượng phải lớn hơn 0");
+            //// Check quantity
+            //if (voucher.Quantity <= 0)
+            //    throw new Exception("Số lượng phải lớn hơn 0");
 
-            // Check date validity
-            var now = DateTime.UtcNow;
-            if (voucher.StartDate.HasValue && voucher.EndDate.HasValue && voucher.StartDate > voucher.EndDate)
-                throw new Exception("Ngày bắt đầu phải trước ngày kết thúc");
+            //// Check date validity
+            //var now = DateTime.UtcNow;
+            //if (voucher.StartDate.HasValue && voucher.EndDate.HasValue && voucher.StartDate > voucher.EndDate)
+            //    throw new Exception("Ngày bắt đầu phải trước ngày kết thúc");
 
-            if (voucher.StartDate.HasValue && voucher.StartDate.Value < now)
-                throw new Exception("Ngày bắt đầu không được ở quá khứ");
+            //if (voucher.StartDate.HasValue && voucher.StartDate.Value < now)
+            //    throw new Exception("Ngày bắt đầu không được ở quá khứ");
 
-            if (voucher.EndDate.HasValue && voucher.EndDate.Value < now)
-                throw new Exception("Ngày kết thúc không được ở quá khứ");
+            //if (voucher.EndDate.HasValue && voucher.EndDate.Value < now)
+            //    throw new Exception("Ngày kết thúc không được ở quá khứ");
 
-            // Check discount validity
-            if (voucher.DiscountType == VoucherDiscountType.FIXED_AMOUNT.ToString())
-            {
-                if (!voucher.DiscountAmount.HasValue || voucher.DiscountAmount.Value <= 0)
-                    throw new Exception("Số tiền giảm phải lớn hơn 0");
-            }
-            else if (voucher.DiscountType == VoucherDiscountType.PERCENTAGE.ToString())
-            {
-                if (!voucher.DiscountPercent.HasValue || voucher.DiscountPercent.Value < 1 || voucher.DiscountPercent.Value > 100)
-                    throw new Exception("Phần trăm giảm phải từ 1 đến 100");
-            }
-            else
-            {
-                throw new Exception("Loại giảm giá không hợp lệ");
-            }
+            //// Check discount validity
+            //if (voucher.DiscountType == VoucherDiscountType.FIXED_AMOUNT.ToString())
+            //{
+            //    if (!voucher.DiscountAmount.HasValue || voucher.DiscountAmount.Value <= 0)
+            //        throw new Exception("Số tiền giảm phải lớn hơn 0");
+            //}
+            //else if (voucher.DiscountType == VoucherDiscountType.PERCENTAGE.ToString())
+            //{
+            //    if (!voucher.DiscountPercent.HasValue || voucher.DiscountPercent.Value < 1 || voucher.DiscountPercent.Value > 100)
+            //        throw new Exception("Phần trăm giảm phải từ 1 đến 100");
+            //}
+            //else
+            //{
+            //    throw new Exception("Loại giảm giá không hợp lệ");
+            //}
 
             voucher.Status = VoucherStatus.PENDING.ToString();
             voucher.UpdatedAt = DateTime.UtcNow;
@@ -1029,6 +1032,67 @@ namespace capstone_backend.Business.Services
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
+        }
+
+        private static void ValidateVoucherBeforeSubmit(Voucher voucher)
+        {
+            if (string.IsNullOrWhiteSpace(voucher.Title))
+                throw new Exception("Vui lòng nhập tiêu đề voucher");
+
+            if (string.IsNullOrWhiteSpace(voucher.Description))
+                throw new Exception("Vui lòng nhập mô tả voucher");
+
+            if (string.IsNullOrWhiteSpace(voucher.ImageUrl))
+                throw new Exception("Vui lòng thêm ảnh voucher");
+
+            if (voucher.VoucherPrice <= 0)
+                throw new Exception("Giá voucher phải lớn hơn 0");
+
+            if (!voucher.Quantity.HasValue || voucher.Quantity.Value <= 0)
+                throw new Exception("Số lượng phải lớn hơn 0");
+
+            if (!voucher.UsageValidDays.HasValue || voucher.UsageValidDays.Value < 1 || voucher.UsageValidDays.Value > 365)
+                throw new Exception("UsageValidDays phải từ 1 đến 365 ngày");
+
+            if (voucher.UsageLimitPerMember.HasValue && voucher.UsageLimitPerMember.Value <= 0)
+                throw new Exception("Giới hạn sử dụng mỗi thành viên phải lớn hơn 0");
+
+            if (voucher.StartDate.HasValue && voucher.EndDate.HasValue && voucher.StartDate > voucher.EndDate)
+                throw new Exception("Ngày bắt đầu phải trước ngày kết thúc");
+
+            var now = DateTime.UtcNow;
+            if (voucher.StartDate.HasValue && voucher.StartDate.Value < now)
+                throw new Exception("Ngày bắt đầu không được ở quá khứ");
+
+            if (voucher.EndDate.HasValue && voucher.EndDate.Value < now)
+                throw new Exception("Ngày kết thúc không được ở quá khứ");
+
+            if (string.IsNullOrWhiteSpace(voucher.DiscountType))
+                throw new Exception("Loại giảm giá không hợp lệ");
+
+            if (voucher.DiscountAmount.HasValue && voucher.DiscountPercent.HasValue)
+                throw new Exception("Chỉ được truyền một trong hai: DiscountAmount hoặc DiscountPercent");
+
+            if (voucher.DiscountType == VoucherDiscountType.FIXED_AMOUNT.ToString())
+            {
+                if (!voucher.DiscountAmount.HasValue || voucher.DiscountAmount.Value <= 0)
+                    throw new Exception("Số tiền giảm phải lớn hơn 0");
+
+                if (voucher.DiscountPercent.HasValue)
+                    throw new Exception("Không được nhập Percent khi dùng Fixed Amount");
+            }
+            else if (voucher.DiscountType == VoucherDiscountType.PERCENTAGE.ToString())
+            {
+                if (!voucher.DiscountPercent.HasValue || voucher.DiscountPercent.Value < 1 || voucher.DiscountPercent.Value > 100)
+                    throw new Exception("Phần trăm giảm phải từ 1 đến 100");
+
+                if (voucher.DiscountAmount.HasValue)
+                    throw new Exception("Không được nhập Amount khi dùng Percentage");
+            }
+            else
+            {
+                throw new Exception("Loại giảm giá không hợp lệ");
+            }
         }
     }
 }
