@@ -21,6 +21,8 @@ namespace capstone_backend.Business.Jobs.Leaderboard
             var now = DateTime.UtcNow;
             var oneMonthAgo = now.AddMonths(-1);
             var currentSeasonKey = $"{now.Year}-{now.Month:D2}";
+            var periodStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var periodEnd = periodStart.AddMonths(1).AddTicks(-1);
 
             // Lấy tất cả couple ACTIVE >= 1 tháng
             var couples = await _unitOfWork.Context.CoupleProfiles
@@ -47,8 +49,8 @@ namespace capstone_backend.Business.Jobs.Leaderboard
                 {
                     CoupleId = couple.id,
                     PeriodType = "monthly",
-                    PeriodStart = now,
-                    PeriodEnd = now.AddMonths(1),
+                    PeriodStart = periodStart,
+                    PeriodEnd = periodEnd,
                     SeasonKey = currentSeasonKey,
                     TotalPoints = couple.InteractionPoints ?? 0,
                     RankPosition = 0,

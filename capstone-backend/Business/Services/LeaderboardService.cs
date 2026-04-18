@@ -23,6 +23,9 @@ public class LeaderboardService : ILeaderboardService
         var periodStart = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
         var nextMonth = periodStart.AddMonths(1);
         var periodEnd = nextMonth.AddTicks(-1); // Giây cuối cùng của tháng
+        var seasonKey = $"{year}-{month:D2}";
+
+        await EnsureMonthlyRanksAsync(seasonKey);
 
         var (leaderboards, totalCount) = await _unitOfWork.Leaderboards.GetLeaderboardByPeriodAsync(
             "monthly",
@@ -88,6 +91,8 @@ public class LeaderboardService : ILeaderboardService
     {
         var now = DateTime.UtcNow;
         var currentSeasonKey = $"{now.Year}-{now.Month:D2}";
+        var periodStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var periodEnd = periodStart.AddMonths(1).AddTicks(-1);
 
         // Check xem couple đã có trong leaderboard tháng này chưa
         var exists = await _unitOfWork.Context.Leaderboards
@@ -101,8 +106,8 @@ public class LeaderboardService : ILeaderboardService
         {
             CoupleId = coupleId,
             PeriodType = "monthly",
-            PeriodStart = now,
-            PeriodEnd = now.AddMonths(1),
+            PeriodStart = periodStart,
+            PeriodEnd = periodEnd,
             SeasonKey = currentSeasonKey,
             TotalPoints = 0,
             RankPosition = 0,
@@ -127,5 +132,46 @@ public class LeaderboardService : ILeaderboardService
         }
 
         await _unitOfWork.SaveChangesAsync();
+    }
+
+    private async Task EnsureMonthlyRanksAsync(string seasonKey)
+    {
+        var monthlyRows = await _unitOfWork.Context.Leaderboards
+            .Where(l => l.PeriodType == "monthly"
+                     && l.SeasonKey == seasonKey
+                     && l.Status == LeaderboardStatus.ACTIVE.ToString())
+            .OrderByDescending(l => l.TotalPoints ?? 0)
+            .ThenBy(l => l.UpdatedAt)
+            .ThenBy(l => l.Id)
+            .ToListAsync();
+
+        if (!monthlyRows.Any())
+            return;
+
+        var position = 0;
+        var seen = 0;
+        int? previousPoints = null;
+        var hasChanges = false;
+
+        foreach (var row in monthlyRows)
+        {
+            seen++;
+            var currentPoints = row.TotalPoints ?? 0;
+
+            // Competition ranking: 1, 1, 3, 4...
+            if (previousPoints == null || currentPoints != previousPoints)
+                position = seen;
+
+            if (row.RankPosition != position)
+            {
+                row.RankPosition = position;
+                hasChanges = true;
+            }
+
+            previousPoints = currentPoints;
+        }
+
+        if (hasChanges)
+            await _unitOfWork.SaveChangesAsync();
     }
 }
