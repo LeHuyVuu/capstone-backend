@@ -17,9 +17,8 @@ public class CreateAdvertisementRequest
     [Url(ErrorMessage = "TargetUrl phải là URL hợp lệ")]
     public string? TargetUrl { get; set; }
 
-    [Required(ErrorMessage = "PlacementType là bắt buộc")]
     [StringLength(50, ErrorMessage = "PlacementType không được vượt quá 50 ký tự")]
-    public string PlacementType { get; set; } = null!;
+    public string? PlacementType { get; set; }
 
     [Required(ErrorMessage = "MoodTypeId là bắt buộc")]
     public int MoodTypeId { get; set; }

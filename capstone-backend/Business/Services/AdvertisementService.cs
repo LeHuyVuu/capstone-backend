@@ -604,7 +604,6 @@ public class AdvertisementService : IAdvertisementService
         var missingFields = new List<string>();
         if (string.IsNullOrWhiteSpace(advertisement.Title)) missingFields.Add("Title");
         if (string.IsNullOrWhiteSpace(advertisement.BannerUrl)) missingFields.Add("BannerUrl");
-        if (string.IsNullOrWhiteSpace(advertisement.PlacementType)) missingFields.Add("PlacementType");
 
         if (missingFields.Any())
         {
@@ -639,6 +638,26 @@ public class AdvertisementService : IAdvertisementService
                 Message = "Package configuration is invalid"
             };
         }
+
+        // Placement type is derived from selected package at submit time.
+        var resolvedPlacement = package.Placement?.Trim();
+        if (string.IsNullOrWhiteSpace(resolvedPlacement))
+        {
+            // Backward-compatible fallback for older package data.
+            resolvedPlacement = advertisement.PlacementType?.Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(resolvedPlacement))
+        {
+            return new SubmitAdvertisementWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "Package placement is not configured"
+            };
+        }
+
+        advertisement.PlacementType = resolvedPlacement;
+        advertisement.UpdatedAt = DateTime.UtcNow;
 
         // 6. Check if there's already a pending payment
         var existingPending = await _unitOfWork.Context.Set<AdsOrder>()
