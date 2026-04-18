@@ -64,8 +64,20 @@ public interface IMeilisearchService
     Task<bool> ConfigureIndexSettingsAsync();
 
     /// <summary>
+    /// Configure index settings for Meilisearch v2 host
+    /// </summary>
+    /// <returns>True if successful</returns>
+    Task<bool> ConfigureIndexSettingsV2Async();
+
+    /// <summary>
     /// Verify index settings are correctly configured
     /// </summary>
     /// <returns>Settings verification result</returns>
     Task<object> VerifyIndexSettingsAsync();
+
+    /// <summary>
+    /// Verify index settings on Meilisearch v2 host
+    /// </summary>
+    /// <returns>Settings verification result</returns>
+    Task<object> VerifyIndexSettingsV2Async();
 }

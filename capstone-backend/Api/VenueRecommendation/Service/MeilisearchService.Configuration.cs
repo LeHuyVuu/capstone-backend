@@ -10,9 +10,27 @@ public partial class MeilisearchService
     /// <inheritdoc/>
     public async Task<bool> ConfigureIndexSettingsAsync()
     {
+        return await ConfigureIndexSettingsInternalAsync(_meilisearchClient, "default");
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> ConfigureIndexSettingsV2Async()
+    {
+        var v2Host = Environment.GetEnvironmentVariable("MEILISEARCH_V2_HOST")
+                     ?? "http://134.209.108.208:7700";
+
+        var apiKey = Environment.GetEnvironmentVariable("MEILI_MASTER_KEY")
+                     ?? "couplemood123";
+
+        var v2Client = new MeilisearchClient(v2Host, apiKey);
+        return await ConfigureIndexSettingsInternalAsync(v2Client, "v2");
+    }
+
+    private async Task<bool> ConfigureIndexSettingsInternalAsync(MeilisearchClient client, string hostLabel)
+    {
         try
         {
-            var index = _meilisearchClient.Index(_indexName);
+            var index = client.Index(_indexName);
 
             // Ranking Rules: Ưu tiên exact match và relevance
             await index.UpdateRankingRulesAsync(new[]
@@ -95,13 +113,16 @@ public partial class MeilisearchService
 
             if (!hasGeoFilterable || !hasGeoSortable)
             {
+                _logger.LogWarning("Meilisearch {HostLabel} index settings missing geo capability for index {Index}", hostLabel, _indexName);
                 return false;
             }
 
+            _logger.LogInformation("Configured Meilisearch {HostLabel} index settings successfully for index {Index}", hostLabel, _indexName);
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Error configuring Meilisearch {HostLabel} index settings for index {Index}", hostLabel, _indexName);
             return false;
         }
     }
@@ -109,9 +130,27 @@ public partial class MeilisearchService
     /// <inheritdoc/>
     public async Task<object> VerifyIndexSettingsAsync()
     {
+        return await VerifyIndexSettingsInternalAsync(_meilisearchClient, "default");
+    }
+
+    /// <inheritdoc/>
+    public async Task<object> VerifyIndexSettingsV2Async()
+    {
+        var v2Host = Environment.GetEnvironmentVariable("MEILISEARCH_V2_HOST")
+                     ?? "http://134.209.108.208:7700";
+
+        var apiKey = Environment.GetEnvironmentVariable("MEILI_MASTER_KEY")
+                     ?? "couplemood123";
+
+        var v2Client = new MeilisearchClient(v2Host, apiKey);
+        return await VerifyIndexSettingsInternalAsync(v2Client, "v2");
+    }
+
+    private async Task<object> VerifyIndexSettingsInternalAsync(MeilisearchClient client, string hostLabel)
+    {
         try
         {
-            var index = _meilisearchClient.Index(_indexName);
+            var index = client.Index(_indexName);
 
             var filterableAttrs = await index.GetFilterableAttributesAsync();
             var sortableAttrs = await index.GetSortableAttributesAsync();
@@ -123,6 +162,7 @@ public partial class MeilisearchService
 
             return new
             {
+                HostLabel = hostLabel,
                 IndexName = _indexName,
                 FilterableAttributes = filterableAttrs?.ToList() ?? new List<string>(),
                 SortableAttributes = sortableAttrs?.ToList() ?? new List<string>(),
@@ -138,7 +178,7 @@ public partial class MeilisearchService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error verifying Meilisearch index settings");
+            _logger.LogError(ex, "Error verifying Meilisearch {HostLabel} index settings", hostLabel);
             return new { Error = ex.Message };
         }
     }
