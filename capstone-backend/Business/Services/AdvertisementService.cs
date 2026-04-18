@@ -198,6 +198,11 @@ public class AdvertisementService : IAdvertisementService
 
                     foreach (var item in rotated)
                     {
+                        var isPopupPlacement = string.Equals(
+                            item.Advertisement.PlacementType?.Trim(),
+                            "POPUP",
+                            StringComparison.OrdinalIgnoreCase);
+
                         rotatedAds.Add(new AdvertisementResponse
                         {
                             Type = "ADVERTISEMENT",
@@ -205,7 +210,8 @@ public class AdvertisementService : IAdvertisementService
                             VenueId = item.VenueId,
                             SpecialEventId = null,
                             BannerUrl = item.Advertisement.BannerUrl,
-                            PlacementType = item.Advertisement.PlacementType
+                            PlacementType = item.Advertisement.PlacementType,
+                            TargetUrl = isPopupPlacement ? item.Advertisement.TargetUrl : null
                         });
                     }
 
@@ -230,7 +236,8 @@ public class AdvertisementService : IAdvertisementService
                 VenueId = null,
                 SpecialEventId = se.Id,
                 BannerUrl = se.BannerUrl,
-                PlacementType = null
+                PlacementType = null,
+                TargetUrl = null
             }).ToList();
 
             // Kết hợp: Quảng cáo trước (priority cao), special events sau
