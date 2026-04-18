@@ -10,15 +10,13 @@ namespace capstone_backend.Business.DTOs.Voucher
         public string Title { get; set; } = null!;
 
         /// <example>Giảm ngay 50k cho đơn hàng từ 200k trở lên.</example>
-        [Required]
-        public string Description { get; set; } = null!;
+        public string? Description { get; set; } = null!;
 
         /// <example>50000</example>
-        public decimal VoucherPrice { get; set; }
+        public decimal? VoucherPrice { get; set; }
 
         /// <example>FIXED_AMOUNT</example>
-        [Required]
-        public string DiscountType { get; set; } = null!;
+        public string? DiscountType { get; set; }
 
         /// <example>50000</example>
         public decimal? DiscountAmount { get; set; }
