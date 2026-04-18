@@ -76,6 +76,12 @@ namespace capstone_backend.Business.Services
                         throw new Exception("Thời gian bắn notification phải là số nguyên trong khoảng 5-3600 giây");
                     break;
 
+                case "DATEPLAN_REMINDER_1_BEFORE_SECONDS":
+                case "DATEPLAN_REMINDER_2_BEFORE_SECONDS":
+                    if (!int.TryParse(value, out var sec) || sec < 5 || sec > 43200)
+                        throw new Exception("Reminder seconds phải là số nguyên trong khoảng 5-43200");
+                    break;
+
                 default:
                     throw new Exception("Config key không hợp lệ");
             }

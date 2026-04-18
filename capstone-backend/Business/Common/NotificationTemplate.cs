@@ -4,8 +4,8 @@
     {
         public static class DatePlan
         {
-            public const string TitleReminder1Day = "Mai mình có hẹn nha bồ ơi!";
-            public const string TitleReminder1Hour = "Còn 1 giờ nữa tới hẹn rồi";
+            public const string TitleReminderPrimary = "Sắp tới buổi hẹn của bạn 💕";
+            public const string TitleReminderSecondary = "Đến giờ chuẩn bị đi hẹn rồi ⏰";
 
             public const string TitleDatePlanStarted = "Date time! Bắt đầu";
             public const string TitelDatePlanEnded = "Buổi hẹn đã kết thúc";
@@ -15,14 +15,14 @@
 
             public const string TitleAccepted = "Buổi hẹn đã được đồng ý!";
 
-            public static string GetReminder1DayBody(string datePlanTitle, TimeOnly plannedStartAt)
+            public static string GetReminderPrimaryBody(string datePlanTitle, TimeOnly plannedStartAt)
             {
-                return $"Đừng quên là ngày mai mình có hẹn \"{datePlanTitle}\" vào lúc {plannedStartAt:HH:mm} nhé!";
+                return $"Buổi hẹn \"{datePlanTitle}\" sẽ bắt đầu lúc {plannedStartAt:HH:mm}. Mình chuẩn bị nhé!";
             }
 
-            public static string GetReminder1HourBody(string datePlanTitle, TimeOnly plannedStartAt)
+            public static string GetReminderSecondaryBody(string datePlanTitle, TimeOnly plannedStartAt)
             {
-                return $"Chỉ còn 1 tiếng nữa là đến giờ hẹn \"{datePlanTitle}\" vào lúc {plannedStartAt:HH:mm} rồi đấy!";
+                return $"Nhắc nhẹ: \"{datePlanTitle}\" sắp tới giờ ({plannedStartAt:HH:mm}) rồi nè!";
             }
 
             public static string GetDatePlanStartedBody(string datePlanTitle)
