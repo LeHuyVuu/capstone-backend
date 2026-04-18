@@ -12,10 +12,11 @@ namespace capstone_backend.Api.VenueRecommendation.Api;
 [ApiController]
 public class VenueLocationSearchIndexController : BaseController
 {
-    private const string HardcodedIndexHost = "http://134.209.108.208:7700";
+    private const string DefaultV2Host = "http://134.209.108.208:7700";
 
     private readonly IMeilisearchService _meilisearchService;
     private readonly ILogger<VenueLocationSearchIndexController> _logger;
+    private readonly string _v2Host;
 
     public VenueLocationSearchIndexController(
         IMeilisearchService meilisearchService,
@@ -23,6 +24,7 @@ public class VenueLocationSearchIndexController : BaseController
     {
         _meilisearchService = meilisearchService;
         _logger = logger;
+        _v2Host = Environment.GetEnvironmentVariable("MEILISEARCH_V2_HOST") ?? DefaultV2Host;
     }
 
     /// <summary>
@@ -61,31 +63,31 @@ public class VenueLocationSearchIndexController : BaseController
     public async Task<IActionResult> IndexVenueToMeilisearchHardcodedHost(int id)
     {
         _logger.LogInformation(
-            "Indexing venue {VenueId} to hardcoded Meilisearch host {Host}",
+            "Indexing venue {VenueId} to Meilisearch v2 host {Host}",
             id,
-            HardcodedIndexHost);
+            _v2Host);
 
         try
         {
             var syncedCount = await MeilisearchSyncDataUtil.SyncVenueByIdLikeOldAsync(
                 id,
                 indexName: "venue_locations",
-                targetHost: HardcodedIndexHost);
+                targetHost: _v2Host);
 
             if (syncedCount <= 0)
             {
                 return NotFoundResponse($"Không tìm thấy địa điểm có ID {id} hoặc không thể lập chỉ mục");
             }
 
-            return OkResponse(true, $"Lập chỉ mục địa điểm thành công lên host {HardcodedIndexHost}");
+            return OkResponse(true, $"Lập chỉ mục địa điểm thành công lên host {_v2Host}");
         }
         catch (Exception ex)
         {
             _logger.LogWarning(
                 ex,
-                "Failed indexing venue {VenueId} to hardcoded Meilisearch host {Host}",
+                "Failed indexing venue {VenueId} to Meilisearch v2 host {Host}",
                 id,
-                HardcodedIndexHost);
+                _v2Host);
             return NotFoundResponse($"Không tìm thấy địa điểm có ID {id} hoặc không thể lập chỉ mục");
         }
     }

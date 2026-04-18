@@ -62,7 +62,7 @@ public class VenueLocationSearchSyncController : BaseController
         _logger.LogInformation("Admin syncing all venues to Meilisearch");
 
         // Configure index settings first
-        await _meilisearchService.ConfigureIndexSettingsAsync();
+        await _meilisearchService.ConfigureIndexSettingsV2Async();
 
         var count = await _meilisearchService.IndexAllVenueLocationsV2Async();
 
@@ -79,5 +79,17 @@ public class VenueLocationSearchSyncController : BaseController
     {
         var result = await _meilisearchService.VerifyIndexSettingsAsync();
         return OkResponse(result, "Xác minh cấu hình thành công");
+    }
+
+    /// <summary>
+    /// Verify Meilisearch v2 index settings
+    /// </summary>
+    [HttpGet("v2/search/verify-settings")]
+    [Tags("Meilisearch")]
+    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+    public async Task<IActionResult> VerifyMeilisearchSettingsV2()
+    {
+        var result = await _meilisearchService.VerifyIndexSettingsV2Async();
+        return OkResponse(result, "Xác minh cấu hình v2 thành công");
     }
 }
