@@ -3,6 +3,9 @@
     public class PersonalityTestDetailResponse : PersonalityTestResponse
     {
         public object? Summary { get; set; }
+        public string? ResultTitle { get; set; }
+        public string? ResultReason { get; set; }
+        public string? ResultImage { get; set; }
         public List<MemberAnswerDetailDto> Details { get; set; }
     }
 

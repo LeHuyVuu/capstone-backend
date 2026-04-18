@@ -121,6 +121,37 @@ namespace capstone_backend.Business.Services
                 result.Summary = jsonNode["result"];
                 result.Details = details;
 
+                // Add MBTI result metadata for history detail
+                var mbtiCode = test.ResultCode;
+                if (string.IsNullOrWhiteSpace(mbtiCode))
+                {
+                    mbtiCode = jsonNode?["result"]?["mbtiCode"]?.GetValue<string>();
+                }
+
+                if (!string.IsNullOrWhiteSpace(mbtiCode))
+                {
+                    var mbtiInfo = _mbtiContentService.GetResult(mbtiCode);
+                    if (mbtiInfo != null)
+                    {
+                        result.ResultTitle = mbtiInfo.Name;
+                        result.ResultReason = mbtiInfo.Description;
+                        result.ResultImage = mbtiInfo.ImageUrl;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(result.ResultTitle) || string.IsNullOrWhiteSpace(result.ResultReason))
+                    {
+                        var profile = MbtiContentStore.GetProfile(mbtiCode);
+                        if (profile != null)
+                        {
+                            result.ResultTitle ??= profile.Name;
+                            if (string.IsNullOrWhiteSpace(result.ResultReason) && profile.Description != null && profile.Description.Any())
+                            {
+                                result.ResultReason = string.Join(" ", profile.Description);
+                            }
+                        }
+                    }
+                }
+
                 return result;
             }
             catch (Exception ex)
