@@ -97,15 +97,30 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
             : 0;
 
         // Voucher metrics
-        var totalVoucherItems = allVouchers.SelectMany(v => v.VoucherItems).ToList();
-        var exchangedVouchers = totalVoucherItems.Count(vi => vi.Status != VoucherItemStatus.ACQUIRED.ToString());
-        var usedVouchers = totalVoucherItems.Count(vi => vi.Status == VoucherItemStatus.USED.ToString());
+        var totalVoucherItems = allVouchers
+            .SelectMany(v => v.VoucherItems)
+            .Where(vi => vi.IsDeleted != true)
+            .ToList();
+        var normalizedVoucherItemStatuses = totalVoucherItems
+            .Select(vi => (vi.Status ?? string.Empty).Trim().ToUpperInvariant())
+            .ToList();
+
+        var availableVouchers = normalizedVoucherItemStatuses.Count(status =>
+            status == VoucherItemStatus.AVAILABLE.ToString());
+        var exchangedVouchers = normalizedVoucherItemStatuses.Count(status =>
+            status == VoucherItemStatus.ACQUIRED.ToString()
+            || status == VoucherItemStatus.USED.ToString()
+            || status == VoucherItemStatus.EXPIRED.ToString()
+            || status == VoucherItemStatus.ENDED.ToString());
+        var usedVouchers = normalizedVoucherItemStatuses.Count(status =>
+            status == VoucherItemStatus.USED.ToString());
         
         var exchangeRate = totalVoucherItems.Count > 0 
             ? (decimal)exchangedVouchers / totalVoucherItems.Count * 100 
             : 0;
-        var usageRate = exchangedVouchers > 0 
-            ? (decimal)usedVouchers / exchangedVouchers * 100 
+        // Keep consistent with voucher summary semantics: usage rate is based on total quantity.
+        var usageRate = totalVoucherItems.Count > 0
+            ? (decimal)usedVouchers / totalVoucherItems.Count * 100
             : 0;
 
         // Unique customers
@@ -189,8 +204,9 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
             TotalFavorites = venues.Sum(v => v.FavoriteCount ?? 0),
 
             // Voucher
-            TotalVouchers = allVouchers.Count,
-            ActiveVouchers = allVouchers.Count(v => v.Status == VoucherStatus.ACTIVE.ToString()),
+            // Use voucher-item level counts so all voucher chart bars share the same unit.
+            TotalVouchers = totalVoucherItems.Count,
+            ActiveVouchers = availableVouchers,
             TotalVoucherExchanged = exchangedVouchers,
             TotalVoucherUsed = usedVouchers,
             VoucherExchangeRate = exchangeRate,
@@ -351,6 +367,7 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
             .ToListAsync();
 
         var voucherItems = venueVouchers.SelectMany(v => v.VoucherItems).ToList();
+        voucherItems = voucherItems.Where(vi => vi.IsDeleted != true).ToList();
         var exchanged = voucherItems.Count(vi => vi.Status != VoucherItemStatus.AVAILABLE.ToString());
         var used = voucherItems.Count(vi => vi.Status == VoucherItemStatus.USED.ToString());
 
@@ -359,8 +376,8 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
             {
                 VoucherId = v.Id,
                 Title = v.Title ?? v.Code,
-                ExchangedCount = v.VoucherItems.Count(vi => vi.Status != VoucherItemStatus.AVAILABLE.ToString()),
-                UsedCount = v.VoucherItems.Count(vi => vi.Status == VoucherItemStatus.USED.ToString()),
+                ExchangedCount = v.VoucherItems.Count(vi => vi.IsDeleted != true && vi.Status != VoucherItemStatus.AVAILABLE.ToString()),
+                UsedCount = v.VoucherItems.Count(vi => vi.IsDeleted != true && vi.Status == VoucherItemStatus.USED.ToString()),
                 Status = v.Status ?? "UNKNOWN"
             })
             .OrderByDescending(v => v.ExchangedCount)
