@@ -124,6 +124,22 @@ namespace capstone_backend.Api.Controllers
                 if (!string.Equals(currentStatus, WithdrawRequestStatus.PENDING.ToString(), StringComparison.OrdinalIgnoreCase))
                     return BadRequestResponse($"Không thể từ chối yêu cầu rút tiền ở trạng thái '{currentStatus}'. Chỉ trạng thái PENDING mới có thể bị từ chối");
 
+                if (withdrawRequest.Amount == null || withdrawRequest.Amount <= 0)
+                    return BadRequestResponse("Số tiền yêu cầu rút không hợp lệ");
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                var wallet = await _unitOfWork.Wallets.GetByIdAsync(withdrawRequest.WalletId);
+                if (wallet == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return BadRequestResponse("Không tìm thấy ví cho yêu cầu rút tiền này");
+                }
+
+                wallet.Balance = (wallet.Balance ?? 0) + withdrawRequest.Amount.Value;
+                wallet.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.Wallets.Update(wallet);
+
                 withdrawRequest.Status = WithdrawRequestStatus.REJECTED.ToString();
                 withdrawRequest.RejectionReason = request.Reason.Trim();
                 withdrawRequest.ProofImageUrl = null;
@@ -131,11 +147,20 @@ namespace capstone_backend.Api.Controllers
 
                 _unitOfWork.WithdrawRequests.Update(withdrawRequest);
                 await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
 
                 return OkResponse(MapWithdrawRequestResponse(withdrawRequest), "Từ chối yêu cầu rút tiền thành công");
             }
             catch (Exception ex)
             {
+                try
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                }
+                catch
+                {
+                }
+
                 return BadRequestResponse(ex.Message);
             }
         }
@@ -295,18 +320,6 @@ namespace capstone_backend.Api.Controllers
                     await _unitOfWork.RollbackTransactionAsync();
                     return BadRequestResponse("Ví chưa được kích hoạt");
                 }
-
-                var currentBalance = wallet.Balance ?? 0;
-                if (currentBalance < withdrawRequest.Amount.Value)
-                {
-                    await _unitOfWork.RollbackTransactionAsync();
-                    return BadRequestResponse(
-                        $"Insufficient balance to complete withdraw request. Available: {currentBalance:N0} VND");
-                }
-
-                wallet.Balance = currentBalance - withdrawRequest.Amount.Value;
-                wallet.UpdatedAt = DateTime.UtcNow;
-                _unitOfWork.Wallets.Update(wallet);
 
                 withdrawRequest.Status = WithdrawRequestStatus.COMPLETED.ToString();
                 withdrawRequest.ProofImageUrl = request.ProofImageUrl.Trim();

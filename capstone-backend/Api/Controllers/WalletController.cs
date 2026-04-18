@@ -67,7 +67,7 @@ public class WalletController : BaseController
         try
         {
             var withdrawRequest = await _walletService.CreateWithdrawRequestAsync(userId.Value, request);
-            return CreatedResponse(withdrawRequest, "Tạo yêu cầu rút tiền thành công");
+            return CreatedResponse(withdrawRequest, "Tạo yêu cầu rút tiền thành công. Bạn sẽ được chuyển khoản trong vòng 24 giờ làm việc.");
         }
         catch (InvalidOperationException ex)
         {

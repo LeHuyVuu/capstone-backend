@@ -60,32 +60,48 @@ public class WalletService
         if (request.Amount <= 0)
             throw new InvalidOperationException("Số tiền phải lớn hơn 0");
 
-        if (request.Amount > wallet.Balance)
-            throw new InvalidOperationException($"Insufficient balance. Available: {wallet.Balance:N0} VND");
+        var currentBalance = wallet.Balance ?? 0;
+        if (request.Amount > currentBalance)
+            throw new InvalidOperationException($"Insufficient balance. Available: {currentBalance:N0} VND");
 
-        var withdrawRequest = new WithdrawRequest
+        await _unitOfWork.BeginTransactionAsync();
+
+        try
         {
-            WalletId = wallet.Id,
-            Amount = request.Amount,
-            BankInfo = System.Text.Json.JsonSerializer.Serialize(request.BankInfo),
-            Status = WithdrawRequestStatus.PENDING.ToString(),
-            RequestedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
+            wallet.Balance = currentBalance - request.Amount;
+            wallet.UpdatedAt = DateTime.UtcNow;
+            _unitOfWork.Wallets.Update(wallet);
 
-        await _unitOfWork.WithdrawRequests.AddAsync(withdrawRequest);
-        await _unitOfWork.SaveChangesAsync();
+            var withdrawRequest = new WithdrawRequest
+            {
+                WalletId = wallet.Id,
+                Amount = request.Amount,
+                BankInfo = System.Text.Json.JsonSerializer.Serialize(request.BankInfo),
+                Status = WithdrawRequestStatus.PENDING.ToString(),
+                RequestedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
 
-        return new WithdrawRequestResponse
+            await _unitOfWork.WithdrawRequests.AddAsync(withdrawRequest);
+            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.CommitTransactionAsync();
+
+            return new WithdrawRequestResponse
+            {
+                Id = withdrawRequest.Id,
+                WalletId = wallet.Id,
+                Amount = withdrawRequest.Amount ?? 0,
+                BankInfo = request.BankInfo,
+                Status = withdrawRequest.Status ?? WithdrawRequestStatus.PENDING.ToString(),
+                RequestedAt = withdrawRequest.RequestedAt ?? DateTime.UtcNow
+            };
+        }
+        catch
         {
-            Id = withdrawRequest.Id,
-            WalletId = wallet.Id,
-            Amount = withdrawRequest.Amount ?? 0,
-            BankInfo = request.BankInfo,
-            Status = withdrawRequest.Status ?? WithdrawRequestStatus.PENDING.ToString(),
-            RequestedAt = withdrawRequest.RequestedAt ?? DateTime.UtcNow
-        };
+            await _unitOfWork.RollbackTransactionAsync();
+            throw;
+        }
     }
 
     public async Task<List<WithdrawRequestResponse>> GetMyWithdrawRequestsAsync(int userId)
@@ -330,17 +346,19 @@ public class WalletService
         if (request.Amount % rate != 0)
             throw new Exception($"Số tiền đổi phải là bội số của {rate}");
 
-        if (wallet.Balance < request.Amount)
+        var currentBalance = wallet.Balance ?? 0;
+
+        if (currentBalance < request.Amount)
             throw new Exception("Số dư ví không đủ");
 
         var pointsToAdd = (int)(request.Amount / rate);
         if (pointsToAdd <= 0)
             throw new Exception("Số point quy đổi không hợp lệ");
 
-        var balanceBefore = wallet.Balance;
+        var balanceBefore = currentBalance;
         var pointsBefore = wallet.Points ?? 0;
 
-        wallet.Balance = Math.Max(0, wallet.Balance.Value - request.Amount);
+        wallet.Balance = Math.Max(0, currentBalance - request.Amount);
         wallet.Points = pointsBefore + pointsToAdd;
         wallet.UpdatedAt = DateTime.UtcNow;
 
