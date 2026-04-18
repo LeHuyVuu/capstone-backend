@@ -186,6 +186,45 @@ public class SubscriptionValidationService : ISubscriptionValidationService
 
             if (userLevelSub == null)
             {
+                // Backward-compatible fallback: VENUE_INSIGHT can be unlocked by an active venue-level package.
+                if (string.Equals(featureCode, "VENUE_INSIGHT", StringComparison.OrdinalIgnoreCase))
+                {
+                    var venueLevelSub = await _context.VenueSubscriptionPackages
+                        .Where(vsp =>
+                            vsp.VenueId != null &&
+                            vsp.Status == VenueSubscriptionPackageStatus.ACTIVE.ToString() &&
+                            vsp.EndDate.HasValue &&
+                            vsp.EndDate.Value >= now)
+                        .Include(vsp => vsp.Package)
+                        .Include(vsp => vsp.Venue)
+                        .Where(vsp =>
+                            vsp.Venue != null &&
+                            vsp.Venue.VenueOwnerId == venueOwner.Id)
+                        .OrderByDescending(vsp => vsp.EndDate)
+                        .FirstOrDefaultAsync();
+
+                    if (venueLevelSub != null)
+                    {
+                        if (!HasFeatureAccess(venueLevelSub.Package?.FeatureFlags, featureCode))
+                        {
+                            _logger.LogInformation(
+                                "Feature access denied for venue owner ID: {OwnerId}, FeatureCode: {FeatureCode}, PackageId: {PackageId} (venue-level)",
+                                venueOwner.Id,
+                                featureCode,
+                                venueLevelSub.PackageId);
+                            return (false, "Gói hiện tại không hỗ trợ tính năng này");
+                        }
+
+                        _logger.LogInformation(
+                            "Active venue-level subscription found for venue owner ID: {OwnerId}, Subscription ID: {SubId}, EndDate: {EndDate}",
+                            venueOwner.Id,
+                            venueLevelSub.Id,
+                            venueLevelSub.EndDate);
+
+                        return (true, null);
+                    }
+                }
+
                 _logger.LogInformation(
                     "No active user-level subscription found for venue owner ID: {OwnerId} (User ID: {UserId})", 
                     venueOwner.Id, 
