@@ -13,6 +13,13 @@ public class SubmitAdvertisementWithPaymentRequest
     public List<int> VenueIds { get; set; } = new List<int>();
 
     /// <summary>
+    /// Number of venue locations included in this submit request.
+    /// Optional for backward compatibility. If provided, it must match distinct VenueIds count.
+    /// </summary>
+    [Range(1, 200, ErrorMessage = "Quantity phải nằm trong khoảng từ 1 đến 200")]
+    public int? Quantity { get; set; }
+
+    /// <summary>
     /// Payment method: VIETQR (default) or WALLET
     /// </summary>
     public string PaymentMethod { get; set; } = "VIETQR";

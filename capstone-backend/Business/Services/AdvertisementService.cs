@@ -695,6 +695,30 @@ public class AdvertisementService : IAdvertisementService
         // Remove duplicates
         var uniqueVenueIds = request.VenueIds.Distinct().ToList();
 
+        // Quantity comes from FE payload. Keep default 1 for backward compatibility.
+        var requestedQuantity = request.Quantity ?? 1;
+
+        if (requestedQuantity <= 0)
+        {
+            return new SubmitAdvertisementWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "Quantity must be greater than 0"
+            };
+        }
+
+        // Defensive validation in service layer (in addition to DTO validation).
+        if (requestedQuantity > 200)
+        {
+            return new SubmitAdvertisementWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "Quantity must be less than or equal to 200"
+            };
+        }
+
+        var finalQuantity = requestedQuantity;
+
         var venues = await _unitOfWork.Context.Set<VenueLocation>()
             .Where(v => uniqueVenueIds.Contains(v.Id) 
                 && v.IsDeleted != true
@@ -757,11 +781,76 @@ public class AdvertisementService : IAdvertisementService
             };
         }
 
-        // 8. Calculate amount (same price for all venues in the package)
-        var totalAmount = package.Price;
+        // 7.7. Calculate campaign duration from package duration x quantity
+        long totalDurationDaysLong;
+        try
+        {
+            totalDurationDaysLong = checked((long)package.DurationDays * finalQuantity);
+        }
+        catch (OverflowException)
+        {
+            return new SubmitAdvertisementWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "Calculated duration is out of range"
+            };
+        }
+
+        if (totalDurationDaysLong <= 0 || totalDurationDaysLong > 3650)
+        {
+            return new SubmitAdvertisementWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "Calculated duration is invalid. Maximum allowed duration is 3650 days"
+            };
+        }
+
+        DateTime campaignEndDate;
+        try
+        {
+            campaignEndDate = desiredStartDate.AddDays(totalDurationDaysLong);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return new SubmitAdvertisementWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "Campaign end date is out of supported date range"
+            };
+        }
+
+        var totalDurationDays = (int)totalDurationDaysLong;
+
+        // 8. Calculate amount from package unit price x quantity
+        decimal totalAmount;
+        try
+        {
+            totalAmount = checked(package.Price * finalQuantity);
+        }
+        catch (OverflowException)
+        {
+            return new SubmitAdvertisementWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "Calculated payment amount is out of range"
+            };
+        }
+
+        if (totalAmount <= 0)
+        {
+            return new SubmitAdvertisementWithPaymentResponse
+            {
+                IsSuccess = false,
+                Message = "Calculated payment amount is invalid"
+            };
+        }
 
         // 8.5. Validate payment method
-        var paymentMethod = request.PaymentMethod?.ToUpper() ?? "VIETQR";
+        var paymentMethod = request.PaymentMethod?.Trim().ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(paymentMethod))
+        {
+            paymentMethod = "VIETQR";
+        }
         if (paymentMethod != "VIETQR" && paymentMethod != "WALLET")
         {
             return new SubmitAdvertisementWithPaymentResponse
@@ -831,7 +920,7 @@ public class AdvertisementService : IAdvertisementService
                     VenueId = venue.Id,
                     PriorityScore = package.PriorityScore, // Set from package
                     StartDate = desiredStartDate, // Use desired start date from advertisement
-                    EndDate = desiredStartDate.AddDays(package.DurationDays),
+                    EndDate = campaignEndDate,
                     Status = VenueLocationAdvertisementStatus.PENDING_PAYMENT.ToString(),
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -858,7 +947,7 @@ public class AdvertisementService : IAdvertisementService
                 PaymentMethod = paymentMethod,
                 TransType = (int)TransactionType.ADS_ORDER,
                 DocNo = adsOrder.Id,
-                Description = $"Thanh toán quảng cáo {package.Name} cho {venues.Count} địa điểm: {venueNames}",
+                Description = $"Thanh toán quảng cáo {package.Name} cho {finalQuantity} địa điểm: {venueNames}",
                 Status = "PENDING",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -868,7 +957,7 @@ public class AdvertisementService : IAdvertisementService
             await _unitOfWork.SaveChangesAsync();
 
             _logger.LogInformation("✅ Created transaction ID: {TxId} for {Count} venue(s), PaymentMethod: {Method}", 
-                transaction.Id, venues.Count, paymentMethod);
+                transaction.Id, finalQuantity, paymentMethod);
 
             // ========== WALLET PAYMENT FLOW ==========
             if (paymentMethod == "WALLET")
@@ -927,7 +1016,7 @@ public class AdvertisementService : IAdvertisementService
                     ExpireAt = null,
                     PaymentContent = paymentContent,
                     PackageName = package.Name,
-                    DurationDays = package.DurationDays,
+                    DurationDays = totalDurationDays,
                     PaymentMethod = "WALLET",
                     WalletBalance = walletResult.NewBalance
                 };
@@ -977,6 +1066,8 @@ public class AdvertisementService : IAdvertisementService
                 qrData = sepayResponse.Data.QrData,
                 orderCode = sepayResponse.Data.OrderCode,
                 venueIds = uniqueVenueIds, // Store all venueIds for webhook processing
+                quantity = finalQuantity,
+                durationDays = totalDurationDays,
                 expireAt,
                 bankInfo = new { bankName, accountNumber, accountName }
             });
@@ -1011,7 +1102,7 @@ public class AdvertisementService : IAdvertisementService
                 ExpireAt = expireAt,
                 PaymentContent = paymentContent,
                 PackageName = package.Name,
-                DurationDays = package.DurationDays,
+                DurationDays = totalDurationDays,
                 PaymentMethod = "VIETQR"
             };
         }
