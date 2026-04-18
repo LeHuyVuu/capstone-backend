@@ -185,9 +185,18 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Không tìm thấy địa điểm");
 
             // Check if review already exists
-            var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId);
-            if (hasReview)
+            var hasPublishedReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId);
+            if (hasPublishedReview)
                 throw new Exception("Bạn đã đánh giá địa điểm này rồi");
+
+            var existingFlagged = await _unitOfWork.Reviews.GetFirstAsync(r =>
+                r.MemberId == member.Id &&
+                r.VenueId == request.VenueLocationId &&
+                r.IsDeleted == false &&
+                r.Status == ReviewStatus.FLAGGED.ToString());
+
+            if (existingFlagged != null)
+                throw new Exception("Đánh giá của bạn đang được admin xem xét, chưa thể gửi đánh giá mới");
 
             var checkIn = await _unitOfWork.CheckInHistories.GetByIdAsync(request.CheckInId);
             if (checkIn == null || checkIn.MemberId != member.Id || checkIn.VenueId != request.VenueLocationId)
@@ -200,42 +209,89 @@ namespace capstone_backend.Business.Services
             var toCheck = new List<string> { request.Content };
             if (request.Images != null && request.Images.Any())
                 toCheck.AddRange(request.Images);
-            var moderationResults = await _moderationService.CheckContentByAIService(toCheck);
+            var moderationResults = toCheck.Any()
+                    ? await _moderationService.CheckContentByAIService(toCheck)
+                    : new List<ModerationResultDto>();
 
             if (moderationResults.Any(r => r.Action == ModerationAction.BLOCK))
                 throw new Exception("Nội dung của bạn đã bị hệ thống chặn vì vi phạm tiêu chuẩn cộng đồng");
 
-            var review = _mapper.Map<Review>(request);
-            review.MemberId = member.Id;
-            review.VenueId = request.VenueLocationId;
-            review.Status = ReviewStatus.PENDING.ToString();
-            review.IsAnonymous = request.IsAnonymous;
-            review.IsMatched = request.IsMatched;
-
-            checkIn.IsValid = false;
-
-            _unitOfWork.CheckInHistories.Update(checkIn);
-            await _unitOfWork.Reviews.AddAsync(review);
-            await _unitOfWork.SaveChangesAsync();
-
+            Review? review = null;
             var hasImage = false;
-            // Handle images
-            if (request.Images != null && request.Images.Any())
-            {
-                var mediaList = await _unitOfWork.Media.GetByUrlsAsync(request.Images);
-                foreach (var media in mediaList)
-                {
-                    if (media.UploaderId != userId || media.TargetId != null || media.TargetType != null)
-                        throw new Exception("Ảnh không hợp lệ");
 
-                    media.TargetId = review.Id;
-                    media.TargetType = ReferenceType.REVIEW.ToString();
-                    _unitOfWork.Media.Update(media);
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                // Soft delete un-published review if exist to prevent duplicate review when user submit multiple times before the first review is published
+                var existingReplaceable = await _unitOfWork.Reviews.GetFirstAsync(r =>
+                    r.MemberId == member.Id &&
+                    r.VenueId == request.VenueLocationId &&
+                    r.IsDeleted == false &&
+                    (r.Status == ReviewStatus.PENDING.ToString() || r.Status == ReviewStatus.CANCELLED.ToString()));
+
+                if (existingReplaceable != null)
+                {
+                    existingReplaceable.IsDeleted = true;
+                    existingReplaceable.UpdatedAt = DateTime.UtcNow;
+                    _unitOfWork.Reviews.Update(existingReplaceable);
+
+                    var oldMedia = await _unitOfWork.Media.GetByTargetIdAndTypeAsync(existingReplaceable.Id, ReferenceType.REVIEW.ToString());
+                    foreach (var media in oldMedia)
+                    {
+                        media.IsDeleted = true;
+                        media.UpdatedAt = DateTime.UtcNow;
+                        _unitOfWork.Media.Update(media);
+                    }
                 }
 
-                hasImage = true;
+                review = _mapper.Map<Review>(request);
+                review.MemberId = member.Id;
+                review.VenueId = request.VenueLocationId;
+                review.Status = ReviewStatus.PENDING.ToString();
+                review.IsAnonymous = request.IsAnonymous;
+                review.IsMatched = request.IsMatched;
+
+                checkIn.IsValid = false;
+                _unitOfWork.CheckInHistories.Update(checkIn);
+
+                await _unitOfWork.Reviews.AddAsync(review);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Handle images
+                if (request.Images != null && request.Images.Any())
+                {
+                    var requestedUrls = request.Images.Distinct().ToList();
+                    var mediaList = (await _unitOfWork.Media.GetByUrlsAsync(requestedUrls)).ToList();
+
+                    if (mediaList.Count != requestedUrls.Count)
+                        throw new Exception("Ảnh không hợp lệ");
+
+                    foreach (var media in mediaList)
+                    {
+                        if (media.UploaderId != userId || media.TargetId != null || media.TargetType != null)
+                            throw new Exception("Ảnh không hợp lệ");
+
+                        media.TargetId = review.Id;
+                        media.TargetType = ReferenceType.REVIEW.ToString();
+                        _unitOfWork.Media.Update(media);
+                    }
+
+                    hasImage = true;
+                    await _unitOfWork.SaveChangesAsync();
+                }
+
+                await _unitOfWork.CommitTransactionAsync();
             }
-            await _unitOfWork.SaveChangesAsync();
+            catch (DbUpdateException)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw new Exception("Lỗi cơ sở dữ liệu khi gửi đánh giá. Vui lòng thử lại.");
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
 
             BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessReviewModerationAndChallengeAsync(review.Id, moderationResults, userId, review.VenueId, hasImage));
 

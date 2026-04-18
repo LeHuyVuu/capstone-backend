@@ -3,7 +3,7 @@
     public class UserStateDto
     {
         public bool HasReviewedBefore { get; set; }
-        public int? ActiceCheckInId { get; set; }
+        public int? ActiveCheckInId { get; set; }
         public bool CanReview { get; set; } = false;
     }
 }
