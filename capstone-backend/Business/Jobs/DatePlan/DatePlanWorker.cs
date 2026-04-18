@@ -61,19 +61,21 @@ namespace capstone_backend.Business.Jobs.DatePlan
             {
                 _logger.LogInformation($"[REMINDER] Sending reminder for DatePlan #{datePlanId}");
 
+                var time = TimeOnly.FromDateTime(TimezoneUtil.ToVietNamTime(plan.PlannedStartAt.Value));
+
+
                 string title = "";
                 string body = "";
-                TimeOnly time = TimeOnly.FromDateTime(TimezoneUtil.ToVietNamTime(plan.PlannedStartAt.Value));
 
-                if (type == "DAY")
+                if (type == "PRIMARY")
                 {
-                    title = NotificationTemplate.DatePlan.TitleReminder1Day;
-                    body = NotificationTemplate.DatePlan.GetReminder1DayBody(plan.Title, time);
+                    title = NotificationTemplate.DatePlan.TitleReminderPrimary;
+                    body = NotificationTemplate.DatePlan.GetReminderPrimaryBody(plan.Title, time);
                 }
-                else if (type == "HOUR")
+                else if (type == "SECONDARY")
                 {
-                    title = NotificationTemplate.DatePlan.TitleReminder1Hour;
-                    body = NotificationTemplate.DatePlan.GetReminder1HourBody(plan.Title, time);
+                    title = NotificationTemplate.DatePlan.TitleReminderSecondary;
+                    body = NotificationTemplate.DatePlan.GetReminderSecondaryBody(plan.Title, time);
                 }
 
                 // Send realtime notification to couple members

@@ -1408,23 +1408,131 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Thành viên chưa thuộc cặp đôi nào");
 
             var nowVn = TimezoneUtil.ToVietNamTime(DateTime.UtcNow);
-            var startOfDayVn = nowVn.Date;
-            var endOfDayVn = startOfDayVn.AddDays(1);
+            var today = DateOnly.FromDateTime(nowVn);
+            var startDay = today.AddDays(-3);
+            var endDay = today;
 
-            var startUtc = DateTimeNormalizeUtil.NormalizeToUtc(startOfDayVn);
-            var endUtc = DateTimeNormalizeUtil.NormalizeToUtc(endOfDayVn);
+            var coupleCheckinChallenge = await _unitOfWork.Context.Set<CoupleProfileChallenge>()
+                .AsNoTracking()
+                .Include(x => x.Challenge)
+                .Where(x =>
+                    x.CoupleId == couple.id &&
+                    x.IsDeleted == false &&
+                    x.Challenge != null &&
+                    x.Challenge.IsDeleted == false &&
+                    x.Challenge.TriggerEvent == ChallengeTriggerEvent.CHECKIN.ToString())
+                .OrderByDescending(x => x.CreatedAt ?? DateTime.MinValue)
+                .ThenByDescending(x => x.Id)
+                .FirstOrDefaultAsync();
 
-            var checkins = await _unitOfWork.MemberMoodLogs.GetByMemberIdAsync(member.Id);
-            var checkin = checkins
-                .Where(c => c.CreatedAt >= startUtc && c.CreatedAt < endUtc)
-                .OrderByDescending(c => c.CreatedAt)
-                .FirstOrDefault();
+            // Nếu chưa có challenge checkin thì trả default, không throw
+            if (coupleCheckinChallenge == null || string.IsNullOrWhiteSpace(coupleCheckinChallenge.ProgressData))
+            {
+                var emptyDays = Enumerable.Range(0, 30)
+                    .Select(i => startDay.AddDays(i))
+                    .Select(d => new MoodCheckinCalendarDayItemResponse
+                    {
+                        Date = d,
+                        HasCheckedIn = false
+                    })
+                    .ToList();
+
+                return new TodayMoodCheckinStatusResponse
+                {
+                    HasCheckedInToday = false,
+                    CheckedInAt = null,
+                    CurrentStreak = 0,
+                    LongestStreak = 0,
+                    StartDay = startDay,
+                    EndDay = endDay,
+                    Days = emptyDays
+                };
+            }
+
+            var progress = JsonConverterUtil.DeserializeOrDefault<CoupleChallengeProgressData>(coupleCheckinChallenge.ProgressData)
+                           ?? new CoupleChallengeProgressData();
+
+            var memberKey = member.Id.ToString();
+            var historyMonths = progress.DailyHistory?.Months ?? new Dictionary<string, Dictionary<string, int>>();
+
+            var checkedDates = ExtractMemberCheckinDates(historyMonths, memberKey, today);
+            var hasCheckedInToday = checkedDates.Contains(today);
+
+            DateTime? checkedInAt = null;
+            if (progress.Members != null &&
+                progress.Members.TryGetValue(memberKey, out var m) &&
+                m?.LastActionAt != null)
+            {
+                var lastActionVn = TimezoneUtil.ToVietNamTime(m.LastActionAt.Value);
+                if (DateOnly.FromDateTime(lastActionVn) == today)
+                {
+                    checkedInAt = m.LastActionAt;
+                }
+            }
+
+            var (currentStreak, longestStreak) = CheckinBitMaskUtil.CalculateCrossMonthStreak(
+                historyMonths,
+                memberKey,
+                null,
+                today);
+
+            var days = Enumerable.Range(0, 4)
+                .Select(i => startDay.AddDays(i))
+                .Select(d => new MoodCheckinCalendarDayItemResponse
+                {
+                    Date = d,
+                    HasCheckedIn = checkedDates.Contains(d)
+                })
+                .ToList();
 
             return new TodayMoodCheckinStatusResponse
             {
-                HasCheckedInToday = checkin != null,
-                CheckedInAt = checkin?.CreatedAt
+                HasCheckedInToday = hasCheckedInToday,
+                CheckedInAt = checkedInAt,
+                CurrentStreak = currentStreak,
+                LongestStreak = longestStreak,
+                StartDay = startDay,
+                EndDay = endDay,
+                Days = days
             };
+        }
+
+        private static HashSet<DateOnly> ExtractMemberCheckinDates(
+            Dictionary<string, Dictionary<string, int>> historyMonths,
+            string memberKey,
+            DateOnly maxDate)
+        {
+            var result = new HashSet<DateOnly>();
+
+            foreach (var monthEntry in historyMonths)
+            {
+                var monthKey = monthEntry.Key;
+                var parts = monthKey.Split('-');
+                if (parts.Length != 2 ||
+                    !int.TryParse(parts[0], out var year) ||
+                    !int.TryParse(parts[1], out var month))
+                {
+                    continue;
+                }
+
+                if (!monthEntry.Value.TryGetValue(memberKey, out var mask))
+                    continue;
+
+                var daysInMonth = DateTime.DaysInMonth(year, month);
+                for (int day = 1; day <= daysInMonth; day++)
+                {
+                    if ((mask & (1 << (day - 1))) == 0)
+                        continue;
+
+                    var date = new DateOnly(year, month, day);
+                    if (date <= maxDate)
+                    {
+                        result.Add(date);
+                    }
+                }
+            }
+
+            return result;
         }
 
         public async Task HandleCheckinChallengeProgressAsync(int userId)

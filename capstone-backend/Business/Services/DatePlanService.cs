@@ -23,8 +23,9 @@ namespace capstone_backend.Business.Services
         private readonly IDatePlanWorker _datePlanWorker;
         private readonly IMapper _mapper;
         private readonly Lazy<ChatClient> _chatClientLazy;
+        private readonly ISystemConfigService _systemConfigService;
 
-        public DatePlanService(IUnitOfWork unitOfWork, IMapper mapper, IDatePlanWorker datePlanWorker)
+        public DatePlanService(IUnitOfWork unitOfWork, IMapper mapper, IDatePlanWorker datePlanWorker, ISystemConfigService systemConfigService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -40,6 +41,7 @@ namespace capstone_backend.Business.Services
 
                 return new ChatClient(model: modelName, apiKey: apiKey);
             });
+            _systemConfigService = systemConfigService;
         }
 
         public async Task<int> CreateDatePlanAsync(int userId, CreateDatePlanRequest request)
@@ -370,11 +372,44 @@ namespace capstone_backend.Business.Services
         private async Task StartDatePlanAsync(DatePlan datePlan)
         {
             var now = DateTime.UtcNow;
+            var (reminder1Sec, reminder2Sec) = await GetDatePlanReminderSecondsAsync();
             var jobs = new List<DatePlanJob>();
+
+            if (datePlan.PlannedStartAt.HasValue)
+            {
+                var reminder1At = datePlan.PlannedStartAt.Value.AddSeconds(-reminder1Sec);
+                if (reminder1At > now)
+                {
+                    string jobReminder1Id = BackgroundJob.Schedule<IDatePlanWorker>(
+                        w => w.SendReminderAsync(datePlan.Id, "PRIMARY"),
+                        reminder1At);
+
+                    jobs.Add(new DatePlanJob
+                    {
+                        DatePlanId = datePlan.Id,
+                        JobId = jobReminder1Id,
+                        JobType = DatePlanJobType.REMINDER.ToString()
+                    });
+                }
+
+                var reminder2At = datePlan.PlannedStartAt.Value.AddSeconds(-reminder2Sec);
+                if (reminder2At > now)
+                {
+                    string jobReminder2Id = BackgroundJob.Schedule<IDatePlanWorker>(
+                        w => w.SendReminderAsync(datePlan.Id, "SECONDARY"),
+                        reminder2At);
+
+                    jobs.Add(new DatePlanJob
+                    {
+                        DatePlanId = datePlan.Id,
+                        JobId = jobReminder2Id,
+                        JobType = DatePlanJobType.REMINDER.ToString()
+                    });
+                }
+            }
+
             if (datePlan.PlannedStartAt > now)
             {
-
-
                 string jobStartId = BackgroundJob.Schedule<IDatePlanWorker>(
                     w => w.StartDatePlanAsync(datePlan.Id),
                     datePlan.PlannedStartAt.Value);
@@ -403,34 +438,42 @@ namespace capstone_backend.Business.Services
                 });
             }
 
-            if (datePlan.PlannedStartAt.HasValue && datePlan.PlannedStartAt.Value.AddDays(-1) > now)
-            {
-                string jobReminder1Id = BackgroundJob.Schedule<IDatePlanWorker>(
-                    w => w.SendReminderAsync(datePlan.Id, "DAY"),
-                    datePlan.PlannedStartAt.Value.AddDays(-1));
-                jobs.Add(new DatePlanJob
-                {
-                    DatePlanId = datePlan.Id,
-                    JobId = jobReminder1Id,
-                    JobType = DatePlanJobType.REMINDER.ToString()
-                });
-            }
-
-            if (datePlan.PlannedStartAt.HasValue && datePlan.PlannedStartAt.Value.AddHours(-1) > now)
-            {
-                string jobReminder2Id = BackgroundJob.Schedule<IDatePlanWorker>(
-                    w => w.SendReminderAsync(datePlan.Id, "HOUR"),
-                    datePlan.PlannedStartAt.Value.AddHours(-1));
-                jobs.Add(new DatePlanJob
-                {
-                    DatePlanId = datePlan.Id,
-                    JobId = jobReminder2Id,
-                    JobType = DatePlanJobType.REMINDER.ToString()
-                });
-            }
-
             if (jobs.Count > 0)
                 await _unitOfWork.DatePlanJobs.AddRangeAsync(jobs);
+        }
+
+        private async Task<(int reminder1Sec, int reminder2Sec)> GetDatePlanReminderSecondsAsync()
+        {
+            const int fallback1 = 3600; // mặc định reminder 1: 1h trước
+            const int fallback2 = 900;  // mặc định reminder 2: 15p trước
+
+            int r1 = fallback1;
+            int r2 = fallback2;
+
+            try
+            {
+                r1 = await _systemConfigService.GetIntValueAsync(SystemConfigKeys.DATEPLAN_REMINDER_1_BEFORE_SECONDS.ToString());
+            }
+            catch { }
+
+            try
+            {
+                r2 = await _systemConfigService.GetIntValueAsync(SystemConfigKeys.DATEPLAN_REMINDER_2_BEFORE_SECONDS.ToString());
+            }
+            catch { }
+
+            r1 = Math.Clamp(r1, 5, 43200);
+            r2 = Math.Clamp(r2, 5, 43200);
+
+            // reminder1 phải sớm hơn reminder2
+            if (r1 <= r2)
+            {
+                var tmp = r1;
+                r1 = r2;
+                r2 = tmp;
+            }
+
+            return (r1, r2);
         }
 
         public async Task<int> ActionDatePlanAsync(int userId, int datePlanId, DatePlanAction action)
