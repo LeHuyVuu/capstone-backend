@@ -52,7 +52,7 @@
 
         public static class Review
         {
-            public const string TitleReviewRequest = "⏳ Đã 10 phút rồi!";
+            public const string TitleReviewRequest = "⏳ Đến giờ đánh giá rồi!";
             public const string TitleReceiveNewReview = "Một đánh giá mới";
 
             public static string GetReviewRequestBody(string venueName)

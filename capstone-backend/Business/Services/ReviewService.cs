@@ -28,18 +28,22 @@ namespace capstone_backend.Business.Services
         private readonly S3StorageService _s3Service;
         private readonly IModerationService _moderationService;
         private readonly IAccessoryService _accessoryService;
+        private readonly ISystemConfigService _systemConfigService;
 
-        public ReviewService(IUnitOfWork unitOfWork, IMapper mapper, S3StorageService s3Service, IModerationService moderationService, IAccessoryService accessoryService)
+        public ReviewService(IUnitOfWork unitOfWork, IMapper mapper, S3StorageService s3Service, IModerationService moderationService, IAccessoryService accessoryService, ISystemConfigService systemConfigService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _s3Service = s3Service;
             _moderationService = moderationService;
             _accessoryService = accessoryService;
+            _systemConfigService = systemConfigService;
         }
 
         public async Task<int> CheckinAsync(int userId, CheckinRequest request)
         {
+            var now = DateTime.UtcNow;
+
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Không tìm thấy hồ sơ thành viên");
@@ -56,14 +60,22 @@ namespace capstone_backend.Business.Services
             if (hasReview)
                 throw new Exception("Bạn đã đánh giá địa điểm này rồi");
 
+            var delaySeconds = await GetCheckinReviewDelaySecondsAsync();
+            var delayMinutes = ToDisplayMinutes(delaySeconds);
             var lastCheckin = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(member.Id, request.VenueLocationId);
 
-            if (lastCheckin != null)
+            if (lastCheckin != null && lastCheckin.IsValid == null)
             {
-                var timeSinceLastCheckin = DateTime.UtcNow - lastCheckin.CreatedAt;
-                if (timeSinceLastCheckin.Value.TotalMinutes < 10 && lastCheckin.IsValid == null)
-                {
+                if (!lastCheckin.CreatedAt.HasValue)
                     throw new InvalidOperationException("Bạn vừa check-in rồi, hãy đợi thông báo xác thực nhé!");
+
+                var elapsedSeconds = (now - lastCheckin.CreatedAt.Value).TotalSeconds;
+                if (elapsedSeconds + 1 < delaySeconds)
+                {
+                    var remainingSeconds = Math.Max(1, (int)Math.Ceiling(delaySeconds - elapsedSeconds));
+                    var remainingMinutes = Math.Max(1, (int)Math.Ceiling(remainingSeconds / 60.0));
+
+                    throw new Exception($"Vui lòng đợi thêm khoảng {remainingMinutes} phút ({remainingSeconds} giây) để nhận thông báo xác thực");
                 }
             }
 
@@ -84,16 +96,17 @@ namespace capstone_backend.Business.Services
                 VenueId = request.VenueLocationId,
                 Latitude = request.Latitude,
                 Longitude = request.Longitude,
+                CreatedAt = now,
                 IsValid = null, // Invalid until validated
             };
 
             await _unitOfWork.CheckInHistories.AddAsync(checkIn);
             await _unitOfWork.SaveChangesAsync();
 
-            // Notify after 10 minutes to validate check-in
+            // Notify after delaySeconds to validate check-in
             BackgroundJob.Schedule<IReviewWorker>(
                 worker => worker.SendReviewNotificationAsync(checkIn.Id),
-                TimeSpan.FromMinutes(10)
+                TimeSpan.FromSeconds(delaySeconds)
             );
 
             return checkIn.Id;
@@ -509,13 +522,21 @@ namespace capstone_backend.Business.Services
             if (checkIn.IsValid == null)
                 throw new Exception("Lịch sử check-in chưa được xác thực, vui lòng đợi hệ thống xác thực tự động hoặc liên hệ hỗ trợ");
 
-            var now = DateTime.UtcNow;
-            var minutes = (now - checkIn.CreatedAt.Value).TotalMinutes;
-            if (minutes < 10)
-                throw new Exception("Vui lòng đợi đủ 10 phút kể từ khi check-in");
+            if (!checkIn.CreatedAt.HasValue)
+                throw new Exception("Không thể xác định thời gian check-in hợp lệ");
 
-            if (checkIn.IsValid == null)
-                throw new Exception("Chưa đến bước xác thực (vui lòng đợi thông báo)");
+            var now = DateTime.UtcNow;
+            var delaySeconds = await GetCheckinReviewDelaySecondsAsync();
+            var elapsedSeconds = (now - checkIn.CreatedAt.Value).TotalSeconds;
+
+            // Grace 1 giây để tránh lệch clock/queue
+            if (elapsedSeconds + 1 < delaySeconds)
+            {
+                var remainingSeconds = Math.Max(1, (int)Math.Ceiling(delaySeconds - elapsedSeconds));
+                var remainingMinutes = Math.Max(1, (int)Math.Ceiling(remainingSeconds / 60.0));
+
+                throw new Exception($"Vui lòng đợi thêm khoảng {remainingMinutes} phút ({remainingSeconds} giây) kể từ khi check-in");
+            }
 
             if (checkIn.IsValid != false)
                 throw new Exception("Trạng thái check-in không hợp lệ để xác thực");
@@ -699,6 +720,33 @@ namespace capstone_backend.Business.Services
             _unitOfWork.Reviews.Update(review);
             await _unitOfWork.SaveChangesAsync();
             return review.Id;
+        }
+
+        private async Task<int> GetCheckinReviewDelaySecondsAsync()
+        {
+            const int defaultDelaySeconds = 600; // 10 phút
+            const int minDelaySeconds = 5;
+            const int maxDelaySeconds = 3600;
+
+            try
+            {
+                var delaySeconds = await _systemConfigService.GetIntValueAsync(
+                    SystemConfigKeys.CHECKIN_REVIEW_NOTIFICATION_DELAY_SECONDS.ToString());
+
+                if (delaySeconds < minDelaySeconds || delaySeconds > maxDelaySeconds)
+                    return defaultDelaySeconds;
+
+                return delaySeconds;
+            }
+            catch
+            {
+                return defaultDelaySeconds;
+            }
+        }
+
+        private static int ToDisplayMinutes(int seconds)
+        {
+            return Math.Max(1, (int)Math.Ceiling(seconds / 60.0));
         }
     }
 }

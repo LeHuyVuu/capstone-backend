@@ -71,6 +71,11 @@ namespace capstone_backend.Business.Services
                         throw new Exception("Phần trăm hoa hồng phải nằm trong khoảng từ 0 đến 100");
                     break;
 
+                case "CHECKIN_REVIEW_NOTIFICATION_DELAY_SECONDS":
+                    if (!int.TryParse(value, out var seconds) || seconds < 5 || seconds > 3600)
+                        throw new Exception("Thời gian bắn notification phải là số nguyên trong khoảng 5-3600 giây");
+                    break;
+
                 default:
                     throw new Exception("Config key không hợp lệ");
             }
