@@ -27,6 +27,13 @@ public interface IMeilisearchService
     Task<int> IndexAllVenueLocationsV2Async();
 
     /// <summary>
+    /// Index a single venue location to Meilisearch v2 host
+    /// </summary>
+    /// <param name="venueId">Venue location ID</param>
+    /// <returns>True if successful</returns>
+    Task<bool> IndexVenueLocationV2Async(int venueId);
+
+    /// <summary>
     /// Query venue locations with filters
     /// </summary>
     /// <param name="request">Query request with filters</param>

@@ -181,6 +181,32 @@ public class VenueLocationService : IVenueLocationService
 
         var response = _mapper.Map<VenueLocationDetailResponse>(venue);
 
+        // Always derive review count from reviews table, then backfill venue_location.ReviewCount.
+        var (totalReviewCount, _) = await _unitOfWork.Reviews.GetMoodMatchStatisticsAsync(venueId);
+        response.ReviewCount = totalReviewCount;
+        if (venue.ReviewCount != totalReviewCount)
+        {
+            var venueToUpdate = await _unitOfWork.VenueLocations.GetByIdAsync(venueId);
+            if (venueToUpdate != null)
+            {
+                venueToUpdate.ReviewCount = totalReviewCount;
+                venueToUpdate.UpdatedAt = DateTime.UtcNow;
+                _unitOfWork.VenueLocations.Update(venueToUpdate);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Reindex venue to Meili main + sync to Meili v2
+                try
+                {
+                    await _meilisearchService.IndexVenueLocationAsync(venueId);
+                    await _meilisearchService.IndexVenueLocationV2Async(venueId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to reindex venue {VenueId} to both Meilisearch hosts", venueId);
+                }
+            }
+        }
+
         // Deserialize image JSON strings to arrays
         response.Category = DeserializeCategory(venue.Category);
         response.CoverImage = DeserializeImages(venue.CoverImage);
