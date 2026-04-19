@@ -916,7 +916,18 @@ RULES (STRICT):
    - MUST output exactly {targetVenueCount} distinct venues.
    - If timeframe is short, prioritize fewer, better-matched stops.
 4. FORMAT:
-   - 'reason': only 1 sentences, specific, Vietnamese, explain overall why these venues are selected. Must mention every selected venue (name if available, else venueLocationId). Explain at least 2 concrete factors: budget fit, mood/intent, category, rating. MUST reference selected items only. No extra venues.
+   - 'reason': exactly 1 sentence, Vietnamese.
+        + MUST mention ALL selected venues (name if available, else venueLocationId).
+        + MUST explain at least 2 concrete factors: budget fit, mood/intent, category, or rating.
+
+        + DATA CONSTRAINT:
+            - Only use information from the final selected 'items'.
+            - Treat 'items' as the single source of truth.
+            - DO NOT use or reference any venue from 'venue_candidates' that is not selected.
+
+        + STRICT FORBIDDEN:
+            - Any venue name or id not present in 'items'.
+            - Any hallucinated or inferred venue.
    - 'note': < 15 words. Sharp and engaging. Vietnamese
    - OUTPUT PURE JSON. NO markdown. NO yapping.
 
