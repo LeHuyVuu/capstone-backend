@@ -5,6 +5,6 @@ namespace capstone_backend.Data.Interfaces
 {
     public interface ICheckInHistoryRepository : IGenericRepository<CheckInHistory>
     {
-        Task<CheckInHistory?> GetLatestByMemberIdAndVenueIdAsync(int memberId, int venueId);
+        Task<CheckInHistory?> GetLatestByMemberIdAndVenueIdAsync(int memberId, int venueId, int? delaySeconds = null);
     }
 }

@@ -29,6 +29,7 @@ public class VenueLocationService : IVenueLocationService
     private readonly IEmailService _emailService;
     private readonly WalletPaymentService _walletPaymentService;
     private readonly IAccessoryService _accessoryService;
+    private readonly ISystemConfigService _systemConfigService;
 
     public VenueLocationService(
         IUnitOfWork unitOfWork,
@@ -40,7 +41,8 @@ public class VenueLocationService : IVenueLocationService
         RefundService refundService,
         IEmailService emailService,
         WalletPaymentService walletPaymentService,
-        IAccessoryService accessoryService)
+        IAccessoryService accessoryService,
+        ISystemConfigService systemConfigService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -52,6 +54,7 @@ public class VenueLocationService : IVenueLocationService
         _emailService = emailService;
         _walletPaymentService = walletPaymentService;
         _accessoryService = accessoryService;
+        _systemConfigService = systemConfigService;
     }
 
     #region Category & Image Helpers
@@ -229,15 +232,21 @@ public class VenueLocationService : IVenueLocationService
         if (_currentUser.UserId != null && _currentUser.Role == "MEMBER")
         {
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
-            var checkin = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(member.Id, venueId);
-            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
-            int? coupleProfileId = couple?.id;
+
+            var hasPublishedReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId);
+
+            var delaySeconds = await _systemConfigService.GetIntValueAsync(SystemConfigKeys.CHECKIN_REVIEW_NOTIFICATION_DELAY_SECONDS.ToString());
+
+            var latestCheckinInDelay = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(
+                member.Id,
+                venueId,
+                delaySeconds);
 
             response.UserState = new UserStateDto
             {
-                HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId),
-                ActiveCheckInId = checkin != null ? checkin.Id : null,
-                CanReview = checkin != null && checkin.IsValid == true
+                HasReviewedBefore = hasPublishedReview,
+                ActiveCheckInId = latestCheckinInDelay?.Id,
+                CanReview = !hasPublishedReview
             };
         }
         
@@ -2662,19 +2671,22 @@ public class VenueLocationService : IVenueLocationService
         if (_currentUser.UserId != null && _currentUser.Role == "MEMBER")
         {
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(_currentUser.UserId.Value);
-            if (member != null)
-            {
-                var checkin = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(member.Id, venueId);
-                var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
-                int? coupleProfileId = couple?.id;
 
-                venueDetail.UserState = new UserStateDto
-                {
-                    HasReviewedBefore = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId),
-                    ActiveCheckInId = checkin != null ? checkin.Id : null,
-                    CanReview = checkin != null && checkin.IsValid == true
-                };
-            }
+            var hasPublishedReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, venueId);
+
+            var delaySeconds = await _systemConfigService.GetIntValueAsync(SystemConfigKeys.CHECKIN_REVIEW_NOTIFICATION_DELAY_SECONDS.ToString());
+
+            var latestCheckinInDelay = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(
+                member.Id,
+                venueId,
+                delaySeconds);
+
+            venueDetail.UserState = new UserStateDto
+            {
+                HasReviewedBefore = hasPublishedReview,
+                ActiveCheckInId = latestCheckinInDelay?.Id,
+                CanReview = !hasPublishedReview
+            };
         }
 
         var response = new VenueLocationWithKycResponse
