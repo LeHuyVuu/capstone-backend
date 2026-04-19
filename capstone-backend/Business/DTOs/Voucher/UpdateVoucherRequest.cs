@@ -9,7 +9,7 @@
         public string? Description { get; set; }
 
         /// <example>30000</example>
-        public decimal? VoucherPrice { get; set; }
+        public decimal VoucherPrice { get; set; }
 
         /// <example>FIXED_AMOUNT</example>
         public string? DiscountType { get; set; }
