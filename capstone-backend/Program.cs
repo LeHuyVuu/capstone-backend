@@ -5,6 +5,7 @@ using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Challenge;
 using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Business.Jobs.Leaderboard;
+using capstone_backend.Business.Jobs.Like;
 using capstone_backend.Business.Jobs.Media;
 using capstone_backend.Business.Jobs.MemberSubscription;
 using capstone_backend.Business.Jobs.Payment;
@@ -296,7 +297,7 @@ using (var scope = serviceProvider.CreateScope())
             TimeZone = vnTz
         });
 
-    RecurringJob.AddOrUpdate<IChallengeWorker>(
+    recurringJobManager.AddOrUpdate<IChallengeWorker>(
         "auto-incomplete-challenge",
         job => job.AutoInCompleteChallengeAsync(),
         Cron.Daily(),
@@ -305,7 +306,7 @@ using (var scope = serviceProvider.CreateScope())
             TimeZone = vnTz
         });
 
-    RecurringJob.AddOrUpdate<IVoucherWorker>(
+    recurringJobManager.AddOrUpdate<IVoucherWorker>(
         "auto-scan-refund-voucher",
         job => job.ScanAndRefundInactiveVouchersAsync(),
         Cron.Hourly(),
@@ -314,10 +315,19 @@ using (var scope = serviceProvider.CreateScope())
             TimeZone = vnTz
         });
 
-    RecurringJob.AddOrUpdate<IChallengeWorker>(
+    recurringJobManager.AddOrUpdate<IChallengeWorker>(
         "cleanup-challenges-job",
         job => job.SyncInactiveVenuesAsync(),
         "0 2 * * *",
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
+    recurringJobManager.AddOrUpdate<ILikeWorker>(
+        "sync-interaction-points-from-likes",
+        job => job.RebuildInteractionPointsFromLikesAsync(),
+        "*/5 * * * *",
         new RecurringJobOptions
         {
             TimeZone = vnTz

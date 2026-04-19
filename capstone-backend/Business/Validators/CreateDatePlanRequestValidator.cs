@@ -57,5 +57,9 @@ public class CreateDatePlanRequestValidator : AbstractValidator<CreateDatePlanRe
                     }
                 }
             });
+
+        RuleFor(x => x)
+            .Must(x => (x.PlannedEndAt - x.PlannedStartAt) >= TimeSpan.FromHours(1))
+            .WithMessage("Thời gian bắt đầu và kết thúc phải cách nhau ít nhất 1 giờ");
     }
 }

@@ -176,7 +176,7 @@ namespace capstone_backend.Business.Services
             if (post.Visibility != PostVisibility.PUBLIC.ToString() || post.Status != PostStatus.PUBLISHED.ToString())
                 throw new Exception("Bài viết không hợp lệ để like");
 
-            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(post.AuthorId);
+            //var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(post.AuthorId);
 
             var notification = new Notification();
             await _unitOfWork.BeginTransactionAsync();
@@ -206,31 +206,31 @@ namespace capstone_backend.Business.Services
                     await _unitOfWork.SaveChangesAsync();
                 }
 
-                // Update interation score
-                if (couple != null && post.AuthorId != member.Id)
-                {
-                    var now = DateTime.UtcNow;
-                    var seasonKey = $"{now.Year}-{now.Month:D2}";
+                //// Update interation score
+                //if (couple != null && post.AuthorId != member.Id)
+                //{
+                //    var now = DateTime.UtcNow;
+                //    var seasonKey = $"{now.Year}-{now.Month:D2}";
 
-                    couple.InteractionPoints += 1;
-                    couple.UpdatedAt = DateTime.UtcNow;
-                    _unitOfWork.CoupleProfiles.Update(couple);
+                //    couple.InteractionPoints += 1;
+                //    couple.UpdatedAt = DateTime.UtcNow;
+                //    _unitOfWork.CoupleProfiles.Update(couple);
 
-                    var leaderboard = await _unitOfWork.Leaderboards
-                .GetFirstAsync(l =>
-                    l.CoupleId == couple.id &&
-                    l.SeasonKey == seasonKey &&
-                    l.Status == LeaderboardStatus.ACTIVE.ToString());
+                //    var leaderboard = await _unitOfWork.Leaderboards
+                //.GetFirstAsync(l =>
+                //    l.CoupleId == couple.id &&
+                //    l.SeasonKey == seasonKey &&
+                //    l.Status == LeaderboardStatus.ACTIVE.ToString());
 
-                    if (leaderboard != null)
-                    {
-                        leaderboard.TotalPoints = (leaderboard.TotalPoints ?? 0) + 1;
-                        leaderboard.UpdatedAt = now;
-                        _unitOfWork.Leaderboards.Update(leaderboard);
-                    }
+                //    if (leaderboard != null)
+                //    {
+                //        leaderboard.TotalPoints = (leaderboard.TotalPoints ?? 0) + 1;
+                //        leaderboard.UpdatedAt = now;
+                //        _unitOfWork.Leaderboards.Update(leaderboard);
+                //    }
 
-                    await _unitOfWork.SaveChangesAsync();
-                }
+                //    await _unitOfWork.SaveChangesAsync();
+                //}
 
                 await _unitOfWork.CommitTransactionAsync();
             }

@@ -92,6 +92,9 @@ namespace capstone_backend.Business.Services
             if (endUtc < startUtc)
                 throw new Exception("Thời gian kết thúc dự kiến không được sớm hơn thời gian bắt đầu dự kiến");
 
+            if ((endUtc - startUtc) < TimeSpan.FromHours(1))
+                throw new Exception("Thời gian bắt đầu và kết thúc phải cách nhau ít nhất 1 giờ");
+
             var startVn = TimezoneUtil.ToVietNamTime(startUtc);
             var endVn = TimezoneUtil.ToVietNamTime(endUtc);
 
@@ -837,6 +840,11 @@ namespace capstone_backend.Business.Services
                 if (!finalPlan.Items.Any())
                     throw new Exception("AI không thể tạo lịch trình từ dữ liệu này.");
 
+                if (string.IsNullOrWhiteSpace(finalPlan.Reason))
+                {
+                    finalPlan.Reason = "Lịch trình được chọn theo khung giờ, ngân sách, sở thích và độ phù hợp trải nghiệm tổng thể.";
+                }
+
                 foreach (var item in finalPlan.Items)
                 {
                     var rawVenue = rawVenues.FirstOrDefault(v => v.Id == item.VenueLocationId);
@@ -894,7 +902,7 @@ Rules:
             targetVenueCount = Math.Clamp(targetVenueCount, 1, 3);
 
             return @$"Role: Date Planner AI.
-Task: Map 'raw_query', 'user_intent', 'venue_candidates' -> 3-item JSON itinerary.
+Task: Map 'raw_query', 'user_intent', 'venue_candidates' -> JSON itinerary.
 
 RULES (STRICT):
 1. TIME CONSTRAINTS & TRAVEL:
@@ -908,10 +916,12 @@ RULES (STRICT):
    - MUST output exactly {targetVenueCount} distinct venues.
    - If timeframe is short, prioritize fewer, better-matched stops.
 4. FORMAT:
+   - 'reason': only 1 sentences, specific, Vietnamese, explain overall why these venues are selected. Must mention every selected venue (name if available, else venueLocationId). Explain at least 2 concrete factors: budget fit, mood/intent, category, rating. MUST reference selected items only. No extra venues.
    - 'note': < 15 words. Sharp and engaging. Vietnamese
    - OUTPUT PURE JSON. NO markdown. NO yapping.
 
-{{""items"":[{{""venueLocationId"":1,""startTime"":""HH:mm:ss"",""endTime"":""HH:mm:ss"",""note"":""string""}}]}}
+{{""reason"":""string"",""items"":[{{""venueLocationId"":1,""startTime"":""HH:mm:ss"",""endTime"":""HH:mm:ss"",""note"":""string""}}]}}
+
 ";
         }
     }

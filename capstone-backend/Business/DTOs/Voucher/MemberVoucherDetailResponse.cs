@@ -14,6 +14,7 @@
         public int Quantity { get; set; }
         public int? RemainingQuantity { get; set; }
         public int? UsageLimitPerMember { get; set; }
+        public int? RemainingUsagePerMember { get; set; }
         public int? UsageValidDays { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }

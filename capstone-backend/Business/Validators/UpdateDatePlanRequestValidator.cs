@@ -61,5 +61,12 @@ public class UpdateDatePlanRequestValidator : AbstractValidator<UpdateDatePlanRe
                     }
                 }
             });
+
+        RuleFor(x => x)
+            .Must(x =>
+                !x.PlannedStartAt.HasValue ||
+                !x.PlannedEndAt.HasValue ||
+                (x.PlannedEndAt.Value - x.PlannedStartAt.Value) >= TimeSpan.FromHours(1))
+            .WithMessage("Thời gian bắt đầu và kết thúc phải cách nhau ít nhất 1 giờ");
     }
 }

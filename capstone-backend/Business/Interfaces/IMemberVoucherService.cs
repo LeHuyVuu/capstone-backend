@@ -6,7 +6,7 @@ namespace capstone_backend.Business.Interfaces
     public interface IMemberVoucherService
     {
         Task<ExchangeVoucherResponse> ExchangeVoucherAsync(int userId, ExchangeVoucherRequest request);
-        Task<MemberVoucherDetailResponse> GetMemberVoucherByIdAsync(int voucherId);
+        Task<MemberVoucherDetailResponse> GetMemberVoucherByIdAsync(int userId, int voucherId);
         Task<PagedResult<MemberVoucherListItemResponse>> GetMemberVouchersAsync(int userId, GetMemberVouchersRequest request);
         Task<MemberVoucherTransactionDetailResponse> GetMemberVoucherTransactionDetailsAsync(int userId, int voucherItemMemberId);
         Task<PagedResult<MemberVoucherTransactionListItemResponse>> GetMemberVoucherTransactionsAsync(int userId, GetMemberVoucherTransactionsRequest request);

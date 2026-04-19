@@ -4,6 +4,9 @@ namespace capstone_backend.Business.DTOs.DatePlan
 {
     public class AIDatePlanItemResponse
     {
+        [JsonPropertyName("reason")]
+        public string? Reason { get; set; }
+
         [JsonPropertyName("items")]
         public List<AIDatePlanItemRequest> Items { get; set; } = new();
     }
