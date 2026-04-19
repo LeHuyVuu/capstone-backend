@@ -32,7 +32,7 @@ public class VenueReviewResponse
     /// <summary>
     /// Tag matched hoặc not matched bằng tiếng Việt
     /// </summary>
-    public string? MatchedTag { get; set; }
+    public bool IsMatched { get; set; }
 
     /// <summary>
     /// Danh sách likes của review

@@ -375,7 +375,7 @@ public class VenueLocationService : IVenueLocationService
             }
 
             // Set MatchedTag bằng tiếng Việt
-            response.MatchedTag = r.IsMatched == true ? "Phù hợp" : "Không phù hợp";
+            //response.MatchedTag = r.IsMatched == true ? "Phù hợp" : "Không phù hợp";
 
             return response;
         }).ToList();
@@ -555,7 +555,7 @@ public class VenueLocationService : IVenueLocationService
             }
 
             // Set MatchedTag bằng tiếng Việt
-            response.MatchedTag = r.IsMatched == true ? "Phù hợp" : "Không phù hợp";
+            //response.MatchedTag = r.IsMatched == true ? "Phù hợp" : "Không phù hợp";
 
             // Map ReviewLikes
             if (r.ReviewLikes != null && r.ReviewLikes.Any())

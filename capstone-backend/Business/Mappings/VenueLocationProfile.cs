@@ -90,7 +90,6 @@ public class VenueLocationProfile : Profile
         // Ignore ImageUrls, MatchedTag và ReviewLikes - xử lý thủ công trong service
         CreateMap<Review, VenueReviewResponse>()
             .ForMember(dest => dest.ImageUrls, opt => opt.Ignore())
-            .ForMember(dest => dest.MatchedTag, opt => opt.Ignore())
             .ForMember(dest => dest.ReviewLikes, opt => opt.Ignore());
 
         // ReviewLike to ReviewLikeInfo
