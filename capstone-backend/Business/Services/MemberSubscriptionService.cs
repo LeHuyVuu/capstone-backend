@@ -76,6 +76,42 @@ namespace capstone_backend.Business.Services
             return response;
         }
 
+        public async Task<bool> HasActiveSubscriptionAsync(int userId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var activeSubscription = await _unitOfWork.MemberSubscriptionPackages.GetCurrentActiveSubscriptionAsync(member.Id);
+            return activeSubscription != null;
+        }
+
+        public async Task<CurrentSubscriptionInfoResponse> GetCurrentSubscriptionInfoAsync(int userId)
+        {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Hồ sơ thành viên không tồn tại");
+
+            var activeSubscription = await _unitOfWork.MemberSubscriptionPackages.GetCurrentActiveSubscriptionAsync(member.Id);
+            if (activeSubscription == null)
+            {
+                return new CurrentSubscriptionInfoResponse
+                {
+                    HasActiveSubscription = false
+                };
+            }
+
+            return new CurrentSubscriptionInfoResponse
+            {
+                HasActiveSubscription = true,
+                SubscriptionId = activeSubscription.Id,
+                PackageId = activeSubscription.PackageId,
+                PackageName = activeSubscription.Package?.PackageName,
+                StartDate = activeSubscription.StartDate,
+                EndDate = activeSubscription.EndDate
+            };
+        }
+
         public async Task<PagedResult<SubscriptionPackageDto>> GetAvailablePackagesAsync(int pageNumber, int pageSize)
         {
             var (packages, totalCount) = await _unitOfWork.SubscriptionPackages.GetPagedAsync(

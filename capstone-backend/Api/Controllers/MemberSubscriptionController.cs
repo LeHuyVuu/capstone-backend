@@ -72,6 +72,29 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Check whether current member has active subscription package
+        /// </summary>
+        [HttpGet("has-active")]
+        public async Task<IActionResult> HasActiveSubscription()
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                {
+                    return UnauthorizedResponse("Không có quyền truy cập");
+                }
+
+                var currentSubscriptionInfo = await _memberSubscriptionService.GetCurrentSubscriptionInfoAsync(userId.Value);
+                return OkResponse(currentSubscriptionInfo, "Lấy thông tin gói đăng ký hiện tại thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Get available subscription packages
         /// </summary>
         [HttpGet("packages")]
