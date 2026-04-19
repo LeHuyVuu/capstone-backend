@@ -429,9 +429,7 @@ namespace capstone_backend.Business.Services
             if (review == null)
                 throw new Exception("Không tìm thấy đánh giá hợp lệ");
 
-            review.Rating = request.Rating;
-            review.Content = request.Content;
-            review.IsAnonymous = request.IsAnonymous;
+            _mapper.Map(request, review);
 
             if (request.DeletedImageUrls != null && request.DeletedImageUrls.Any())
             {

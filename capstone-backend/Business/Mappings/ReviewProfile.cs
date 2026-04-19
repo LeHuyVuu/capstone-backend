@@ -11,6 +11,8 @@ namespace capstone_backend.Business.Mappings
         public ReviewProfile()
         {
             CreateMap<CreateReviewRequest, Review>();
+            CreateMap<UpdateReviewRequest, Review>()
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
             // Review reply
             CreateMap<ReviewReplyRequest, ReviewReply>();
