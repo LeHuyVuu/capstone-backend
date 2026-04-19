@@ -237,6 +237,9 @@ public class CoupleInvitationController : BaseController
         {
             var memberId = await GetCurrentMemberIdAsync();
             var invitations = await _service.GetReceivedInvitationsAsync(memberId, status, page, pageSize);
+            
+            // Count pending invitations inline
+            var pendingCount = await _unitOfWork.CoupleInvitations.CountReceivedInvitationsAsync(memberId, "PENDING");
 
             return OkResponse(new
             {
@@ -246,7 +249,8 @@ public class CoupleInvitationController : BaseController
                     page,
                     pageSize,
                     total = invitations.Count
-                }
+                },
+                pendingCount = pendingCount
             });
         }
         catch (UnauthorizedAccessException ex)
