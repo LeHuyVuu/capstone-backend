@@ -47,7 +47,11 @@ namespace capstone_backend.Api.Controllers
         {
             try
             {
-                var result = await _memberVoucherService.GetMemberVoucherByIdAsync(voucherId);
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse("Không xác thực được người dùng");
+
+                var result = await _memberVoucherService.GetMemberVoucherByIdAsync(userId.Value, voucherId);
                 if (result == null)
                     return NotFoundResponse("Không tìm thấy voucher");
                 return OkResponse(result, "Lấy chi tiết voucher thành công");

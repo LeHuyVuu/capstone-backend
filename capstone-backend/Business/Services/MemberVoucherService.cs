@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using AutoMapper.Execution;
 using capstone_backend.Business.DTOs.Challenge;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Voucher;
@@ -274,8 +275,12 @@ namespace capstone_backend.Business.Services
             };
         }
 
-        public async Task<MemberVoucherDetailResponse> GetMemberVoucherByIdAsync(int voucherId)
+        public async Task<MemberVoucherDetailResponse> GetMemberVoucherByIdAsync(int userId, int voucherId)
         {
+            var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+            if (member == null)
+                throw new Exception("Không tìm thấy hồ sơ thành viên");
+
             var voucher = await _unitOfWork.Vouchers.GetIncludeByIdAsync(voucherId);
             if (voucher == null || voucher.Status != VoucherStatus.ACTIVE.ToString())
                 throw new Exception("Không tìm thấy voucher");
@@ -293,6 +298,18 @@ namespace capstone_backend.Business.Services
                 response.IsAvailable = false;
                 response.UnavailableReason = "Voucher đã hết số lượng";
                 return response;
+            }
+
+            var memberVoucherAcquiredCounts = await _unitOfWork.VoucherItems.CountMemberAcquiredVouchersAsync(member.Id, new List<int> { voucher.Id });
+
+            var usedCount = memberVoucherAcquiredCounts.TryGetValue(voucher.Id, out var count) ? count : 0;
+            if (voucher.UsageLimitPerMember.HasValue)
+            {
+                response.RemainingUsagePerMember = Math.Max(0, voucher.UsageLimitPerMember.Value - usedCount);
+            }
+            else             
+            {
+                response.RemainingUsagePerMember = null;
             }
 
             response.IsAvailable = true;
