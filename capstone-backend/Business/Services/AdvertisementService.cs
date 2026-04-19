@@ -404,7 +404,10 @@ public class AdvertisementService : IAdvertisementService
             advertisement.Content = request.Content;
             advertisement.BannerUrl = request.BannerUrl;
             advertisement.TargetUrl = request.TargetUrl;
-            advertisement.PlacementType = request.PlacementType;
+            if (!string.IsNullOrWhiteSpace(request.PlacementType))
+            {
+                advertisement.PlacementType = request.PlacementType.Trim();
+            }
             advertisement.MoodTypeId = request.MoodTypeId;
             advertisement.DesiredStartDate = request.DesiredStartDate;
             advertisement.Status = AdvertisementStatus.DRAFT.ToString();

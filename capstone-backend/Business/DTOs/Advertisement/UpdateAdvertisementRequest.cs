@@ -14,8 +14,7 @@ public class UpdateAdvertisementRequest
     
     public string? TargetUrl { get; set; }
     
-    [Required]
-    public string PlacementType { get; set; } = null!;
+    public string? PlacementType { get; set; }
 
     [Required]
     public int MoodTypeId { get; set; }
