@@ -2,6 +2,7 @@
 using capstone_backend.Business.Common;
 using capstone_backend.Business.DTOs.Notification;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Notification;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
@@ -17,13 +18,16 @@ namespace capstone_backend.Business.Jobs.DatePlan
         private readonly IFcmService? _fcmService;
         private readonly INotificationService _notificationService;
         private readonly ILogger<DatePlanWorker> _logger;
+        private readonly INotificationWorker _notificationWorker;
 
-        public DatePlanWorker(IUnitOfWork unitOfWork, ILogger<DatePlanWorker> logger, IServiceProvider serviceProvider, INotificationService notificationService)
+
+        public DatePlanWorker(IUnitOfWork unitOfWork, ILogger<DatePlanWorker> logger, IServiceProvider serviceProvider, INotificationService notificationService, INotificationWorker notificationWorker)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
             _fcmService = serviceProvider.GetService<IFcmService>();
             _notificationService = notificationService;
+            _notificationWorker = notificationWorker;
         }
 
         [JobDisplayName("End DatePlan #{0}")]
@@ -227,6 +231,109 @@ namespace capstone_backend.Business.Jobs.DatePlan
 
             _unitOfWork.DatePlans.UpdateRange(expiredPlans);
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        [JobDisplayName("Notify DatePlan Rejected #{0}")]
+        public async Task SendRejectedNotificationAsync(int datePlanId)
+        {
+            var plan = await _unitOfWork.DatePlans.GetFirstAsync(dp => dp.Id == datePlanId && dp.IsDeleted == false, dp => dp.Include(dp => dp.OrganizerMember));
+            if (plan == null)
+                return;
+
+            var organizer = plan.OrganizerMember;
+
+            var notification = new Data.Entities.Notification
+            {
+                UserId = organizer.UserId,
+                Title = NotificationTemplate.DatePlan.TitleDatePlanRejected,
+                Message = NotificationTemplate.DatePlan.GetDatePlanRejectedBody(plan.Title),
+                Type = NotificationType.SYSTEM.ToString(),
+                ReferenceId = plan.Id,
+                ReferenceType = ReferenceType.DATE_PLAN.ToString()
+            };
+
+            await _unitOfWork.Notifications.AddAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+
+            await _notificationWorker.SendPushNotificationAsync(notification.Id);
+        }
+
+        [JobDisplayName("Notify DatePlan Cancelled #{0}")]
+        public async Task SendCancelledNotificationAsync(int datePlanId)
+        {
+
+            var plan = await _unitOfWork.DatePlans.GetFirstAsync(dp => dp.Id == datePlanId && dp.IsDeleted == false);
+            if (plan == null)
+                return;
+
+            var (userId1, userId2) = await _unitOfWork.CoupleProfiles.GetCoupleUserIdsAsync(plan.CoupleId);
+
+            var notifications = new List<Data.Entities.Notification>
+            {
+                new Data.Entities.Notification
+                {
+                    UserId = userId1,
+                    Title = NotificationTemplate.DatePlan.TitleDatePlanCancelled,
+                    Message = NotificationTemplate.DatePlan.GetDatePlanCancelledBody(plan.Title),
+                    Type = NotificationType.SYSTEM.ToString(),
+                    ReferenceId = plan.Id,
+                    ReferenceType = ReferenceType.DATE_PLAN.ToString()
+                },
+                new Data.Entities.Notification
+                {
+                    UserId = userId2,
+                    Title = NotificationTemplate.DatePlan.TitleDatePlanCancelled,
+                    Message = NotificationTemplate.DatePlan.GetDatePlanCancelledBody(plan.Title),
+                    Type = NotificationType.SYSTEM.ToString(),
+                    ReferenceId = plan.Id,
+                    ReferenceType = ReferenceType.DATE_PLAN.ToString()
+                }
+            };
+
+            await _unitOfWork.Notifications.AddRangeAsync(notifications);
+            await _unitOfWork.SaveChangesAsync();
+
+            await Task.WhenAll(
+                notifications.Select(n => _notificationWorker.SendPushNotificationAsync(n.Id))
+            );
+        }
+
+        [JobDisplayName("Notify DatePlan Completed #{0}")]
+        public async Task SendCompletedNotificationAsync(int datePlanId)
+        {
+            var plan = await _unitOfWork.DatePlans.GetByIdAsync(datePlanId);
+            if (plan == null) return;
+
+            var (userId1, userId2) = await _unitOfWork.CoupleProfiles.GetCoupleUserIdsAsync(plan.CoupleId);
+
+            var notifications = new List<Data.Entities.Notification>
+            {
+                new Data.Entities.Notification
+                {
+                    UserId = userId1,
+                    Title = NotificationTemplate.DatePlan.TitleDatePlanCompleted,
+                    Message = NotificationTemplate.DatePlan.GetDatePlanCompletedBody(plan.Title),
+                    Type = NotificationType.SYSTEM.ToString(),
+                    ReferenceId = plan.Id,
+                    ReferenceType = ReferenceType.DATE_PLAN.ToString()
+                },
+                new Data.Entities.Notification
+                {
+                    UserId = userId2,
+                    Title = NotificationTemplate.DatePlan.TitleDatePlanCompleted,
+                    Message = NotificationTemplate.DatePlan.GetDatePlanCompletedBody(plan.Title),
+                    Type = NotificationType.SYSTEM.ToString(),
+                    ReferenceId = plan.Id,
+                    ReferenceType = ReferenceType.DATE_PLAN.ToString()
+                }
+            };
+
+            await _unitOfWork.Notifications.AddRangeAsync(notifications);
+            await _unitOfWork.SaveChangesAsync();
+
+            await Task.WhenAll(
+                notifications.Select(n => _notificationWorker.SendPushNotificationAsync(n.Id))
+            );
         }
     }
 }

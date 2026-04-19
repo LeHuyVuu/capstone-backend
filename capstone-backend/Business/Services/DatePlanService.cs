@@ -493,6 +493,10 @@ namespace capstone_backend.Business.Services
             if (datePlan == null)
                 throw new Exception("Không tìm thấy lịch trình buổi hẹn");
 
+            var notifyRejected = false;
+            var notifyCancelled = false;
+            var notifyCompleted = false;
+
             if (action == DatePlanAction.SEND)
             {
                 if (!datePlan.PlannedStartAt.HasValue || !datePlan.PlannedEndAt.HasValue)
@@ -543,6 +547,7 @@ namespace capstone_backend.Business.Services
                 if (datePlan.OrganizerMemberId == member.Id)
                     throw new Exception("Người tổ chức không thể từ chối lịch trình buổi hẹn");
                 datePlan.Status = DatePlanStatus.DRAFTED.ToString();
+                notifyRejected = true;
             }
             else if (action == DatePlanAction.CANCEL && (datePlan.Status == DatePlanStatus.SCHEDULED.ToString() || datePlan.Status == DatePlanStatus.IN_PROGRESS.ToString()))
             {
@@ -552,6 +557,8 @@ namespace capstone_backend.Business.Services
 
                 // Remove jobs
                 await _datePlanWorker.CleanupAllJobsAsync(datePlan.Id);
+
+                notifyCancelled = true;
             }
             else if (action == DatePlanAction.COMPLETE && datePlan.Status == DatePlanStatus.IN_PROGRESS.ToString())
             {
@@ -561,6 +568,8 @@ namespace capstone_backend.Business.Services
                 datePlan.CompletedAt = DateTime.UtcNow;
                 // Remove jobs
                 await _datePlanWorker.CleanupAllJobsAsync(datePlan.Id);
+
+                notifyCompleted = true;
             }
             else
             {
@@ -568,7 +577,21 @@ namespace capstone_backend.Business.Services
             }
 
             _unitOfWork.DatePlans.Update(datePlan);
-            return await _unitOfWork.SaveChangesAsync();
+            var result = await _unitOfWork.SaveChangesAsync();
+
+            if (result > 0)
+            {
+                if (notifyRejected)
+                    await _datePlanWorker.SendRejectedNotificationAsync(datePlan.Id);
+
+                if (notifyCancelled)
+                    await _datePlanWorker.SendCancelledNotificationAsync(datePlan.Id);
+
+                if (notifyCompleted)
+                    await _datePlanWorker.SendCompletedNotificationAsync(datePlan.Id);
+            }
+
+            return result;
         }
 
         private async Task ValidateDatePlanOverlapAsync(

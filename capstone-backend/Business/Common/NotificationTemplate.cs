@@ -14,6 +14,10 @@
             public const string TitleDatePlanAutoClosed = "Buổi hẹn đã được đóng tự động";
 
             public const string TitleAccepted = "Buổi hẹn đã được đồng ý!";
+            public const string TitleDatePlanCancelled = "Buổi hẹn đã bị hủy";
+            public const string TitleDatePlanRejected = "Lịch trình đã bị từ chối";
+
+            public const string TitleDatePlanCompleted = "Hoàn thành buổi hẹn";
 
             public static string GetReminderPrimaryBody(string datePlanTitle, TimeOnly plannedStartAt)
             {
@@ -35,6 +39,11 @@
                 return $"Buổi hẹn \"{datePlanTitle}\" của chúng ta đã kết thúc. Hy vọng bạn đã có những khoảnh khắc tuyệt vời!";
             }
 
+            public static string GetDatePlanCompletedBody(string datePlanTitle)
+            {
+                return $"Buổi hẹn \"{datePlanTitle}\" của chúng ta đã hoàn thành! Hãy nhớ đánh giá địa điểm và chia sẻ cảm nhận nhé!";
+            }
+
             public static string GetDatePlanSoftEndedBody(string datePlanTitle)
             {
                 return $"Buổi hẹn \"{datePlanTitle}\" của chúng ta đã kết thúc theo dự kiến. Hãy nhớ cập nhật trạng thái nhé!";
@@ -47,6 +56,16 @@
             public static string GetAcceptedBody(string datePlanTitle)
             {
                 return $"Buổi hẹn \"{datePlanTitle}\" của bạn đã được partner đồng ý! Hãy chuẩn bị cho một buổi hẹn tuyệt vời nhé!";
+            }
+
+            public static string GetDatePlanCancelledBody(string datePlanTitle)
+            {
+                return $"Buổi hẹn \"{datePlanTitle}\" của bạn đã bị hủy. Hãy lên kế hoạch cho buổi hẹn tiếp theo nhé!";
+            }
+
+            public static string GetDatePlanRejectedBody(string datePlanTitle)
+            {
+                return $"Lịch trình \"{datePlanTitle}\" partner đã từ chối. Đừng nản lòng, hãy lên kế hoạch cho buổi hẹn tiếp theo nhé!";
             }
         }
 
