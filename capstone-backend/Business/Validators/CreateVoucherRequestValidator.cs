@@ -75,6 +75,34 @@ namespace capstone_backend.Business.Validators
             RuleFor(x => x.UsageValidDays)
                 .NotNull().WithMessage("UsageValidDays không được null.")
                 .InclusiveBetween(1, 365).WithMessage("UsageValidDays phải từ 1 đến 365 ngày");
+
+            RuleFor(x => x)
+                .Custom((request, context) =>
+                {
+                    if (request.StartDate.HasValue && request.EndDate.HasValue)
+                    {
+                        var startDate = request.StartDate.Value.Date;
+                        var endDate = request.EndDate.Value.Date;
+
+                        if (endDate <= startDate)
+                        {
+                            context.AddFailure("EndDate", "Ngày kết thúc phải sau ngày bắt đầu");
+                            return;
+                        }
+
+                        // Min 1 ngày (không tính giờ/phút/giây)
+                        if ((endDate - startDate).TotalDays < 1)
+                        {
+                            context.AddFailure("EndDate", "Thời gian hiệu lực voucher tối thiểu là 1 ngày");
+                        }
+
+                        // Max 3 tháng theo calendar month (không tính giờ/phút/giây)
+                        if (endDate > startDate.AddMonths(3))
+                        {
+                            context.AddFailure("EndDate", "Thời gian hiệu lực voucher tối đa là 3 tháng");
+                        }
+                    }
+                });
         }
     }
 }
