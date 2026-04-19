@@ -29,6 +29,10 @@ public class AuthController : BaseController
     [AllowAnonymous]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
+        var existingUser = await _unitOfWork.Users.GetByEmailAsync(request.Email);
+        if (existingUser != null && existingUser.IsActive != true)
+            return UnauthorizedResponse("Tài khoản đã bị khóa");
+
         var loginResponse = await _userService.LoginAsync(request);
 
         if (loginResponse == null)
