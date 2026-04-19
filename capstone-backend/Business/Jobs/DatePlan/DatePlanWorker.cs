@@ -293,9 +293,11 @@ namespace capstone_backend.Business.Jobs.DatePlan
             await _unitOfWork.Notifications.AddRangeAsync(notifications);
             await _unitOfWork.SaveChangesAsync();
 
-            await Task.WhenAll(
-                notifications.Select(n => _notificationWorker.SendPushNotificationAsync(n.Id))
-            );
+            // Replace in SendCancelledNotificationAsync
+            foreach (var notification in notifications)
+            {
+                await _notificationWorker.SendPushNotificationAsync(notification.Id);
+            }
         }
 
         [JobDisplayName("Notify DatePlan Completed #{0}")]
@@ -331,9 +333,11 @@ namespace capstone_backend.Business.Jobs.DatePlan
             await _unitOfWork.Notifications.AddRangeAsync(notifications);
             await _unitOfWork.SaveChangesAsync();
 
-            await Task.WhenAll(
-                notifications.Select(n => _notificationWorker.SendPushNotificationAsync(n.Id))
-            );
+            // Replace in SendCompletedNotificationAsync
+            foreach (var notification in notifications)
+            {
+                await _notificationWorker.SendPushNotificationAsync(notification.Id);
+            }
         }
     }
 }
