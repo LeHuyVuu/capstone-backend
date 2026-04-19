@@ -232,6 +232,23 @@ public class CoupleInvitationService : ICoupleInvitationService
             await _unitOfWork.CoupleProfiles.AddAsync(coupleProfile);
         }
 
+        // Inline sync personality type when both members already completed MBTI tests
+        var senderMbti = (await _unitOfWork.PersonalityTests.GetCurrentPersonalityAsync(invitation.SenderMemberId))?.ResultCode;
+        var receiverMbti = (await _unitOfWork.PersonalityTests.GetCurrentPersonalityAsync(invitation.ReceiverMemberId))?.ResultCode;
+        if (!string.IsNullOrWhiteSpace(senderMbti) && !string.IsNullOrWhiteSpace(receiverMbti))
+        {
+            var mappedName = PersonalityMappingService.GetPersonalityTags(senderMbti, receiverMbti).FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(mappedName))
+            {
+                var mappedType = await _unitOfWork.CouplePersonalityTypes.GetFirstAsync(
+                    x => x.IsDeleted == false && x.Name != null && x.Name.ToLower() == mappedName.ToLower());
+                if (mappedType != null)
+                {
+                    coupleProfile.CouplePersonalityTypeId = mappedType.Id;
+                }
+            }
+        }
+
         // Update relationship status for both members
         invitation.SenderMember.RelationshipStatus = RelationshipStatus.IN_RELATIONSHIP.ToString();
         _unitOfWork.MembersProfile.Update(invitation.SenderMember);
