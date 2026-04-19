@@ -110,10 +110,17 @@ namespace capstone_backend.Api.Controllers
                 .CountAsync();
 
             var totalTransactions = await _unitOfWork.Context.Set<Data.Entities.Transaction>()
+                .Where(t => t.Status == TransactionStatus.SUCCESS.ToString()
+                    && (t.TransType == (int)TransactionType.VENUE_SUBSCRIPTION
+                        || t.TransType == (int)TransactionType.ADS_ORDER
+                        || t.TransType == (int)TransactionType.MEMBER_SUBSCRIPTION))
                 .CountAsync();
 
             var totalRevenue = await _unitOfWork.Context.Set<Data.Entities.Transaction>()
-                .Where(t => t.Status == TransactionStatus.SUCCESS.ToString())
+                .Where(t => t.Status == TransactionStatus.SUCCESS.ToString()
+                    && (t.TransType == (int)TransactionType.VENUE_SUBSCRIPTION
+                        || t.TransType == (int)TransactionType.ADS_ORDER
+                        || t.TransType == (int)TransactionType.MEMBER_SUBSCRIPTION))
                 .SumAsync(t => (decimal?)t.Amount) ?? 0;
 
             var totalReports = await _unitOfWork.Context.Set<Data.Entities.Report>()
@@ -152,7 +159,12 @@ namespace capstone_backend.Api.Controllers
 
             var revenueByPeriod = await GroupTransactionsByPeriod(
                 _unitOfWork.Context.Set<Data.Entities.Transaction>()
-                    .Where(t => t.CreatedAt >= calculatedStartDate && t.CreatedAt <= calculatedEndDate && t.Status == TransactionStatus.SUCCESS.ToString()),
+                    .Where(t => t.CreatedAt >= calculatedStartDate 
+                        && t.CreatedAt <= calculatedEndDate 
+                        && t.Status == TransactionStatus.SUCCESS.ToString()
+                        && (t.TransType == (int)TransactionType.VENUE_SUBSCRIPTION
+                            || t.TransType == (int)TransactionType.ADS_ORDER
+                            || t.TransType == (int)TransactionType.MEMBER_SUBSCRIPTION)),
                 period);
 
             var transactionsByPeriod = await GroupDataByPeriod(
@@ -162,12 +174,18 @@ namespace capstone_backend.Api.Controllers
 
             var venueGrowth = await GroupDataByPeriod(
                 _unitOfWork.Context.Set<Data.Entities.VenueLocation>()
-                    .Where(v => v.CreatedAt >= calculatedStartDate && v.CreatedAt <= calculatedEndDate && v.IsDeleted != true),
+                    .Where(v => v.CreatedAt >= calculatedStartDate
+                        && v.CreatedAt <= calculatedEndDate
+                        && v.IsDeleted != true
+                        && v.Status == VenueLocationStatus.ACTIVE.ToString()),
                 period);
 
             var postActivity = await GroupDataByPeriod(
                 _unitOfWork.Context.Set<Data.Entities.Post>()
-                    .Where(p => p.CreatedAt >= calculatedStartDate && p.CreatedAt <= calculatedEndDate && p.IsDeleted != true),
+                    .Where(p => p.CreatedAt >= calculatedStartDate
+                        && p.CreatedAt <= calculatedEndDate
+                        && p.IsDeleted != true
+                        && p.Status == PostStatus.PUBLISHED.ToString()),
                 period);
 
             var dashboard = new AdminDashboardResponse
