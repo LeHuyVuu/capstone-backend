@@ -184,15 +184,22 @@ public class VenueLocationService : IVenueLocationService
 
         var response = _mapper.Map<VenueLocationDetailResponse>(venue);
 
-        // Always derive review count from reviews table, then backfill venue_location.ReviewCount.
+        // Always derive review count and average rating from reviews table, then backfill venue_location fields.
         var (totalReviewCount, _) = await _unitOfWork.Reviews.GetMoodMatchStatisticsAsync(venueId);
+        var ratings = await _unitOfWork.Reviews.GetAllRatingsByVenueIdAsync(venueId);
+        
         response.ReviewCount = totalReviewCount;
-        if (venue.ReviewCount != totalReviewCount)
+        var averageRating = ratings.Any() ? Math.Round((decimal)ratings.Average(), 1) : 0m;
+        response.AverageRating = averageRating;
+
+        // Check if any fields differ and need updating
+        if (venue.ReviewCount != totalReviewCount || venue.AverageRating != averageRating)
         {
             var venueToUpdate = await _unitOfWork.VenueLocations.GetByIdAsync(venueId);
             if (venueToUpdate != null)
             {
                 venueToUpdate.ReviewCount = totalReviewCount;
+                venueToUpdate.AverageRating = averageRating;
                 venueToUpdate.UpdatedAt = DateTime.UtcNow;
                 _unitOfWork.VenueLocations.Update(venueToUpdate);
                 await _unitOfWork.SaveChangesAsync();
