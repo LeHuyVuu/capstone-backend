@@ -62,7 +62,10 @@ namespace capstone_backend.Business.Services
 
             var delaySeconds = await GetCheckinReviewDelaySecondsAsync();
             var delayMinutes = ToDisplayMinutes(delaySeconds);
-            var lastCheckin = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(member.Id, request.VenueLocationId);
+            var lastCheckin = await _unitOfWork.CheckInHistories.GetLatestByMemberIdAndVenueIdAsync(
+                    member.Id,
+                    request.VenueLocationId,
+                    delaySeconds);
 
             if (lastCheckin != null && lastCheckin.IsValid == null)
             {
