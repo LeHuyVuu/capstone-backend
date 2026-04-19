@@ -27,7 +27,7 @@ public class UserContextController : BaseController
     }
 
     [HttpGet("user-context")]
-    [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
     public async Task<IActionResult> GetUserContext()
     {
         var userIdClaim = User.Claims
@@ -61,6 +61,8 @@ public class UserContextController : BaseController
                 i.CreatedAt
             })
             .FirstOrDefaultAsync();
+
+        var searchHistories = latestInteraction?.CategoryInteraction;
 
         var latestPersonalityResultCode = await _dbContext.PersonalityTests
             .AsNoTracking()
@@ -104,11 +106,19 @@ public class UserContextController : BaseController
         {
             userContext = "suggest popular and diverse venues";
             _logger.LogInformation("[USER CONTEXT] fallback default context for new member {MemberId}: {UserContext}", memberProfile.Id, userContext);
-            return OkResponse(userContext, "Tạo ngữ cảnh người dùng mới thành công");
+            return OkResponse(new
+            {
+                userContext,
+                searchHistories
+            }, "Tạo ngữ cảnh người dùng mới thành công");
         }
 
         _logger.LogInformation("[USER CONTEXT] userContext for member {MemberId}: {UserContext}", memberProfile.Id, userContext);
 
-        return OkResponse(userContext, "Lấy ngữ cảnh người dùng thành công");
+        return OkResponse(new
+        {
+            userContext,
+            searchHistories
+        }, "Lấy ngữ cảnh người dùng thành công");
     }
 }

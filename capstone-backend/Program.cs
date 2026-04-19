@@ -177,6 +177,9 @@ app.UseCors("AllowAll");
 // 6. Authentication (must be before Authorization)
 app.UseAuthentication();
 
+// 6.1. Block all authenticated requests when account is inactive/locked
+app.UseMiddleware<ActiveUserGuardMiddleware>();
+
 // 7. Authorization
 app.UseAuthorization();
 
