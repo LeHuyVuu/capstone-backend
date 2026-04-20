@@ -67,7 +67,7 @@ namespace capstone_backend.Api.Filters
                 context.Result = new BadRequestObjectResult(
                     ApiResponse<object>.ErrorData(
                         errorData,
-                        "Kiểm duyệt nội dung thất bại",
+                        "Chứa nội dung không phù hợp",
                         400,
                         traceId
                     )
