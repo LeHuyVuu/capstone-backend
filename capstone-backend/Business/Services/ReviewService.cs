@@ -490,6 +490,9 @@ namespace capstone_backend.Business.Services
             if (checkIn == null || checkIn.MemberId != member.Id || checkIn.VenueId != request.VenueLocationId)
                 throw new Exception("Không tìm thấy lịch sử check-in hợp lệ");
 
+            if (checkIn.IsValid == true)
+                return 1; // Đã được xác thực trước đó
+
             if (checkIn.IsValid == null)
                 throw new Exception("Lịch sử check-in chưa được xác thực, vui lòng đợi hệ thống xác thực tự động hoặc liên hệ hỗ trợ");
 

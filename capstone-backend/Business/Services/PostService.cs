@@ -314,6 +314,7 @@ namespace capstone_backend.Business.Services
                          c.IsDeleted == false && 
                          c.Post.Visibility == PostVisibility.PUBLIC.ToString() && 
                          c.Post.Status == PostStatus.PUBLISHED.ToString() && 
+                         c.Status == CommentStatus.PUBLISHED.ToString() &&
                          c.ParentId == null && c.RootId == null,
                     c => c.OrderByDescending(c => c.CreatedAt),
                     c => c.Include(c => c.Author).ThenInclude(a => a.User).Include(c => c.CommentLikes)

@@ -1,4 +1,5 @@
-﻿using capstone_backend.Business.Interfaces;
+﻿using capstone_backend.Api.Models;
+using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using System.Collections.Concurrent;
@@ -23,7 +24,7 @@ namespace capstone_backend.Api.Filters
 
                 if (argument is string strValue)
                 {
-                    if (!Validate(context, moderationService, strValue, "DirectParam")) 
+                    if (!Validate(context, moderationService, strValue, "DirectParam"))
                         return;
                 }
                 else
@@ -37,7 +38,7 @@ namespace capstone_backend.Api.Filters
                     foreach (var prop in props)
                     {
                         var value = (string?)prop.GetValue(argument);
-                        if (!Validate(context, moderationService, value, prop.Name)) 
+                        if (!Validate(context, moderationService, value, prop.Name))
                             return;
                     }
                 }
@@ -48,21 +49,33 @@ namespace capstone_backend.Api.Filters
 
         private bool Validate(ActionExecutingContext context, IModerationService service, string? content, string fieldName)
         {
-            if (string.IsNullOrEmpty(content)) 
+            if (string.IsNullOrEmpty(content))
                 return true;
 
             var (isValid, message) = service.CheckContent(content);
             if (!isValid)
             {
-                context.Result = new BadRequestObjectResult(new
+                var traceId = context.HttpContext.Items["TraceId"]?.ToString()
+                              ?? context.HttpContext.TraceIdentifier;
+
+                var errorData = new
                 {
-                    StatusCode = 400,
-                    Error = "Kiểm duyệt nội dung thất bại",
-                    Message = message,
-                    Field = fieldName
-                });
+                    field = fieldName,
+                    reason = message
+                };
+
+                context.Result = new BadRequestObjectResult(
+                    ApiResponse<object>.ErrorData(
+                        errorData,
+                        "Chứa nội dung không phù hợp",
+                        400,
+                        traceId
+                    )
+                );
+
                 return false;
             }
+
             return true;
         }
     }
