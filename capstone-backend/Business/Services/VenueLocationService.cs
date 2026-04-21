@@ -1146,7 +1146,17 @@ public class VenueLocationService : IVenueLocationService
             EndDate = activeSubscriptionsByVenueId.TryGetValue(v.Id, out activeSubscription)
                 ? activeSubscription.EndDate
                 : null,
-            LocationTags = CreateLocationTagsInfo(v)
+            LocationTags = CreateLocationTagsInfo(v),
+            OpeningHours = v.VenueOpeningHours?
+                .OrderBy(oh => oh.Day)
+                .Select(oh => new VenueOpeningHourResponse
+                {
+                    Id = oh.Id,
+                    Day = oh.Day,
+                    OpenTime = oh.OpenTime,
+                    CloseTime = oh.CloseTime,
+                    IsClosed = oh.IsClosed
+                }).ToList()
         }).ToList();
 
         _logger.LogInformation("Retrieved {Count} venue locations for venue owner profile ID {VenueOwnerProfileId}", responses.Count, venueOwnerProfile.Id);
@@ -1217,7 +1227,17 @@ public class VenueLocationService : IVenueLocationService
             EndDate = activeSubscriptionsByVenueId.TryGetValue(venue.Id, out activeSubscription)
                 ? activeSubscription.EndDate
                 : null,
-            LocationTags = CreateLocationTagsInfo(venue)
+            LocationTags = CreateLocationTagsInfo(venue),
+            OpeningHours = venue.VenueOpeningHours?
+                .OrderBy(oh => oh.Day)
+                .Select(oh => new VenueOpeningHourResponse
+                {
+                    Id = oh.Id,
+                    Day = oh.Day,
+                    OpenTime = oh.OpenTime,
+                    CloseTime = oh.CloseTime,
+                    IsClosed = oh.IsClosed
+                }).ToList()
         };
 
         _logger.LogInformation("Retrieved venue location {VenueId} for user {UserId}", venueId, userId);

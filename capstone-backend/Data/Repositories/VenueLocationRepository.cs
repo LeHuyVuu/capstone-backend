@@ -97,6 +97,7 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
                     .ThenInclude(lt => lt!.CouplePersonalityType)
             .Include(v => v.VenueLocationCategories)
                 .ThenInclude(vlc => vlc.Category)
+            .Include(v => v.VenueOpeningHours)
             .Where(v => v.VenueOwnerId == venueOwnerId && v.IsDeleted != true)
             .OrderByDescending(v => v.CreatedAt)
             .AsSplitQuery()

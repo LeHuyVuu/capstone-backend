@@ -40,6 +40,11 @@ public class VenueOwnerVenueLocationResponse
     /// Location Tags information including couple mood type and personality type (many-to-many)
     /// </summary>
     public List<VenueOwnerLocationTagInfo>? LocationTags { get; set; }
+
+    /// <summary>
+    /// Opening hours for all days of the week
+    /// </summary>
+    public List<VenueOpeningHourResponse>? OpeningHours { get; set; }
 }
 
 /// <summary>
