@@ -400,36 +400,50 @@ public class MemberService : IMemberService
 
         _logger.LogInformation("Updated member profile {MemberId} for user {UserId}", memberProfile.Id, currentUserId);
 
+        // Reload to ensure navigation properties are populated
+        var updatedProfile = await _unitOfWork.Context.MemberProfiles
+            .Include(m => m.User)
+            .FirstOrDefaultAsync(m => m.Id == memberProfile.Id);
+
+        if (updatedProfile == null)
+            throw new InvalidOperationException("Không thể tải lại hồ sơ sau khi cập nhật");
+
         return new MemberProfileResponse
         {
-            MemberProfileId = memberProfile.Id,
-            UserId = memberProfile.UserId,
-            FullName = memberProfile.FullName ?? string.Empty,
-            AvatarUrl = memberProfile.User?.AvatarUrl,
-            PhoneNumber = memberProfile.User?.PhoneNumber,
-            DateOfBirth = memberProfile.DateOfBirth,
-            Gender = memberProfile.Gender,
-            Bio = memberProfile.Bio,
-            RelationshipStatus = memberProfile.RelationshipStatus,
-            JobTitle = memberProfile.JobTitle,
-            EducationLevel = memberProfile.EducationLevel,
-            Height = memberProfile.Height,
-            Weight = memberProfile.Weight,
-            City = memberProfile.City,
-            District = memberProfile.District,
-            HomeLatitude = memberProfile.HomeLatitude,
-            HomeLongitude = memberProfile.HomeLongitude,
-            BudgetMin = memberProfile.BudgetMin,
-            BudgetMax = memberProfile.BudgetMax,
-            FavoritePets = memberProfile.FavoritePets,
-            HasPet = memberProfile.HasPet,
-            Smoking = memberProfile.Smoking,
-            Interests = memberProfile.Interests,
-            AvailableTime = memberProfile.AvailableTime,
-            Address = memberProfile.address,
-            Area = memberProfile.area,
-            InviteCode = memberProfile.InviteCode,
-            Age = memberProfile.Age
+            MemberProfileId = updatedProfile.Id,
+            UserId = updatedProfile.UserId,
+            FullName = updatedProfile.FullName ?? string.Empty,
+            AvatarUrl = updatedProfile.User?.AvatarUrl,
+            PhoneNumber = updatedProfile.User?.PhoneNumber,
+            DateOfBirth = updatedProfile.DateOfBirth,
+            Gender = updatedProfile.Gender,
+            Bio = updatedProfile.Bio,
+            RelationshipStatus = updatedProfile.RelationshipStatus,
+            JobTitle = updatedProfile.JobTitle,
+            EducationLevel = updatedProfile.EducationLevel,
+            Height = updatedProfile.Height,
+            Weight = updatedProfile.Weight,
+            City = updatedProfile.City,
+            District = updatedProfile.District,
+            HomeLatitude = updatedProfile.HomeLatitude,
+            HomeLongitude = updatedProfile.HomeLongitude,
+            BudgetMin = updatedProfile.BudgetMin,
+            BudgetMax = updatedProfile.BudgetMax,
+            FavoritePets = string.IsNullOrWhiteSpace(updatedProfile.FavoritePets) 
+                ? null 
+                : System.Text.Json.JsonSerializer.Deserialize<object>(updatedProfile.FavoritePets),
+            HasPet = updatedProfile.HasPet,
+            Smoking = updatedProfile.Smoking,
+            Interests = string.IsNullOrWhiteSpace(updatedProfile.Interests) 
+                ? null 
+                : System.Text.Json.JsonSerializer.Deserialize<object>(updatedProfile.Interests),
+            AvailableTime = string.IsNullOrWhiteSpace(updatedProfile.AvailableTime) 
+                ? null 
+                : System.Text.Json.JsonSerializer.Deserialize<object>(updatedProfile.AvailableTime),
+            Address = updatedProfile.address,
+            Area = updatedProfile.area,
+            InviteCode = updatedProfile.InviteCode,
+            Age = updatedProfile.Age
         };
     }
 }

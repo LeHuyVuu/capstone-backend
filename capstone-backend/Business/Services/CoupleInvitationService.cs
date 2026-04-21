@@ -670,8 +670,12 @@ public class CoupleInvitationService : ICoupleInvitationService
                 HomeLongitude = member.HomeLongitude,
                 BudgetMin = member.BudgetMin,
                 BudgetMax = member.BudgetMax,
-                Interests = member.Interests,
-                AvailableTime = member.AvailableTime,
+                Interests = string.IsNullOrWhiteSpace(member.Interests) 
+                    ? null 
+                    : System.Text.Json.JsonSerializer.Deserialize<object>(member.Interests),
+                AvailableTime = string.IsNullOrWhiteSpace(member.AvailableTime) 
+                    ? null 
+                    : System.Text.Json.JsonSerializer.Deserialize<object>(member.AvailableTime),
                 Address = member.address,
                 Area = member.area,
                 InviteCode = member.InviteCode,
