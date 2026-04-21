@@ -299,6 +299,9 @@ public static class ServiceExtensions
         // Register Report Type Service
         services.AddScoped<IReportTypeService, ReportTypeService>();
 
+        // Register Interest Service
+        services.AddScoped<IInterestService, InterestService>();
+
         // Background listener for Firebase Realtime Database location updates
         services.AddHostedService<FirebaseLocationListenerHostedService>();
 

@@ -328,6 +328,12 @@ public class MemberService : IMemberService
             hasUpdates = true;
         }
 
+        if (request.Interests != null)
+        {
+            memberProfile.Interests = System.Text.Json.JsonSerializer.Serialize(request.Interests);
+            hasUpdates = true;
+        }
+
         if (request.Address != null)
         {
             memberProfile.address = request.Address;

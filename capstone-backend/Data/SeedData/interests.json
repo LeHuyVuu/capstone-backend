@@ -1,0 +1,354 @@
+{
+  "interests": [
+    {
+      "id": 1,
+      "name": "Du lịch",
+      "nameEn": "Travel",
+      "category": "Hoạt động ngoài trời",
+      "icon": "✈️"
+    },
+    {
+      "id": 2,
+      "name": "Ẩm thực",
+      "nameEn": "Food & Dining",
+      "category": "Ăn uống",
+      "icon": "🍽️"
+    },
+    {
+      "id": 3,
+      "name": "Xem phim",
+      "nameEn": "Movies",
+      "category": "Giải trí",
+      "icon": "🎬"
+    },
+    {
+      "id": 4,
+      "name": "Âm nhạc",
+      "nameEn": "Music",
+      "category": "Giải trí",
+      "icon": "🎵"
+    },
+    {
+      "id": 5,
+      "name": "Thể thao",
+      "nameEn": "Sports",
+      "category": "Hoạt động ngoài trời",
+      "icon": "⚽"
+    },
+    {
+      "id": 6,
+      "name": "Đọc sách",
+      "nameEn": "Reading",
+      "category": "Văn hóa",
+      "icon": "📚"
+    },
+    {
+      "id": 7,
+      "name": "Nhiếp ảnh",
+      "nameEn": "Photography",
+      "category": "Nghệ thuật",
+      "icon": "📷"
+    },
+    {
+      "id": 8,
+      "name": "Nấu ăn",
+      "nameEn": "Cooking",
+      "category": "Ăn uống",
+      "icon": "👨‍🍳"
+    },
+    {
+      "id": 9,
+      "name": "Yoga",
+      "nameEn": "Yoga",
+      "category": "Sức khỏe",
+      "icon": "🧘"
+    },
+    {
+      "id": 10,
+      "name": "Gym",
+      "nameEn": "Gym",
+      "category": "Sức khỏe",
+      "icon": "💪"
+    },
+    {
+      "id": 11,
+      "name": "Chơi game",
+      "nameEn": "Gaming",
+      "category": "Giải trí",
+      "icon": "🎮"
+    },
+    {
+      "id": 12,
+      "name": "Vẽ tranh",
+      "nameEn": "Painting",
+      "category": "Nghệ thuật",
+      "icon": "🎨"
+    },
+    {
+      "id": 13,
+      "name": "Khiêu vũ",
+      "nameEn": "Dancing",
+      "category": "Nghệ thuật",
+      "icon": "💃"
+    },
+    {
+      "id": 14,
+      "name": "Leo núi",
+      "nameEn": "Hiking",
+      "category": "Hoạt động ngoài trời",
+      "icon": "🏔️"
+    },
+    {
+      "id": 15,
+      "name": "Bơi lội",
+      "nameEn": "Swimming",
+      "category": "Thể thao",
+      "icon": "🏊"
+    },
+    {
+      "id": 16,
+      "name": "Cắm trại",
+      "nameEn": "Camping",
+      "category": "Hoạt động ngoài trời",
+      "icon": "⛺"
+    },
+    {
+      "id": 17,
+      "name": "Câu cá",
+      "nameEn": "Fishing",
+      "category": "Hoạt động ngoài trời",
+      "icon": "🎣"
+    },
+    {
+      "id": 18,
+      "name": "Làm vườn",
+      "nameEn": "Gardening",
+      "category": "Hoạt động ngoài trời",
+      "icon": "🌱"
+    },
+    {
+      "id": 19,
+      "name": "Thời trang",
+      "nameEn": "Fashion",
+      "category": "Phong cách",
+      "icon": "👗"
+    },
+    {
+      "id": 20,
+      "name": "Làm đẹp",
+      "nameEn": "Beauty",
+      "category": "Phong cách",
+      "icon": "💄"
+    },
+    {
+      "id": 21,
+      "name": "Chơi nhạc cụ",
+      "nameEn": "Playing Instruments",
+      "category": "Nghệ thuật",
+      "icon": "🎸"
+    },
+    {
+      "id": 22,
+      "name": "Hát karaoke",
+      "nameEn": "Karaoke",
+      "category": "Giải trí",
+      "icon": "🎤"
+    },
+    {
+      "id": 23,
+      "name": "Thiền",
+      "nameEn": "Meditation",
+      "category": "Sức khỏe",
+      "icon": "🧘‍♀️"
+    },
+    {
+      "id": 24,
+      "name": "Chạy bộ",
+      "nameEn": "Running",
+      "category": "Thể thao",
+      "icon": "🏃"
+    },
+    {
+      "id": 25,
+      "name": "Đạp xe",
+      "nameEn": "Cycling",
+      "category": "Thể thao",
+      "icon": "🚴"
+    },
+    {
+      "id": 26,
+      "name": "Cầu lông",
+      "nameEn": "Badminton",
+      "category": "Thể thao",
+      "icon": "🏸"
+    },
+    {
+      "id": 27,
+      "name": "Bóng đá",
+      "nameEn": "Football",
+      "category": "Thể thao",
+      "icon": "⚽"
+    },
+    {
+      "id": 28,
+      "name": "Bóng rổ",
+      "nameEn": "Basketball",
+      "category": "Thể thao",
+      "icon": "🏀"
+    },
+    {
+      "id": 29,
+      "name": "Tennis",
+      "nameEn": "Tennis",
+      "category": "Thể thao",
+      "icon": "🎾"
+    },
+    {
+      "id": 30,
+      "name": "Võ thuật",
+      "nameEn": "Martial Arts",
+      "category": "Thể thao",
+      "icon": "🥋"
+    },
+    {
+      "id": 31,
+      "name": "Xem concert",
+      "nameEn": "Concerts",
+      "category": "Giải trí",
+      "icon": "🎪"
+    },
+    {
+      "id": 32,
+      "name": "Đi cafe",
+      "nameEn": "Coffee",
+      "category": "Ăn uống",
+      "icon": "☕"
+    },
+    {
+      "id": 33,
+      "name": "Uống trà",
+      "nameEn": "Tea",
+      "category": "Ăn uống",
+      "icon": "🍵"
+    },
+    {
+      "id": 34,
+      "name": "Làm bánh",
+      "nameEn": "Baking",
+      "category": "Ăn uống",
+      "icon": "🧁"
+    },
+    {
+      "id": 35,
+      "name": "Thú cưng",
+      "nameEn": "Pets",
+      "category": "Động vật",
+      "icon": "🐾"
+    },
+    {
+      "id": 36,
+      "name": "Công nghệ",
+      "nameEn": "Technology",
+      "category": "Khoa học",
+      "icon": "💻"
+    },
+    {
+      "id": 37,
+      "name": "Lập trình",
+      "nameEn": "Programming",
+      "category": "Khoa học",
+      "icon": "👨‍💻"
+    },
+    {
+      "id": 38,
+      "name": "Thiên văn học",
+      "nameEn": "Astronomy",
+      "category": "Khoa học",
+      "icon": "🔭"
+    },
+    {
+      "id": 39,
+      "name": "Viết lách",
+      "nameEn": "Writing",
+      "category": "Văn hóa",
+      "icon": "✍️"
+    },
+    {
+      "id": 40,
+      "name": "Xem triển lãm",
+      "nameEn": "Exhibitions",
+      "category": "Văn hóa",
+      "icon": "🖼️"
+    },
+    {
+      "id": 41,
+      "name": "Xem kịch",
+      "nameEn": "Theater",
+      "category": "Văn hóa",
+      "icon": "🎭"
+    },
+    {
+      "id": 42,
+      "name": "Làm từ thiện",
+      "nameEn": "Volunteering",
+      "category": "Xã hội",
+      "icon": "❤️"
+    },
+    {
+      "id": 43,
+      "name": "Mua sắm",
+      "nameEn": "Shopping",
+      "category": "Phong cách",
+      "icon": "🛍️"
+    },
+    {
+      "id": 44,
+      "name": "Spa",
+      "nameEn": "Spa",
+      "category": "Sức khỏe",
+      "icon": "💆"
+    },
+    {
+      "id": 45,
+      "name": "Massage",
+      "nameEn": "Massage",
+      "category": "Sức khỏe",
+      "icon": "💆‍♂️"
+    },
+    {
+      "id": 46,
+      "name": "Chơi bida",
+      "nameEn": "Billiards",
+      "category": "Giải trí",
+      "icon": "🎱"
+    },
+    {
+      "id": 47,
+      "name": "Bowling",
+      "nameEn": "Bowling",
+      "category": "Giải trí",
+      "icon": "🎳"
+    },
+    {
+      "id": 48,
+      "name": "Picnic",
+      "nameEn": "Picnic",
+      "category": "Hoạt động ngoài trời",
+      "icon": "🧺"
+    },
+    {
+      "id": 49,
+      "name": "BBQ",
+      "nameEn": "BBQ",
+      "category": "Ăn uống",
+      "icon": "🍖"
+    },
+    {
+      "id": 50,
+      "name": "Lặn biển",
+      "nameEn": "Diving",
+      "category": "Thể thao",
+      "icon": "🤿"
+    }
+  ]
+}

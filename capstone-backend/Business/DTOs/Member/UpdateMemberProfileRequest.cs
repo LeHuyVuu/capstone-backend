@@ -18,6 +18,7 @@ public class UpdateMemberProfileRequest
     public decimal? HomeLongitude { get; set; }
     public decimal? BudgetMin { get; set; }
     public decimal? BudgetMax { get; set; }
+    public List<string>? Interests { get; set; }
     public List<string>? FavoritePets { get; set; }
     public bool? HasPet { get; set; }
     public bool? Smoking { get; set; }
