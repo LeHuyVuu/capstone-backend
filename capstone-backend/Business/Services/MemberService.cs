@@ -288,7 +288,7 @@ public class MemberService : IMemberService
 
         if (request.FavoritePets != null)
         {
-            memberProfile.FavoritePets = request.FavoritePets;
+            memberProfile.FavoritePets = System.Text.Json.JsonSerializer.Serialize(request.FavoritePets);
             hasUpdates = true;
         }
 
@@ -404,7 +404,7 @@ public class MemberService : IMemberService
         {
             MemberProfileId = memberProfile.Id,
             UserId = memberProfile.UserId,
-            FullName = memberProfile.FullName,
+            FullName = memberProfile.FullName ?? string.Empty,
             AvatarUrl = memberProfile.User?.AvatarUrl,
             PhoneNumber = memberProfile.User?.PhoneNumber,
             DateOfBirth = memberProfile.DateOfBirth,
