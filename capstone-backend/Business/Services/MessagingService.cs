@@ -864,9 +864,34 @@ public class MessagingService : IMessagingService
             {
                 var firstVenue = datePlan.DatePlanItems?.FirstOrDefault()?.VenueLocation;
                 var imageUrl = firstVenue?.CoverImage;
-                if (!string.IsNullOrWhiteSpace(imageUrl) && imageUrl.Contains(','))
+                
+                // Handle various imageUrl formats: ["url"], "url", url1,url2
+                if (!string.IsNullOrWhiteSpace(imageUrl))
                 {
-                    imageUrl = imageUrl.Split(',')[0].Trim();
+                    imageUrl = imageUrl.Trim();
+                    
+                    // Try to parse as JSON array first: ["url1","url2"]
+                    if (imageUrl.StartsWith("[") && imageUrl.EndsWith("]"))
+                    {
+                        try
+                        {
+                            var urls = System.Text.Json.JsonSerializer.Deserialize<string[]>(imageUrl);
+                            if (urls != null && urls.Length > 0)
+                            {
+                                imageUrl = urls[0];
+                            }
+                        }
+                        catch
+                        {
+                            // If JSON parse fails, try manual extraction
+                            imageUrl = imageUrl.Trim('[', ']', '"', ' ');
+                        }
+                    }
+                    // Handle comma-separated format
+                    else if (imageUrl.Contains(','))
+                    {
+                        imageUrl = imageUrl.Split(',')[0].Trim().Trim('"');
+                    }
                 }
 
                 var datePlanInfo = new DatePlanInfoDto
