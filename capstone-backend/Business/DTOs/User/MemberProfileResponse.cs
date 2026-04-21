@@ -11,6 +11,9 @@ public class MemberProfileResponse
     public string? FullName { get; set; }
     public DateOnly? DateOfBirth { get; set; }
     public string? Gender { get; set; }
+    public int? Age { get; set; }
+    public string? PersonalityResultCode { get; set; }
+    public List<string>? PersonalityDescription { get; set; }
     public string? Bio { get; set; }
     public string? RelationshipStatus { get; set; }
     public string? JobTitle { get; set; }

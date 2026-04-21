@@ -6,6 +6,7 @@ using capstone_backend.Business.DTOs.User;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
+using capstone_backend.Data.Static;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -435,6 +436,14 @@ public class UserService : IUserService
     {
         var memberProfile = user.MemberProfiles?.FirstOrDefault(p => p.IsDeleted != true);
         var venueOwnerProfile = user.VenueOwnerProfiles?.FirstOrDefault(p => p.IsDeleted != true);
+        var personalityTest = memberProfile != null
+            ? await _unitOfWork.PersonalityTests.GetCurrentPersonalityAsync(memberProfile.Id)
+            : null;
+
+        var personalityResultCode = personalityTest?.ResultCode;
+        var personalityDescription = !string.IsNullOrWhiteSpace(personalityResultCode)
+            ? MbtiContentStore.GetProfile(personalityResultCode).Description
+            : null;
 
         var equippedAccessories = new List<EquippedAccessoryBriefResponse>();
         if (memberProfile != null)
@@ -460,6 +469,9 @@ public class UserService : IUserService
                 FullName = memberProfile.FullName,
                 DateOfBirth = memberProfile.DateOfBirth,
                 Gender = memberProfile.Gender,
+                Age = CalculateAge(memberProfile.DateOfBirth),
+                PersonalityResultCode = personalityResultCode,
+                PersonalityDescription = personalityDescription,
                 Bio = memberProfile.Bio,
                 RelationshipStatus = memberProfile.RelationshipStatus,
                 HomeLatitude = memberProfile.HomeLatitude,
@@ -502,6 +514,20 @@ public class UserService : IUserService
         {
             return jsonString; // Return as-is if parsing fails
         }
+    }
+
+    private static int? CalculateAge(DateOnly? dateOfBirth)
+    {
+        if (!dateOfBirth.HasValue)
+            return null;
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var age = today.Year - dateOfBirth.Value.Year;
+
+        if (dateOfBirth.Value > today.AddYears(-age))
+            age--;
+
+        return age < 0 ? null : age;
     }
 
     /// <summary>
