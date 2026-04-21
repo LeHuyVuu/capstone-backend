@@ -27,6 +27,18 @@ public partial class MemberProfile
 
     public string? RelationshipStatus { get; set; }
 
+    public string? JobTitle { get; set; }
+
+    public string? EducationLevel { get; set; }
+
+    public int? Height { get; set; }
+
+    public int? Weight { get; set; }
+
+    public string? City { get; set; }
+
+    public string? District { get; set; }
+
     [Precision(10, 8)]
     public decimal? HomeLatitude { get; set; }
 
@@ -38,6 +50,13 @@ public partial class MemberProfile
 
     [Precision(18, 2)]
     public decimal? BudgetMax { get; set; }
+
+    [Column(TypeName = "jsonb")]
+    public string? FavoritePets { get; set; }
+
+    public bool? HasPet { get; set; }
+
+    public bool? Smoking { get; set; }
 
     [Column(TypeName = "jsonb")]
     public string? Interests { get; set; }

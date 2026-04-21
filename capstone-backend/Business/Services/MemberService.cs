@@ -244,6 +244,66 @@ public class MemberService : IMemberService
             hasUpdates = true;
         }
 
+        if (!string.IsNullOrWhiteSpace(request.RelationshipStatus))
+        {
+            memberProfile.RelationshipStatus = request.RelationshipStatus;
+            hasUpdates = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.JobTitle))
+        {
+            memberProfile.JobTitle = request.JobTitle;
+            hasUpdates = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.EducationLevel))
+        {
+            memberProfile.EducationLevel = request.EducationLevel;
+            hasUpdates = true;
+        }
+
+        if (request.Height.HasValue)
+        {
+            memberProfile.Height = request.Height.Value;
+            hasUpdates = true;
+        }
+
+        if (request.Weight.HasValue)
+        {
+            memberProfile.Weight = request.Weight.Value;
+            hasUpdates = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.City))
+        {
+            memberProfile.City = request.City;
+            hasUpdates = true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.District))
+        {
+            memberProfile.District = request.District;
+            hasUpdates = true;
+        }
+
+        if (request.FavoritePets != null)
+        {
+            memberProfile.FavoritePets = request.FavoritePets;
+            hasUpdates = true;
+        }
+
+        if (request.HasPet.HasValue)
+        {
+            memberProfile.HasPet = request.HasPet.Value;
+            hasUpdates = true;
+        }
+
+        if (request.Smoking.HasValue)
+        {
+            memberProfile.Smoking = request.Smoking.Value;
+            hasUpdates = true;
+        }
+
         if (request.HomeLatitude.HasValue)
         {
             memberProfile.HomeLatitude = request.HomeLatitude.Value;
@@ -345,10 +405,19 @@ public class MemberService : IMemberService
             Gender = memberProfile.Gender,
             Bio = memberProfile.Bio,
             RelationshipStatus = memberProfile.RelationshipStatus,
+            JobTitle = memberProfile.JobTitle,
+            EducationLevel = memberProfile.EducationLevel,
+            Height = memberProfile.Height,
+            Weight = memberProfile.Weight,
+            City = memberProfile.City,
+            District = memberProfile.District,
             HomeLatitude = memberProfile.HomeLatitude,
             HomeLongitude = memberProfile.HomeLongitude,
             BudgetMin = memberProfile.BudgetMin,
             BudgetMax = memberProfile.BudgetMax,
+            FavoritePets = memberProfile.FavoritePets,
+            HasPet = memberProfile.HasPet,
+            Smoking = memberProfile.Smoking,
             Interests = memberProfile.Interests,
             AvailableTime = memberProfile.AvailableTime,
             Address = memberProfile.address,
