@@ -40,4 +40,5 @@ public class MemberProfileResponse
 
     public string? InviteCode { get; set; }
     public bool CanSendInvitation { get; set; }
+    public int? Age { get; set; }
 }

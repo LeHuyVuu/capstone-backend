@@ -348,6 +348,12 @@ public class MemberService : IMemberService
             hasUpdates = true;
         }
 
+        if(request.Age.HasValue)
+        {
+            memberProfile.Age = request.Age.Value;
+            hasUpdates = true;
+        }
+
         if (request.PhoneNumber != null && memberProfile.User != null)
         {
             // Validate phone number format (Vietnamese phone number)
@@ -422,7 +428,8 @@ public class MemberService : IMemberService
             AvailableTime = memberProfile.AvailableTime,
             Address = memberProfile.address,
             Area = memberProfile.area,
-            InviteCode = memberProfile.InviteCode
+            InviteCode = memberProfile.InviteCode,
+            Age = memberProfile.Age
         };
     }
 }

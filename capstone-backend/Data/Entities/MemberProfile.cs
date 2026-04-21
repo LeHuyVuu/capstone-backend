@@ -25,6 +25,8 @@ public partial class MemberProfile
 
     public string? Bio { get; set; }
 
+    public int? Age { get; set; }
+
     public string? RelationshipStatus { get; set; }
 
     public string? JobTitle { get; set; }

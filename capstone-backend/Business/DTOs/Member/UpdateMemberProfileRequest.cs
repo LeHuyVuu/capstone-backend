@@ -6,6 +6,7 @@ public class UpdateMemberProfileRequest
     public DateOnly? DateOfBirth { get; set; }
     public string? Gender { get; set; }
     public string? Bio { get; set; }
+    public int? Age { get; set; }
     public string? RelationshipStatus { get; set; }
     public string? JobTitle { get; set; }
     public string? EducationLevel { get; set; }
