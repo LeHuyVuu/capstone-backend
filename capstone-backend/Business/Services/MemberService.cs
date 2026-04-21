@@ -396,7 +396,7 @@ public class MemberService : IMemberService
 
         return new MemberProfileResponse
         {
-            Id = memberProfile.Id,
+            MemberProfileId = memberProfile.Id,
             UserId = memberProfile.UserId,
             FullName = memberProfile.FullName,
             AvatarUrl = memberProfile.User?.AvatarUrl,
