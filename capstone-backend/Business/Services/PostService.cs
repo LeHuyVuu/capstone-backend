@@ -156,8 +156,8 @@ namespace capstone_backend.Business.Services
             if (existingPost.AuthorId != member.Id)
                 throw new Exception("Bạn không có quyền chỉnh sửa bài viết này");
 
-            if (existingPost.Status == PostStatus.CANCELLED.ToString())
-                throw new Exception("Bài viết đã bị hủy, không thể chỉnh sửa");
+            //if (existingPost.Status == PostStatus.CANCELLED.ToString())
+            //    throw new Exception("Bài viết đã bị hủy, không thể chỉnh sửa");
 
             existingPost.IsDeleted = true;
             return await _unitOfWork.SaveChangesAsync();
