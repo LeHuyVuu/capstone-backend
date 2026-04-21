@@ -486,9 +486,11 @@ public class CoupleInvitationService : ICoupleInvitationService
         {
             InvitationId = i.Id,
             SenderMemberId = i.SenderMemberId,
+            SenderUserId = i.SenderMember?.UserId ?? 0,
             SenderName = i.SenderMember?.FullName ?? "Unknown",
             SenderAvatarUrl = i.SenderMember?.User?.AvatarUrl,
             ReceiverMemberId = i.ReceiverMemberId,
+            ReceiverUserId = i.ReceiverMember?.UserId ?? 0,
             ReceiverName = "", // Not needed for received invitations
             ReceiverAvatarUrl = null,
             InviteCodeUsed = i.InviteCodeUsed,
@@ -511,9 +513,11 @@ public class CoupleInvitationService : ICoupleInvitationService
         {
             InvitationId = i.Id,
             SenderMemberId = i.SenderMemberId,
+            SenderUserId = i.SenderMember?.UserId ?? 0,
             SenderName = "", // Not needed for sent invitations
             SenderAvatarUrl = null,
             ReceiverMemberId = i.ReceiverMemberId,
+            ReceiverUserId = i.ReceiverMember?.UserId ?? 0,
             ReceiverName = i.ReceiverMember?.FullName ?? "Unknown",
             ReceiverAvatarUrl = i.ReceiverMember?.User?.AvatarUrl,
             InviteCodeUsed = i.InviteCodeUsed,

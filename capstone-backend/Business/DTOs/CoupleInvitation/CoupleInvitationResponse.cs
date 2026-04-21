@@ -7,9 +7,11 @@ public class CoupleInvitationResponse
 {
     public int InvitationId { get; set; }
     public int SenderMemberId { get; set; }
+    public int SenderUserId { get; set; }
     public string SenderName { get; set; } = string.Empty;
     public string? SenderAvatarUrl { get; set; }
     public int ReceiverMemberId { get; set; }
+    public int ReceiverUserId { get; set; }
     public string ReceiverName { get; set; } = string.Empty;
     public string? ReceiverAvatarUrl { get; set; }
     public string? InviteCodeUsed { get; set; }
