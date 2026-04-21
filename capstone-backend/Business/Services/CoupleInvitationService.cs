@@ -33,11 +33,29 @@ public class CoupleInvitationService : ICoupleInvitationService
             return (false, "Không thể gửi lời mời cho chính mình", null);
         }
 
+        // Get sender to check gender
+        var sender = await _unitOfWork.MembersProfile.GetByIdAsync(senderMemberId);
+        if (sender == null || sender.IsDeleted == true)
+        {
+            return (false, "Không tìm thấy thông tin của bạn", null);
+        }
+
         // Check if receiver exists
         var receiver = await _unitOfWork.MembersProfile.GetByIdAsync(request.ReceiverMemberId);
         if (receiver == null)
         {
             return (false, "Không tìm thấy member này", null);
+        }
+
+        // Gender validation - only opposite genders can send invitations
+        if (string.IsNullOrWhiteSpace(sender.Gender) || string.IsNullOrWhiteSpace(receiver.Gender))
+        {
+            return (false, "Cả hai người cần có giới tính để ghép đôi", null);
+        }
+
+        if (sender.Gender == receiver.Gender)
+        {
+            return (false, "Chỉ có thể gửi lời mời ghép đôi cho giới tính khác", null);
         }
 
         // Send invitation (without invite code)
@@ -163,7 +181,18 @@ public class CoupleInvitationService : ICoupleInvitationService
             return (false, "Bạn không còn SINGLE nữa", null);
         }
 
-        // Edge case 6: Both must not have active couple
+        // Edge case 6: Gender validation - only opposite genders can be couple
+        if (string.IsNullOrWhiteSpace(invitation.SenderMember.Gender) || string.IsNullOrWhiteSpace(invitation.ReceiverMember.Gender))
+        {
+            return (false, "Cả hai người cần có giới tính để ghép đôi", null);
+        }
+
+        if (invitation.SenderMember.Gender == invitation.ReceiverMember.Gender)
+        {
+            return (false, "Chỉ có thể ghép đôi với giới tính khác", null);
+        }
+
+        // Edge case 8: Both must not have active couple
         var senderHasCouple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(invitation.SenderMemberId);
         if (senderHasCouple != null)
         {
