@@ -26,7 +26,7 @@ public class MemberProfileResponse
     public decimal? HomeLongitude { get; set; }
     public decimal? BudgetMin { get; set; }
     public decimal? BudgetMax { get; set; }
-    public string? FavoritePets { get; set; }
+    public object? FavoritePets { get; set; }
     public bool? HasPet { get; set; }
     public bool? Smoking { get; set; }
     public object? Interests { get; set; }

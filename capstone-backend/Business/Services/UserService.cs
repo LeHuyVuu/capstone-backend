@@ -474,13 +474,28 @@ public class UserService : IUserService
                 PersonalityDescription = personalityDescription,
                 Bio = memberProfile.Bio,
                 RelationshipStatus = memberProfile.RelationshipStatus,
+                JobTitle = memberProfile.JobTitle,
+                EducationLevel = memberProfile.EducationLevel,
+                Height = memberProfile.Height,
+                Weight = memberProfile.Weight,
+                City = memberProfile.City,
+                District = memberProfile.District,
                 HomeLatitude = memberProfile.HomeLatitude,
                 HomeLongitude = memberProfile.HomeLongitude,
                 BudgetMin = memberProfile.BudgetMin,
                 BudgetMax = memberProfile.BudgetMax,
+                FavoritePets = string.IsNullOrWhiteSpace(memberProfile.FavoritePets) 
+                    ? null 
+                    : System.Text.Json.JsonSerializer.Deserialize<object>(memberProfile.FavoritePets),
+                HasPet = memberProfile.HasPet,
+                Smoking = memberProfile.Smoking,
                 Interests = TryParseJson(memberProfile.Interests),
                 AvailableTime = TryParseJson(memberProfile.AvailableTime),
+                Address = memberProfile.address,
+                Area = memberProfile.area,
                 InviteCode = memberProfile.InviteCode,
+                PhoneNumber = user.PhoneNumber,
+                AvatarUrl = user.AvatarUrl,
 
                 EquippedAccessories = equippedAccessories
             } : null,
