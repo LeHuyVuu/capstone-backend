@@ -4,6 +4,7 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using capstone_backend.Data.Repositories;
+using capstone_backend.Data.Static;
 using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Services;
@@ -529,10 +530,18 @@ public class CoupleInvitationService : ICoupleInvitationService
     }
 
     public async Task<List<MemberProfileResponse>> SearchMembersAsync(
-        string query,
+        string? query,
         int currentMemberId,
         int page,
-        int pageSize)
+        int pageSize,
+        int? ageFrom = null,
+        int? ageTo = null,
+        string? city = null,
+        string? district = null,
+        int? heightFrom = null,
+        int? heightTo = null,
+        int? weightFrom = null,
+        int? weightTo = null)
     {
         var currentMember = await _unitOfWork.Context.MemberProfiles
             .Include(m => m.User)
@@ -550,7 +559,89 @@ public class CoupleInvitationService : ICoupleInvitationService
             .Where(m => m.IsDeleted != true && m.Id != currentMemberId && m.FullName != null &&
                        m.User != null && m.User.IsDeleted != true && m.User.Role == "MEMBER");
 
+        var hasAdvancedFilters = ageFrom.HasValue || ageTo.HasValue ||
+                                 !string.IsNullOrWhiteSpace(city) || !string.IsNullOrWhiteSpace(district) ||
+                                 heightFrom.HasValue || heightTo.HasValue ||
+                                 weightFrom.HasValue || weightTo.HasValue;
+
+        if (hasAdvancedFilters)
+        {
+            if (ageFrom.HasValue)
+            {
+                var maxBirthDate = DateOnly.FromDateTime(DateTime.UtcNow.Date.AddYears(-ageFrom.Value));
+                baseQuery = baseQuery.Where(m => m.DateOfBirth.HasValue && m.DateOfBirth.Value <= maxBirthDate);
+            }
+
+            if (ageTo.HasValue)
+            {
+                var minBirthDate = DateOnly.FromDateTime(DateTime.UtcNow.Date.AddYears(-(ageTo.Value + 1)).AddDays(1));
+                baseQuery = baseQuery.Where(m => m.DateOfBirth.HasValue && m.DateOfBirth.Value >= minBirthDate);
+            }
+
+            if (!string.IsNullOrWhiteSpace(city))
+            {
+                var normalizedCity = city.Trim();
+                baseQuery = baseQuery.Where(m => m.City != null && EF.Functions.Like(m.City, $"%{normalizedCity}%"));
+            }
+
+            if (!string.IsNullOrWhiteSpace(district))
+            {
+                var normalizedDistrict = district.Trim();
+                baseQuery = baseQuery.Where(m => m.District != null && EF.Functions.Like(m.District, $"%{normalizedDistrict}%"));
+            }
+
+            if (heightFrom.HasValue)
+            {
+                baseQuery = baseQuery.Where(m => m.Height.HasValue && m.Height.Value >= heightFrom.Value);
+            }
+
+            if (heightTo.HasValue)
+            {
+                baseQuery = baseQuery.Where(m => m.Height.HasValue && m.Height.Value <= heightTo.Value);
+            }
+
+            if (weightFrom.HasValue)
+            {
+                baseQuery = baseQuery.Where(m => m.Weight.HasValue && m.Weight.Value >= weightFrom.Value);
+            }
+
+            if (weightTo.HasValue)
+            {
+                baseQuery = baseQuery.Where(m => m.Weight.HasValue && m.Weight.Value <= weightTo.Value);
+            }
+        }
+
         List<MemberProfile> candidates;
+
+        // If any advanced filters are provided, return results based on those filters directly.
+        if (hasAdvancedFilters)
+        {
+            if (string.IsNullOrWhiteSpace(normalizedQuery))
+            {
+                candidates = await baseQuery
+                    .OrderBy(m => m.FullName)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+            }
+            else
+            {
+                candidates = await baseQuery
+                    .OrderBy(m => m.FullName)
+                    .ToListAsync();
+
+                candidates = candidates
+                    .Where(m => Helpers.VietnameseTextHelper.NormalizeForSearch(m.FullName ?? "").Contains(normalizedQuery))
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+            }
+
+            if (!candidates.Any())
+                return new List<MemberProfileResponse>();
+
+            return await BuildMemberResponsesAsync(currentMemberId, currentMember, candidates);
+        }
 
         // Khi query = null, áp dụng matching algorithm
         if (string.IsNullOrWhiteSpace(normalizedQuery))
@@ -568,14 +659,13 @@ public class CoupleInvitationService : ICoupleInvitationService
 
             // Filter chỉ gender (bắt buộc) và area (bắt buộc phải bằng nhau)
             var matchingMembers = await baseQuery
-                .Where(m => m.Gender == targetGender && m.area == currentMember.area)
+                .Where(m => m.Gender == targetGender)
                 .Include(m => m.PersonalityTests.Where(pt => pt.IsDeleted != true && pt.Status == PersonalityTestStatus.COMPLETED.ToString()))
                 .ToListAsync();
 
             // Sắp xếp theo độ ưu tiên (không loại bỏ, chỉ ưu tiên): Mood > Personality > Interests > Name
             candidates = matchingMembers
-                .OrderByDescending(m => m.MoodTypesId == currentMember.MoodTypesId)  // Ưu tiên 1: Cùng mood
-                .ThenByDescending(m => 
+                .OrderByDescending(m => 
                 {
                     // Ưu tiên 2: Cùng personality
                     if (string.IsNullOrWhiteSpace(currentPersonality)) return false;
@@ -652,6 +742,22 @@ public class CoupleInvitationService : ICoupleInvitationService
             .Distinct()
             .ToHashSet();
 
+        // Batch query latest completed personality result for members in this page.
+        var personalityRows = await _unitOfWork.Context.PersonalityTests
+            .Where(pt => memberIds.Contains(pt.MemberId) &&
+                        pt.IsDeleted != true &&
+                        pt.Status == PersonalityTestStatus.COMPLETED.ToString() &&
+                        pt.ResultCode != null)
+            .OrderByDescending(pt => pt.TakenAt)
+            .Select(pt => new { pt.MemberId, pt.ResultCode, pt.TakenAt })
+            .ToListAsync();
+
+        var personalityByMember = personalityRows
+            .GroupBy(x => x.MemberId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.First().ResultCode);
+
         // Build response
         return pagedMembers.Select(member =>
         {
@@ -659,6 +765,19 @@ public class CoupleInvitationService : ICoupleInvitationService
             // Only check: no pending invitation between them
             var noPendingInvitation = !pendingMemberIds.Contains(member.Id);
             var canSend = noPendingInvitation;
+            personalityByMember.TryGetValue(member.Id, out var personalityResultCode);
+
+            List<string>? personalityDescription = null;
+            if (!string.IsNullOrWhiteSpace(personalityResultCode))
+            {
+                var mbtiInfo = MbtiContentStore.GetProfile(personalityResultCode);
+                if (!string.IsNullOrWhiteSpace(mbtiInfo.PersonalityDescription))
+                {
+                    personalityDescription = mbtiInfo.PersonalityDescription
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .ToList();
+                }
+            }
 
             return new MemberProfileResponse
             {
@@ -666,14 +785,28 @@ public class CoupleInvitationService : ICoupleInvitationService
                 UserId = member.UserId,
                 FullName = member.FullName ?? "Unknown",
                 AvatarUrl = member.User?.AvatarUrl,
+                PhoneNumber = member.User?.PhoneNumber,
                 DateOfBirth = member.DateOfBirth,
                 Gender = member.Gender,
+                PersonalityResultCode = personalityResultCode,
+                PersonalityDescription = personalityDescription,
                 Bio = member.Bio,
                 RelationshipStatus = member.RelationshipStatus ?? RelationshipStatus.SINGLE.ToString(),
+                JobTitle = member.JobTitle,
+                EducationLevel = member.EducationLevel,
+                Height = member.Height,
+                Weight = member.Weight,
+                City = member.City,
+                District = member.District,
                 HomeLatitude = member.HomeLatitude,
                 HomeLongitude = member.HomeLongitude,
                 BudgetMin = member.BudgetMin,
                 BudgetMax = member.BudgetMax,
+                FavoritePets = string.IsNullOrWhiteSpace(member.FavoritePets)
+                    ? null
+                    : System.Text.Json.JsonSerializer.Deserialize<object>(member.FavoritePets),
+                HasPet = member.HasPet,
+                Smoking = member.Smoking,
                 Interests = string.IsNullOrWhiteSpace(member.Interests) 
                     ? null 
                     : System.Text.Json.JsonSerializer.Deserialize<object>(member.Interests),
@@ -683,7 +816,8 @@ public class CoupleInvitationService : ICoupleInvitationService
                 Address = member.address,
                 Area = member.area,
                 InviteCode = member.InviteCode,
-                CanSendInvitation = canSend
+                CanSendInvitation = canSend,
+                Age = member.Age
             };
         }).ToList();
     }

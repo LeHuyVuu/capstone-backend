@@ -323,12 +323,32 @@ public class CoupleInvitationController : BaseController
     public async Task<IActionResult> SearchMembers(
         [FromQuery] string? query = null,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] int pageSize = 20,
+        [FromQuery] int? ageFrom = null,
+        [FromQuery] int? ageTo = null,
+        [FromQuery] string? city = null,
+        [FromQuery] string? district = null,
+        [FromQuery] int? heightFrom = null,
+        [FromQuery] int? heightTo = null,
+        [FromQuery] int? weightFrom = null,
+        [FromQuery] int? weightTo = null)
     {
         try
         {
             var memberId = await GetCurrentMemberIdAsync();
-            var members = await _service.SearchMembersAsync(query, memberId, page, pageSize);
+            var members = await _service.SearchMembersAsync(
+                query,
+                memberId,
+                page,
+                pageSize,
+                ageFrom,
+                ageTo,
+                city,
+                district,
+                heightFrom,
+                heightTo,
+                weightFrom,
+                weightTo);
 
             return OkResponse(new
             {

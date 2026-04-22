@@ -11,5 +11,17 @@ public interface ICoupleInvitationService
     Task<(bool Success, string Message)> BreakupAsync(int currentMemberId);
     Task<List<CoupleInvitationResponse>> GetReceivedInvitationsAsync(int memberId, string? status, int page, int pageSize);
     Task<List<CoupleInvitationResponse>> GetSentInvitationsAsync(int memberId, string? status, int page, int pageSize);
-    Task<List<MemberProfileResponse>> SearchMembersAsync(string query, int currentMemberId, int page, int pageSize);
+    Task<List<MemberProfileResponse>> SearchMembersAsync(
+        string? query,
+        int currentMemberId,
+        int page,
+        int pageSize,
+        int? ageFrom = null,
+        int? ageTo = null,
+        string? city = null,
+        string? district = null,
+        int? heightFrom = null,
+        int? heightTo = null,
+        int? weightFrom = null,
+        int? weightTo = null);
 }
