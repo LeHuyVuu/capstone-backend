@@ -107,7 +107,7 @@ public class MemberService : IMemberService
             StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
             Status = CoupleProfileStatus.ACTIVE.ToString(),
             TotalPoints = 0,
-            InteractionPoints = 0,
+            RankingPoints = 0,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             IsDeleted = false

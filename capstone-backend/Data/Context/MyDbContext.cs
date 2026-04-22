@@ -455,7 +455,7 @@ public partial class MyDbContext : DbContext
             entity.Property(e => e.MemberId2).HasColumnName("member_id_2");
             entity.Property(e => e.BudgetMin).HasDefaultValueSql("0");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("now()");
-            entity.Property(e => e.InteractionPoints).HasDefaultValue(0);
+            entity.Property(e => e.RankingPoints).HasDefaultValue(0);
             entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.TotalPoints).HasDefaultValue(0);
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("now()");

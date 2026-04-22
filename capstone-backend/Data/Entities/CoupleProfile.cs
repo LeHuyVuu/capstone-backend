@@ -35,7 +35,7 @@ public partial class CoupleProfile
 
     public int? TotalPoints { get; set; }
 
-    public int? InteractionPoints { get; set; }
+    public int? RankingPoints { get; set; }
 
     public string? Status { get; set; }
 

@@ -65,6 +65,8 @@ public partial class VenueLocation
 
     public string? BusinessLicenseUrl { get; set; }
 
+    public decimal? PercentMatched { get; set; } = 100m;
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

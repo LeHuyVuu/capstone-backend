@@ -52,7 +52,7 @@ namespace capstone_backend.Business.Jobs.Leaderboard
                     PeriodStart = periodStart,
                     PeriodEnd = periodEnd,
                     SeasonKey = currentSeasonKey,
-                    TotalPoints = couple.InteractionPoints ?? 0,
+                    TotalPoints = couple.RankingPoints ?? 0,
                     RankPosition = 0,
                     Status = LeaderboardStatus.ACTIVE.ToString(),
                     UpdatedAt = now
@@ -87,7 +87,7 @@ namespace capstone_backend.Business.Jobs.Leaderboard
 
             foreach (var couple in couples)
             {
-                couple.InteractionPoints = 0;
+                couple.RankingPoints = 0;
                 couple.UpdatedAt = now;
             }
 

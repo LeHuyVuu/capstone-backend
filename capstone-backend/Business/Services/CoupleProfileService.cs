@@ -60,7 +60,7 @@ public class CoupleProfileService : ICoupleProfileService
             BudgetMin = coupleWithDetails.BudgetMin,
             BudgetMax = coupleWithDetails.BudgetMax,
             TotalPoints = coupleWithDetails.TotalPoints,
-            InteractionPoints = coupleWithDetails.InteractionPoints,
+            InteractionPoints = coupleWithDetails.RankingPoints,
             Status = coupleWithDetails.Status,
             CreatedAt = coupleWithDetails.CreatedAt,
             UpdatedAt = coupleWithDetails.UpdatedAt,

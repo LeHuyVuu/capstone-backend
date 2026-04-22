@@ -96,7 +96,7 @@ namespace capstone_backend.Business.Jobs.Like
 
                     var totalInteractionPoints = m1Post + m2Post + m1Review + m2Review;
 
-                    couple.InteractionPoints = totalInteractionPoints;
+                    couple.RankingPoints = totalInteractionPoints;
                     couple.UpdatedAt = now;
                     _unitOfWork.CoupleProfiles.Update(couple);
 
