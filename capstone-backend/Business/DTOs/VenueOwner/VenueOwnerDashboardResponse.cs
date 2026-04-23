@@ -46,6 +46,8 @@ public class VenueOwnerDashboardResponse
     public int ActiveAdvertisements { get; set; }
     public int PendingAdvertisements { get; set; }
     public int RejectedAdvertisements { get; set; }
+
+    public int DraftAdvertisements { get; set; }
     public List<AdvertisementSummary> RecentAdvertisements { get; set; } = new();
     
     // Top Performing Venue

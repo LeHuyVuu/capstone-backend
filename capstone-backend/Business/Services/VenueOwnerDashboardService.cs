@@ -238,6 +238,8 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
                 status == AdvertisementStatus.PENDING.ToString()),
             RejectedAdvertisements = normalizedAdvertisementStatuses.Count(status =>
                 status == AdvertisementStatus.REJECTED.ToString()),
+            DraftAdvertisements = normalizedAdvertisementStatuses.Count(status =>
+                status == AdvertisementStatus.DRAFT.ToString()),
             RecentAdvertisements = recentAds,
 
             // Top venue
