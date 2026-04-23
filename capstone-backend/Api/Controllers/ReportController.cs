@@ -27,7 +27,7 @@ public class ReportController : BaseController
     }
 
     /// <summary>
-    /// Member tạo report mới
+    /// Member/VenueOnwer (review) tạo report mới
     /// </summary>
     [HttpPost]
     public async Task<IActionResult> CreateReport([FromBody] CreateReportRequest request)
