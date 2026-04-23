@@ -18,6 +18,7 @@ namespace capstone_backend.Business.DTOs.Review
         public DateTime? UpdatedAt { get; set; }
         public List<string>? ImageUrls { get; set; }
         public bool? IsMatched { get; set; }
+        public bool? IsRelevant { get; set; }
 
         public ReviewMemberInfo? Member { get; set; }
         public ReviewVenueInfo? Venue { get; set; }

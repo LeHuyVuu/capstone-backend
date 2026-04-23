@@ -44,6 +44,8 @@ public partial class Accessory
 
     public string? Status { get; set; }
 
+    public bool? IsPurchasable { get; set; }
+
     [InverseProperty("Accessory")]
     public virtual ICollection<MemberAccessory> MemberAccessories { get; set; } = new List<MemberAccessory>();
 

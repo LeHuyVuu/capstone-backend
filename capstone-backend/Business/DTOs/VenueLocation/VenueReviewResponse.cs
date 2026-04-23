@@ -34,6 +34,8 @@ public class VenueReviewResponse
     /// </summary>
     public bool IsMatched { get; set; }
 
+    public bool? IsRelevant { get; set; }
+
     /// <summary>
     /// Danh sách likes của review
     /// </summary>

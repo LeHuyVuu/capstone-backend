@@ -61,6 +61,7 @@ namespace capstone_backend.Business.Services
                 a =>
                     a.IsDeleted == false &&
                     a.Status == AccessoryStatus.ACTIVE.ToString() &&
+                    a.IsPurchasable == true &&
                     (query.Type == null || a.Type == query.Type.ToString()) &&
                     (a.AvailableFrom == null || a.AvailableFrom <= now) &&
                     (a.AvailableTo == null || a.AvailableTo >= now) &&
@@ -132,7 +133,7 @@ namespace capstone_backend.Business.Services
             var partnerId = couple.MemberId1 == member.Id ? couple.MemberId2 : couple.MemberId1;
 
             var accessory = await _unitOfWork.Accessories.GetByIdAsync(accessoryId);
-            if (accessory == null || accessory.IsDeleted == true || accessory.Status != AccessoryStatus.ACTIVE.ToString())
+            if (accessory == null || accessory.IsDeleted == true || accessory.Status != AccessoryStatus.ACTIVE.ToString() || accessory.IsPurchasable != true)
                 return null;
 
             var response = _mapper.Map<AccessoryDetailResponse>(accessory);
@@ -178,6 +179,9 @@ namespace capstone_backend.Business.Services
 
             if (accessory.AvailableFrom != null && accessory.AvailableFrom > now)
                 throw new Exception("Phụ kiện chưa được mở bán");
+
+            if (accessory.IsPurchasable != true)
+                throw new Exception("Phụ kiện này không thể mua");
 
             if (accessory.AvailableTo != null && accessory.AvailableTo < now)
                 throw new Exception("Phụ kiện đã ngừng bán");
