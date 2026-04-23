@@ -82,6 +82,17 @@ namespace capstone_backend.Business.Services
                         throw new Exception("Reminder seconds phải là số nguyên trong khoảng 5-43200");
                     break;
 
+                case "VENUE_TAG_GOOD_THRESHOLD":
+                case "VENUE_TAG_WARNING_THRESHOLD":
+                    if (!decimal.TryParse(value, out var threshold) || threshold < 0 || threshold > 100)
+                        throw new Exception("Ngưỡng phải là số trong khoảng 0-100");
+                    break;
+
+                case "VENUE_TAG_MIN_REVIEWS":
+                    if (!int.TryParse(value, out var minReviews) || minReviews < 1 || minReviews > 100)
+                        throw new Exception("Số reviews tối thiểu phải là số nguyên trong khoảng 1-100");
+                    break;
+
                 default:
                     throw new Exception("Config key không hợp lệ");
             }

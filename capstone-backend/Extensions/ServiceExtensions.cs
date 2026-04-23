@@ -302,6 +302,9 @@ public static class ServiceExtensions
         // Register Interest Service
         services.AddScoped<IInterestService, InterestService>();
 
+        // Register Venue Tag Analysis Service
+        services.AddScoped<IVenueTagAnalysisService, VenueTagAnalysisService>();
+
         // Background listener for Firebase Realtime Database location updates
         services.AddHostedService<FirebaseLocationListenerHostedService>();
 
