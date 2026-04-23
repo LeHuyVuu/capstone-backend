@@ -266,6 +266,7 @@ namespace capstone_backend.Business.Services
                 review.Status = ReviewStatus.PENDING.ToString();
                 review.IsAnonymous = request.IsAnonymous;
                 review.IsMatched = request.IsMatched;
+                review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id);
 
                 checkIn.IsValid = false;
                 _unitOfWork.CheckInHistories.Update(checkIn);
@@ -312,6 +313,31 @@ namespace capstone_backend.Business.Services
             BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessReviewModerationAndChallengeAsync(review.Id, moderationResults, userId, review.VenueId, hasImage));
 
             return review.Id;
+        }
+
+        private async Task<string?> BuildCoupleMoodSnapshotAsync(int memberId)
+        {
+            var couple = await _unitOfWork.Context.CoupleProfiles
+                .AsNoTracking()
+                .Include(c => c.CouplePersonalityType)
+                .Include(c => c.CoupleMoodType)
+                .FirstOrDefaultAsync(c =>
+                    c.IsDeleted != true &&
+                    c.Status == CoupleProfileStatus.ACTIVE.ToString() &&
+                    (c.MemberId1 == memberId || c.MemberId2 == memberId));
+
+            if (couple == null)
+                return null;
+
+            var values = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(couple.CouplePersonalityType?.Name))
+                values.Add(couple.CouplePersonalityType.Name.Trim());
+
+            if (!string.IsNullOrWhiteSpace(couple.CoupleMoodType?.Name))
+                values.Add(couple.CoupleMoodType.Name.Trim());
+
+            return values.Any() ? string.Join(",", values) : null;
         }
 
         private bool CalculateIsMatched(CoupleProfile? couple, VenueLocation venue)
@@ -433,6 +459,7 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Không tìm thấy đánh giá hợp lệ");
 
             _mapper.Map(request, review);
+            review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id);
 
             if (request.DeletedImageUrls != null && request.DeletedImageUrls.Any())
             {
