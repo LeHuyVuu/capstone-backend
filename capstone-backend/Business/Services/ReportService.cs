@@ -238,6 +238,83 @@ public class ReportService : IReportService
         };
     }
 
+    public async Task<ReportDto> CreateVenueOwnerReviewReportAsync(
+        int reviewId,
+        CreateVenueOwnerReviewReportRequest request,
+        int venueOwnerUserId)
+    {
+        var venueOwnerProfile = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(venueOwnerUserId);
+        if (venueOwnerProfile == null)
+            throw new UnauthorizedAccessException("Không tìm thấy hồ sơ chủ địa điểm");
+
+        var review = await _unitOfWork.Context.Reviews
+            .Include(r => r.Venue)
+            .FirstOrDefaultAsync(r => r.Id == reviewId && r.IsDeleted != true);
+
+        if (review == null)
+            throw new InvalidOperationException("Review không tồn tại");
+
+        if (review.Venue == null || review.Venue.IsDeleted == true || review.Venue.VenueOwnerId != venueOwnerProfile.Id)
+            throw new UnauthorizedAccessException("Bạn chỉ có thể tố cáo review thuộc địa điểm của mình");
+
+        var reportType = await _unitOfWork.Context.ReportTypes
+            .FirstOrDefaultAsync(rt => rt.Id == request.ReportTypeId && rt.IsDeleted != true && rt.IsActive == true);
+
+        if (reportType == null)
+            throw new InvalidOperationException($"Report type không hợp lệ: {request.ReportTypeId}");
+
+        if (string.Equals(reportType.TypeName, "VOUCHER_DISPUTE", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Loại report này không áp dụng cho review");
+
+        var hasPendingReport = await _unitOfWork.Context.Reports.AnyAsync(r =>
+            r.IsDeleted != true &&
+            r.TargetType == ReportTargetType.REVIEW.ToString() &&
+            r.TargetId == reviewId &&
+            r.ReportTypeId == request.ReportTypeId &&
+            r.Status == ReportStatus.PENDING.ToString());
+
+        if (hasPendingReport)
+            throw new InvalidOperationException("Review này đang có tố cáo cùng loại đang được xử lý");
+
+        var reporterProfile = await _unitOfWork.MembersProfile.GetFirstAsync(
+            predicate: m => m.UserId == venueOwnerUserId && m.IsDeleted != true);
+
+        var evidenceSnapshot = await BuildEvidenceSnapshotAsync(ReportTargetType.REVIEW, reviewId);
+
+        var report = new Data.Entities.Report
+        {
+            ReporterId = reporterProfile?.Id,
+            ReportTypeId = request.ReportTypeId,
+            TargetType = ReportTargetType.REVIEW.ToString(),
+            TargetId = reviewId,
+            EvidenceSnapshot = evidenceSnapshot,
+            Reason = request.Reason?.Trim(),
+            Status = ReportStatus.PENDING.ToString(),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+
+        await _unitOfWork.Reports.AddAsync(report);
+        await _unitOfWork.SaveChangesAsync();
+
+        return new ReportDto
+        {
+            Id = report.Id,
+            ReporterId = report.ReporterId,
+            ReporterName = reporterProfile?.FullName ?? venueOwnerProfile.BusinessName ?? $"Venue Owner #{venueOwnerProfile.Id}",
+            ReportTypeId = report.ReportTypeId,
+            ReportTypeName = reportType.TypeName,
+            TargetType = ReportTargetType.REVIEW,
+            TargetId = report.TargetId,
+            EvidenceSnapshot = ParseEvidenceSnapshot(report.EvidenceSnapshot),
+            Reason = report.Reason,
+            Status = ReportStatus.PENDING,
+            CreatedAt = report.CreatedAt,
+            UpdatedAt = report.UpdatedAt
+        };
+    }
+
     private async Task HandleVoucherReportAsync(
         CreateReportRequest request,
         MemberProfile reporterProfile,
