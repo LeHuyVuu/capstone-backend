@@ -36,6 +36,8 @@ public partial class Review
 
     public bool? IsMatched { get; set; }
 
+    public bool? IsRelevant { get; set; }
+
     public string? CoupleMoodSnapshot { get; set; }
 
     public bool? IsDeleted { get; set; }
