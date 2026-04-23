@@ -283,7 +283,7 @@ public class ReportService : IReportService
 
         var report = new Data.Entities.Report
         {
-            ReporterId = reporterProfile?.Id,
+            ReporterId = venueOwnerProfile.Id,
             ReportTypeId = request.ReportTypeId,
             TargetType = ReportTargetType.REVIEW.ToString(),
             TargetId = reviewId,
@@ -301,7 +301,7 @@ public class ReportService : IReportService
         return new ReportDto
         {
             Id = report.Id,
-            ReporterId = report.ReporterId,
+            ReporterId = venueOwnerProfile.Id,
             ReporterName = reporterProfile?.FullName ?? venueOwnerProfile.BusinessName ?? $"Venue Owner #{venueOwnerProfile.Id}",
             ReportTypeId = report.ReportTypeId,
             ReportTypeName = reportType.TypeName,
