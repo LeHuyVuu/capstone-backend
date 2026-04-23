@@ -2673,19 +2673,29 @@ namespace capstone_backend.Business.Services
                 _unitOfWork.Context.Leaderboards.Update(row);
             }
 
+            // Không order ở DB để tránh dùng điểm cũ khi chưa SaveChanges
             var monthlyRows = await _unitOfWork.Context.Leaderboards
                 .Where(l => l.PeriodType == "monthly"
                          && l.SeasonKey == seasonKey
                          && l.Status == LeaderboardStatus.ACTIVE.ToString())
-                .OrderByDescending(l => l.TotalPoints ?? 0)
-                .ThenBy(l => l.UpdatedAt)
-                .ThenBy(l => l.Id)
                 .ToListAsync();
 
-            // Unique rank: 1,2,3,4...
-            for (int i = 0; i < monthlyRows.Count; i++)
+            // Nếu row vừa Add (chưa save) thì query DB chưa trả về -> add thủ công
+            if (!monthlyRows.Any(x => x.CoupleId == coupleId))
             {
-                monthlyRows[i].RankPosition = i + 1;
+                monthlyRows.Add(row);
+            }
+
+            // Sort in-memory theo điểm mới nhất, rồi unique rank 1..N
+            var orderedRows = monthlyRows
+                .OrderByDescending(l => l.TotalPoints ?? 0)
+                .ThenBy(l => l.UpdatedAt ?? DateTime.MaxValue)
+                .ThenBy(l => l.Id == 0 ? int.MaxValue : l.Id)
+                .ToList();
+
+            for (int i = 0; i < orderedRows.Count; i++)
+            {
+                orderedRows[i].RankPosition = i + 1;
             }
         }
     }
