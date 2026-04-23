@@ -492,7 +492,11 @@ namespace capstone_backend.Business.Services
             }
 
             _unitOfWork.Reviews.Update(review);
-            return await _unitOfWork.SaveChangesAsync();
+            var affected = await _unitOfWork.SaveChangesAsync();
+
+            BackgroundJob.Enqueue<IReviewWorker>(j => j.EvaluateReviewRelevanceAsync(review.Id));
+
+            return affected;
         }
 
         public async Task<int> ValidateCheckinAsync(int userId, int checkInId, CheckinRequest request)
@@ -720,6 +724,12 @@ namespace capstone_backend.Business.Services
             review.UpdatedAt = DateTime.UtcNow;
             _unitOfWork.Reviews.Update(review);
             await _unitOfWork.SaveChangesAsync();
+
+            if (review.Status == ReviewStatus.PUBLISHED.ToString())
+            {
+                BackgroundJob.Enqueue<IReviewWorker>(j => j.EvaluateReviewRelevanceAsync(review.Id));
+            }
+
             return review.Id;
         }
 

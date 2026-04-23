@@ -3,5 +3,6 @@
     public interface IReviewWorker
     {
         Task SendReviewNotificationAsync(int checkInHistoryId);
+        Task EvaluateReviewRelevanceAsync(int reviewId);
     }
 }

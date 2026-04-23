@@ -6,6 +6,7 @@ using capstone_backend.Business.DTOs.Notification;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Comment;
 using capstone_backend.Business.Jobs.Notification;
+using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Data.Enums;
 using Hangfire;
 
@@ -164,6 +165,8 @@ namespace capstone_backend.Business.Jobs.Moderation
             {
                 // Only process challenge progress if the review is approved
                 await _challengeService.HandleReviewChallengeProgressAsync(userId, reviewId, venueId, hasImage);
+
+                BackgroundJob.Enqueue<IReviewWorker>(j => j.EvaluateReviewRelevanceAsync(reviewId));
 
                 // Send notification
                 if (venueLocation != null)
