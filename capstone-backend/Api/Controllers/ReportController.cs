@@ -48,6 +48,32 @@ public class ReportController : BaseController
     }
 
     /// <summary>
+    /// Venue owner tố cáo review thuộc venue của mình
+    /// </summary>
+    [HttpPost("venue-owner/reviews/{reviewId:int}")]
+    [Authorize(Roles = "VENUEOWNER,VENUE_OWNER")]
+    public async Task<IActionResult> CreateVenueOwnerReviewReport(int reviewId, [FromBody] CreateVenueOwnerReviewReportRequest request)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null)
+            return UnauthorizedResponse("Không thể xác định người dùng");
+
+        try
+        {
+            var report = await _reportService.CreateVenueOwnerReviewReportAsync(reviewId, request, currentUserId.Value);
+            return CreatedResponse(report, "Tố cáo review thành công và đang chờ admin kiểm duyệt");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return ForbiddenResponse(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+    }
+
+    /// <summary>
     /// Admin lấy danh sách reports
     /// </summary>
     [HttpGet]
