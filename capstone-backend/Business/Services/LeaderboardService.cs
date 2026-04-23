@@ -137,38 +137,28 @@ public class LeaderboardService : ILeaderboardService
     private async Task EnsureMonthlyRanksAsync(string seasonKey)
     {
         var monthlyRows = await _unitOfWork.Context.Leaderboards
-            .Where(l => l.PeriodType == "monthly"
-                     && l.SeasonKey == seasonKey
-                     && l.Status == LeaderboardStatus.ACTIVE.ToString())
-            .OrderByDescending(l => l.TotalPoints ?? 0)
-            .ThenBy(l => l.UpdatedAt)
-            .ThenBy(l => l.Id)
-            .ToListAsync();
+        .Where(l => l.PeriodType == "monthly"
+                 && l.SeasonKey == seasonKey
+                 && l.Status == LeaderboardStatus.ACTIVE.ToString())
+        .OrderByDescending(l => l.TotalPoints ?? 0)
+        .ThenBy(l => l.UpdatedAt)
+        .ThenBy(l => l.Id)
+        .ToListAsync();
 
         if (!monthlyRows.Any())
             return;
 
-        var position = 0;
-        var seen = 0;
-        int? previousPoints = null;
         var hasChanges = false;
 
-        foreach (var row in monthlyRows)
+        // Unique rank: 1,2,3,4...
+        for (int i = 0; i < monthlyRows.Count; i++)
         {
-            seen++;
-            var currentPoints = row.TotalPoints ?? 0;
-
-            // Competition ranking: 1, 1, 3, 4...
-            if (previousPoints == null || currentPoints != previousPoints)
-                position = seen;
-
-            if (row.RankPosition != position)
+            var expectedRank = i + 1;
+            if (monthlyRows[i].RankPosition != expectedRank)
             {
-                row.RankPosition = position;
+                monthlyRows[i].RankPosition = expectedRank;
                 hasChanges = true;
             }
-
-            previousPoints = currentPoints;
         }
 
         if (hasChanges)

@@ -1707,7 +1707,21 @@ namespace capstone_backend.Business.Services
             }
 
             // Add points
-            couple.TotalPoints += challenge.RewardPoints;
+            var rewardPoints = challenge.RewardPoints;
+            if (rewardPoints > 0)
+            {
+                couple.TotalPoints = (couple.TotalPoints ?? 0) + rewardPoints;
+                couple.RankingPoints = (couple.RankingPoints ?? 0) + rewardPoints;
+                couple.UpdatedAt = nowUtc;
+
+                _unitOfWork.CoupleProfiles.Update(couple);
+
+                // Keep monthly leaderboard consistent with ranking points
+                await SyncMonthlyLeaderboardFromRankingPointsAsync(
+                    couple.id,
+                    couple.RankingPoints ?? 0,
+                    nowUtc);
+            }
 
             // Serialize and save
             coupleChallenge.ProgressData = JsonConverterUtil.Serialize(progress);
@@ -2588,11 +2602,11 @@ namespace capstone_backend.Business.Services
                 cc => cc.Include(x => x.Challenge)
             );
 
-            if (coupleChallenge.Challenge?.Id == 14)
-                throw new Exception("Thử thách này tự động cộng điểm cho bạn");
-
             if (coupleChallenge == null)
                 throw new Exception("Thử thách không tồn tại hoặc chưa hoàn thành");
+
+            if (coupleChallenge.Challenge?.Id == 14)
+                throw new Exception("Thử thách này tự động cộng điểm cho bạn");
 
             // Check if member is part of this couple challenge
             var memberKey = member.Id.ToString();
@@ -2605,6 +2619,8 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Thử thách này đã nhận thưởng rồi");          
 
             couple.TotalPoints += coupleChallenge.Challenge?.RewardPoints ?? 0;
+            couple.RankingPoints += coupleChallenge.Challenge?.RewardPoints ?? 0;
+            couple.UpdatedAt = DateTime.UtcNow;
 
             // Mark reward as claimed
             coupleChallenge.IsRewardClaimed = true;
@@ -2614,9 +2630,63 @@ namespace capstone_backend.Business.Services
             _unitOfWork.CoupleProfiles.Update(couple);
             _unitOfWork.CoupleProfileChallenges.Update(coupleChallenge);
 
+            await SyncMonthlyLeaderboardFromRankingPointsAsync(couple.id, couple.RankingPoints ?? 0, DateTime.UtcNow);
+
             await _unitOfWork.SaveChangesAsync();
 
             return coupleChallenge.Challenge?.RewardPoints ?? 0;
+        }
+
+        private async Task SyncMonthlyLeaderboardFromRankingPointsAsync(int coupleId, int rankingPoints, DateTime now)
+        {
+            var seasonKey = $"{now.Year}-{now.Month:D2}";
+            var periodStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var periodEnd = periodStart.AddMonths(1).AddTicks(-1);
+
+            var row = await _unitOfWork.Context.Leaderboards.FirstOrDefaultAsync(l =>
+                l.CoupleId == coupleId &&
+                l.SeasonKey == seasonKey &&
+                l.PeriodType == "monthly" &&
+                l.Status == LeaderboardStatus.ACTIVE.ToString());
+
+            if (row == null)
+            {
+                row = new Data.Entities.Leaderboard
+                {
+                    CoupleId = coupleId,
+                    PeriodType = "monthly",
+                    PeriodStart = periodStart,
+                    PeriodEnd = periodEnd,
+                    SeasonKey = seasonKey,
+                    TotalPoints = rankingPoints,
+                    RankPosition = 0,
+                    Status = LeaderboardStatus.ACTIVE.ToString(),
+                    UpdatedAt = now
+                };
+
+                await _unitOfWork.Context.Leaderboards.AddAsync(row);
+            }
+            else
+            {
+                row.TotalPoints = rankingPoints;
+                row.UpdatedAt = now;
+                _unitOfWork.Context.Leaderboards.Update(row);
+            }
+
+            var monthlyRows = await _unitOfWork.Context.Leaderboards
+                .Where(l => l.PeriodType == "monthly"
+                         && l.SeasonKey == seasonKey
+                         && l.Status == LeaderboardStatus.ACTIVE.ToString())
+                .OrderByDescending(l => l.TotalPoints ?? 0)
+                .ThenBy(l => l.UpdatedAt)
+                .ThenBy(l => l.Id)
+                .ToListAsync();
+
+            // Unique rank: 1,2,3,4...
+            for (int i = 0; i < monthlyRows.Count; i++)
+            {
+                monthlyRows[i].RankPosition = i + 1;
+            }
         }
     }
 }

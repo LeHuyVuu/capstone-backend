@@ -327,15 +327,6 @@ using (var scope = serviceProvider.CreateScope())
             TimeZone = vnTz
         });
 
-    recurringJobManager.AddOrUpdate<ILikeWorker>(
-        "sync-interaction-points-from-likes",
-        job => job.RebuildInteractionPointsFromLikesAsync(),
-        "*/5 * * * *",
-        new RecurringJobOptions
-        {
-            TimeZone = vnTz
-        });
-
     app.Logger.LogInformation("[INFO] Hangfire recurring jobs configured");
 }
 

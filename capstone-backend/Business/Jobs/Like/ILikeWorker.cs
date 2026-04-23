@@ -4,7 +4,5 @@
     {
         Task RecountPostLikeAsync(int postId);
         Task RecountCommentLikeAsync(int commentId);
-
-        Task RebuildInteractionPointsFromLikesAsync();
     }
 }

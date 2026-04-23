@@ -62,7 +62,43 @@ namespace capstone_backend.Business.Jobs.Leaderboard
             }
 
             await _unitOfWork.SaveChangesAsync();
+
+            await RecalculateMonthlyUniqueRankPositionAsync(currentSeasonKey, now);
+
             _logger.LogInformation($"Đã tạo leaderboard tháng {currentSeasonKey} cho {newCouples.Count} couple");
+        }
+
+        private async Task RecalculateMonthlyUniqueRankPositionAsync(string seasonKey, DateTime now)
+        {
+            var monthlyRows = await _unitOfWork.Context.Leaderboards
+                .Where(l => l.PeriodType == "monthly"
+                         && l.SeasonKey == seasonKey
+                         && l.Status == LeaderboardStatus.ACTIVE.ToString())
+                .OrderByDescending(l => l.TotalPoints ?? 0)
+                .ThenBy(l => l.UpdatedAt)
+                .ThenBy(l => l.Id)
+                .ToListAsync();
+
+            if (!monthlyRows.Any())
+                return;
+
+            var hasChanges = false;
+
+            for (int i = 0; i < monthlyRows.Count; i++)
+            {
+                var expectedRank = i + 1; // unique rank
+                var row = monthlyRows[i];
+
+                if (row.RankPosition != expectedRank)
+                {
+                    row.RankPosition = expectedRank;
+                    row.UpdatedAt = now;
+                    hasChanges = true;
+                }
+            }
+
+            if (hasChanges)
+                await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task ResetInteractionPointsAsync()
