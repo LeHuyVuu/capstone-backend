@@ -132,7 +132,7 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
         // Advertisement metrics
         var allAdvertisements = await _unitOfWork.Context.Set<Data.Entities.Advertisement>()
             .Include(a => a.VenueLocationAdvertisements)
-            .Where(a => a.VenueOwnerId == venueOwner.Id && a.IsDeleted != true)
+            .Where(a => a.VenueOwnerId == venueOwner.Id && a.IsDeleted != true && a.Status != AdvertisementStatus.DRAFT.ToString())
             .OrderByDescending(a => a.CreatedAt)
             .ToListAsync();
 
