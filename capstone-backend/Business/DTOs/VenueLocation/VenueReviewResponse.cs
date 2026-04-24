@@ -36,6 +36,8 @@ public class VenueReviewResponse
 
     public bool? IsRelevant { get; set; }
 
+    public string? CoupleMoodSnapshot { get; set; }
+
     /// <summary>
     /// Danh sách likes của review
     /// </summary>

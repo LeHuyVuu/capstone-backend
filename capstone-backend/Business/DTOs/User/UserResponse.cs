@@ -57,7 +57,8 @@ public class UserResponse
     public DateTime? UpdatedAt { get; set; }
 
     public decimal Balance { get; set; } = 0;
-    public decimal Points { get; set; }
+    public int Points { get; set; }
+    public int CouplePoints { get; set; }
 
     /// <summary>
     /// Member profile information (if user is a member)

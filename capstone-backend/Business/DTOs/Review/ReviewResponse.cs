@@ -19,6 +19,7 @@ namespace capstone_backend.Business.DTOs.Review
         public List<string>? ImageUrls { get; set; }
         public bool? IsMatched { get; set; }
         public bool? IsRelevant { get; set; }
+        public string? CoupleMoodSnapshot { get; set; }
 
         public ReviewMemberInfo? Member { get; set; }
         public ReviewVenueInfo? Venue { get; set; }
