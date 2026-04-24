@@ -73,9 +73,6 @@ public partial class CoupleProfile
     [InverseProperty("CoupleProfilememberId2Navigations")]
     public virtual MemberProfile MemberId2Navigation { get; set; } = null!;
 
-    [InverseProperty("CoupleProfile")]
-    public virtual ICollection<Review> Reviews { get; set; } = new List<Review>();
-
     [InverseProperty("Couple")]
     public virtual ICollection<AccessoryPurchase> AccessoryPurchases { get; set; } = new List<AccessoryPurchase>();
 }

@@ -55,8 +55,4 @@ public partial class Review
 
     [InverseProperty("Review")]
     public virtual ReviewReply? ReviewReply { get; set; }
-
-    [ForeignKey("CoupleProfileId")]
-    [InverseProperty("Reviews")]
-    public virtual CoupleProfile? CoupleProfile { get; set; }
 }

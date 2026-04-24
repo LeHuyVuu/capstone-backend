@@ -7,7 +7,6 @@ namespace capstone_backend.Business.DTOs.Review
         public int Id { get; set; }
         public int VenueId { get; set; }
         public int MemberId { get; set; }
-        public int? CoupleProfileId { get; set; }
         public int? Rating { get; set; }
         public string? Content { get; set; }
         public DateTime? VisitedAt { get; set; }
