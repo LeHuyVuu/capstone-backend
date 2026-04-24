@@ -48,6 +48,10 @@ namespace capstone_backend.Business.Services
             if (member == null)
                 throw new Exception("Không tìm thấy hồ sơ thành viên");
 
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Bạn không có hồ sơ cặp đôi");
+
             var venue = await _unitOfWork.VenueLocations.GetActiveByIdAsync(request.VenueLocationId);
             if (venue == null)
                 throw new Exception("Không tìm thấy địa điểm");
@@ -195,6 +199,10 @@ namespace capstone_backend.Business.Services
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Không tìm thấy hồ sơ thành viên");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Bạn không có hồ sơ cặp đôi");
 
             var venue = await _unitOfWork.VenueLocations.GetActiveByIdAsync(request.VenueLocationId);
             if (venue == null)
@@ -504,6 +512,10 @@ namespace capstone_backend.Business.Services
             var member = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
             if (member == null)
                 throw new Exception("Không tìm thấy hồ sơ thành viên");
+
+            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
+            if (couple == null)
+                throw new Exception("Bạn không có hồ sơ cặp đôi");
 
             var venue = await _unitOfWork.VenueLocations.GetActiveByIdAsync(request.VenueLocationId);
             if (venue == null)
