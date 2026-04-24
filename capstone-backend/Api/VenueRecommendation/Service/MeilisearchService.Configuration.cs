@@ -65,6 +65,7 @@ public partial class MeilisearchService
                 "coupleMoodTypeNames", "couplePersonalityTypeNames",
                 "detailTags",  // Filterable tags
                 "venueOwnerId", "status", "createdAt", "updatedAt",
+                "isPenalty",  // Penalty filter for MODE 2 (Auto Recommendation)
                 "_geo" // Enable geo filtering
             });
 

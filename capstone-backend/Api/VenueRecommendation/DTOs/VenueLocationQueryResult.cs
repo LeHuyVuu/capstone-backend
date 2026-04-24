@@ -134,6 +134,13 @@ public class VenueLocationQueryResult
     [JsonProperty("locationTagId")]
     public int? LocationTagId { get; set; }
 
+    /// <summary>
+    /// Indicates if venue has any POOR tags (match rate < 50%)
+    /// Used for search penalty in MODE 2 (Auto Recommendation) - venues with penalty are filtered out
+    /// </summary>
+    [JsonProperty("isPenalty")]
+    public bool? IsPenalty { get; set; }
+
     [JsonProperty("distance")]
     public decimal? Distance { get; set; }
 

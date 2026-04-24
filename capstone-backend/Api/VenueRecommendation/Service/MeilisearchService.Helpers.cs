@@ -112,7 +112,8 @@ public partial class MeilisearchService
             CouplePersonalityTypeNames = personalityTypeNames.Any() ? personalityTypeNames : null,
             IsOpenNow = isOpenNow,
             TodayOpenTime = todayOpenTime,
-            TodayCloseTime = todayCloseTime
+            TodayCloseTime = todayCloseTime,
+            IsPenalty = venue.IsPenalty
         };
     }
 

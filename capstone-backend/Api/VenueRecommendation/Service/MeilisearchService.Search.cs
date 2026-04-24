@@ -397,6 +397,9 @@ public partial class MeilisearchService
         else
         {
             // ===== MODE 2: AUTO RECOMMENDATION - Dùng couple context =====
+            // ===== PENALTY: Luôn áp dụng cho MODE 2 (kể cả khi không có couple context) =====
+            filters.Add("isPenalty = false");
+            
             var coupleFilters = new List<string>();
             
             if (!string.IsNullOrWhiteSpace(coupleMoodTypeName))
@@ -408,11 +411,11 @@ public partial class MeilisearchService
             if (coupleFilters.Any())
             {
                 filters.Add($"({string.Join(" OR ", coupleFilters)})"); // Đổi OR → AND nếu cần strict
-                _logger.LogInformation("[FILTER MODE] Couple context recommendation");
+                _logger.LogInformation("[FILTER MODE] Couple context recommendation with penalty filter (isPenalty = false)");
             }
             else
             {
-                _logger.LogInformation("[FILTER MODE] No filters - returning all active venues");
+                _logger.LogInformation("[FILTER MODE] No couple context - returning all active venues with penalty filter (isPenalty = false)");
             }
         }
 

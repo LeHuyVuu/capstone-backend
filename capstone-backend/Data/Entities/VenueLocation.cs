@@ -67,6 +67,8 @@ public partial class VenueLocation
 
     public decimal? PercentMatched { get; set; } = 100m;
 
+    public bool? IsPenalty { get; set; } = false;
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

@@ -4,6 +4,7 @@ using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
+using capstone_backend.Api.VenueRecommendation.Service;
 using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Services;
@@ -16,15 +17,18 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ISystemConfigService _systemConfigService;
+    private readonly IMeilisearchService _meilisearchService;
     private readonly ILogger<VenueTagAnalysisService> _logger;
 
     public VenueTagAnalysisService(
         IUnitOfWork unitOfWork,
         ISystemConfigService systemConfigService,
+        IMeilisearchService meilisearchService,
         ILogger<VenueTagAnalysisService> logger)
     {
         _unitOfWork = unitOfWork;
         _systemConfigService = systemConfigService;
+        _meilisearchService = meilisearchService;
         _logger = logger;
     }
 
@@ -75,6 +79,47 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
 
         // Tạo summary
         var summary = CreateSummary(tagAnalysisList);
+
+        // Cập nhật IsPenalty cho venue (chỉ áp dụng cho MODE 2 - Auto Recommendation)
+        var isPenalty = tagAnalysisList.Any(t => t.Status == VenueTagAnalysisConstants.STATUS_POOR);
+        
+        // Đảm bảo venue được track bởi context
+        if (_unitOfWork.Context.Entry(venue).State == EntityState.Detached)
+        {
+            _unitOfWork.Context.Attach(venue);
+        }
+        
+        venue.IsPenalty = isPenalty;
+        _unitOfWork.Context.Entry(venue).State = EntityState.Modified;
+        await _unitOfWork.SaveChangesAsync();
+
+        _logger.LogInformation("[TAG ANALYSIS] Venue {VenueId} IsPenalty updated to: {IsPenalty}", 
+            venueId, isPenalty);
+
+        // Sync venue lên cả 2 Meilisearch servers (V1 và V2)
+        try
+        {
+            _logger.LogInformation("[TAG ANALYSIS] Syncing venue {VenueId} to Meilisearch V1...", venueId);
+            await _meilisearchService.IndexVenueLocationAsync(venueId);
+            _logger.LogInformation("[TAG ANALYSIS] Synced venue {VenueId} to Meilisearch V1 successfully", venueId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[TAG ANALYSIS] Failed to sync venue {VenueId} to Meilisearch V1", venueId);
+            // Don't throw - continue to sync V2
+        }
+
+        try
+        {
+            _logger.LogInformation("[TAG ANALYSIS] Syncing venue {VenueId} to Meilisearch V2...", venueId);
+            await _meilisearchService.IndexVenueLocationV2Async(venueId);
+            _logger.LogInformation("[TAG ANALYSIS] Synced venue {VenueId} to Meilisearch V2 successfully", venueId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[TAG ANALYSIS] Failed to sync venue {VenueId} to Meilisearch V2", venueId);
+            // Don't throw - analysis still succeeded
+        }
 
         // Log kết quả dạng bảng
         LogAnalysisTable(venue.Name, venueId, allReviews.Count, overallMatchRate, 
