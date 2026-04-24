@@ -625,7 +625,7 @@ public class CoupleInvitationService : ICoupleInvitationService
             {
                 var normalizedInterest = interest.Trim();
                 baseQuery = baseQuery.Where(m => m.Interests != null && 
-                    EF.Functions.ILike(m.Interests.ToString(), $"%{normalizedInterest}%"));
+                    EF.Functions.JsonContains(m.Interests, $"\"{normalizedInterest}\""));
             }
         }
 
