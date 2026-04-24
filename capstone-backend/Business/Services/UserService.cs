@@ -449,6 +449,10 @@ public class UserService : IUserService
         if (memberProfile != null)
             equippedAccessories = await _accessoryService.GetEquippedAccessoryForMemberAsync(memberProfile.Id);
 
+        CoupleProfile coupleProfile = null;
+        if (memberProfile != null)
+            coupleProfile = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(memberProfile.Id);
+
         return new UserResponse
         {
             Id = user.Id,
@@ -463,6 +467,7 @@ public class UserService : IUserService
             UpdatedAt = user.UpdatedAt,
             Balance = user.Wallet?.IsActive == true ? user.Wallet.Balance.Value : 0,
             Points = user.Wallet?.IsActive == true ? user.Wallet.Points.Value : 0,
+            CouplePoints = coupleProfile != null ? (coupleProfile.TotalPoints ?? 0) : 0,
             MemberProfile = memberProfile != null ? new MemberProfileResponse
             {
                 Id = memberProfile.Id,

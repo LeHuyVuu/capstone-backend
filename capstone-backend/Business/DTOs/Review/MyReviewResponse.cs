@@ -20,6 +20,7 @@ namespace capstone_backend.Business.DTOs.Review
         public bool? IsAnonymous { get; set; }
         public bool? IsMatched { get; set; }
         public bool? IsRelevant { get; set; }
+        public string? CoupleMoodSnapshot { get; set; }
 
         public int LikeCount { get; set; }
         public string? Status { get; set; }
