@@ -23,5 +23,7 @@ public interface ICoupleInvitationService
         int? heightFrom = null,
         int? heightTo = null,
         int? weightFrom = null,
-        int? weightTo = null);
+        int? weightTo = null,
+        string? jobTitle = null, 
+        string? interest = null);
 }
