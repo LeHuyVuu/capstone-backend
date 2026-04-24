@@ -61,7 +61,10 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
         foreach (var tag in venueTags)
         {
             var analysis = AnalyzeTag(tag, allReviews, goodThreshold, warningThreshold, minReviews);
-            tagAnalysisList.Add(analysis);
+            if (analysis != null) // Chỉ thêm nếu không null (bỏ qua khoảng giữa)
+            {
+                tagAnalysisList.Add(analysis);
+            }
         }
 
         // Tính overall match rate
@@ -158,7 +161,7 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
     /// <summary>
     /// Phân tích một tag cụ thể
     /// </summary>
-    private TagAccuracyDetail AnalyzeTag(
+    private TagAccuracyDetail? AnalyzeTag(
         VenueTagInfo tag, 
         List<Data.Entities.Review> allReviews,
         decimal goodThreshold,
@@ -213,25 +216,26 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
         var unmatchedCount = relevantReviews.Count(r => r.IsMatched == false);
         var matchRate = (decimal)matchedCount / totalReviews * 100;
 
-        // Xác định status và severity
+        // Xác định status và severity (CHỈ 2 MỨC: GOOD hoặc POOR, bỏ khoảng giữa)
         string status, severity, recommendation;
         if (matchRate >= goodThreshold)
         {
+            // >= 70% → GOOD
             status = VenueTagAnalysisConstants.STATUS_GOOD;
             severity = VenueTagAnalysisConstants.SEVERITY_NONE;
             recommendation = VenueTagAnalysisConstants.RECOMMENDATION_KEEP;
         }
-        else if (matchRate >= warningThreshold)
+        else if (matchRate < warningThreshold)
         {
-            status = VenueTagAnalysisConstants.STATUS_WARNING;
-            severity = VenueTagAnalysisConstants.SEVERITY_MEDIUM;
-            recommendation = VenueTagAnalysisConstants.RECOMMENDATION_REVIEW;
-        }
-        else
-        {
+            // < 50% → POOR
             status = VenueTagAnalysisConstants.STATUS_POOR;
             severity = VenueTagAnalysisConstants.SEVERITY_HIGH;
             recommendation = VenueTagAnalysisConstants.RECOMMENDATION_REMOVE;
+        }
+        else
+        {
+            // 50-69% → Không xử lý (trả về null)
+            return null;
         }
 
         var message = GenerateMessage(tag.Name, matchRate, status);
