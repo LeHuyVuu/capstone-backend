@@ -41,19 +41,19 @@ public class PersonalityMappingService
         // 1. CASE SINGLE: Only mbti1 is provided
         if (!string.IsNullOrEmpty(mbti1) && string.IsNullOrEmpty(mbti2))
         {
-             if (mbti1.Length < 4) return "HÒA GIẢI"; // Fallback
+             if (mbti1.Length < 4) return "Thấu hiểu"; // Fallback
              return MapGroupToTag(GetKeirseyGroup(mbti1.ToUpper()));
         }
 
         // 2. CASE COUPLE: Both are provided
         if (!string.IsNullOrEmpty(mbti1) && !string.IsNullOrEmpty(mbti2))
         {
-            if (mbti1.Length < 4 || mbti2.Length < 4) return "HÒA GIẢI"; // Fallback
+            if (mbti1.Length < 4 || mbti2.Length < 4) return "Thấu hiểu"; // Fallback
 
             mbti1 = mbti1.ToUpper();
             mbti2 = mbti2.ToUpper();
 
-            // RULE 1 (Priority): High Energy Couple (Both are Extroverts) -> VUI VẺ
+            // RULE 1 (Priority): High Energy Couple (Both are Extroverts) -> VUI NHỘN
             if (mbti1[0] == 'E' && mbti2[0] == 'E') 
                 return "Vui nhộn";
 
@@ -67,12 +67,12 @@ public class PersonalityMappingService
                 return MapGroupToTag(group1);
             }
 
-            // RULE 3: Mixed groups or Rational Logic (NT + NT) -> HÒA GIẢI
-            // NT group (Rationals) prefer Logic/Debate -> HÒA GIẢI fits best among options
-            return "HÒA GIẢI";
+            // RULE 3: Mixed groups or Rational Logic (NT + NT) -> THẤU HIỂU
+            // NT group (Rationals) prefer Logic/Debate -> Thấu hiểu fits best among options
+            return "Thấu hiểu";
         }
 
-        return "HÒA GIẢI"; // Default safe fallback
+        return "Thấu hiểu"; // Default safe fallback
     }
 
     private static string GetKeirseyGroup(string mbti)
@@ -105,8 +105,8 @@ public class PersonalityMappingService
             "NF" => "Lãng mạn",   // Idealists -> Romantic
             "SP" => "Phiêu lưu",  // Artisans -> Adventurous
             "SJ" => "Thư thái",   // Guardians -> Relaxed/Stable
-            "NT" => "Hòa giải",   // Rationals -> Harmony/Logic resolution
-            _ => "Hòa giải"
+            "NT" => "Thấu hiểu",  // Rationals -> Understanding/Empathy
+            _ => "Thấu hiểu"
         };
     }
 }
