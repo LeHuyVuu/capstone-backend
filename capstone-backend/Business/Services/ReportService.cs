@@ -328,7 +328,7 @@ public class ReportService : IReportService
         string reportTypeName)
     {
         if (request.TargetType != ReportTargetType.VOUCHER_ITEM)
-            throw new InvalidOperationException("Loại report VOUCHER_DISPUTE chỉ áp dụng cho voucher item");
+            throw new InvalidOperationException("Chỉ áp dụng cho báo cáo voucher");
 
         if (string.IsNullOrWhiteSpace(request.Reason))
             throw new InvalidOperationException("Vui lòng nhập lý do khiếu nại voucher");
