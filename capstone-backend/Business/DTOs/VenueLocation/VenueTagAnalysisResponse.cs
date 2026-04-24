@@ -28,6 +28,7 @@ public class TagAccuracyDetail
     public decimal MatchRate { get; set; }
     public string Message { get; set; } = string.Empty;
     public string? Recommendation { get; set; }
+    public List<string> ReviewDetails { get; set; } = new(); // Chi tiết các reviews liên quan
 }
 
 /// <summary>

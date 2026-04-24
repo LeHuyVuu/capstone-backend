@@ -1,6 +1,8 @@
 using capstone_backend.Business.Common.Constants;
 using capstone_backend.Business.DTOs.VenueLocation;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Entities;
+using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -49,7 +51,7 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
         // Lấy tất cả published reviews
         var allReviews = await _unitOfWork.Context.Set<Data.Entities.Review>()
             .Where(r => r.VenueId == venueId 
-                && r.Status == "PUBLISHED" 
+                && r.Status == ReviewStatus.PUBLISHED.ToString() 
                 && r.IsDeleted != true)
             .ToListAsync();
 
@@ -71,6 +73,10 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
         // Tạo summary
         var summary = CreateSummary(tagAnalysisList);
 
+        // Log kết quả dạng bảng
+        LogAnalysisTable(venue.Name, venueId, allReviews.Count, overallMatchRate, 
+            tagAnalysisList, summary, goodThreshold, warningThreshold, minReviews);
+
         return new VenueTagAnalysisResponse
         {
             VenueId = venueId,
@@ -83,6 +89,73 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
     }
 
     /// <summary>
+    /// Log kết quả phân tích dạng bảng
+    /// </summary>
+    private void LogAnalysisTable(
+        string venueName,
+        int venueId,
+        int totalReviews,
+        decimal overallMatchRate,
+        List<TagAccuracyDetail> tagAnalysisList,
+        TagAnalysisSummary summary,
+        decimal goodThreshold,
+        decimal warningThreshold,
+        int minReviews)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("\n╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗");
+        sb.AppendLine($"║  🏢 VENUE TAG ANALYSIS REPORT");
+        sb.AppendLine("╠══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣");
+        sb.AppendLine($"║  Venue: {venueName,-80} ID: {venueId,-10}");
+        sb.AppendLine($"║  Total Reviews: {totalReviews,-10} Overall Match Rate: {overallMatchRate:F1}%");
+        sb.AppendLine($"║  Thresholds: Good ≥{goodThreshold}% | Warning ≥{warningThreshold}% | Min Reviews: {minReviews}");
+        sb.AppendLine("╠══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣");
+        sb.AppendLine("║  TAG ANALYSIS DETAILS");
+        sb.AppendLine("╠═══════════════════════════╦══════════════════════════╦═══════╦═════════╦═══════════╦══════════╦═══════════════╦═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣");
+        sb.AppendLine("║ Tag Name                  ║ Type                     ║ Total ║ Matched ║ Unmatched ║ Rate     ║ Status        ║ Review Snapshots                                                                                                                                                                                                                                      ║");
+        sb.AppendLine("╠═══════════════════════════╬══════════════════════════╬═══════╬═════════╬═══════════╬══════════╬═══════════════╬═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣");
+
+        foreach (var tag in tagAnalysisList.OrderByDescending(t => t.MatchRate))
+        {
+            var statusIcon = tag.Status switch
+            {
+                "GOOD" => "✅",
+                "WARNING" => "⚠️",
+                "POOR" => "❌",
+                _ => "⏳"
+            };
+
+            var reviewSnapshotsText = tag.ReviewDetails != null && tag.ReviewDetails.Any() 
+                ? string.Join(" | ", tag.ReviewDetails)
+                : "No reviews";
+
+            // Nếu text quá dài, cắt và thêm "..."
+            if (reviewSnapshotsText.Length > 125)
+            {
+                reviewSnapshotsText = reviewSnapshotsText.Substring(0, 122) + "...";
+            }
+
+            sb.AppendLine($"║ {tag.Tag,-25} ║ {tag.TagType,-24} ║ {tag.TotalReviews,5} ║ {tag.MatchedCount,7} ║ {tag.UnmatchedCount,9} ║ {tag.MatchRate,6:F1}% ║ {statusIcon} {tag.Status,-11} ║ {reviewSnapshotsText,-125} ║");
+        }
+
+        sb.AppendLine("╠═══════════════════════════╩══════════════════════════╩═══════╩═════════╩═══════════╩══════════╩═══════════════╩═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣");
+        sb.AppendLine("║  � SUMMARY");
+        sb.AppendLine("╠══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣");
+        sb.AppendLine($"║  ✅ Good Tags ({summary.GoodTags.Count}): {string.Join(", ", summary.GoodTags)}");
+        sb.AppendLine($"║  ⚠️  Warning Tags ({summary.WarningTags.Count}): {string.Join(", ", summary.WarningTags)}");
+        sb.AppendLine($"║  ❌ Poor Tags ({summary.PoorTags.Count}): {string.Join(", ", summary.PoorTags)}");
+        sb.AppendLine($"║  Action Required: {(summary.ActionRequired ? "YES ⚠️" : "NO ✅")}");
+        sb.AppendLine($"║  {summary.OverallMessage}");
+        if (!string.IsNullOrEmpty(summary.ImpactMessage))
+        {
+            sb.AppendLine($"║  💡 {summary.ImpactMessage}");
+        }
+        sb.AppendLine("╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝\n");
+
+        _logger.LogInformation(sb.ToString());
+    }
+
+    /// <summary>
     /// Phân tích một tag cụ thể
     /// </summary>
     private TagAccuracyDetail AnalyzeTag(
@@ -92,13 +165,29 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
         decimal warningThreshold,
         int minReviews)
     {
-        // Lọc reviews có CoupleMoodSnapshot chứa tag này
+        // Lọc reviews có CoupleMoodSnapshot chứa tag này (EXACT MATCH)
         var relevantReviews = allReviews
-            .Where(r => !string.IsNullOrEmpty(r.CoupleMoodSnapshot) 
-                && r.CoupleMoodSnapshot.Contains(tag.Name, StringComparison.OrdinalIgnoreCase))
+            .Where(r => !string.IsNullOrEmpty(r.CoupleMoodSnapshot))
+            .Where(r => 
+            {
+                var tags = r.CoupleMoodSnapshot
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(t => t.Trim())
+                    .ToList();
+                
+                return tags.Any(t => t.Equals(tag.Name, StringComparison.OrdinalIgnoreCase));
+            })
             .ToList();
 
         var totalReviews = relevantReviews.Count;
+
+        // Lưu thông tin reviews để log
+        var reviewDetails = relevantReviews.Select(r => new
+        {
+            r.Id,
+            r.CoupleMoodSnapshot,
+            r.IsMatched
+        }).ToList();
 
         // Chưa đủ data
         if (totalReviews < minReviews)
@@ -114,7 +203,8 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
                 UnmatchedCount = 0,
                 MatchRate = 0,
                 Message = $"Chưa đủ dữ liệu để đánh giá (cần ít nhất {minReviews} reviews)",
-                Recommendation = null
+                Recommendation = null,
+                ReviewDetails = reviewDetails.Select(r => $"#{r.Id}: {r.CoupleMoodSnapshot} → {(r.IsMatched == true ? "✅" : r.IsMatched == false ? "❌" : "?")}").ToList()
             };
         }
 
@@ -157,7 +247,8 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
             UnmatchedCount = unmatchedCount,
             MatchRate = Math.Round(matchRate, 1),
             Message = message,
-            Recommendation = recommendation
+            Recommendation = recommendation,
+            ReviewDetails = reviewDetails.Select(r => $"#{r.Id}: {r.CoupleMoodSnapshot} → {(r.IsMatched == true ? "✅" : r.IsMatched == false ? "❌" : "?")}").ToList()
         };
     }
 
