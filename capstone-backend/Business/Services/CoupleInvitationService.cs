@@ -541,7 +541,9 @@ public class CoupleInvitationService : ICoupleInvitationService
         int? heightFrom = null,
         int? heightTo = null,
         int? weightFrom = null,
-        int? weightTo = null)
+        int? weightTo = null,
+        string? jobTitle = null,
+        string? interest = null)
     {
         var currentMember = await _unitOfWork.Context.MemberProfiles
             .Include(m => m.User)
@@ -562,7 +564,9 @@ public class CoupleInvitationService : ICoupleInvitationService
         var hasAdvancedFilters = ageFrom.HasValue || ageTo.HasValue ||
                                  !string.IsNullOrWhiteSpace(city) || !string.IsNullOrWhiteSpace(district) ||
                                  heightFrom.HasValue || heightTo.HasValue ||
-                                 weightFrom.HasValue || weightTo.HasValue;
+                                 weightFrom.HasValue || weightTo.HasValue ||
+                                 !string.IsNullOrWhiteSpace(jobTitle) ||
+                                 !string.IsNullOrWhiteSpace(interest);
 
         if (hasAdvancedFilters)
         {
@@ -608,6 +612,20 @@ public class CoupleInvitationService : ICoupleInvitationService
             if (weightTo.HasValue)
             {
                 baseQuery = baseQuery.Where(m => m.Weight.HasValue && m.Weight.Value <= weightTo.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(jobTitle))
+            {
+                var normalizedJobTitle = jobTitle.Trim();
+                baseQuery = baseQuery.Where(m => m.JobTitle != null && 
+                    EF.Functions.ILike(m.JobTitle, normalizedJobTitle));
+            }
+
+            if (!string.IsNullOrWhiteSpace(interest))
+            {
+                var normalizedInterest = interest.Trim();
+                baseQuery = baseQuery.Where(m => m.Interests != null && 
+                    EF.Functions.ILike(m.Interests.ToString(), $"%{normalizedInterest}%"));
             }
         }
 

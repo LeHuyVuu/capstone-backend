@@ -331,7 +331,9 @@ public class CoupleInvitationController : BaseController
         [FromQuery] int? heightFrom = null,
         [FromQuery] int? heightTo = null,
         [FromQuery] int? weightFrom = null,
-        [FromQuery] int? weightTo = null)
+        [FromQuery] int? weightTo = null,
+        [FromQuery] string? jobTitle = null,
+        [FromQuery] string? interest = null)
     {
         try
         {
@@ -348,7 +350,9 @@ public class CoupleInvitationController : BaseController
                 heightFrom,
                 heightTo,
                 weightFrom,
-                weightTo);
+                weightTo,
+                jobTitle,
+                interest);
 
             return OkResponse(new
             {
