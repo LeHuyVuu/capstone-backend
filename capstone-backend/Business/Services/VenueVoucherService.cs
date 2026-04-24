@@ -117,7 +117,8 @@ namespace capstone_backend.Business.Services
             var usedCount = voucherItems.Count(vi => vi.Status == VoucherItemStatus.USED.ToString());
             var expiredCount = voucherItems.Count(vi => vi.Status == VoucherItemStatus.EXPIRED.ToString());
             var endedCount = voucherItems.Count(vi => vi.Status == VoucherItemStatus.ENDED.ToString());
-            var availableCount = voucherItems.Count(vi => vi.Status == VoucherItemStatus.AVAILABLE.ToString());
+            //var availableCount = voucherItems.Count(vi => vi.Status == VoucherItemStatus.AVAILABLE.ToString());
+            var availableCount = voucher.RemainingQuantity ?? 0;
 
             var totalQuantity = voucher.Quantity ?? 0;
             var remainingQuantity = voucher.RemainingQuantity ?? 0;
