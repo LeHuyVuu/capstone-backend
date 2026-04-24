@@ -64,4 +64,7 @@ public partial class UserAccount
 
     [InverseProperty("User")]
     public virtual ICollection<ReviewReply> ReviewReplies { get; set; } = new List<ReviewReply>();
+
+    [InverseProperty("Reporter")]
+    public virtual ICollection<Report> Reports { get; set; } = new List<Report>();
 }

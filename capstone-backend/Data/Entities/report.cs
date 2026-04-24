@@ -34,7 +34,7 @@ public partial class Report
 
     [ForeignKey("ReporterId")]
     [InverseProperty("Reports")]
-    public virtual MemberProfile? Reporter { get; set; }
+    public virtual UserAccount? Reporter { get; set; }
 
     [ForeignKey("ReportTypeId")]
     [InverseProperty("Reports")]

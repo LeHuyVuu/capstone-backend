@@ -33,7 +33,7 @@ public class ReportService : IReportService
         {
             Id = r.Id,
             ReporterId = r.ReporterId,
-            ReporterName = r.Reporter?.FullName,
+            ReporterName = r.Reporter?.DisplayName,
             ReportTypeId = r.ReportTypeId,
             ReportTypeName = r.ReportType?.TypeName,
             ReportTypeDescription = r.ReportType?.Description,
@@ -64,7 +64,7 @@ public class ReportService : IReportService
         {
             Id = report.Id,
             ReporterId = report.ReporterId,
-            ReporterName = report.Reporter?.FullName,
+            ReporterName = report.Reporter?.DisplayName,
             ReportTypeId = report.ReportTypeId,
             ReportTypeName = report.ReportType?.TypeName,
             ReportTypeDescription = report.ReportType?.Description,
@@ -186,29 +186,33 @@ public class ReportService : IReportService
 
     public async Task<ReportDto> CreateReportAsync(CreateReportRequest request, int reporterId)
     {
-        var reporterProfile = await _unitOfWork.MembersProfile.GetFirstAsync(
-            predicate: m => m.UserId == reporterId && m.IsDeleted != true
-        );
+        var reporterProfile = await _unitOfWork.Users.GetByIdWithProfilesAsync(reporterId);
 
         if (reporterProfile == null)
-            throw new InvalidOperationException("Không tìm thấy hồ sơ thành viên cho tài khoản hiện tại");
+            throw new InvalidOperationException("User không tồn tại");
 
         var reportType = await _unitOfWork.Context.ReportTypes
             .FirstOrDefaultAsync(rt => rt.Id == request.ReportTypeId && rt.IsDeleted != true && rt.IsActive == true);
 
+        var memberProfile = reporterProfile.MemberProfiles.FirstOrDefault(mp => mp.IsDeleted != true);
+        if (memberProfile == null && string.Equals(reportType?.TypeName, "VOUCHER_DISPUTE", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Chỉ thành viên mới có thể khiếu nại voucher");
+
         if (reportType == null)
-            throw new InvalidOperationException($"Report type không hợp lệ: {request.ReportTypeId}");
+        throw new InvalidOperationException($"Report type không hợp lệ: {request.ReportTypeId}");
 
         if (string.Equals(reportType.TypeName, "VOUCHER_DISPUTE", StringComparison.OrdinalIgnoreCase))
         {
-            await HandleVoucherReportAsync(request, reporterProfile, reportType.TypeName);
+            if (memberProfile == null)
+                throw new InvalidOperationException("Chỉ thành viên mới có thể khiếu nại voucher");
+            await HandleVoucherReportAsync(request, memberProfile, reportType.TypeName);
         }
 
         var evidenceSnapshot = await BuildEvidenceSnapshotAsync(request.TargetType, request.TargetId);
 
         var report = new Data.Entities.Report
         {
-            ReporterId = reporterProfile.Id,
+            ReporterId = reporterId,
             ReportTypeId = request.ReportTypeId,
             TargetType = request.TargetType.ToString(),
             TargetId = request.TargetId,
@@ -227,7 +231,7 @@ public class ReportService : IReportService
         {
             Id = report.Id,
             ReporterId = report.ReporterId,
-            ReporterName = reporterProfile.FullName,
+            ReporterName = reporterProfile.DisplayName,
             ReportTypeId = report.ReportTypeId,
             ReportTypeName = reportType.TypeName,
             ReportTypeDescription = reportType.Description,
@@ -279,14 +283,13 @@ public class ReportService : IReportService
         if (hasPendingReport)
             throw new InvalidOperationException("Review này đang có tố cáo cùng loại đang được xử lý");
 
-        var reporterProfile = await _unitOfWork.MembersProfile.GetFirstAsync(
-            predicate: m => m.UserId == venueOwnerUserId && m.IsDeleted != true);
+        var reporterProfile = await _unitOfWork.Users.GetByIdWithProfilesAsync(venueOwnerUserId);
 
         var evidenceSnapshot = await BuildEvidenceSnapshotAsync(ReportTargetType.REVIEW, reviewId);
 
         var report = new Data.Entities.Report
         {
-            ReporterId = venueOwnerProfile.Id,
+            ReporterId = venueOwnerUserId,
             ReportTypeId = request.ReportTypeId,
             TargetType = ReportTargetType.REVIEW.ToString(),
             TargetId = reviewId,
@@ -304,8 +307,8 @@ public class ReportService : IReportService
         return new ReportDto
         {
             Id = report.Id,
-            ReporterId = venueOwnerProfile.Id,
-            ReporterName = reporterProfile?.FullName ?? venueOwnerProfile.BusinessName ?? $"Venue Owner #{venueOwnerProfile.Id}",
+            ReporterId = venueOwnerUserId,
+            ReporterName = reporterProfile?.DisplayName ?? venueOwnerProfile.BusinessName ?? $"Venue Owner #{venueOwnerProfile.Id}",
             ReportTypeId = report.ReportTypeId,
             ReportTypeName = reportType.TypeName,
             ReportTypeDescription = reportType.Description,
@@ -383,6 +386,8 @@ public class ReportService : IReportService
 
         settlement.Status = VenueSettlementStatus.DISPUTED.ToString();
         settlement.UpdatedAt = DateTime.UtcNow;
+
+        _unitOfWork.VenueSettlements.Update(settlement);
     }
 
     public async Task<IEnumerable<ReportTypeDto>> GetAllReportTypesAsync()
