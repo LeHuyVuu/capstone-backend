@@ -9,6 +9,7 @@ public class ReportDto
     public string? ReporterName { get; set; }
     public int? ReportTypeId { get; set; }
     public string? ReportTypeName { get; set; }
+    public string? ReportTypeDescription { get; set; }
     public ReportTargetType? TargetType { get; set; }
     public int? TargetId { get; set; }
     public object? EvidenceSnapshot { get; set; }
