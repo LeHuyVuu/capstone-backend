@@ -56,6 +56,7 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
         var allReviews = await _unitOfWork.Context.Set<Data.Entities.Review>()
             .Where(r => r.VenueId == venueId 
                 && r.Status == ReviewStatus.PUBLISHED.ToString() 
+                && r.IsRelevant == true
                 && r.IsDeleted != true)
             .ToListAsync();
 
