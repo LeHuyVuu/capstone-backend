@@ -168,6 +168,14 @@ namespace capstone_backend.Business.Services
                 q => q.OrderByDescending(vi => vi.CreatedAt)
             );
 
+            // Fallback expired at for items that haven't been acquired yet
+            var expiredItemsFallBack = voucher.EndDate.Value;
+            foreach (var item in voucherItems)
+            {
+                if (item.ExpiredAt == null)
+                    item.ExpiredAt = expiredItemsFallBack;
+            }
+
             var response = _mapper.Map<List<VoucherItemResponse>>(voucherItems);
             return new PagedResult<VoucherItemResponse>
             {
