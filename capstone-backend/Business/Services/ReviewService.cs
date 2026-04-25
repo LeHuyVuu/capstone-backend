@@ -14,6 +14,7 @@ using capstone_backend.Data.Enums;
 using capstone_backend.Extensions.Common;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Linq;
 using static capstone_backend.Business.Services.VenueLocationService;
@@ -60,11 +61,12 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Địa điểm không có tọa độ hợp lệ");
 
             // Check opening hours
-            var today = now.DayOfWeek == DayOfWeek.Sunday
+            var nowVn = TimezoneUtil.ToVietNamTime(now);
+            var today = nowVn.DayOfWeek == DayOfWeek.Sunday
                     ? 8
-                    : (int)now.DayOfWeek + 1;
+                    : (int)nowVn.DayOfWeek + 1;
 
-            var currentTime = now.TimeOfDay;
+            var currentTime = nowVn.TimeOfDay;
 
             var openingHours = venue.VenueOpeningHours;
             if (openingHours == null || !openingHours.Any())
@@ -239,11 +241,12 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Không tìm thấy địa điểm");
 
             // Check opening hours
-            var today = now.DayOfWeek == DayOfWeek.Sunday
+            var nowVn = TimezoneUtil.ToVietNamTime(now);
+            var today = nowVn.DayOfWeek == DayOfWeek.Sunday
                     ? 8
-                    : (int)now.DayOfWeek + 1;
+                    : (int)nowVn.DayOfWeek + 1;
 
-            var currentTime = now.TimeOfDay;
+            var currentTime = nowVn.TimeOfDay;
 
             var openingHours = venue.VenueOpeningHours;
             if (openingHours == null || !openingHours.Any())
@@ -561,6 +564,7 @@ namespace capstone_backend.Business.Services
             var affected = await _unitOfWork.SaveChangesAsync();
 
             BackgroundJob.Enqueue<IReviewWorker>(j => j.EvaluateReviewRelevanceAsync(review.Id));
+            BackgroundJob.Enqueue<IReviewWorker>(j => j.RecountReviewAsync(review.VenueId));
 
             return affected;
         }

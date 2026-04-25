@@ -162,6 +162,28 @@ Venue info:
             }
         }
 
+        public async Task RecountReviewAsync(int venueId)
+        {
+            var venue = await _unitOfWork.VenueLocations.GetByIdAsync(venueId);
+            if (venue == null)
+                return;
+
+            var reviews = await _unitOfWork.Context.Reviews
+                .Where(r => r.VenueId == venueId && r.IsDeleted == false)
+                .ToListAsync();
+
+            var reviewCount = reviews.Count;
+            var averageRating = reviews.Any()
+                ? reviews.Average(r => (decimal)r.Rating)
+                : 0m;
+
+            venue.ReviewCount = reviewCount;
+            venue.AverageRating = averageRating;
+
+            _unitOfWork.VenueLocations.Update(venue);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
         public async Task SendReviewNotificationAsync(int checkInHistoryId)
         {
             var checkInHistory = await _unitOfWork.CheckInHistories.GetByIdAsync(checkInHistoryId);

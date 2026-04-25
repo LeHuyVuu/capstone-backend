@@ -167,6 +167,7 @@ namespace capstone_backend.Business.Jobs.Moderation
                 await _challengeService.HandleReviewChallengeProgressAsync(userId, reviewId, venueId, hasImage);
 
                 BackgroundJob.Enqueue<IReviewWorker>(j => j.EvaluateReviewRelevanceAsync(reviewId));
+                BackgroundJob.Enqueue<IReviewWorker>(j => j.RecountReviewAsync(review.VenueId));
 
                 // Send notification
                 if (venueLocation != null)

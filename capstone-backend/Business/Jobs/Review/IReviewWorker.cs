@@ -4,5 +4,6 @@
     {
         Task SendReviewNotificationAsync(int checkInHistoryId);
         Task EvaluateReviewRelevanceAsync(int reviewId);
+        Task RecountReviewAsync(int venueId);
     }
 }
