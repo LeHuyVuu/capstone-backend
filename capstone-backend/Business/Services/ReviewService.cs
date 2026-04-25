@@ -52,12 +52,40 @@ namespace capstone_backend.Business.Services
             if (couple == null)
                 throw new Exception("Bạn không có hồ sơ cặp đôi");
 
-            var venue = await _unitOfWork.VenueLocations.GetActiveByIdAsync(request.VenueLocationId);
+            var venue = await _unitOfWork.VenueLocations.GetByIdWithDetailsAsync(request.VenueLocationId);
             if (venue == null)
                 throw new Exception("Không tìm thấy địa điểm");
 
             if (!venue.Latitude.HasValue || !venue.Longitude.HasValue)
                 throw new Exception("Địa điểm không có tọa độ hợp lệ");
+
+            // Check opening hours
+            var today = now.DayOfWeek == DayOfWeek.Sunday
+                    ? 8
+                    : (int)now.DayOfWeek + 1;
+
+            var currentTime = now.TimeOfDay;
+
+            var openingHours = venue.VenueOpeningHours;
+            if (openingHours == null || !openingHours.Any())
+                throw new Exception("Địa điểm hôm nay không mở cửa");
+
+            var isOpen = openingHours.Any(oh =>
+            {
+
+                var open = oh.OpenTime;
+                var close = oh.CloseTime;
+
+                if (close < open)
+                {
+                    return currentTime >= open || currentTime <= close;
+                }
+
+                return currentTime >= open && currentTime <= close;
+            });
+
+            if (!isOpen)
+                throw new Exception("Địa điểm hiện tại đang đóng cửa");
 
             // Check if review already exists
             var hasReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId);
@@ -193,6 +221,8 @@ namespace capstone_backend.Business.Services
 
         public async Task<int> SubmitReviewAsync(int userId, CreateReviewRequest request)
         {
+            var now = DateTime.UtcNow;
+
             if (request.Images != null && request.Images.Count > 3)
                 throw new Exception("Bạn chỉ có thể tải lên tối đa 3 hình ảnh cho mỗi đánh giá");
 
@@ -204,9 +234,37 @@ namespace capstone_backend.Business.Services
             if (couple == null)
                 throw new Exception("Bạn không có hồ sơ cặp đôi");
 
-            var venue = await _unitOfWork.VenueLocations.GetActiveByIdAsync(request.VenueLocationId);
+            var venue = await _unitOfWork.VenueLocations.GetByIdWithDetailsAsync(request.VenueLocationId);
             if (venue == null)
                 throw new Exception("Không tìm thấy địa điểm");
+
+            // Check opening hours
+            var today = now.DayOfWeek == DayOfWeek.Sunday
+                    ? 8
+                    : (int)now.DayOfWeek + 1;
+
+            var currentTime = now.TimeOfDay;
+
+            var openingHours = venue.VenueOpeningHours;
+            if (openingHours == null || !openingHours.Any())
+                throw new Exception("Địa điểm hôm nay không mở cửa");
+
+            var isOpen = openingHours.Any(oh =>
+            {
+
+                var open = oh.OpenTime;
+                var close = oh.CloseTime;
+
+                if (close < open)
+                {
+                    return currentTime >= open || currentTime <= close;
+                }
+
+                return currentTime >= open && currentTime <= close;
+            });
+
+            if (!isOpen)
+                throw new Exception("Địa điểm hiện tại đang đóng cửa");
 
             // Check if review already exists
             var hasPublishedReview = await _unitOfWork.Reviews.HasMemberReviewedVenueAsync(member.Id, request.VenueLocationId);
