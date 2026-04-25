@@ -313,6 +313,7 @@ namespace capstone_backend.Business.Services
                 pageSize,
                 ma =>
                     ma.MemberId == member.Id &&
+                    (ma.ExpiredAt == null || ma.ExpiredAt > now) &&
                     (query.EquippedOnly == false || ma.IsEquipped == query.EquippedOnly) &&
                     (query.Type == null || ma.Accessory.Type == query.Type.ToString()) &&
                     (
@@ -400,6 +401,9 @@ namespace capstone_backend.Business.Services
             if (memberAccessory.IsEquipped != true)
                 throw new Exception("Phụ kiện chưa được trang bị");
 
+            if (memberAccessory.ExpiredAt != null && memberAccessory.ExpiredAt <= DateTime.UtcNow)
+                throw new Exception("Phụ kiện này đã hết hạn sử dụng");
+
             memberAccessory.IsEquipped = false;
             _unitOfWork.MemberAccessories.Update(memberAccessory);
             await _unitOfWork.SaveChangesAsync();
@@ -422,7 +426,7 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Hồ sơ thành viên không tồn tại");
 
             var memberAccessory = await _unitOfWork.MemberAccessories.GetByIdAsync(memberAccessoryId);
-            if (memberAccessory == null || memberAccessory.MemberId != member.Id)
+            if (memberAccessory == null || memberAccessory.MemberId != member.Id || memberAccessory.ExpiredAt != null && memberAccessory.ExpiredAt <= DateTime.UtcNow)
                 throw new Exception("Phụ kiện của thành viên không tồn tại");
 
             if (memberAccessory.Accessory == null || memberAccessory.Accessory.IsDeleted == true)
