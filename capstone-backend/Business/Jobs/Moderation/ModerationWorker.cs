@@ -168,6 +168,13 @@ namespace capstone_backend.Business.Jobs.Moderation
 
                 BackgroundJob.Enqueue<IReviewWorker>(j => j.EvaluateReviewRelevanceAsync(reviewId));
                 BackgroundJob.Enqueue<IReviewWorker>(j => j.RecountReviewAsync(review.VenueId));
+                
+                // Re-analyze venue tags after new review (IsPenalty might change)
+                if (venueId.HasValue)
+                {
+                    BackgroundJob.Enqueue<IVenueTagAnalysisService>(j => j.AnalyzeVenueTagsAsync(venueId.Value));
+                    _logger.LogInformation("[MODERATION WORKER] Enqueued tag analysis for venue {VenueId} after review {ReviewId} published", venueId.Value, reviewId);
+                }
 
                 // Send notification
                 if (venueLocation != null)

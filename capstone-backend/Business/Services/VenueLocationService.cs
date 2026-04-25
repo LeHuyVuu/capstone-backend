@@ -30,6 +30,7 @@ public class VenueLocationService : IVenueLocationService
     private readonly WalletPaymentService _walletPaymentService;
     private readonly IAccessoryService _accessoryService;
     private readonly ISystemConfigService _systemConfigService;
+    private readonly IVenueTagAnalysisService _venueTagAnalysisService;
 
     public VenueLocationService(
         IUnitOfWork unitOfWork,
@@ -42,7 +43,8 @@ public class VenueLocationService : IVenueLocationService
         IEmailService emailService,
         WalletPaymentService walletPaymentService,
         IAccessoryService accessoryService,
-        ISystemConfigService systemConfigService)
+        ISystemConfigService systemConfigService,
+        IVenueTagAnalysisService venueTagAnalysisService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
@@ -55,6 +57,7 @@ public class VenueLocationService : IVenueLocationService
         _walletPaymentService = walletPaymentService;
         _accessoryService = accessoryService;
         _systemConfigService = systemConfigService;
+        _venueTagAnalysisService = venueTagAnalysisService;
     }
 
     #region Category & Image Helpers
@@ -963,6 +966,65 @@ public class VenueLocationService : IVenueLocationService
         _unitOfWork.VenueLocations.Update(venue);
         await _unitOfWork.SaveChangesAsync();
 
+        // Re-analyze tags if venue is ACTIVE and tags were modified
+        // Note: request.VenueTags != null means tags were touched (even if empty array = delete all)
+        if (venue.Status == VenueLocationStatus.ACTIVE.ToString() && request.VenueTags != null)
+        {
+            try
+            {
+                _logger.LogInformation("[VENUE UPDATE] Re-analyzing venue {VenueId} tags after tag update", id);
+                await _venueTagAnalysisService.AnalyzeVenueTagsAsync(id);
+                _logger.LogInformation("[VENUE UPDATE] Re-analysis completed for venue {VenueId}", id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[VENUE UPDATE] Failed to re-analyze venue {VenueId} after tag update", id);
+                
+                // Fallback: Still sync to Meilisearch even if analysis fails
+                try
+                {
+                    await _meilisearchService.IndexVenueLocationAsync(id);
+                    _logger.LogInformation("Indexed updated venue {VenueId} to Meilisearch v1", id);
+                }
+                catch (Exception ex2)
+                {
+                    _logger.LogWarning(ex2, "Failed to index updated venue {VenueId} to Meilisearch v1", id);
+                }
+
+                try
+                {
+                    await _meilisearchService.IndexVenueLocationV2Async(id);
+                    _logger.LogInformation("Indexed updated venue {VenueId} to Meilisearch v2", id);
+                }
+                catch (Exception ex2)
+                {
+                    _logger.LogWarning(ex2, "Failed to index updated venue {VenueId} to Meilisearch v2", id);
+                }
+            }
+        }
+        else if (venue.Status == VenueLocationStatus.ACTIVE.ToString())
+        {
+            // If no tag changes, just sync to Meilisearch
+            try
+            {
+                await _meilisearchService.IndexVenueLocationAsync(id);
+                _logger.LogInformation("Indexed updated venue {VenueId} to Meilisearch v1", id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to index updated venue {VenueId} to Meilisearch v1", id);
+            }
+
+            try
+            {
+                await _meilisearchService.IndexVenueLocationV2Async(id);
+                _logger.LogInformation("Indexed updated venue {VenueId} to Meilisearch v2", id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to index updated venue {VenueId} to Meilisearch v2", id);
+            }
+        }
 
         // Do not re-fetch via GetVenueLocationDetailByIdAsync because it only returns ACTIVE venues.
         // Venue owners can update DRAFTED/PENDING venues too, otherwise client gets false 404 after successful update.
@@ -2489,35 +2551,38 @@ public class VenueLocationService : IVenueLocationService
 
             if (status == VenueLocationStatus.ACTIVE.ToString())
             {
+                // Admin duyệt venue sang ACTIVE -> analyze tags và index lại venue trên Meilisearch (v1 và v2)
                 try
                 {
-                    // Admin duyệt venue sang ACTIVE -> index lại venue trên Meilisearch
-                    // await _meilisearchService.IndexVenueLocationAsync(request.VenueId);
+                    _logger.LogInformation("[VENUE APPROVAL] Analyzing tags for newly approved venue {VenueId}", request.VenueId);
+                    await _venueTagAnalysisService.AnalyzeVenueTagsAsync(request.VenueId);
+                    _logger.LogInformation("[VENUE APPROVAL] Tag analysis completed for venue {VenueId}", request.VenueId);
+                    // Note: AnalyzeVenueTagsAsync already syncs to Meilisearch V1 and V2
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[VENUE APPROVAL] Failed to analyze tags for venue {VenueId}, falling back to direct sync", request.VenueId);
+                    
+                    // Fallback: Sync without analysis
+                    try
+                    {
+                        await _meilisearchService.IndexVenueLocationAsync(request.VenueId);
+                        _logger.LogInformation("Indexed APPROVED ACTIVE venue {VenueId} to Meilisearch v1", request.VenueId);
+                    }
+                    catch (Exception ex2)
+                    {
+                        _logger.LogWarning(ex2, "Failed to index APPROVED ACTIVE venue {VenueId} to Meilisearch v1", request.VenueId);
+                    }
 
                     try
                     {
-                        // var syncedCount = await MeilisearchSyncDataUtil.SyncVenueByIdLikeOldAsync(
-                        //     request.VenueId,
-                        //     indexName: "venue_locations",
-                        //     targetHost: MeilisearchSyncDataUtil.DefaultHost);
-
-                        // _logger.LogInformation(
-                        //     "Synced APPROVED ACTIVE venue {VenueId} to external Meilisearch host {Host}. SyncedCount={SyncedCount}",
-                        //     request.VenueId,
-                        //     MeilisearchSyncDataUtil.DefaultHost,
-                        //     syncedCount);
+                        await _meilisearchService.IndexVenueLocationV2Async(request.VenueId);
+                        _logger.LogInformation("Indexed APPROVED ACTIVE venue {VenueId} to Meilisearch v2", request.VenueId);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex2)
                     {
-                        _logger.LogWarning(
-                            ex,
-                            "Failed to sync APPROVED ACTIVE venue {VenueId} to external Meilisearch host {Host}",
-                            request.VenueId,
-                            MeilisearchSyncDataUtil.DefaultHost);
+                        _logger.LogWarning(ex2, "Failed to index APPROVED ACTIVE venue {VenueId} to Meilisearch v2", request.VenueId);
                     }
-                }
-                catch
-                {
                 }
             }
 
@@ -2628,6 +2693,42 @@ public class VenueLocationService : IVenueLocationService
 
         await _unitOfWork.SaveChangesAsync();
         _logger.LogInformation("Soft deleted tag {TagId} from venue {VenueId}", locationTagId, venueId);
+
+        // Re-analyze tags to update IsPenalty status (tag removal might remove POOR tags)
+        if (venue.Status == VenueLocationStatus.ACTIVE.ToString())
+        {
+            try
+            {
+                _logger.LogInformation("[TAG DELETE] Re-analyzing venue {VenueId} tags after tag deletion", venueId);
+                await _venueTagAnalysisService.AnalyzeVenueTagsAsync(venueId);
+                _logger.LogInformation("[TAG DELETE] Re-analysis completed for venue {VenueId}", venueId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[TAG DELETE] Failed to re-analyze venue {VenueId} after tag deletion", venueId);
+                
+                // Fallback: Still sync to Meilisearch even if analysis fails
+                try
+                {
+                    await _meilisearchService.IndexVenueLocationAsync(venueId);
+                    _logger.LogInformation("Indexed venue {VenueId} with deleted tag to Meilisearch v1", venueId);
+                }
+                catch (Exception ex2)
+                {
+                    _logger.LogWarning(ex2, "Failed to index venue {VenueId} to Meilisearch v1", venueId);
+                }
+
+                try
+                {
+                    await _meilisearchService.IndexVenueLocationV2Async(venueId);
+                    _logger.LogInformation("Indexed venue {VenueId} with deleted tag to Meilisearch v2", venueId);
+                }
+                catch (Exception ex2)
+                {
+                    _logger.LogWarning(ex2, "Failed to index venue {VenueId} to Meilisearch v2", venueId);
+                }
+            }
+        }
 
         return true;
     }
@@ -2838,6 +2939,30 @@ public class VenueLocationService : IVenueLocationService
         await _unitOfWork.SaveChangesAsync();
         _logger.LogInformation("Successfully updated opening hours for venue {VenueId}", request.VenueLocationId);
 
+        // Index venue to Meilisearch v1 and v2 if venue is ACTIVE
+        if (venue.Status == VenueLocationStatus.ACTIVE.ToString())
+        {
+            try
+            {
+                await _meilisearchService.IndexVenueLocationAsync(request.VenueLocationId);
+                _logger.LogInformation("Indexed venue {VenueId} with updated opening hours to Meilisearch v1", request.VenueLocationId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to index venue {VenueId} to Meilisearch v1", request.VenueLocationId);
+            }
+
+            try
+            {
+                await _meilisearchService.IndexVenueLocationV2Async(request.VenueLocationId);
+                _logger.LogInformation("Indexed venue {VenueId} with updated opening hours to Meilisearch v2", request.VenueLocationId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to index venue {VenueId} to Meilisearch v2", request.VenueLocationId);
+            }
+        }
+
         return true;
     }
 
@@ -2923,37 +3048,27 @@ public class VenueLocationService : IVenueLocationService
 
         await _unitOfWork.SaveChangesAsync();
 
+        // Admin đổi trạng thái ACTIVE/INACTIVE -> reindex venue trên Meilisearch v1 và v2
         bool reindexSuccess = false;
         try
         {
-            // Admin đổi trạng thái ACTIVE/INACTIVE -> reindex venue trên Meilisearch
-            // reindexSuccess = await _meilisearchService.IndexVenueLocationAsync(venueId);
+            await _meilisearchService.IndexVenueLocationAsync(venueId);
+            _logger.LogInformation("Indexed venue {VenueId} (status: {Status}) to Meilisearch v1", venueId, status);
+            reindexSuccess = true;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to reindex venue {VenueId} in Meilisearch", venueId);
+            _logger.LogWarning(ex, "Failed to index venue {VenueId} to Meilisearch v1", venueId);
         }
 
-        if (status == VenueLocationStatus.INACTIVE.ToString())
+        try
         {
-            try
-            {
-                // var syncedCount = await MeilisearchSyncDataUtil.SyncVenueByIdLikeOldAsync(
-                //     venueId,
-                //     indexName: "venue_locations",
-                //     targetHost: MeilisearchSyncDataUtil.DefaultHost);
-
-                //     _logger.LogInformation("Synced INACTIVE status for venue {VenueId} to external Meilisearch host {Host}. SyncedCount={SyncedCount}", 
-                //         venueId, MeilisearchSyncDataUtil.DefaultHost, syncedCount);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "Failed to sync INACTIVE venue {VenueId} to external Meilisearch host {Host}",
-                    venueId,
-                    MeilisearchSyncDataUtil.DefaultHost);
-            }
+            await _meilisearchService.IndexVenueLocationV2Async(venueId);
+            _logger.LogInformation("Indexed venue {VenueId} (status: {Status}) to Meilisearch v2", venueId, status);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to index venue {VenueId} to Meilisearch v2", venueId);
         }
 
         var owner = await _unitOfWork.Context.Set<VenueOwnerProfile>()
