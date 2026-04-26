@@ -8,5 +8,6 @@ namespace capstone_backend.Business.Interfaces
         Task<VenueSettlementSummaryResponse> GetSummaryAsync(int userId);
         Task<PagedResult<VenueSettlementListItemResponse>> GetSettlementsAsync(int userId, GetVenueSettlementsRequest request);
         Task<VenueSettlementDetailResponse> GetSettlementDetailAsync(int userId, int settlementId);
+        Task<RevenueResponse> GetRevenueAsync(int userId, RevenueRequest request);
     }
 }
