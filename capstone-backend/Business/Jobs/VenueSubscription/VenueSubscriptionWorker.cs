@@ -104,6 +104,7 @@ namespace capstone_backend.Business.Jobs.VenueSubscription
                 try
                 {
                     await _meilisearchService.IndexVenueLocationAsync(venueId);
+                    await _meilisearchService.IndexVenueLocationV2Async(venueId);
                 }
                 catch (Exception ex)
                 {
