@@ -1,4 +1,5 @@
 ﻿using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Business.DTOs.CoupleMoodType;
 using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Review;
 using capstone_backend.Business.DTOs.VenueLocation;
@@ -10,6 +11,7 @@ namespace capstone_backend.Business.Interfaces
         Task<int> CheckinAsync(int userId, CheckinRequest request);
         Task<int> DeleteReviewAsync(int userId, int reviewId);
         Task<int> DeleteReviewReplyAsync(int userId, int reviewId);
+        Task<List<CoupleMoodTypeResponse>> GetCoupleMoodTypeAsync();
         Task<PagedResult<ReviewResponse>> GetFlaggedReviewsAsync(int pageNumber, int pageSize);
         Task<PagedResult<MyReviewResponse>> GetMyReviewsAsync(int value, GetMyReviewRequest request);
         Task<int> ModerateReviewAsync(int reviewId, ModerationRequest request);
