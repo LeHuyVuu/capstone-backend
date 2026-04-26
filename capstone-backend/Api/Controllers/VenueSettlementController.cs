@@ -19,6 +19,26 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Get revenue settlement of vouchers
+        /// </summary>
+        [HttpGet("revenue")]
+        public async Task<IActionResult> GetRevenueSettlement([FromQuery] RevenueRequest request)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (userId == null)
+                    return UnauthorizedResponse();
+                var result = await _venueSettlementService.GetRevenueAsync(userId.Value, request);
+                return OkResponse(result, "Lấy doanh thu đối soát thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Get summary settlement of vouchers
         /// </summary>
         [HttpGet("summary")]

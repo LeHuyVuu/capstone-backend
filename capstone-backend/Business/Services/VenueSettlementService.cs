@@ -4,6 +4,7 @@ using capstone_backend.Business.DTOs.VenueSettlement;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
+using capstone_backend.Extensions.Common;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
@@ -19,6 +20,104 @@ namespace capstone_backend.Business.Services
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+        }
+
+        public async Task<RevenueResponse> GetRevenueAsync(int userId, RevenueRequest request)
+        {
+            var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetIncludeByUserIdAsync(userId);
+            if (venueOwner == null)
+                throw new Exception("Không tìm thấy chủ địa điểm");
+
+            var query = _unitOfWork.VenueSettlements.GetByVenueOwnerId(venueOwner.Id)
+                .Where(x => x.IsDeleted == false &&
+                            x.Status == VenueSettlementStatus.PAID.ToString() &&
+                            x.PaidAt != null);
+
+            DateTime? fromUtc = null;
+            DateTime? toUtc = null;
+
+            if (request.FromDate.HasValue)
+                fromUtc = DateTimeNormalizeUtil.NormalizeToUtc(request.FromDate.Value);
+
+            if (request.ToDate.HasValue)
+            {
+                var endOfDay = request.ToDate.Value.Date.AddDays(1).AddTicks(-1);
+                toUtc = DateTimeNormalizeUtil.NormalizeToUtc(endOfDay);
+            }
+
+            if (fromUtc.HasValue)
+                query = query.Where(x => x.PaidAt >= fromUtc.Value);
+
+            if (toUtc.HasValue)
+                query = query.Where(x => x.PaidAt <= toUtc.Value);
+
+            var groupBy = ResolveGroupBy(fromUtc, toUtc, request.GroupBy);
+
+            var data = query.AsEnumerable();
+
+            List<RevenueItem> result;
+
+            if (groupBy == "day")
+            {
+                result = data
+                    .GroupBy(x => TimezoneUtil.ToVietNamTime(x.PaidAt!.Value).Date)
+                    .Select(g => new RevenueItem
+                    {
+                        Label = g.Key.ToString("yyyy-MM-dd"),
+                        Revenue = g.Sum(x => x.NetAmount),
+                        Count = g.Count()
+                    })
+                    .OrderBy(x => x.Label)
+                    .ToList();
+            }
+            else if (groupBy == "year")
+            {
+                result = data
+                    .GroupBy(x => TimezoneUtil.ToVietNamTime(x.PaidAt!.Value).Year)
+                    .Select(g => new RevenueItem
+                    {
+                        Label = g.Key.ToString(),
+                        Revenue = g.Sum(x => x.NetAmount),
+                        Count = g.Count()
+                    })
+                    .OrderBy(x => x.Label)
+                    .ToList();
+            }
+            else
+            {
+                result = data
+                    .GroupBy(x =>
+                    {
+                        var local = TimezoneUtil.ToVietNamTime(x.PaidAt!.Value);
+                        return new { local.Year, local.Month };
+                    })
+                    .Select(g => new RevenueItem
+                    {
+                        Label = $"{g.Key.Year}-{g.Key.Month:D2}",
+                        Revenue = g.Sum(x => x.NetAmount),
+                        Count = g.Count()
+                    })
+                    .OrderBy(x => x.Label)
+                    .ToList();
+            }
+
+            return new RevenueResponse
+            {
+                Items = result
+            };
+        }
+
+        private string ResolveGroupBy(DateTime? fromUtc, DateTime? toUtc, string? requested)
+        {
+
+            if (!fromUtc.HasValue || !toUtc.HasValue)
+                return requested?.Trim().ToLower() ?? "month";
+
+            var days = (toUtc.Value - fromUtc.Value).TotalDays;
+
+            if (days <= 31) return "day";
+            if (days <= 365) return "month";
+            return "year";
         }
 
         public async Task<VenueSettlementDetailResponse> GetSettlementDetailAsync(int userId, int settlementId)
