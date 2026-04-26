@@ -83,6 +83,6 @@ public class VenuePerformanceSummary
     public int FavoriteCount { get; set; }
     public int DatePlanCount { get; set; }
     public int CollectionCount { get; set; }
-    public string? CoverImage { get; set; }
+    public List<string>? CoverImage { get; set; }
     public List<RejectionRecord>? RejectionDetails { get; set; }
 }

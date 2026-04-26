@@ -180,7 +180,7 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
                 FavoriteCount = venue.FavoriteCount ?? 0,
                 DatePlanCount = venueDatePlans,
                 CollectionCount = venueCollections,
-                CoverImage = venue.CoverImage,
+                CoverImage = ParseImageList(venue.CoverImage),
                 RejectionDetails = string.IsNullOrWhiteSpace(venue.RejectReason)
                     ? null
                     : System.Text.Json.JsonSerializer.Deserialize<List<Business.DTOs.VenueLocation.RejectionRecord>>(venue.RejectReason)
@@ -412,6 +412,55 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
             VoucherStats = voucherStats
         };
     }
+
+    /// <summary>
+    /// Parse image string from database to list of URLs
+    /// </summary>
+    private List<string>? ParseImageList(string? imageString)
+    {
+        if (string.IsNullOrWhiteSpace(imageString))
+            return null;
+
+        try
+        {
+            // Handle database format: '[ "url1", "url2" ]' or '["url1", "url2"]'
+            var trimmed = imageString.Trim();
+            
+            // Remove leading/trailing single or double quotes
+            if ((trimmed.StartsWith("'") && trimmed.EndsWith("'")) ||
+                (trimmed.StartsWith("\"") && trimmed.EndsWith("\"")))
+            {
+                trimmed = trimmed.Substring(1, trimmed.Length - 2);
+            }
+            
+            // Now check if it's a JSON array
+            trimmed = trimmed.Trim();
+            if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+            {
+                // Unescape any escaped quotes before deserializing
+                trimmed = trimmed.Replace("\\\"", "\"");
+                
+                var deserializedArray = System.Text.Json.JsonSerializer.Deserialize<List<string>>(trimmed);
+                if (deserializedArray != null && deserializedArray.Any())
+                {
+                    return deserializedArray
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Select(s => s.Trim())
+                        .ToList();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[IMAGE PARSE] Failed to parse image list: {Input}", 
+                imageString?.Substring(0, Math.Min(100, imageString.Length)));
+        }
+
+        // Fallback: parse as comma-separated string
+        return (imageString ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim().Trim('\'', '"', '[', ']', '\\'))
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .ToList();
+    }
 }
-
-
