@@ -221,9 +221,9 @@ public class AdvertisementService : IAdvertisementService
             }
         }
 
-        // Chỉ thêm special events khi KHÔNG có placementType (không trộn lẫn khi có filter)
+        // Thêm special events cho HOME_BANNER và khi không có placementType
         List<AdvertisementResponse> result;
-        if (string.IsNullOrEmpty(placementType))
+        if (string.IsNullOrEmpty(placementType) || placementType.Trim().ToUpper() == "HOME_BANNER")
         {
             // Lấy special events active
             var specialEvents = await _unitOfWork.SpecialEvents.GetActiveSpecialEventsAsync();
@@ -244,8 +244,8 @@ public class AdvertisementService : IAdvertisementService
             result = rotatedAds.Concat(specialEventResponses).ToList();
             
             _logger.LogInformation(
-                "Retrieved {TotalCount} items: {AdCount} advertisement(s) + {SpecialEventCount} special event(s) (PlacementType: all, RotationIndex: {RotationIndex})",
-                result.Count, rotatedAds.Count, specialEventResponses.Count, _rotationIndex);
+                "Retrieved {TotalCount} items: {AdCount} advertisement(s) + {SpecialEventCount} special event(s) (PlacementType: {PlacementType}, RotationIndex: {RotationIndex})",
+                result.Count, rotatedAds.Count, specialEventResponses.Count, placementType ?? "all", _rotationIndex);
         }
         else if (placementType.Trim().ToUpper() == "POPUP")
         {

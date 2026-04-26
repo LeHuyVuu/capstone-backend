@@ -13,7 +13,8 @@ public class SpecialEventRepository : GenericRepository<SpecialEvent>, ISpecialE
 
     public async Task<List<SpecialEvent>> GetActiveSpecialEventsAsync()
     {
-        var now = DateTime.UtcNow;
+        // Sử dụng DateTime.Now thay vì UtcNow vì database lưu với timezone +07
+        var now = DateTime.Now;
         var currentMonth = now.Month;
         var currentDay = now.Day;
 
@@ -50,7 +51,10 @@ public class SpecialEventRepository : GenericRepository<SpecialEvent>, ISpecialE
             else
             {
                 // So sánh đầy đủ cho sự kiện một lần
-                return e.StartDate.Value <= now && e.EndDate.Value >= now;
+                // Chuyển về local time để so sánh chính xác
+                var startDateLocal = e.StartDate.Value.ToLocalTime();
+                var endDateLocal = e.EndDate.Value.ToLocalTime();
+                return startDateLocal <= now && endDateLocal >= now;
             }
         })
         .OrderBy(e => e.StartDate)
