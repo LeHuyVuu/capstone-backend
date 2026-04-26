@@ -327,7 +327,10 @@ public class AdvertisementService : IAdvertisementService
             BannerUrl = request.BannerUrl,
             TargetUrl = request.TargetUrl,
             PlacementType = request.PlacementType,
-            DesiredStartDate = request.DesiredStartDate,
+            // Ensure DesiredStartDate is stored as UTC
+            DesiredStartDate = request.DesiredStartDate.Kind == DateTimeKind.Utc 
+                ? request.DesiredStartDate 
+                : DateTime.SpecifyKind(request.DesiredStartDate, DateTimeKind.Utc),
             Status = AdvertisementStatus.DRAFT.ToString(), // Default to DRAFT, will be updated to PENDING after payment
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -409,7 +412,10 @@ public class AdvertisementService : IAdvertisementService
                 advertisement.PlacementType = request.PlacementType.Trim();
             }
             advertisement.MoodTypeId = request.MoodTypeId;
-            advertisement.DesiredStartDate = request.DesiredStartDate;
+            // Ensure DesiredStartDate is stored as UTC
+            advertisement.DesiredStartDate = request.DesiredStartDate.Kind == DateTimeKind.Utc 
+                ? request.DesiredStartDate 
+                : DateTime.SpecifyKind(request.DesiredStartDate, DateTimeKind.Utc);
             advertisement.Status = AdvertisementStatus.DRAFT.ToString();
             advertisement.UpdatedAt = DateTime.UtcNow;
 
