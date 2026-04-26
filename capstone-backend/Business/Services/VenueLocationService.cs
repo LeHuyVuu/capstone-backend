@@ -1171,55 +1171,73 @@ public class VenueLocationService : IVenueLocationService
             venueLocations.Select(v => v.Id).ToList());
 
         // Map to response DTOs
-        var responses = venueLocations.Select(v => new VenueOwnerVenueLocationResponse
+        var responses = new List<VenueOwnerVenueLocationResponse>();
+        
+        foreach (var v in venueLocations)
         {
-            Id = v.Id,
-            Name = v.Name,
-            Description = v.Description,
-            Address = v.Address,
-            Email = v.Email,
-            PhoneNumber = v.PhoneNumber,
-            WebsiteUrl = v.WebsiteUrl,
-            PriceMin = v.PriceMin,
-            PriceMax = v.PriceMax,
-            Latitude = v.Latitude,
-            Longitude = v.Longitude,
-            Area = v.Area,
-            AverageRating = v.AverageRating.HasValue ? Math.Round(v.AverageRating.Value, 1) : null,
-            AvarageCost = v.AvarageCost,
-            ReviewCount = v.ReviewCount,
-            Status = v.Status,
-            CoverImage = DeserializeImages(v.CoverImage),
-            InteriorImage = DeserializeImages(v.InteriorImage),
-            Category = v.Category,
-            Categories = CreateCategoriesInfo(v),
-            FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
-            IsOwnerVerified = v.IsOwnerVerified,
-            BusinessLicenseUrl = v.BusinessLicenseUrl,
-            RejectionDetails = string.IsNullOrWhiteSpace(v.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(v.RejectReason),
-            CreatedAt = v.CreatedAt,
-            UpdatedAt = v.UpdatedAt,
-            DurationDays = activeSubscriptionsByVenueId.TryGetValue(v.Id, out var activeSubscription)
-                ? CalculateActualDurationDays(activeSubscription)
-                : null,
-            StartDate = activeSubscriptionsByVenueId.TryGetValue(v.Id, out activeSubscription)
-                ? activeSubscription.StartDate
-                : null,
-            EndDate = activeSubscriptionsByVenueId.TryGetValue(v.Id, out activeSubscription)
-                ? activeSubscription.EndDate
-                : null,
-            LocationTags = CreateLocationTagsInfo(v),
-            OpeningHours = v.VenueOpeningHours?
-                .OrderBy(oh => oh.Day)
-                .Select(oh => new VenueOpeningHourResponse
-                {
-                    Id = oh.Id,
-                    Day = oh.Day,
-                    OpenTime = oh.OpenTime,
-                    CloseTime = oh.CloseTime,
-                    IsClosed = oh.IsClosed
-                }).ToList()
-        }).ToList();
+            VenueSubscriptionPackage? subscription = null;
+            
+            // Try to get active subscription first
+            if (!activeSubscriptionsByVenueId.TryGetValue(v.Id, out subscription))
+            {
+                // If no active subscription, get the latest subscription (excluding cancelled/refunded/failed)
+                subscription = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
+                    .AsNoTracking()
+                    .Include(vsp => vsp.Package)
+                    .Where(vsp => vsp.VenueId == v.Id 
+                        && vsp.Status != VenueSubscriptionPackageStatus.CANCELLED.ToString()
+                        && vsp.Status != VenueSubscriptionPackageStatus.REFUNDED.ToString()
+                        && vsp.Status != VenueSubscriptionPackageStatus.PAYMENT_FAILED.ToString()
+                        && vsp.Status != VenueSubscriptionPackageStatus.PENDING_PAYMENT.ToString())
+                    .OrderByDescending(vsp => vsp.CreatedAt)
+                    .ThenByDescending(vsp => vsp.Id)
+                    .FirstOrDefaultAsync();
+            }
+
+            responses.Add(new VenueOwnerVenueLocationResponse
+            {
+                Id = v.Id,
+                Name = v.Name,
+                Description = v.Description,
+                Address = v.Address,
+                Email = v.Email,
+                PhoneNumber = v.PhoneNumber,
+                WebsiteUrl = v.WebsiteUrl,
+                PriceMin = v.PriceMin,
+                PriceMax = v.PriceMax,
+                Latitude = v.Latitude,
+                Longitude = v.Longitude,
+                Area = v.Area,
+                AverageRating = v.AverageRating.HasValue ? Math.Round(v.AverageRating.Value, 1) : null,
+                AvarageCost = v.AvarageCost,
+                ReviewCount = v.ReviewCount,
+                Status = v.Status,
+                CoverImage = DeserializeImages(v.CoverImage),
+                InteriorImage = DeserializeImages(v.InteriorImage),
+                Category = v.Category,
+                Categories = CreateCategoriesInfo(v),
+                FullPageMenuImage = DeserializeImages(v.FullPageMenuImage),
+                IsOwnerVerified = v.IsOwnerVerified,
+                BusinessLicenseUrl = v.BusinessLicenseUrl,
+                RejectionDetails = string.IsNullOrWhiteSpace(v.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(v.RejectReason),
+                CreatedAt = v.CreatedAt,
+                UpdatedAt = v.UpdatedAt,
+                DurationDays = subscription != null ? CalculateActualDurationDays(subscription) : null,
+                StartDate = subscription?.StartDate,
+                EndDate = subscription?.EndDate,
+                LocationTags = CreateLocationTagsInfo(v),
+                OpeningHours = v.VenueOpeningHours?
+                    .OrderBy(oh => oh.Day)
+                    .Select(oh => new VenueOpeningHourResponse
+                    {
+                        Id = oh.Id,
+                        Day = oh.Day,
+                        OpenTime = oh.OpenTime,
+                        CloseTime = oh.CloseTime,
+                        IsClosed = oh.IsClosed
+                    }).ToList()
+            });
+        }
 
         _logger.LogInformation("Retrieved {Count} venue locations for venue owner profile ID {VenueOwnerProfileId}", responses.Count, venueOwnerProfile.Id);
 
@@ -1250,6 +1268,24 @@ public class VenueLocationService : IVenueLocationService
         }
 
         var activeSubscriptionsByVenueId = await GetActiveVenueSubscriptionsByVenueIdsAsync(new List<int> { venueId });
+        VenueSubscriptionPackage? subscription = null;
+        
+        // Try to get active subscription first
+        if (!activeSubscriptionsByVenueId.TryGetValue(venueId, out subscription))
+        {
+            // If no active subscription, get the latest subscription (excluding cancelled/refunded/failed)
+            subscription = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
+                .AsNoTracking()
+                .Include(vsp => vsp.Package)
+                .Where(vsp => vsp.VenueId == venueId 
+                    && vsp.Status != VenueSubscriptionPackageStatus.CANCELLED.ToString()
+                    && vsp.Status != VenueSubscriptionPackageStatus.REFUNDED.ToString()
+                    && vsp.Status != VenueSubscriptionPackageStatus.PAYMENT_FAILED.ToString()
+                    && vsp.Status != VenueSubscriptionPackageStatus.PENDING_PAYMENT.ToString())
+                .OrderByDescending(vsp => vsp.CreatedAt)
+                .ThenByDescending(vsp => vsp.Id)
+                .FirstOrDefaultAsync();
+        }
 
         // Map to response DTO
         var response = new VenueOwnerVenueLocationResponse
@@ -1280,15 +1316,9 @@ public class VenueLocationService : IVenueLocationService
             RejectionDetails = string.IsNullOrWhiteSpace(venue.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(venue.RejectReason),
             CreatedAt = venue.CreatedAt,
             UpdatedAt = venue.UpdatedAt,
-            DurationDays = activeSubscriptionsByVenueId.TryGetValue(venue.Id, out var activeSubscription)
-                ? CalculateActualDurationDays(activeSubscription)
-                : null,
-            StartDate = activeSubscriptionsByVenueId.TryGetValue(venue.Id, out activeSubscription)
-                ? activeSubscription.StartDate
-                : null,
-            EndDate = activeSubscriptionsByVenueId.TryGetValue(venue.Id, out activeSubscription)
-                ? activeSubscription.EndDate
-                : null,
+            DurationDays = subscription != null ? CalculateActualDurationDays(subscription) : null,
+            StartDate = subscription?.StartDate,
+            EndDate = subscription?.EndDate,
             LocationTags = CreateLocationTagsInfo(venue),
             OpeningHours = venue.VenueOpeningHours?
                 .OrderBy(oh => oh.Day)
@@ -1341,8 +1371,30 @@ public class VenueLocationService : IVenueLocationService
         var activeSubscriptionsByVenueId = await GetActiveVenueSubscriptionsByVenueIdsAsync(
             venueLocations.Select(v => v.Id).ToList());
 
-        var responses = venueLocations
-            .Select(v => new VenueOwnerVenueLocationResponse
+        var responses = new List<VenueOwnerVenueLocationResponse>();
+        
+        foreach (var v in venueLocations)
+        {
+            VenueSubscriptionPackage? subscription = null;
+            
+            // Try to get active subscription first
+            if (!activeSubscriptionsByVenueId.TryGetValue(v.Id, out subscription))
+            {
+                // If no active subscription, get the latest subscription (excluding cancelled/refunded/failed)
+                subscription = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
+                    .AsNoTracking()
+                    .Include(vsp => vsp.Package)
+                    .Where(vsp => vsp.VenueId == v.Id 
+                        && vsp.Status != VenueSubscriptionPackageStatus.CANCELLED.ToString()
+                        && vsp.Status != VenueSubscriptionPackageStatus.REFUNDED.ToString()
+                        && vsp.Status != VenueSubscriptionPackageStatus.PAYMENT_FAILED.ToString()
+                        && vsp.Status != VenueSubscriptionPackageStatus.PENDING_PAYMENT.ToString())
+                    .OrderByDescending(vsp => vsp.CreatedAt)
+                    .ThenByDescending(vsp => vsp.Id)
+                    .FirstOrDefaultAsync();
+            }
+
+            responses.Add(new VenueOwnerVenueLocationResponse
             {
                 Id = v.Id,
                 Name = v.Name,
@@ -1370,17 +1422,12 @@ public class VenueLocationService : IVenueLocationService
                 RejectionDetails = string.IsNullOrWhiteSpace(v.RejectReason) ? null : System.Text.Json.JsonSerializer.Deserialize<List<RejectionRecord>>(v.RejectReason),
                 CreatedAt = v.CreatedAt,
                 UpdatedAt = v.UpdatedAt,
-                DurationDays = activeSubscriptionsByVenueId.TryGetValue(v.Id, out var activeSubscription)
-                    ? CalculateActualDurationDays(activeSubscription)
-                    : null,
-                StartDate = activeSubscriptionsByVenueId.TryGetValue(v.Id, out activeSubscription)
-                    ? activeSubscription.StartDate
-                    : null,
-                EndDate = activeSubscriptionsByVenueId.TryGetValue(v.Id, out activeSubscription)
-                    ? activeSubscription.EndDate
-                    : null,
+                DurationDays = subscription != null ? CalculateActualDurationDays(subscription) : null,
+                StartDate = subscription?.StartDate,
+                EndDate = subscription?.EndDate,
                 LocationTags = CreateLocationTagsInfo(v)
-            }).ToList();
+            });
+        }
 
         _logger.LogInformation("Retrieved {Count} system venue locations with status {Status}, search {Search} (Total {TotalCount})", responses.Count, status, search, totalCount);
 
