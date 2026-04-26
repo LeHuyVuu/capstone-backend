@@ -21,6 +21,7 @@ using capstone_backend.Scripts;
 using capstone_backend.Data.Context;
 using capstone_backend.Data.Interfaces;
 using capstone_backend.Data.Repositories;
+using capstone_backend.Extensions.Common;
 using FirebaseAdmin;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -599,6 +600,9 @@ public static class ServiceExtensions
                 opts.JsonSerializerOptions.Converters.Add(
                     new JsonStringEnumConverter()
                     );
+                // Ensure all DateTime values are serialized as UTC with 'Z' suffix
+                opts.JsonSerializerOptions.Converters.Add(new UtcDateTimeConverter());
+                opts.JsonSerializerOptions.Converters.Add(new UtcNullableDateTimeConverter());
             });
 
         services.Configure<ApiBehaviorOptions>(options =>

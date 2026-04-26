@@ -3,6 +3,88 @@ using System.Text.Json.Serialization;
 
 namespace capstone_backend.Extensions.Common
 {
+    /// <summary>
+    /// Custom JSON converter to ensure all DateTime values are serialized as UTC with 'Z' suffix
+    /// This prevents timezone inconsistencies across different API endpoints
+    /// </summary>
+    public class UtcDateTimeConverter : JsonConverter<DateTime>
+    {
+        public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            var dateTime = reader.GetDateTime();
+            
+            // If the DateTime doesn't have a Kind specified, assume it's UTC
+            if (dateTime.Kind == DateTimeKind.Unspecified)
+            {
+                return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+            }
+            
+            // Convert to UTC if it's local time
+            return dateTime.ToUniversalTime();
+        }
+
+        public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+        {
+            // Always convert to UTC before serializing
+            var utcDateTime = value.Kind switch
+            {
+                DateTimeKind.Utc => value,
+                DateTimeKind.Local => value.ToUniversalTime(),
+                DateTimeKind.Unspecified => DateTime.SpecifyKind(value, DateTimeKind.Utc),
+                _ => value
+            };
+            
+            // Write in ISO 8601 format with 'Z' suffix (e.g., "2026-04-30T06:00:00Z")
+            writer.WriteStringValue(utcDateTime);
+        }
+    }
+
+    /// <summary>
+    /// Custom JSON converter for nullable DateTime values
+    /// </summary>
+    public class UtcNullableDateTimeConverter : JsonConverter<DateTime?>
+    {
+        public override DateTime? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType == JsonTokenType.Null)
+            {
+                return null;
+            }
+            
+            var dateTime = reader.GetDateTime();
+            
+            // If the DateTime doesn't have a Kind specified, assume it's UTC
+            if (dateTime.Kind == DateTimeKind.Unspecified)
+            {
+                return DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
+            }
+            
+            // Convert to UTC if it's local time
+            return dateTime.ToUniversalTime();
+        }
+
+        public override void Write(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)
+        {
+            if (!value.HasValue)
+            {
+                writer.WriteNullValue();
+                return;
+            }
+            
+            // Always convert to UTC before serializing
+            var utcDateTime = value.Value.Kind switch
+            {
+                DateTimeKind.Utc => value.Value,
+                DateTimeKind.Local => value.Value.ToUniversalTime(),
+                DateTimeKind.Unspecified => DateTime.SpecifyKind(value.Value, DateTimeKind.Utc),
+                _ => value.Value
+            };
+            
+            // Write in ISO 8601 format with 'Z' suffix (e.g., "2026-04-30T06:00:00Z")
+            writer.WriteStringValue(utcDateTime);
+        }
+    }
+
     public static class JsonConverterUtil
     {
         public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
@@ -11,7 +93,9 @@ namespace capstone_backend.Extensions.Common
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             Converters =
             {
-                new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
+                new JsonStringEnumConverter(JsonNamingPolicy.CamelCase),
+                new UtcDateTimeConverter(),
+                new UtcNullableDateTimeConverter()
             }
         };
 
