@@ -13,4 +13,9 @@ public interface IVenueOwnerDashboardService
     /// Lấy chi tiết analytics cho 1 venue cụ thể
     /// </summary>
     Task<VenueAnalyticsResponse> GetVenueAnalyticsAsync(int userId, int venueId, int days = 30);
+    
+    /// <summary>
+    /// Lấy thông tin subscription của venue owner bao gồm hạn sử dụng các tính năng
+    /// </summary>
+    Task<VenueOwnerSubscriptionInfoResponse> GetSubscriptionInfoAsync(int userId);
 }

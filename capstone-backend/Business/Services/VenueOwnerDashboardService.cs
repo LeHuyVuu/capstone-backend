@@ -463,4 +463,189 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
             .Where(s => !string.IsNullOrWhiteSpace(s))
             .ToList();
     }
+
+    /// <summary>
+    /// Lấy thông tin subscription của venue owner bao gồm hạn sử dụng các tính năng
+    /// Tính năng này sẽ cộng dồn thời gian từ tất cả các gói ACTIVE có cùng feature
+    /// </summary>
+    public async Task<VenueOwnerSubscriptionInfoResponse> GetSubscriptionInfoAsync(int userId)
+    {
+        _logger.LogInformation("Getting subscription info for user ID: {UserId}", userId);
+
+        // 1. Find VenueOwnerProfile by userId
+        var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(userId);
+        if (venueOwner == null)
+        {
+            _logger.LogWarning("Venue owner profile not found for user ID: {UserId}", userId);
+            throw new UnauthorizedAccessException("Không tìm thấy hồ sơ chủ địa điểm");
+        }
+
+        var now = DateTime.UtcNow;
+        var response = new VenueOwnerSubscriptionInfoResponse
+        {
+            HasActiveSubscription = false,
+            ActiveSubscriptions = new List<ActiveSubscriptionDetail>()
+        };
+
+        // 2. Lấy tất cả user-level subscriptions đang ACTIVE (OwnerId = venueOwner.Id, VenueId = null)
+        var userLevelSubs = await _unitOfWork.Context.Set<Data.Entities.VenueSubscriptionPackage>()
+            .Where(vsp =>
+                vsp.OwnerId == venueOwner.Id &&
+                vsp.VenueId == null &&
+                vsp.Status == VenueSubscriptionPackageStatus.ACTIVE.ToString() &&
+                vsp.EndDate.HasValue &&
+                vsp.EndDate.Value >= now)
+            .Include(vsp => vsp.Package)
+            .OrderByDescending(vsp => vsp.EndDate)
+            .ToListAsync();
+
+        // 3. Lấy tất cả venue-level subscriptions đang ACTIVE
+        var venueLevelSubs = await _unitOfWork.Context.Set<Data.Entities.VenueSubscriptionPackage>()
+            .Where(vsp =>
+                vsp.VenueId != null &&
+                vsp.Status == VenueSubscriptionPackageStatus.ACTIVE.ToString() &&
+                vsp.EndDate.HasValue &&
+                vsp.EndDate.Value >= now)
+            .Include(vsp => vsp.Package)
+            .Include(vsp => vsp.Venue)
+            .Where(vsp =>
+                vsp.Venue != null &&
+                vsp.Venue.VenueOwnerId == venueOwner.Id)
+            .OrderByDescending(vsp => vsp.EndDate)
+            .ToListAsync();
+
+        var allActiveSubs = userLevelSubs.Concat(venueLevelSubs).ToList();
+
+        if (!allActiveSubs.Any())
+        {
+            _logger.LogInformation("No active subscriptions found for venue owner ID: {OwnerId}", venueOwner.Id);
+            return response;
+        }
+
+        response.HasActiveSubscription = true;
+
+        // 4. Map tất cả active subscriptions
+        foreach (var sub in allActiveSubs)
+        {
+            var features = new Dictionary<string, bool>();
+            if (sub.Package?.FeatureFlags != null)
+            {
+                foreach (var prop in sub.Package.FeatureFlags.RootElement.EnumerateObject())
+                {
+                    var value = prop.Value.ValueKind switch
+                    {
+                        System.Text.Json.JsonValueKind.True => true,
+                        System.Text.Json.JsonValueKind.False => false,
+                        System.Text.Json.JsonValueKind.String => bool.TryParse(prop.Value.GetString(), out var boolValue) && boolValue,
+                        System.Text.Json.JsonValueKind.Number => prop.Value.TryGetInt32(out var numberValue) && numberValue > 0,
+                        _ => false
+                    };
+                    features[prop.Name] = value;
+                }
+            }
+
+            response.ActiveSubscriptions.Add(new ActiveSubscriptionDetail
+            {
+                SubscriptionId = sub.Id,
+                PackageId = sub.PackageId,
+                PackageName = sub.Package?.PackageName,
+                PackageType = sub.Package?.Type,
+                StartDate = sub.StartDate,
+                EndDate = sub.EndDate,
+                VenueId = sub.VenueId,
+                Features = features
+            });
+        }
+
+        // 5. Tính toán thông tin VENUE_INSIGHT access với logic cộng dồn
+        var insightSubs = allActiveSubs
+            .Where(sub => sub.Package?.FeatureFlags != null && HasFeatureInPackage(sub.Package.FeatureFlags, "VENUE_INSIGHT"))
+            .OrderBy(sub => sub.StartDate)
+            .ToList();
+
+        if (insightSubs.Any())
+        {
+            // Cộng dồn thời gian từ tất cả các gói
+            DateTime cumulativeEndDate = now;
+            
+            foreach (var sub in insightSubs)
+            {
+                if (!sub.StartDate.HasValue || !sub.EndDate.HasValue)
+                    continue;
+
+                // Tính số ngày của subscription này
+                var subscriptionDays = (sub.EndDate.Value - sub.StartDate.Value).TotalDays;
+                
+                // Cộng dồn vào cumulative end date
+                cumulativeEndDate = cumulativeEndDate.AddDays(subscriptionDays);
+                
+                _logger.LogInformation(
+                    "Adding subscription #{SubId} ({Package}): {Days} days, cumulative end: {CumulativeEnd}",
+                    sub.Id,
+                    sub.Package?.PackageName,
+                    subscriptionDays,
+                    cumulativeEndDate);
+            }
+
+            var daysRemaining = (int)Math.Ceiling((cumulativeEndDate - now).TotalDays);
+
+            response.VenueInsightAccess = new FeatureAccessInfo
+            {
+                HasAccess = true,
+                ExpiryDate = cumulativeEndDate,
+                DaysRemaining = daysRemaining > 0 ? daysRemaining : 0,
+                ProvidingPackages = insightSubs
+                    .Select(sub => sub.Package?.PackageName ?? "Unknown")
+                    .Distinct()
+                    .ToList()
+            };
+
+            _logger.LogInformation(
+                "VENUE_INSIGHT access calculated for venue owner ID: {OwnerId}, Total subscriptions: {Count}, Cumulative ExpiryDate: {ExpiryDate}, DaysRemaining: {Days}, Packages: {Packages}",
+                venueOwner.Id,
+                insightSubs.Count,
+                cumulativeEndDate,
+                daysRemaining,
+                string.Join(", ", response.VenueInsightAccess.ProvidingPackages));
+        }
+        else
+        {
+            response.VenueInsightAccess = new FeatureAccessInfo
+            {
+                HasAccess = false,
+                ExpiryDate = null,
+                DaysRemaining = null,
+                ProvidingPackages = new List<string>()
+            };
+        }
+
+        return response;
+    }
+
+    private bool HasFeatureInPackage(System.Text.Json.JsonDocument? featureFlags, string featureCode)
+    {
+        if (featureFlags == null || featureFlags.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        foreach (var property in featureFlags.RootElement.EnumerateObject())
+        {
+            if (!string.Equals(property.Name, featureCode, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return property.Value.ValueKind switch
+            {
+                System.Text.Json.JsonValueKind.True => true,
+                System.Text.Json.JsonValueKind.False => false,
+                System.Text.Json.JsonValueKind.String => bool.TryParse(property.Value.GetString(), out var boolValue) && boolValue,
+                System.Text.Json.JsonValueKind.Number => property.Value.TryGetInt32(out var numberValue) && numberValue > 0,
+                _ => false
+            };
+        }
+
+        return false;
+    }
 }

@@ -177,4 +177,57 @@ public class VenueOwnerDashboardController : BaseController
             return InternalServerErrorResponse("Đã xảy ra lỗi khi lấy venue analytics");
         }
     }
+
+    /// <summary>
+    /// Lấy thông tin subscription của venue owner bao gồm hạn sử dụng các tính năng
+    /// </summary>
+    /// <remarks>
+    /// API này trả về thông tin chi tiết về subscription của venue owner:
+    /// 
+    /// **Active Subscriptions:**
+    /// - Danh sách tất cả các gói subscription đang active
+    /// - Bao gồm cả user-level (VENUEOWNER) và venue-level (VENUE) subscriptions
+    /// - Thông tin: PackageName, StartDate, EndDate, Features
+    /// 
+    /// **VENUE_INSIGHT Access:**
+    /// - Trạng thái truy cập tính năng VENUE_INSIGHT
+    /// - Ngày hết hạn xa nhất (cộng dồn từ tất cả các gói có tính năng này)
+    /// - Số ngày còn lại
+    /// - Danh sách các gói đang cung cấp tính năng này
+    /// 
+    /// **Logic cộng thời gian:**
+    /// - Nếu venue owner mua nhiều gói có cùng tính năng (VD: DeepInsight + Venue Pro đều có VENUE_INSIGHT)
+    /// - Hệ thống sẽ lấy ngày hết hạn xa nhất làm thời hạn sử dụng tính năng
+    /// - Ví dụ: Gói A hết hạn 01/05, Gói B hết hạn 15/05 → VENUE_INSIGHT có thể dùng đến 15/05
+    /// </remarks>
+    /// <response code="200">Trả về thông tin subscription</response>
+    /// <response code="401">Chưa đăng nhập hoặc không phải venue owner</response>
+    [HttpGet("subscription-info")]
+    [Authorize]
+    [ProducesResponseType(typeof(object), 200)]
+    [ProducesResponseType(401)]
+    public async Task<IActionResult> GetSubscriptionInfo()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return UnauthorizedResponse("User không xác thực");
+            }
+
+            var subscriptionInfo = await _dashboardService.GetSubscriptionInfoAsync(userId.Value);
+
+            return OkResponse(subscriptionInfo, "Lấy thông tin subscription thành công");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return UnauthorizedResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting subscription info for user {UserId}", GetCurrentUserId());
+            return InternalServerErrorResponse("Đã xảy ra lỗi khi lấy thông tin subscription");
+        }
+    }
 }

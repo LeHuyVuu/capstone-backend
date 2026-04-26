@@ -2900,6 +2900,125 @@ public class VenueLocationService : IVenueLocationService
     }
 
     /// <summary>
+    /// Tính toán StartDate và EndDate cho subscription mới với logic cộng thời gian
+    /// Nếu có subscription ACTIVE cùng feature, sẽ cộng thêm thời gian vào EndDate của subscription đó
+    /// </summary>
+    private async Task<(DateTime startDate, DateTime endDate)> CalculateSubscriptionDatesAsync(
+        int ownerId,
+        int? venueId,
+        SubscriptionPackage package,
+        int totalDays)
+    {
+        var now = DateTime.UtcNow;
+
+        // Kiểm tra xem package có feature flags không
+        if (package.FeatureFlags == null || package.FeatureFlags.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+        {
+            // Không có feature flags, tạo subscription mới bình thường
+            return (now, now.AddDays(totalDays));
+        }
+
+        // Lấy danh sách features từ package mới
+        var newPackageFeatures = new HashSet<string>();
+        foreach (var prop in package.FeatureFlags.RootElement.EnumerateObject())
+        {
+            var isEnabled = prop.Value.ValueKind switch
+            {
+                System.Text.Json.JsonValueKind.True => true,
+                System.Text.Json.JsonValueKind.False => false,
+                System.Text.Json.JsonValueKind.String => bool.TryParse(prop.Value.GetString(), out var boolValue) && boolValue,
+                System.Text.Json.JsonValueKind.Number => prop.Value.TryGetInt32(out var numberValue) && numberValue > 0,
+                _ => false
+            };
+
+            if (isEnabled)
+            {
+                newPackageFeatures.Add(prop.Name.ToUpper());
+            }
+        }
+
+        if (newPackageFeatures.Count == 0)
+        {
+            // Không có feature nào được enable, tạo mới bình thường
+            return (now, now.AddDays(totalDays));
+        }
+
+        // Tìm subscription ACTIVE có cùng feature
+        var existingActiveSubs = await _unitOfWork.Context.Set<VenueSubscriptionPackage>()
+            .Where(vsp =>
+                vsp.OwnerId == ownerId &&
+                vsp.VenueId == venueId &&
+                vsp.Status == VenueSubscriptionPackageStatus.ACTIVE.ToString() &&
+                vsp.EndDate.HasValue &&
+                vsp.EndDate.Value >= now)
+            .Include(vsp => vsp.Package)
+            .ToListAsync();
+
+        // Tìm subscription có feature trùng với package mới và có EndDate xa nhất
+        VenueSubscriptionPackage? matchingSub = null;
+        DateTime? maxEndDate = null;
+
+        foreach (var existingSub in existingActiveSubs)
+        {
+            if (existingSub.Package?.FeatureFlags == null)
+                continue;
+
+            // Kiểm tra xem có feature nào trùng không
+            bool hasMatchingFeature = false;
+            foreach (var prop in existingSub.Package.FeatureFlags.RootElement.EnumerateObject())
+            {
+                var isEnabled = prop.Value.ValueKind switch
+                {
+                    System.Text.Json.JsonValueKind.True => true,
+                    System.Text.Json.JsonValueKind.False => false,
+                    System.Text.Json.JsonValueKind.String => bool.TryParse(prop.Value.GetString(), out var boolValue) && boolValue,
+                    System.Text.Json.JsonValueKind.Number => prop.Value.TryGetInt32(out var numberValue) && numberValue > 0,
+                    _ => false
+                };
+
+                if (isEnabled && newPackageFeatures.Contains(prop.Name.ToUpper()))
+                {
+                    hasMatchingFeature = true;
+                    break;
+                }
+            }
+
+            if (hasMatchingFeature)
+            {
+                if (maxEndDate == null || existingSub.EndDate.Value > maxEndDate.Value)
+                {
+                    maxEndDate = existingSub.EndDate.Value;
+                    matchingSub = existingSub;
+                }
+            }
+        }
+
+        if (matchingSub != null && maxEndDate.HasValue)
+        {
+            // Có subscription cùng feature, cộng thêm thời gian vào EndDate của subscription đó
+            var newStartDate = maxEndDate.Value;
+            var newEndDate = maxEndDate.Value.AddDays(totalDays);
+
+            _logger.LogInformation(
+                "[SUBSCRIPTION EXTEND] Found existing subscription #{SubId} with matching features. Extending from {OldEndDate} to {NewEndDate} (+{Days} days)",
+                matchingSub.Id,
+                maxEndDate.Value,
+                newEndDate,
+                totalDays);
+
+            return (newStartDate, newEndDate);
+        }
+
+        // Không có subscription cùng feature, tạo mới bình thường
+        _logger.LogInformation(
+            "[SUBSCRIPTION NEW] No existing subscription with matching features found. Creating new subscription from {StartDate} to {EndDate}",
+            now,
+            now.AddDays(totalDays));
+
+        return (now, now.AddDays(totalDays));
+    }
+
+    /// <summary>
     /// Update venue opening hours for all days of the week
     /// </summary>
     public async Task<bool> UpdateVenueOpeningHoursAsync(UpdateVenueOpeningHoursRequest request)
