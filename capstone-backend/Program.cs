@@ -331,8 +331,11 @@ using (var scope = serviceProvider.CreateScope())
     RecurringJob.AddOrUpdate<IMemberAccessoryWorker>(
             "reward-top1-monthly",
             x => x.RewardTop1MonthlyAsync(),
-            "0 2 1 * *" // 02:00 day 1 of every month
-        );
+            "0 2 1 * *", // 02:00 day 1 of every month
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
 
     app.Logger.LogInformation("[INFO] Hangfire recurring jobs configured");
 }

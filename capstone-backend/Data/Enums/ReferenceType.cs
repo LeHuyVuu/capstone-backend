@@ -12,5 +12,6 @@
         CHALLENGE,
         WALLET,
         MEMBER_ACCESSORY,
+        COUPLE_PROFILE,
     }
 }

@@ -346,7 +346,7 @@ public class MoodTypeService : IMoodTypeService
             // Gửi notification cho partner
             await SendCoupleMoodNotificationAsync(
                 partnerId, 
-                currentMember?.FullName, 
+                currentMember?.FullName,
                 TranslateMoodToVietnamese(currentMoodType?.Name),
                 coupleMoodName, 
                 coupleMoodType.Description,
@@ -419,11 +419,25 @@ public class MoodTypeService : IMoodTypeService
                 _logger.LogWarning($"Không tìm thấy đủ member profiles cho couple {coupleId}");
                 return;
             }
-
-         
          
             // Tạo notification request với gợi ý hành động
             var actionSuggestion = GetActionSuggestionFromCoupleMood(coupleMoodName, coupleMoodDescription);
+
+            var notification = new Notification
+            {
+                UserId = partnerProfile.UserId,
+                Title = $"Mood tụi mình vừa thay đổi 💕",
+                Message = $"{senderName} đang {senderMood} nè!\nMood của tụi mình giờ là \"{coupleMoodName}\" đó, {actionSuggestion}",
+                Type = NotificationType.MOOD.ToString(),
+                ReferenceType = ReferenceType.COUPLE_PROFILE.ToString(),
+                ReferenceId = coupleId,
+                CreatedAt = DateTime.UtcNow,
+                IsRead = false,
+            };
+
+            await _unitOfWork.Notifications.AddAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+
             var notificationRequest = new SendNotificationRequest
             {
                 Title = $"Mood tụi mình vừa thay đổi 💕",
