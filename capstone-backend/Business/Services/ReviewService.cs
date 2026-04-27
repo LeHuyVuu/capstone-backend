@@ -117,15 +117,21 @@ namespace capstone_backend.Business.Services
                 }
             }
 
+            // Validate radius
+            var radiusM = await _systemConfigService.GetIntValueAsync(SystemConfigKeys.CHECKIN_RADIUS_M.ToString());
+
             var distance = GeoCalculator.CalculateDistance(
                 request.Latitude,
                 request.Longitude,
                 venue.Latitude.Value,
                 venue.Longitude.Value
-            );
+            ) * 1000;
 
-            if (distance > 0.1)
-                throw new Exception("Bạn đang ở quá xa địa điểm để có thể check-in");
+            if (distance > radiusM)
+                throw new Exception(
+                    $"Bạn đang cách địa điểm {distance:F0}m. " +
+                    $"Chỉ được check-in trong phạm vi {radiusM}m."
+                );
 
             // Save check in
             var checkIn = new CheckInHistory
@@ -606,10 +612,10 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Không tìm thấy lịch sử check-in hợp lệ");
 
             if (checkIn.IsValid == true)
-                return 1; // Đã được xác thực trước đó
+                return checkInId; // Đã được xác thực trước đó
 
             if (checkIn.IsValid == null)
-                throw new Exception("Lịch sử check-in chưa được xác thực, vui lòng đợi hệ thống xác thực tự động hoặc liên hệ hỗ trợ");
+                throw new Exception("Check-in đang chờ hệ thống xử lý");
 
             if (!checkIn.CreatedAt.HasValue)
                 throw new Exception("Không thể xác định thời gian check-in hợp lệ");
@@ -627,23 +633,26 @@ namespace capstone_backend.Business.Services
                 throw new Exception($"Vui lòng đợi thêm khoảng {remainingMinutes} phút ({remainingSeconds} giây) kể từ khi check-in");
             }
 
-            if (checkIn.IsValid != false)
-                throw new Exception("Trạng thái check-in không hợp lệ để xác thực");
+            var radiusM = await _systemConfigService.GetIntValueAsync(SystemConfigKeys.CHECKIN_RADIUS_M.ToString());
 
             var distance = GeoCalculator.CalculateDistance(
                 request.Latitude,
                 request.Longitude,
                 venue.Latitude.Value,
                 venue.Longitude.Value
-            );
+            ) * 1000;
 
-            if (distance > 0.1)
-                throw new Exception("Bạn đang ở quá xa địa điểm để có thể xác thực check-in");
+            if (distance > radiusM)
+                throw new Exception(
+                    $"Bạn đang cách địa điểm {distance:F0}m. " +
+                    $"Chỉ được check-in trong phạm vi {radiusM}m."
+                );
 
             checkIn.IsValid = true;
 
             _unitOfWork.CheckInHistories.Update(checkIn);
-            return await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
+            return checkInId;
         }
 
         public async Task<PagedResult<MyReviewResponse>> GetMyReviewsAsync(int userId, GetMyReviewRequest request)

@@ -93,6 +93,11 @@ namespace capstone_backend.Business.Services
                         throw new Exception("Số reviews tối thiểu phải là số nguyên trong khoảng 1-100");
                     break;
 
+                case "CHECKIN_RADIUS_M":
+                    if (!int.TryParse(value, out var radius) || radius < 10 || radius > 1000)
+                        throw new Exception("Bán kính check-in phải là số nguyên trong khoảng 10-1000 mét");
+                    break;
+
                 default:
                     throw new Exception("Config key không hợp lệ");
             }
