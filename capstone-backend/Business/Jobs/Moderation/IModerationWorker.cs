@@ -1,4 +1,5 @@
 ﻿using capstone_backend.Business.DTOs.Moderation;
+using capstone_backend.Data.Enums;
 
 namespace capstone_backend.Business.Jobs.Moderation
 {
@@ -10,5 +11,7 @@ namespace capstone_backend.Business.Jobs.Moderation
 
         Task ProcessReviewModerationAndChallengeAsync(int reviewId, List<ModerationResultDto> results, int userId, int? venueId, bool hasImage);
         Task ProcessReviewModerationAsync(int reviewId, List<ModerationResultDto> results);
+
+        Task NotifyResultModerationAsync(int userId, int contentId, ModerationContentType contentType, ModerationRequestAction action);
     }
 }

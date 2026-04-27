@@ -13,6 +13,7 @@ using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using static capstone_backend.Business.Common.NotificationTemplate;
 
 namespace capstone_backend.Business.Services
 {
@@ -372,7 +373,7 @@ namespace capstone_backend.Business.Services
 
         public async Task<int> ModerateCommentAsync(int commentId, ModerationRequest request)
         {
-            var comment = await _unitOfWork.Comments.GetByIdAsync(commentId);
+            var comment = await _unitOfWork.Comments.GetFirstAsync(c => c.Id == commentId && c.IsDeleted == false, c => c.Include(c => c.Author));
             if (comment == null || comment.IsDeleted == true)
                 throw new Exception("Bình luận không tồn tại");
 
@@ -393,6 +394,8 @@ namespace capstone_backend.Business.Services
 
             _unitOfWork.Comments.Update(comment);
             await _unitOfWork.SaveChangesAsync();
+
+            BackgroundJob.Enqueue<IModerationWorker>(j => j.NotifyResultModerationAsync(comment.Author.UserId, comment.Id, ModerationContentType.COMMENT, request.Action));
 
             return commentId;
         }

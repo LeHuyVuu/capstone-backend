@@ -755,7 +755,7 @@ namespace capstone_backend.Business.Services
 
         public async Task<int> ModerateFlaggedPostAsync(int postId, ModerationRequest request)
         {
-            var post = await _unitOfWork.Posts.GetByIdAsync(postId);
+            var post = await _unitOfWork.Posts.GetFirstAsync(p => p.Id == postId && p.IsDeleted == false, p => p.Include(p => p.Author));
             if (post == null || post.IsDeleted == true)
                 throw new Exception("Bài viết không tồn tại");
 
@@ -777,6 +777,8 @@ namespace capstone_backend.Business.Services
             post.UpdatedAt = DateTime.UtcNow;
             _unitOfWork.Posts.Update(post);
             await _unitOfWork.SaveChangesAsync();
+
+            BackgroundJob.Enqueue<IModerationWorker>(j => j.NotifyResultModerationAsync(post.Author.UserId, post.Id, ModerationContentType.POST, request.Action));
 
             return postId;
         }

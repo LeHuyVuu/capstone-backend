@@ -786,7 +786,7 @@ namespace capstone_backend.Business.Services
 
         public async Task<int> ModerateReviewAsync(int reviewId, ModerationRequest request)
         {
-            var review = await _unitOfWork.Reviews.GetByIdAsync(reviewId);
+            var review = await _unitOfWork.Reviews.GetFirstAsync(r => r.Id == reviewId && r.IsDeleted == false, r => r.Include(r => r.Member));
             if (review == null || review.IsDeleted == true)
                 throw new Exception("Review không tồn tại");
 
@@ -813,6 +813,8 @@ namespace capstone_backend.Business.Services
             {
                 BackgroundJob.Enqueue<IReviewWorker>(j => j.EvaluateReviewRelevanceAsync(review.Id));
             }
+
+            BackgroundJob.Enqueue<IModerationWorker>(j => j.NotifyResultModerationAsync(review.Member.UserId, review.Id, ModerationContentType.REVIEW, request.Action));
 
             return review.Id;
         }

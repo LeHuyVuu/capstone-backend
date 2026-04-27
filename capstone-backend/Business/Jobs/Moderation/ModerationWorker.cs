@@ -279,5 +279,67 @@ namespace capstone_backend.Business.Jobs.Moderation
                 _logger.LogError(ex, "[MODERATION WORKER] Failed to send flagged-review notification for reviewId={ReviewId}", reviewId);
             }
         }
+
+        public async Task NotifyResultModerationAsync(int userId, int contentId, ModerationContentType contentType, ModerationRequestAction action)
+        {
+            string contentLabel;
+
+            switch (contentType)
+            {
+                case ModerationContentType.POST:
+                    contentLabel = "Bài viết";
+                    break;
+                case ModerationContentType.COMMENT:
+                    contentLabel = "Bình luận";
+                    break;
+                case ModerationContentType.REVIEW:
+                    contentLabel = "Đánh giá";
+                    break;
+                default:
+                    contentLabel = "Nội dung";
+                    break;
+            }
+
+            string title;
+            string message;
+
+            if (action == ModerationRequestAction.PUBLISH)
+            {
+                title = "Nội dung đã được duyệt";
+                message = $"{contentLabel} của bạn đã được chấp nhận và được hiển thị công khai";
+            }
+            else // CANCEL
+            {
+                title = "Nội dung đã bị từ chối";
+                message = $"{contentLabel} của bạn đã bị từ chối do vi phạm quy định";
+            }
+
+            var notification = new Data.Entities.Notification
+            {
+                UserId = userId,
+                Type = NotificationType.MODERATION.ToString(),
+                ReferenceId = contentId,
+                ReferenceType = MapToReferenceType(contentType).ToString(),
+                Title = title,
+                Message = message,
+                IsRead = false
+            };
+
+            await _unitOfWork.Notifications.AddAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+
+            BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(notification.Id));
+        }
+
+        private ReferenceType MapToReferenceType(ModerationContentType contentType)
+        {
+            return contentType switch
+            {
+                ModerationContentType.POST => ReferenceType.POST,
+                ModerationContentType.COMMENT => ReferenceType.COMMENT,
+                ModerationContentType.REVIEW => ReferenceType.REVIEW,
+                _ => ReferenceType.UNKNOWN
+            };
+        }
     }
 }
