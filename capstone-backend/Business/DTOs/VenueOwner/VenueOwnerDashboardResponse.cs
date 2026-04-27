@@ -9,8 +9,12 @@ public class VenueOwnerDashboardResponse
 {
     // Overview Metrics
     public int TotalVenues { get; set; }
+    public int DraftVenues { get; set; }
+    public int PendingVenues { get; set; }
     public int ActiveVenues { get; set; }
-    public int InactiveVenues { get; set; }
+    public int SuspendedVenues { get; set; } // INACTIVE có rejectionDetail (bị admin tắt)
+    public int ExpiredVenues { get; set; } // INACTIVE không có rejectionDetail (hết hạn subscription)
+    public int InactiveVenues { get; set; } // Tổng INACTIVE (SuspendedVenues + ExpiredVenues)
     public decimal AverageRating { get; set; }
     public int TotalReviews { get; set; }
     public int TotalCheckIns { get; set; }

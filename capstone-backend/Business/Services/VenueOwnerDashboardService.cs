@@ -192,12 +192,26 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
             .OrderByDescending(v => (v.ReviewCount * 3) + (v.CheckInCount * 2) + v.FavoriteCount + v.DatePlanCount)
             .FirstOrDefault();
 
+        // Calculate venue status breakdown
+        var draftVenues = venues.Count(v => v.Status == VenueLocationStatus.DRAFTED.ToString());
+        var pendingVenues = venues.Count(v => v.Status == VenueLocationStatus.PENDING.ToString());
+        var activeVenues = venues.Count(v => v.Status == VenueLocationStatus.ACTIVE.ToString());
+        
+        // INACTIVE venues: phân biệt "Tạm ngưng" (có rejectionDetail) và "Hết hạn" (không có rejectionDetail)
+        var inactiveVenues = venues.Where(v => v.Status == VenueLocationStatus.INACTIVE.ToString()).ToList();
+        var suspendedVenues = inactiveVenues.Count(v => !string.IsNullOrWhiteSpace(v.RejectReason));
+        var expiredVenues = inactiveVenues.Count(v => string.IsNullOrWhiteSpace(v.RejectReason));
+
         return new VenueOwnerDashboardResponse
         {
             // Overview
             TotalVenues = venues.Count,
-            ActiveVenues = venues.Count(v => v.Status == VenueLocationStatus.ACTIVE.ToString()),
-            InactiveVenues = venues.Count(v => v.Status != VenueLocationStatus.ACTIVE.ToString()),
+            DraftVenues = draftVenues,
+            PendingVenues = pendingVenues,
+            ActiveVenues = activeVenues,
+            SuspendedVenues = suspendedVenues,
+            ExpiredVenues = expiredVenues,
+            InactiveVenues = inactiveVenues.Count,
             AverageRating = (decimal)averageRating,
             TotalReviews = totalReviews,
             TotalCheckIns = totalCheckIns,
