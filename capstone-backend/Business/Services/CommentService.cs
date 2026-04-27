@@ -126,7 +126,7 @@ namespace capstone_backend.Business.Services
             return result;
         }
 
-        private async Task SoftDeleteCommentAndDescendantsAsync(Comment comment, Post post)
+        private async Task SoftDeleteCommentAndDescendantsAsync(Comment comment, Data.Entities.Post post)
         {
             // Get all direct children
             var childComments = await _unitOfWork.Comments.GetChildCommentsByParentIdAsync(comment.Id);
