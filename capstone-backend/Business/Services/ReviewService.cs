@@ -3,6 +3,7 @@ using AutoMapper;
 using capstone_backend.Business.Common;
 using capstone_backend.Business.DTOs.Accessory;
 using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Business.DTOs.CoupleMoodType;
 using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Review;
 using capstone_backend.Business.DTOs.VenueLocation;
@@ -335,7 +336,7 @@ namespace capstone_backend.Business.Services
                 review.Status = ReviewStatus.PENDING.ToString();
                 review.IsAnonymous = request.IsAnonymous;
                 review.IsMatched = request.IsMatched;
-                review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id);
+                review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id, request.CoupleMoodTypeId);
 
                 checkIn.IsValid = false;
                 _unitOfWork.CheckInHistories.Update(checkIn);
@@ -384,7 +385,7 @@ namespace capstone_backend.Business.Services
             return review.Id;
         }
 
-        private async Task<string?> BuildCoupleMoodSnapshotAsync(int memberId)
+        private async Task<string?> BuildCoupleMoodSnapshotAsync(int memberId, int coupleMoodTypeId)
         {
             var couple = await _unitOfWork.Context.CoupleProfiles
                 .AsNoTracking()
@@ -403,8 +404,17 @@ namespace capstone_backend.Business.Services
             if (!string.IsNullOrWhiteSpace(couple.CouplePersonalityType?.Name))
                 values.Add(couple.CouplePersonalityType.Name.Trim());
 
-            if (!string.IsNullOrWhiteSpace(couple.CoupleMoodType?.Name))
-                values.Add(couple.CoupleMoodType.Name.Trim());
+            var moodType = await _unitOfWork.Context.CoupleMoodTypes
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.IsDeleted != true && m.Id == coupleMoodTypeId);
+
+            if (moodType == null)
+                throw new Exception("Không tìm thấy loại tâm trạng cặp đôi hợp lệ");
+
+            values.Add(moodType.Name.Trim());
+
+            //if (!string.IsNullOrWhiteSpace(couple.CoupleMoodType?.Name))
+            //    values.Add(couple.CoupleMoodType.Name.Trim());
 
             return values.Any() ? string.Join(",", values) : null;
         }
@@ -528,7 +538,7 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Không tìm thấy đánh giá hợp lệ");
 
             _mapper.Map(request, review);
-            review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id);
+            review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id, request.CoupleMoodTypeId);
 
             if (request.DeletedImageUrls != null && request.DeletedImageUrls.Any())
             {
@@ -832,6 +842,18 @@ namespace capstone_backend.Business.Services
         private static int ToDisplayMinutes(int seconds)
         {
             return Math.Max(1, (int)Math.Ceiling(seconds / 60.0));
+        }
+
+        public async Task<List<CoupleMoodTypeResponse>> GetCoupleMoodTypeAsync()
+        {
+            var coupleMoodTypes = await _unitOfWork.Context.CoupleMoodTypes
+                .AsNoTracking()
+                .Where(cmt => cmt.IsDeleted != true && cmt.IsActive == true)
+                .ToListAsync();
+
+            var response = _mapper.Map<List<CoupleMoodTypeResponse>>(coupleMoodTypes);
+
+            return response;
         }
     }
 }

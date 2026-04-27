@@ -21,6 +21,24 @@ namespace capstone_backend.Api.Controllers
         }
 
         /// <summary>
+        /// Get couple mood type
+        /// </summary>
+        [Authorize(Roles = "MEMBER, member")]
+        [HttpGet("couple-mood-type")]
+        public async Task<IActionResult> GetCoupleMoodTypeAsync()
+        {
+            try
+            {
+                var result = await _reviewService.GetCoupleMoodTypeAsync();
+                return OkResponse(result, "Lấy danh sách trạng thái tâm trạng cặp đôi thành công");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Get my reviews
         /// </summary>
         [Authorize(Roles = "MEMBER, member")]

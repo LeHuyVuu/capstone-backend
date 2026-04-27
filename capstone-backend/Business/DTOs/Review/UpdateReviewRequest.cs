@@ -10,6 +10,8 @@ namespace capstone_backend.Business.DTOs.Review
         public string? Content { get; set; }
         public bool? IsMatched { get; set; }
         public bool? IsAnonymous { get; set; }
+
+        public int CoupleMoodTypeId { get; set; }
         public List<string>? DeletedImageUrls { get; set; }
         public List<string>? NewImages { get; set; }
     }
