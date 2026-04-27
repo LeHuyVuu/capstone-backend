@@ -1638,35 +1638,7 @@ public class VenueLocationService : IVenueLocationService
             };
         }
 
-        // 4. Validate required fields
-        var missingFields = new List<string>();
-        if (string.IsNullOrWhiteSpace(venue.Name)) missingFields.Add("Name");
-        if (string.IsNullOrWhiteSpace(venue.Description)) missingFields.Add("Description");
-        if (string.IsNullOrWhiteSpace(venue.Address)) missingFields.Add("Address");
-        
-        var coverImages = DeserializeImages(venue.CoverImage);
-        if (coverImages == null || !coverImages.Any()) missingFields.Add("CoverImage");
-        
-        if (string.IsNullOrWhiteSpace(venue.PhoneNumber)) missingFields.Add("Phone Number");
-        if (string.IsNullOrWhiteSpace(venue.Email)) missingFields.Add("Email");
-        
-        if (!venue.VenueLocationTags.Any()) missingFields.Add("LocationTag");
-        
-        if (venue.Latitude == null || venue.Longitude == null) 
-            missingFields.Add("Location Coordinates (Latitude/Longitude)");
-        
-        if (venue.PriceMin == null || venue.PriceMax == null) 
-            missingFields.Add("Price Range (Min/Max)");
-
-        if (missingFields.Any())
-        {
-            return new SubmitVenueWithPaymentResponse 
-            { 
-                IsSuccess = false, 
-                Message = "Please fill in all required fields before submitting.", 
-                MissingFields = missingFields 
-            };
-        }
+       
 
         // 5. Validate package
         var package = await _unitOfWork.Context.Set<SubscriptionPackage>()
