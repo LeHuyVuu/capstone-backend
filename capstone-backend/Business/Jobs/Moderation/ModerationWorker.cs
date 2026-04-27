@@ -9,6 +9,7 @@ using capstone_backend.Business.Jobs.Notification;
 using capstone_backend.Business.Jobs.Review;
 using capstone_backend.Data.Enums;
 using Hangfire;
+using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Jobs.Moderation
 {
@@ -69,6 +70,12 @@ namespace capstone_backend.Business.Jobs.Moderation
                     BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(notification.Id));
                 }
             }
+            else if (comment.Status == CommentStatus.FLAGGED.ToString())
+            {
+                var userId = comment.Author.UserId;
+
+                await NotifyCommentFlaggedAsync(userId, comment);
+            }
 
             BackgroundJob.Enqueue<ICommentWorker>(j => j.RecountPostAsync(comment.PostId));
 
@@ -85,7 +92,7 @@ namespace capstone_backend.Business.Jobs.Moderation
 
         public async Task ProcessPostModerationAsync(int postId, List<ModerationResultDto> results)
         {
-            var post = await _unitOfWork.Posts.GetByIdAsync(postId);
+            var post = await _unitOfWork.Posts.GetFirstAsync(p => p.Id == postId, p => p.Include(p => p.Author));
             if (post == null || post.IsDeleted == true)
                 return;
 
@@ -97,6 +104,11 @@ namespace capstone_backend.Business.Jobs.Moderation
             _logger.LogInformation($"[MODERATION WORKER] Post ID {postId} moderated with status: {post.Status}");
 
             await _unitOfWork.SaveChangesAsync();
+
+            if (post.Status == PostStatus.FLAGGED.ToString())
+            {
+                await NotifyPostFlaggedAsync(post.Author.UserId, post.Id);
+            }
         }
 
         public async Task ProcessPostModerationAndChallengeAsync(int postId, List<ModerationResultDto> results, int userId, bool hasImage, IEnumerable<string>? hashTags, int? venueId)
@@ -118,6 +130,48 @@ namespace capstone_backend.Business.Jobs.Moderation
             {
                 await _challengeService.HandlePostChallengeProgressAsync(userId, postId, venueId, hasImage, hashTags);
             }
+            else if (post.Status == PostStatus.FLAGGED.ToString())
+            {
+                await NotifyPostFlaggedAsync(userId, post.Id);
+            }
+        }
+
+        private async Task NotifyPostFlaggedAsync(int userId, int postId)
+        {
+            var notification = new Data.Entities.Notification
+            {
+                UserId = userId,
+                Type = NotificationType.MODERATION.ToString(),
+                ReferenceId = postId,
+                ReferenceType = ReferenceType.POST.ToString(),
+                Title = NotificationTemplate.Post.TitlePostFlagged,
+                Message = NotificationTemplate.Post.GetPostFlaggedBody(),
+                IsRead = false
+            };
+
+            await _unitOfWork.Notifications.AddAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+
+            BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(notification.Id));
+        }
+
+        private async Task NotifyCommentFlaggedAsync(int userId, Data.Entities.Comment comment)
+        {
+            var notification = new Data.Entities.Notification
+            {
+                UserId = userId,
+                Type = NotificationType.MODERATION.ToString(),
+                ReferenceId = comment.Id,
+                ReferenceType = ReferenceType.COMMENT.ToString(),
+                Title = NotificationTemplate.Post.TitleCommentFlagged,
+                Message = NotificationTemplate.Post.GetCommentFlaggedBody(),
+                IsRead = false
+            };
+
+            await _unitOfWork.Notifications.AddAsync(notification);
+            await _unitOfWork.SaveChangesAsync();
+
+            BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(notification.Id));
         }
 
         public async Task ProcessReviewModerationAsync(int reviewId, List<ModerationResultDto> results)
@@ -207,7 +261,7 @@ namespace capstone_backend.Business.Jobs.Moderation
                 var notification = new Data.Entities.Notification
                 {
                     UserId = authorUserId,
-                    Type = NotificationType.SOCIAL.ToString(),
+                    Type = NotificationType.MODERATION.ToString(),
                     ReferenceId = reviewId,
                     ReferenceType = ReferenceType.REVIEW.ToString(),
                     Title = NotificationTemplate.Review.TitleReviewFlagged,

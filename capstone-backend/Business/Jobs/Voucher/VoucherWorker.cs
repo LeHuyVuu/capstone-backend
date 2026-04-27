@@ -207,7 +207,7 @@ namespace capstone_backend.Business.Jobs.Voucher
                         UserId = userId,
                         Title = NotificationTemplate.Voucher.TitleRefundInactiveVoucher,
                         Message = NotificationTemplate.Voucher.GetRefundInactiveVoucherBody(voucherEntity.Title, points.Value.ToString()),
-                        Type = NotificationType.Transaction.ToString(),
+                        Type = NotificationType.TRANSACTION.ToString(),
                         ReferenceType = ReferenceType.WALLET.ToString(),
                         ReferenceId = wallet.Id,
                         IsRead = false,
@@ -229,7 +229,7 @@ namespace capstone_backend.Business.Jobs.Voucher
                                 Body = NotificationTemplate.Voucher.GetRefundInactiveVoucherBody(voucherEntity.Title, points.ToString()),
                                 Data = new Dictionary<string, string>
                                 {
-                                    { NotificationKeys.Type, NotificationType.Transaction.ToString() },
+                                    { NotificationKeys.Type, NotificationType.TRANSACTION.ToString() },
                                     { NotificationKeys.RefType, ReferenceType.WALLET.ToString() },
                                     { NotificationKeys.RefId, wallet.Id.ToString() },
                                 }

@@ -99,6 +99,9 @@
 
             public const string TitleNewLikeComment = "Có đồng minh vừa thích bình luận của bạn!";
 
+            public const string TitlePostFlagged = "Bài viết của bạn đang được xem xét";
+            public const string TitleCommentFlagged = "Bình luận của bạn đang được xem xét";
+
             public static string GetNewLikeBody(string fullName)
             {
                 return $"{fullName} vừa thích bài viết của bạn!";
@@ -117,6 +120,16 @@
             public static string GetNewLikeCommentBody(string fullName)
             {
                 return $"{fullName} vừa thích bình luận của bạn!";
+            }
+
+            public static string GetPostFlaggedBody()
+            {
+                return $"Bài viết của bạn đang được hệ thống kiểm duyệt thêm. Chúng tôi sẽ cập nhật sớm.";
+            }
+
+            public static string GetCommentFlaggedBody()
+            {
+                return $"Bình luận của bạn đang được hệ thống kiểm duyệt thêm. Chúng tôi sẽ cập nhật sớm.";
             }
         }
 

@@ -10,6 +10,7 @@
         SYSTEM,
         SOCIAL,
         MAP,
-        Transaction,
+        TRANSACTION,
+        MODERATION,
     }
 }
