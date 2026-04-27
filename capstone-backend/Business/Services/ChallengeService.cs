@@ -874,6 +874,9 @@ namespace capstone_backend.Business.Services
                     item.Progress.IsCompleted,
                     ChallengeProgressExtraBuilder.Build(item.Progress, member.Id)
                 );
+
+                if (r.Status == CoupleProfileChallengeStatus.COMPLETED.ToString())
+                    r.IsCompleted = true;
             }
 
             return new PagedResult<CoupleChallengeListItemResponse>
