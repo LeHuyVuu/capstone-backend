@@ -9,7 +9,11 @@ public static class EmailVenueStatusTemplate
     {
         var safeOwnerName = string.IsNullOrWhiteSpace(ownerDisplayName) ? "Venue Owner" : ownerDisplayName;
         var safeVenueName = string.IsNullOrWhiteSpace(venueName) ? "Địa điểm" : venueName;
-        var timeText = sentAtUtc.ToString("dd/MM/yyyy HH:mm:ss");
+        
+        // Convert UTC to Vietnam timezone (UTC+7)
+        var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+        var vietnamTime = TimeZoneInfo.ConvertTimeFromUtc(sentAtUtc, vietnamTimeZone);
+        var timeText = vietnamTime.ToString("dd/MM/yyyy HH:mm:ss");
 
         if (isActivated)
         {
