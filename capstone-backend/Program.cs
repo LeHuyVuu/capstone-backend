@@ -7,6 +7,7 @@ using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Business.Jobs.Leaderboard;
 using capstone_backend.Business.Jobs.Like;
 using capstone_backend.Business.Jobs.Media;
+using capstone_backend.Business.Jobs.MemberAccessory;
 using capstone_backend.Business.Jobs.MemberSubscription;
 using capstone_backend.Business.Jobs.Payment;
 using capstone_backend.Business.Jobs.Review;
@@ -326,6 +327,12 @@ using (var scope = serviceProvider.CreateScope())
         {
             TimeZone = vnTz
         });
+
+    RecurringJob.AddOrUpdate<IMemberAccessoryWorker>(
+            "reward-top1-monthly",
+            x => x.RewardTop1MonthlyAsync(),
+            "0 2 1 * *" // 02:00 day 1 of every month
+        );
 
     app.Logger.LogInformation("[INFO] Hangfire recurring jobs configured");
 }

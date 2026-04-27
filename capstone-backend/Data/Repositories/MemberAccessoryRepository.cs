@@ -40,5 +40,11 @@ namespace capstone_backend.Data.Repositories
                 .Where(ma => accessoryIds.Contains(ma.AccessoryId.Value) && (ma.MemberId == memberId || ma.MemberId == partnerId))
                 .ToListAsync();
         }
+
+        public async Task<bool> HasRewarded(List<int> memberIds, int kingId, int queenId, DateTime periodStart, DateTime periodEnd)
+        {
+            return await _dbSet
+                .AnyAsync(ma => memberIds.Contains(ma.MemberId.Value) && (ma.AccessoryId == kingId || ma.AccessoryId == queenId) && ma.AcquiredAt >= periodStart && ma.AcquiredAt <= periodEnd);
+        }
     }
 }

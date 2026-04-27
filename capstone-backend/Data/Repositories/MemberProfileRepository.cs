@@ -14,6 +14,11 @@ public class MemberProfileRepository : GenericRepository<MemberProfile>, IMember
     {
     }
 
+    public async Task<IEnumerable<MemberProfile>> GetByIdsAsync(List<int> memberIds)
+    {
+        return await _dbSet.Where(m => memberIds.Contains(m.Id) && m.IsDeleted != true).ToListAsync();
+    }
+
     public async Task<MemberProfile?> GetByInviteCodeAsync(
         string inviteCode,
         bool includeSoftDeleted = false,

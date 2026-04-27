@@ -10,6 +10,7 @@
         POST,
         COMMENT,
         CHALLENGE,
-        WALLET
+        WALLET,
+        MEMBER_ACCESSORY,
     }
 }

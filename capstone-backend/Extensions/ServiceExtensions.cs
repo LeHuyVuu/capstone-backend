@@ -41,6 +41,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using capstone_backend.Business.Jobs.MemberSubscription;
+using capstone_backend.Business.Jobs.MemberAccessory;
 
 namespace capstone_backend.Extensions;
 
@@ -257,6 +258,7 @@ public static class ServiceExtensions
         services.AddScoped<IVenueSubscriptionWorker, VenueSubscriptionWorker>();
         services.AddScoped<INotificationWorker, NotificationWorker>();
         services.AddScoped<IMemberSubscriptionWorker, MemberSubscriptionWorker>();
+        services.AddScoped<IMemberAccessoryWorker, MemberAccessoryWorker>();
 
         // Register Messaging Service
         services.AddScoped<IMessagingService, MessagingService>();

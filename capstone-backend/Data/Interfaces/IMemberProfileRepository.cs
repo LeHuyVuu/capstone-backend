@@ -7,6 +7,8 @@ namespace capstone_backend.Business.Interfaces;
 /// </summary>
 public interface IMemberProfileRepository : IGenericRepository<MemberProfile>
 {
+    Task<IEnumerable<MemberProfile>> GetByIdsAsync(List<int> memberIds);
+
     /// <summary>
     /// Get member profile by invite code
     /// </summary>
