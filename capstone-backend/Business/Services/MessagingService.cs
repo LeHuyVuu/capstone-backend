@@ -338,6 +338,7 @@ public class MessagingService : IMessagingService
             "VIDEO" => "đã gửi 1 video",
             "AUDIO" => "đã gửi 1 tin nhắn thoại",
             "FILE" => "đã gửi 1 tệp",
+            "DATE_PLAN" => !string.IsNullOrWhiteSpace(request.Content) ? request.Content.Trim() : "đã chia sẻ một kế hoạch hẹn hò",
             _ => request.Content?.Trim()
         };
 
