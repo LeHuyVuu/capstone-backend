@@ -244,18 +244,18 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Bạn không có hồ sơ cặp đôi");
 
             // Check if couple have mood?
-            if (request.IsMatched)
-            {
-                // matched → phải có current mood
-                if (couple.CoupleMoodTypeId == null)
-                    throw new Exception("Bạn cần cập nhật mood hiện tại của cả hai trước khi đánh giá");
-            }
-            else
-            {
-                // not matched → phải chọn mood
-                if (!request.CoupleMoodTypeId.HasValue)
-                    throw new Exception("Bạn cần chọn mood khi hai bạn không match với địa điểm");
-            }
+            //if (request.IsMatched)
+            //{
+            //    // matched → phải có current mood
+            //    if (couple.CoupleMoodTypeId == null)
+            //        throw new Exception("Bạn cần cập nhật mood hiện tại của cả hai trước khi đánh giá");
+            //}
+            //else
+            //{
+            //    // not matched → phải chọn mood
+            //    if (!request.CoupleMoodTypeId.HasValue)
+            //        throw new Exception("Bạn cần chọn mood khi hai bạn không match với địa điểm");
+            //}
 
             var venue = await _unitOfWork.VenueLocations.GetByIdWithDetailsAsync(request.VenueLocationId);
             if (venue == null)
@@ -356,7 +356,7 @@ namespace capstone_backend.Business.Services
                 review.Status = ReviewStatus.PENDING.ToString();
                 review.IsAnonymous = request.IsAnonymous;
                 review.IsMatched = request.IsMatched;
-                review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id, request.CoupleMoodTypeId, request.IsMatched, venue);
+                review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id, request.CoupleMoodTypeId, venue);
 
                 checkIn.IsValid = false;
                 _unitOfWork.CheckInHistories.Update(checkIn);
@@ -405,7 +405,7 @@ namespace capstone_backend.Business.Services
             return review.Id;
         }
 
-        private async Task<string?> BuildCoupleMoodSnapshotAsync(int memberId, int? coupleMoodTypeId, bool? isMatched, VenueLocation venue)
+        private async Task<string?> BuildCoupleMoodSnapshotAsync(int memberId, int? coupleMoodTypeId, VenueLocation venue)
         {
             var couple = await _unitOfWork.Context.CoupleProfiles
                 .AsNoTracking()
@@ -421,12 +421,12 @@ namespace capstone_backend.Business.Services
 
             var values = new List<string>();
 
-            if (!string.IsNullOrWhiteSpace(couple.CouplePersonalityType?.Name))
-                values.Add(couple.CouplePersonalityType.Name.Trim());
+            //if (!string.IsNullOrWhiteSpace(couple.CouplePersonalityType?.Name))
+            //    values.Add(couple.CouplePersonalityType.Name.Trim());
 
             string? moodName = null;
 
-            if (isMatched == false && coupleMoodTypeId.HasValue)
+            if (coupleMoodTypeId.HasValue)
             {
                 var matchedMoods = venue.VenueLocationTags
                     .Where(vlt => vlt.LocationTag?.CoupleMoodType != null)
@@ -438,13 +438,13 @@ namespace capstone_backend.Business.Services
 
                 values.AddRange(matchedMoods);
             }
-            else
-            {
-                moodName = couple.CoupleMoodType?.Name;
-            }
+            //else
+            //{
+            //    moodName = couple.CoupleMoodType?.Name;
+            //}
 
-            if (!string.IsNullOrWhiteSpace(moodName))
-                values.Add(moodName.Trim());
+            //if (!string.IsNullOrWhiteSpace(moodName))
+            //    values.Add(moodName.Trim());
 
             //var moodType = await _unitOfWork.Context.CoupleMoodTypes
             //    .AsNoTracking()
@@ -579,28 +579,28 @@ namespace capstone_backend.Business.Services
             if (couple == null)
                 throw new Exception("Bạn không có hồ sơ cặp đôi");
 
-            if (request.IsMatched.HasValue)
-            {
-                if (request.IsMatched.Value)
-                {
-                    // matched → phải có current mood
-                    if (couple.CoupleMoodTypeId == null)
-                        throw new Exception("Bạn cần cập nhật mood hiện tại của cả hai trước khi đánh giá");
-                }
-                else
-                {
-                    // not matched → phải chọn mood
-                    if (!request.CoupleMoodTypeId.HasValue)
-                        throw new Exception("Bạn cần chọn mood khi hai bạn không match với địa điểm");
-                }
-            }
+            //if (request.IsMatched.HasValue)
+            //{
+            //    if (request.IsMatched.Value)
+            //    {
+            //        // matched → phải có current mood
+            //        if (couple.CoupleMoodTypeId == null)
+            //            throw new Exception("Bạn cần cập nhật mood hiện tại của cả hai trước khi đánh giá");
+            //    }
+            //    else
+            //    {
+            //        // not matched → phải chọn mood
+            //        if (!request.CoupleMoodTypeId.HasValue)
+            //            throw new Exception("Bạn cần chọn mood khi hai bạn không match với địa điểm");
+            //    }
+            //}
 
             var review = await _unitOfWork.Reviews.GetByIdAndMemberIdAsync(reviewId, member.Id);
             if (review == null)
                 throw new Exception("Không tìm thấy đánh giá hợp lệ");
 
             _mapper.Map(request, review);
-            review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id, request.CoupleMoodTypeId, request.IsMatched, venue);
+            review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id, request.CoupleMoodTypeId, venue);
 
             if (request.DeletedImageUrls != null && request.DeletedImageUrls.Any())
             {
