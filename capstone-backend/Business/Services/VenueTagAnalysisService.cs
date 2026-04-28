@@ -214,10 +214,22 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
         decimal warningThreshold,
         int minReviews)
     {
-        // Lọc reviews có CoupleMoodSnapshot chứa tag này (EXACT MATCH)
-        var relevantReviews = allReviews
+        // CHỈ phân tích CoupleMoodType (bỏ qua CouplePersonalityType)
+        if (tag.Type != "CoupleMoodType")
+        {
+            return null;
+        }
+
+        // Lấy tất cả reviews có snapshot (đã được đánh giá)
+        var reviewsWithSnapshot = allReviews
             .Where(r => !string.IsNullOrEmpty(r.CoupleMoodSnapshot))
-            .Where(r => 
+            .ToList();
+
+        var totalReviews = reviewsWithSnapshot.Count;
+        
+        // Đếm số lần tag này xuất hiện trong snapshot (= unmatched)
+        var unmatchedCount = reviewsWithSnapshot
+            .Count(r => 
             {
                 var tags = r.CoupleMoodSnapshot
                     .Split(',', StringSplitOptions.RemoveEmptyEntries)
@@ -225,17 +237,25 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
                     .ToList();
                 
                 return tags.Any(t => t.Equals(tag.Name, StringComparison.OrdinalIgnoreCase));
-            })
-            .ToList();
-
-        var totalReviews = relevantReviews.Count;
+            });
+        
+        // Số reviews không có tag này trong snapshot = matched
+        var matchedCount = totalReviews - unmatchedCount;
 
         // Lưu thông tin reviews để log
-        var reviewDetails = relevantReviews.Select(r => new
+        var reviewDetails = reviewsWithSnapshot.Select(r => 
         {
-            r.Id,
-            r.CoupleMoodSnapshot,
-            r.IsMatched
+            var hasTag = r.CoupleMoodSnapshot
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => t.Trim())
+                .Any(t => t.Equals(tag.Name, StringComparison.OrdinalIgnoreCase));
+            
+            return new
+            {
+                r.Id,
+                r.CoupleMoodSnapshot,
+                IsMatched = !hasTag // Không có tag trong snapshot = matched
+            };
         }).ToList();
 
         // Chưa đủ data
@@ -253,14 +273,12 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
                 MatchRate = 0,
                 Message = $"Chưa đủ dữ liệu để đánh giá (cần ít nhất {minReviews} reviews)",
                 Recommendation = null,
-                ReviewDetails = reviewDetails.Select(r => $"#{r.Id}: {r.CoupleMoodSnapshot} → {(r.IsMatched == true ? "✅" : r.IsMatched == false ? "❌" : "?")}").ToList()
+                ReviewDetails = reviewDetails.Select(r => $"#{r.Id}: {r.CoupleMoodSnapshot} → {(r.IsMatched ? "✅" : "❌")}").ToList()
             };
         }
 
-        // Đếm matched vs unmatched
-        var matchedCount = relevantReviews.Count(r => r.IsMatched == true);
-        var unmatchedCount = relevantReviews.Count(r => r.IsMatched == false);
-        var matchRate = (decimal)matchedCount / totalReviews * 100;
+        // Tính match rate
+        var matchRate = totalReviews > 0 ? (decimal)matchedCount / totalReviews * 100 : 0;
 
         // Xác định status và severity (CHỈ 2 MỨC: GOOD hoặc POOR, bỏ khoảng giữa)
         string status, severity, recommendation;
@@ -298,7 +316,7 @@ public class VenueTagAnalysisService : IVenueTagAnalysisService
             MatchRate = Math.Round(matchRate, 1),
             Message = message,
             Recommendation = recommendation,
-            ReviewDetails = reviewDetails.Select(r => $"#{r.Id}: {r.CoupleMoodSnapshot} → {(r.IsMatched == true ? "✅" : r.IsMatched == false ? "❌" : "?")}").ToList()
+            ReviewDetails = reviewDetails.Select(r => $"#{r.Id}: {r.CoupleMoodSnapshot} → {(r.IsMatched ? "✅" : "❌")}").ToList()
         };
     }
 
