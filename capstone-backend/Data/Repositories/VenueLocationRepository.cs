@@ -44,6 +44,8 @@ public class VenueLocationRepository : GenericRepository<VenueLocation>, IVenueL
             .Include(v => v.VenueLocationTags)
                 .ThenInclude(vlt => vlt.LocationTag)
                     .ThenInclude(lt => lt!.CouplePersonalityType)
+                .ThenInclude(vlt => vlt.LocationTags)
+                    .ThenInclude(lt => lt.CoupleMoodType)
             .Include(v => v.VenueLocationCategories)
                 .ThenInclude(vlc => vlc.Category)
             .Include(v => v.VenueOwner)
