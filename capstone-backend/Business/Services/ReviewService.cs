@@ -356,7 +356,7 @@ namespace capstone_backend.Business.Services
                 review.Status = ReviewStatus.PENDING.ToString();
                 review.IsAnonymous = request.IsAnonymous;
                 review.IsMatched = request.IsMatched;
-                review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id, request.CoupleMoodTypeId, venue);
+                review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id, request.CoupleMoodTypeIds, venue);
 
                 checkIn.IsValid = false;
                 _unitOfWork.CheckInHistories.Update(checkIn);
@@ -405,7 +405,7 @@ namespace capstone_backend.Business.Services
             return review.Id;
         }
 
-        private async Task<string?> BuildCoupleMoodSnapshotAsync(int memberId, int? coupleMoodTypeId, VenueLocation venue)
+        private async Task<string?> BuildCoupleMoodSnapshotAsync(int memberId, List<int>? coupleMoodTypeIds, VenueLocation venue)
         {
             var couple = await _unitOfWork.Context.CoupleProfiles
                 .AsNoTracking()
@@ -426,17 +426,19 @@ namespace capstone_backend.Business.Services
 
             string? moodName = null;
 
-            if (coupleMoodTypeId.HasValue)
+            if (coupleMoodTypeIds != null && coupleMoodTypeIds.Any())
             {
-                var matchedMoods = venue.VenueLocationTags
+                var selectedIds = coupleMoodTypeIds.ToHashSet();
+
+                var venueMoods = venue.VenueLocationTags
                     .Where(vlt => vlt.LocationTag?.CoupleMoodType != null)
                     .Select(vlt => vlt.LocationTag!.CoupleMoodType!)
-                    .Where(m => m.Id != coupleMoodTypeId)
+                    .Where(m => !selectedIds.Contains(m.Id))
                     .Select(m => m.Name.Trim())
                     .Distinct()
                     .ToList();
 
-                values.AddRange(matchedMoods);
+                values.AddRange(venueMoods);
             }
             //else
             //{
@@ -600,7 +602,7 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Không tìm thấy đánh giá hợp lệ");
 
             _mapper.Map(request, review);
-            review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id, request.CoupleMoodTypeId, venue);
+            review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id, request.CoupleMoodTypeIds, venue);
 
             if (request.DeletedImageUrls != null && request.DeletedImageUrls.Any())
             {
