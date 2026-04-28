@@ -15,7 +15,7 @@ namespace capstone_backend.Business.Validators
             RuleFor(x => x.Visibility)
                 .NotEmpty().WithMessage("Visibility không được để trống")
                 .Must(BeValidVisibility).WithMessage("Visibility không hợp lệ. Chỉ chấp nhận PUBLIC, PRIVATE, COUPLE_ONLY");
-
+            
             RuleForEach(x => x.Topic)
                 .NotEmpty().WithMessage("Topic không được để trống")
                 .Must(BeValidTopic).WithMessage("Topic không hợp lệ");
