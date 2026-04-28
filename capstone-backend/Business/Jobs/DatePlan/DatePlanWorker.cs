@@ -174,7 +174,7 @@ namespace capstone_backend.Business.Jobs.DatePlan
                 var tokens = await _unitOfWork.DeviceTokens.GetByCoupleId(plan.CoupleId);
                 var data = new Dictionary<string, string>
                     {
-                        { NotificationKeys.Type, NotificationType.SYSTEM.ToString() },
+                        { NotificationKeys.Type, NotificationType.DATE_PLAN.ToString() },
                         { NotificationKeys.RefId, plan.Id.ToString() },
                         { NotificationKeys.RefType, ReferenceType.DATE_PLAN.ToString() }
                     };
