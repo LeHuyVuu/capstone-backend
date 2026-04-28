@@ -13,5 +13,6 @@
         WALLET,
         MEMBER_ACCESSORY,
         COUPLE_PROFILE,
+        COUPLE_INVITATION,
     }
 }

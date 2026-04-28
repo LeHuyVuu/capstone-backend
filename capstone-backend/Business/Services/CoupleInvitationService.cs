@@ -1,10 +1,12 @@
 using capstone_backend.Business.DTOs.CoupleInvitation;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Notification;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using capstone_backend.Data.Repositories;
 using capstone_backend.Data.Static;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 
 namespace capstone_backend.Business.Services;
@@ -111,6 +113,26 @@ public class CoupleInvitationService : ICoupleInvitationService
         await _unitOfWork.SaveChangesAsync();
 
         // TODO: Send push notification to receiver
+        var member = await _unitOfWork.MembersProfile.GetByIdAsync(receiverMemberId);
+        if (member == null)
+            return (false, "Không tìm thấy thông tin của người nhận", null);
+
+        var notification = new Notification
+        {
+            UserId = member.UserId,
+            Title = "Bạn nhận được một lời mời ghép đôi mới! 💌",
+            Message = $"{sender.FullName} đã gửi cho bạn một lời mời ghép đôi. Hãy xem và phản hồi nhé!",
+            Type = NotificationType.PAIRING.ToString(),
+            ReferenceType = ReferenceType.COUPLE_INVITATION.ToString(),
+            ReferenceId = invitation.Id,
+            CreatedAt = DateTime.UtcNow,
+            IsRead = false
+        };
+
+        await _unitOfWork.Notifications.AddAsync(notification);
+        await _unitOfWork.SaveChangesAsync();
+
+        BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(notification.Id));
 
         var response = new CoupleInvitationResponse
         {
@@ -308,9 +330,24 @@ public class CoupleInvitationService : ICoupleInvitationService
         }
 
         // TODO: Auto join check-in challenge
-        var resultChallenge = await _challengeService.JoinCoupleChallengeAsync(coupleProfile, 14);  
+        var resultChallenge = await _challengeService.JoinCoupleChallengeAsync(coupleProfile, 14);
 
-        // TODO: Send push notifications to both
+        // TODO: Send push notifications
+        var notification = new Notification
+        {
+            UserId = invitation.SenderMember.UserId,
+            Title = "Lời mời ghép đôi của bạn đã được chấp nhận! 🎉",
+            Message = $"{invitation.ReceiverMember.FullName} đã chấp nhận lời mời ghép đôi của bạn. Chúc mừng hai bạn đã trở thành một cặp đôi!",
+            Type = NotificationType.PAIRING.ToString(),
+            ReferenceType = ReferenceType.COUPLE_INVITATION.ToString(),
+            ReferenceId = invitation.Id,
+            CreatedAt = DateTime.UtcNow,
+            IsRead = false
+        };
+        await _unitOfWork.Notifications.AddAsync(notification);
+        await _unitOfWork.SaveChangesAsync();
+
+        BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(notification.Id));
 
         // Map member names correctly based on actual MemberId in couple profile
         var member1 = coupleProfile.MemberId1 == invitation.SenderMemberId 
@@ -377,6 +414,22 @@ public class CoupleInvitationService : ICoupleInvitationService
         await _unitOfWork.SaveChangesAsync();
 
         // TODO: Send push notification to sender
+        // TODO: Send push notifications
+        var notification = new Notification
+        {
+            UserId = invitation.SenderMember.UserId,
+            Title = "Lời mời ghép đôi của bạn đã bị từ chối",
+            Message = $"{invitation.ReceiverMember.FullName} đã từ chối lời mời ghép đôi của bạn. Đừng buồn, hãy tiếp tục tìm kiếm người phù hợp nhé!",
+            Type = NotificationType.PAIRING.ToString(),
+            ReferenceType = ReferenceType.COUPLE_INVITATION.ToString(),
+            ReferenceId = invitation.Id,
+            CreatedAt = DateTime.UtcNow,
+            IsRead = false
+        };
+        await _unitOfWork.Notifications.AddAsync(notification);
+        await _unitOfWork.SaveChangesAsync();
+
+        BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(notification.Id));
 
         return (true, "Đã từ chối lời mời ghép đôi");
     }
