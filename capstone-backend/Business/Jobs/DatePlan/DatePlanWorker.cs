@@ -161,7 +161,7 @@ namespace capstone_backend.Business.Jobs.DatePlan
             {
                 Title = title,
                 Message = body,
-                Type = NotificationType.SYSTEM.ToString(),
+                Type = NotificationType.DATE_PLAN.ToString(),
                 ReferenceId = plan.Id,
                 ReferenceType = ReferenceType.DATE_PLAN.ToString()
             };
@@ -247,7 +247,7 @@ namespace capstone_backend.Business.Jobs.DatePlan
                 UserId = organizer.UserId,
                 Title = NotificationTemplate.DatePlan.TitleDatePlanRejected,
                 Message = NotificationTemplate.DatePlan.GetDatePlanRejectedBody(plan.Title),
-                Type = NotificationType.SYSTEM.ToString(),
+                Type = NotificationType.DATE_PLAN.ToString(),
                 ReferenceId = plan.Id,
                 ReferenceType = ReferenceType.DATE_PLAN.ToString()
             };
@@ -275,7 +275,7 @@ namespace capstone_backend.Business.Jobs.DatePlan
                     UserId = userId1,
                     Title = NotificationTemplate.DatePlan.TitleDatePlanCancelled,
                     Message = NotificationTemplate.DatePlan.GetDatePlanCancelledBody(plan.Title),
-                    Type = NotificationType.SYSTEM.ToString(),
+                    Type = NotificationType.DATE_PLAN.ToString(),
                     ReferenceId = plan.Id,
                     ReferenceType = ReferenceType.DATE_PLAN.ToString()
                 },
@@ -284,7 +284,7 @@ namespace capstone_backend.Business.Jobs.DatePlan
                     UserId = userId2,
                     Title = NotificationTemplate.DatePlan.TitleDatePlanCancelled,
                     Message = NotificationTemplate.DatePlan.GetDatePlanCancelledBody(plan.Title),
-                    Type = NotificationType.SYSTEM.ToString(),
+                    Type = NotificationType.DATE_PLAN.ToString(),
                     ReferenceId = plan.Id,
                     ReferenceType = ReferenceType.DATE_PLAN.ToString()
                 }
@@ -315,7 +315,7 @@ namespace capstone_backend.Business.Jobs.DatePlan
                     UserId = userId1,
                     Title = NotificationTemplate.DatePlan.TitleDatePlanCompleted,
                     Message = NotificationTemplate.DatePlan.GetDatePlanCompletedBody(plan.Title),
-                    Type = NotificationType.SYSTEM.ToString(),
+                    Type = NotificationType.DATE_PLAN.ToString(),
                     ReferenceId = plan.Id,
                     ReferenceType = ReferenceType.DATE_PLAN.ToString()
                 },
@@ -324,7 +324,7 @@ namespace capstone_backend.Business.Jobs.DatePlan
                     UserId = userId2,
                     Title = NotificationTemplate.DatePlan.TitleDatePlanCompleted,
                     Message = NotificationTemplate.DatePlan.GetDatePlanCompletedBody(plan.Title),
-                    Type = NotificationType.SYSTEM.ToString(),
+                    Type = NotificationType.DATE_PLAN.ToString(),
                     ReferenceId = plan.Id,
                     ReferenceType = ReferenceType.DATE_PLAN.ToString()
                 }

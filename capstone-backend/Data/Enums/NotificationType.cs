@@ -12,5 +12,6 @@
         MAP,
         TRANSACTION,
         MODERATION,
+        DATE_PLAN
     }
 }

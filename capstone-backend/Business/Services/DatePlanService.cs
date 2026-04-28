@@ -528,7 +528,7 @@ namespace capstone_backend.Business.Services
                     UserId = datePlan.OrganizerMember.UserId,
                     Title = NotificationTemplate.DatePlan.TitleAccepted,
                     Message = NotificationTemplate.DatePlan.GetAcceptedBody(datePlan.Title),
-                    Type = NotificationType.PAIRING.ToString(),
+                    Type = NotificationType.DATE_PLAN.ToString(),
                     ReferenceId = datePlan.Id,
                     ReferenceType = ReferenceType.DATE_PLAN.ToString(),
                     IsRead = false,
