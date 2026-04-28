@@ -140,7 +140,7 @@ public class AdvertisementService : IAdvertisementService
         {
             var now = DateTime.UtcNow;
 
-            venueLocationAds = await _unitOfWork.Context.Set<VenueLocationAdvertisement>()
+          venueLocationAds = await _unitOfWork.Context.Set<VenueLocationAdvertisement>()
                 .AsNoTracking()
                 .Include(vla => vla.Venue)
                 .Where(vla =>
@@ -148,8 +148,7 @@ public class AdvertisementService : IAdvertisementService
                     vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString() &&
                     vla.StartDate <= now &&
                     vla.EndDate >= now &&
-                    vla.Venue.IsDeleted == false &&
-                    vla.Venue.Status == VenueLocationStatus.ACTIVE.ToString())
+                    vla.Venue.IsDeleted == false)
                 .ToListAsync();
         }
 
