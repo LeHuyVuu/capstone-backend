@@ -15,7 +15,7 @@ namespace capstone_backend.Business.DTOs.Review
         public int Rating { get; set; }
         /// <example>false</example>
         public bool IsAnonymous { get; set; }
-        public int CoupleMoodTypeId { get; set; }
+        public int? CoupleMoodTypeId { get; set; }
         public List<string>? Images { get; set; }
     }
 }
