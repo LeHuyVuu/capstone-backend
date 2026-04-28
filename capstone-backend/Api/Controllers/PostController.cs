@@ -264,6 +264,7 @@ namespace capstone_backend.Api.Controllers
         /// Comment posts
         /// </summary>
         [Authorize(Roles = "MEMBER, member")]
+        [Moderation]
         [HttpPost("{postId:int}/comment")]
         public async Task<IActionResult> CommentPost([FromRoute] int postId, [FromBody] CreateCommentRequest request)
         {

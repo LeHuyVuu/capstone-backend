@@ -1,4 +1,5 @@
-﻿using capstone_backend.Business.DTOs.Moderation;
+﻿using capstone_backend.Api.Filters;
+using capstone_backend.Business.DTOs.Moderation;
 using capstone_backend.Business.DTOs.Post;
 using capstone_backend.Business.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -47,6 +48,7 @@ namespace capstone_backend.Api.Controllers
         /// Update comment
         /// </summary>
         [Authorize(Roles = "MEMBER, member")]
+        [Moderation]
         [HttpPut("{commentId:int}")]
         public async Task<IActionResult> UpdateComment([FromRoute] int commentId, [FromBody] UpdateCommentRequest request)
         {
