@@ -693,8 +693,8 @@ namespace capstone_backend.Business.Services
 
             // Get rid of continous author 
             var match = source.FirstOrDefault(s =>
-                !current.Any(c => c.Id == s.Data.Id) &&
-                current.LastOrDefault()?.AuthorId != s.Data.AuthorId);
+                !current.Any(c => c.Id == s.Data.Id));
+                //current.LastOrDefault()?.AuthorId != s.Data.AuthorId);
 
             if (match != null)
                 source.Remove(match);
