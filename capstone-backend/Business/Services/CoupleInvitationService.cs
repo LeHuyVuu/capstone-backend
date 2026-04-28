@@ -415,21 +415,21 @@ public class CoupleInvitationService : ICoupleInvitationService
 
         // TODO: Send push notification to sender
         // TODO: Send push notifications
-        var notification = new Notification
-        {
-            UserId = invitation.SenderMember.UserId,
-            Title = "Lời mời ghép đôi của bạn đã bị từ chối",
-            Message = $"{invitation.ReceiverMember.FullName} đã từ chối lời mời ghép đôi của bạn. Đừng buồn, hãy tiếp tục tìm kiếm người phù hợp nhé!",
-            Type = NotificationType.PAIRING.ToString(),
-            ReferenceType = ReferenceType.COUPLE_INVITATION.ToString(),
-            ReferenceId = invitation.Id,
-            CreatedAt = DateTime.UtcNow,
-            IsRead = false
-        };
-        await _unitOfWork.Notifications.AddAsync(notification);
-        await _unitOfWork.SaveChangesAsync();
+        //var notification = new Notification
+        //{
+        //    UserId = invitation.SenderMember.UserId,
+        //    Title = "Lời mời ghép đôi của bạn đã bị từ chối",
+        //    Message = $"{invitation.ReceiverMember.FullName} đã từ chối lời mời ghép đôi của bạn. Đừng buồn, hãy tiếp tục tìm kiếm người phù hợp nhé!",
+        //    Type = NotificationType.PAIRING.ToString(),
+        //    ReferenceType = ReferenceType.COUPLE_INVITATION.ToString(),
+        //    ReferenceId = invitation.Id,
+        //    CreatedAt = DateTime.UtcNow,
+        //    IsRead = false
+        //};
+        //await _unitOfWork.Notifications.AddAsync(notification);
+        //await _unitOfWork.SaveChangesAsync();
 
-        BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(notification.Id));
+        //BackgroundJob.Enqueue<INotificationWorker>(j => j.SendPushNotificationAsync(notification.Id));
 
         return (true, "Đã từ chối lời mời ghép đôi");
     }
