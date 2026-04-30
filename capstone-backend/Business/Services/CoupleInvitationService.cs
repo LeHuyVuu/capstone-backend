@@ -545,8 +545,8 @@ public class CoupleInvitationService : ICoupleInvitationService
             SenderAvatarUrl = i.SenderMember?.User?.AvatarUrl,
             ReceiverMemberId = i.ReceiverMemberId,
             ReceiverUserId = i.ReceiverMember?.UserId ?? 0,
-            ReceiverName = "", // Not needed for received invitations
-            ReceiverAvatarUrl = null,
+            ReceiverName = i.ReceiverMember?.FullName ?? "",
+            ReceiverAvatarUrl = i.ReceiverMember?.User?.AvatarUrl,
             InviteCodeUsed = i.InviteCodeUsed,
             Status = i.Status,
             Message = i.Message,
@@ -568,8 +568,8 @@ public class CoupleInvitationService : ICoupleInvitationService
             InvitationId = i.Id,
             SenderMemberId = i.SenderMemberId,
             SenderUserId = i.SenderMember?.UserId ?? 0,
-            SenderName = "", // Not needed for sent invitations
-            SenderAvatarUrl = null,
+            SenderName = i.SenderMember?.FullName ?? "",
+            SenderAvatarUrl = i.SenderMember?.User?.AvatarUrl,
             ReceiverMemberId = i.ReceiverMemberId,
             ReceiverUserId = i.ReceiverMember?.UserId ?? 0,
             ReceiverName = i.ReceiverMember?.FullName ?? "Unknown",
