@@ -22,7 +22,7 @@ namespace capstone_backend.Business.Common.Helpers
             if (string.Equals(trigger, ChallengeTriggerEvent.CHECKIN.ToString(), StringComparison.OrdinalIgnoreCase))
             {
                 if (progressExtra is CheckinChallengeProgressExtraResponse checkinExtra)
-                    return $"{checkinExtra.DoneMembersToday}/{checkinExtra.TotalMembers} người đã điểm danh mood hôm nay";
+                    return $"{checkinExtra.DoneMembersToday}/{checkinExtra.TotalMembers} người đã check-in tâm trạng hôm nay";
 
                 return $"{current}/{target} điểm danh hợp lệ";
             }
@@ -53,7 +53,7 @@ namespace capstone_backend.Business.Common.Helpers
             if (string.Equals(metric, ChallengeConstants.GoalMetrics.COUNT, StringComparison.OrdinalIgnoreCase))
             {
                 if (string.Equals(trigger, ChallengeTriggerEvent.REVIEW.ToString(), StringComparison.OrdinalIgnoreCase))
-                    return $"{current}/{target} review hợp lệ";
+                    return $"{current}/{target} đánh giá hợp lệ";
 
                 if (string.Equals(trigger, ChallengeTriggerEvent.POST.ToString(), StringComparison.OrdinalIgnoreCase))
                     return $"{current}/{target} bài đăng hợp lệ";

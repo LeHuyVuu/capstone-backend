@@ -369,7 +369,7 @@ public class WalletService
             Amount = request.Amount,
             Currency = "VND",
             UserId = userId,
-            Description = $"Convert {request.Amount} VND to {pointsToAdd} points",
+            Description = $"Đổi {request.Amount} VND sang {pointsToAdd} điểm",
             PaymentMethod = PaymentMethod.SYSTEM.ToString(),
             TransType = 6,
             DocNo = wallet.Id,

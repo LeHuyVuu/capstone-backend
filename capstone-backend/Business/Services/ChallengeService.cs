@@ -2455,7 +2455,7 @@ namespace capstone_backend.Business.Services
                             return false;
                         break;
 
-                    case "hash_tag":
+                    case "hash_tags":
                         if (!MatchHashTagRule(rule.Value, actualHashTags))
                             return false;
                         break;
