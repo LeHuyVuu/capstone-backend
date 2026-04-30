@@ -82,7 +82,7 @@ namespace capstone_backend.Business.Jobs.VenueSettlement
                         UserId = venueOwner.UserId,
                         PaymentMethod = PaymentMethod.SYSTEM.ToString(),
                         TransType = 5,
-                        Description = $"Settlement for VenueOwnerId {venueOwner.Id}, SettlementId {settlement.Id}",
+                        Description = $"Thanh toán cho VenueOwnerId {venueOwner.Id}, SettlementId {settlement.Id}",
                         ExternalRefCode = null,
                         Status = TransactionStatus.SUCCESS.ToString()
                     };

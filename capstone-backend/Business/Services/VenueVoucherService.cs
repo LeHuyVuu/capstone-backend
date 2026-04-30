@@ -815,7 +815,7 @@ namespace capstone_backend.Business.Services
 
                     Status = VenueSettlementStatus.PENDING.ToString(),
                     AvailableAt = DateTime.UtcNow.AddDays(3),
-                    Note = $"Settlement for voucher item {voucherItem.ItemCode}"
+                    Note = $"Thanh toán cho voucher item {voucherItem.ItemCode}"
                 });
 
                 await _unitOfWork.SaveChangesAsync();
