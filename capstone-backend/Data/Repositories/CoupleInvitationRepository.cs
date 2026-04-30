@@ -32,7 +32,8 @@ public class CoupleInvitationRepository : ICoupleInvitationRepository
     public async Task<List<CoupleInvitation>> GetReceivedInvitationsAsync(int memberId, string? status = null, int page = 1, int pageSize = 20)
     {
         var query = _context.CoupleInvitations
-            .Include(ci => ci.SenderMember)
+            .Include(ci => ci.SenderMember).ThenInclude(m => m.User)
+            .Include(ci => ci.ReceiverMember).ThenInclude(m => m.User)
             .Where(ci => ci.ReceiverMemberId == memberId && ci.IsDeleted == false);
 
         if (!string.IsNullOrEmpty(status))
@@ -50,7 +51,8 @@ public class CoupleInvitationRepository : ICoupleInvitationRepository
     public async Task<List<CoupleInvitation>> GetSentInvitationsAsync(int memberId, string? status = null, int page = 1, int pageSize = 20)
     {
         var query = _context.CoupleInvitations
-            .Include(ci => ci.ReceiverMember)
+            .Include(ci => ci.SenderMember).ThenInclude(m => m.User)
+            .Include(ci => ci.ReceiverMember).ThenInclude(m => m.User)
             .Where(ci => ci.SenderMemberId == memberId && ci.IsDeleted == false);
 
         if (!string.IsNullOrEmpty(status))
