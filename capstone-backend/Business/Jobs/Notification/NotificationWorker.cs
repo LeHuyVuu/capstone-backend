@@ -52,7 +52,9 @@ namespace capstone_backend.Business.Jobs.Notification
                 }
                 };
 
-                await _fcmService.SendMultiNotificationAsync(deviceTokens, request);
+                var result = await _fcmService.SendMultiNotificationAsync(deviceTokens, request);
+
+                _logger.LogInformation("FCM result: {@Result}", result);
             }
         }
     }
