@@ -267,6 +267,84 @@ public class AuthController : BaseController
 
 
     /// <summary>
+    /// Gửi OTP qua email để xác thực trước khi đăng ký tài khoản (Member hoặc VenueOwner)
+    /// </summary>
+    /// <param name="request">Request chứa email cần xác thực</param>
+    /// <returns>Success response</returns>
+    [HttpPost("send-registration-otp")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SendRegistrationOtp([FromBody] ForgotPasswordRequest request)
+    {
+        try
+        {
+            if (request == null)
+                return BadRequestResponse("Nội dung yêu cầu không được để trống");
+
+            if (string.IsNullOrWhiteSpace(request.Email))
+                return BadRequestResponse("Email không được để trống");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                return BadRequestResponse("Email không hợp lệ");
+
+            if (request.Email.Length > 255)
+                return BadRequestResponse("Email không được vượt quá 255 ký tự");
+
+            await _userService.SendRegistrationOtpAsync(request.Email);
+            return OkResponse<object?>(null, "Mã OTP đã được gửi đến email của bạn");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse($"Gửi OTP thất bại: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Xác thực OTP đăng ký email trước khi tạo tài khoản
+    /// </summary>
+    /// <param name="request">Verify OTP request</param>
+    /// <returns>Success response</returns>
+    [HttpPost("verify-registration-otp")]
+    [AllowAnonymous]
+    public async Task<IActionResult> VerifyRegistrationOtp([FromBody] VerifyOtpRequest request)
+    {
+        try
+        {
+            if (request == null)
+                return BadRequestResponse("Nội dung yêu cầu không được để trống");
+
+            if (string.IsNullOrWhiteSpace(request.Email))
+                return BadRequestResponse("Email không được để trống");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                return BadRequestResponse("Email không hợp lệ");
+
+            if (string.IsNullOrWhiteSpace(request.OtpCode))
+                return BadRequestResponse("Mã OTP không được để trống");
+
+            if (request.OtpCode.Length != 6)
+                return BadRequestResponse("Mã OTP phải có 6 ký tự");
+
+            if (!System.Text.RegularExpressions.Regex.IsMatch(request.OtpCode, @"^\d{6}$"))
+                return BadRequestResponse("Mã OTP chỉ được chứa số");
+
+            await _userService.VerifyRegistrationOtpAsync(request);
+            return OkResponse<object?>(null, "Xác thực email thành công. Bạn có thể tiến hành đăng ký tài khoản");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            return InternalServerErrorResponse($"Xác thực OTP thất bại: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Gửi OTP qua email để reset password
     /// </summary>
     /// <param name="request">Forgot password request</param>
