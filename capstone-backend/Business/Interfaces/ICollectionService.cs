@@ -8,7 +8,7 @@ public interface ICollectionService
 {
     Task<CollectionResponse> CreateCollectionAsync(int memberId, CreateCollectionRequest request, CancellationToken cancellationToken = default);
     Task<CollectionResponse> CreateDefaultCollectionForMemberAsync(int memberId, CancellationToken cancellationToken = default);
-    Task<CollectionResponse?> GetCollectionByIdAsync(int collectionId, CancellationToken cancellationToken = default);
+    Task<CollectionResponse?> GetCollectionByIdAsync(int memberId, int collectionId, CancellationToken cancellationToken = default);
     Task<CollectionResponse> GetCurrentCollectionAsync(int memberId, CancellationToken cancellationToken = default);
     Task<PagedResult<CollectionResponse>> GetCollectionsByMemberAsync(int memberId, int page, int pageSize, CancellationToken cancellationToken = default);
     Task<List<CollectionSummaryResponse>> GetCollectionSummariesByMemberAsync(int memberId, CancellationToken cancellationToken = default);
@@ -19,5 +19,5 @@ public interface ICollectionService
     Task<CollectionResponse?> AddVenuesToCollectionAsync(int collectionId, int memberId, PatchCollectionRequest request, CancellationToken cancellationToken = default);
     Task<CollectionResponse?> RemoveVenuesFromCollectionAsync(int collectionId, int memberId, PatchCollectionRequest request, CancellationToken cancellationToken = default);
     Task<ShareLinkResponse> GetCollectionShareLinkAsync(int collectionId, CancellationToken cancellationToken = default);
-    Task<CollectionResponse?> GetCollectionByShareLinkAsync(string shareCode, CancellationToken cancellationToken = default);
+    Task<CollectionResponse?> GetCollectionByShareLinkAsync(int? memberId, string shareCode, CancellationToken cancellationToken = default);
 }

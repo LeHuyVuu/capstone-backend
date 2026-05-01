@@ -55,7 +55,7 @@ public class CollectionService : ICollectionService
 
         _logger.LogInformation("Created collection {CollectionId} for member {MemberId}", collection.Id, memberId);
 
-        return MapToResponse(collection);
+        return MapToResponse(collection, memberId);
     }
 
     public async Task<CollectionResponse> CreateDefaultCollectionForMemberAsync(int memberId, CancellationToken cancellationToken = default)
@@ -77,10 +77,10 @@ public class CollectionService : ICollectionService
         _logger.LogInformation("Created default collection '{CollectionName}' for member {MemberId}", 
             CollectionConstants.DEFAULT_COLLECTION_NAME, memberId);
 
-        return MapToResponse(collection);
+        return MapToResponse(collection, memberId);
     }
 
-    public async Task<CollectionResponse?> GetCollectionByIdAsync(int collectionId, CancellationToken cancellationToken = default)
+    public async Task<CollectionResponse?> GetCollectionByIdAsync(int memberId, int collectionId, CancellationToken cancellationToken = default)
     {
         var collection = await _unitOfWork.Context.Set<Collection>()
             .Include(c => c.Venues)
@@ -93,7 +93,7 @@ public class CollectionService : ICollectionService
                         .ThenInclude(lt => lt.CouplePersonalityType)
             .FirstOrDefaultAsync(c => c.Id == collectionId && c.IsDeleted != true, cancellationToken);
 
-        return collection == null ? null : MapToResponse(collection);
+        return collection == null ? null : MapToResponse(collection, memberId);
     }
 
     public async Task<CollectionResponse> GetCurrentCollectionAsync(int memberId, CancellationToken cancellationToken = default)
@@ -119,7 +119,7 @@ public class CollectionService : ICollectionService
             return await CreateDefaultCollectionForMemberAsync(memberId, cancellationToken);
         }
 
-        return MapToResponse(collection);
+        return MapToResponse(collection, memberId);
     }
 
     public async Task<PagedResult<CollectionResponse>> GetCollectionsByMemberAsync(int memberId, int page, int pageSize, CancellationToken cancellationToken = default)
@@ -144,7 +144,7 @@ public class CollectionService : ICollectionService
 
         return new PagedResult<CollectionResponse>
         {
-            Items = items.Select(MapToResponse).ToList(),
+            Items = items.Select(c => MapToResponse(c, memberId)).ToList(),
             PageNumber = page,
             PageSize = pageSize,
             TotalCount = total
@@ -221,7 +221,7 @@ public class CollectionService : ICollectionService
 
         _logger.LogInformation("Updated collection {CollectionId}", collectionId);
 
-        return MapToResponse(collection);
+        return MapToResponse(collection, memberId);
     }
 
     public async Task<CollectionResponse?> UpdateCollectionStatusAsync(int collectionId, int memberId, UpdateCollectionStatusRequest request, CancellationToken cancellationToken = default)
@@ -246,7 +246,7 @@ public class CollectionService : ICollectionService
 
         _logger.LogInformation("Updated status of collection {CollectionId} to {Status}", collectionId, request.Status);
 
-        return MapToResponse(collection);
+        return MapToResponse(collection, memberId);
     }
 
     public async Task<bool> DeleteCollectionAsync(int collectionId, int memberId, CancellationToken cancellationToken = default)
@@ -315,7 +315,7 @@ public class CollectionService : ICollectionService
                         .ThenInclude(lt => lt.CouplePersonalityType)
             .FirstOrDefaultAsync(c => c.Id == collectionId, cancellationToken);
 
-        return MapToResponse(collection!);
+        return MapToResponse(collection!, memberId);
     }
 
     public async Task<CollectionResponse?> AddVenuesToCollectionAsync(int collectionId, int memberId, PatchCollectionRequest request, CancellationToken cancellationToken = default)
@@ -361,7 +361,7 @@ public class CollectionService : ICollectionService
                         .ThenInclude(lt => lt.CouplePersonalityType)
             .FirstOrDefaultAsync(c => c.Id == collectionId, cancellationToken);
 
-        return MapToResponse(collection!);
+        return MapToResponse(collection!, memberId);
     }
 
     public async Task<CollectionResponse?> RemoveVenuesFromCollectionAsync(int collectionId, int memberId, PatchCollectionRequest request, CancellationToken cancellationToken = default)
@@ -404,13 +404,14 @@ public class CollectionService : ICollectionService
                         .ThenInclude(lt => lt.CouplePersonalityType)
             .FirstOrDefaultAsync(c => c.Id == collectionId, cancellationToken);
 
-        return MapToResponse(collection!);
+        return MapToResponse(collection!, memberId);
     }
 
-    private CollectionResponse MapToResponse(Collection collection)
+    private CollectionResponse MapToResponse(Collection collection, int? memberId)
     {
         return new CollectionResponse
         {
+            IsOwner = memberId.HasValue && collection.MemberId == memberId.Value,
             Id = collection.Id,
             MemberId = collection.MemberId,
             CollectionName = collection.CollectionName,
@@ -427,7 +428,7 @@ public class CollectionService : ICollectionService
                 Name = v.Name,
                 Description = v.Description,
                 Address = v.Address,
-                CoverImage = v.CoverImage,
+                CoverImage = ParseImageToList(v.CoverImage),
                 InteriorImage = ParseImageToList(v.InteriorImage),
                 CoupleMoodTypes = v.VenueLocationTags
                     ?.Where(vlt => vlt.IsDeleted != true && vlt.LocationTag?.CoupleMoodType != null)
@@ -537,7 +538,7 @@ public class CollectionService : ICollectionService
         };
     }
 
-    public async Task<CollectionResponse?> GetCollectionByShareLinkAsync(string shareCode, CancellationToken cancellationToken = default)
+    public async Task<CollectionResponse?> GetCollectionByShareLinkAsync(int? memberId, string shareCode, CancellationToken cancellationToken = default)
     {
         var collection = await _unitOfWork.Context.Set<Collection>()
             .Include(c => c.Venues)
@@ -556,6 +557,6 @@ public class CollectionService : ICollectionService
         if (collection.Status != "PUBLIC")
             throw new Exception("Collection không khả dụng để chia sẻ");
 
-        return MapToResponse(collection);
+        return MapToResponse(collection, memberId);
     }
 }

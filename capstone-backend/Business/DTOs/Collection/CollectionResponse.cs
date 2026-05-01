@@ -5,6 +5,7 @@ namespace capstone_backend.Business.DTOs.Collection;
 
 public class CollectionResponse
 {
+    public bool IsOwner { get; set; }
     public int Id { get; set; }
     public int MemberId { get; set; }
     public string? CollectionName { get; set; }
@@ -24,7 +25,7 @@ public class VenueSimpleResponse
     public string Name { get; set; } = null!;
     public string? Description { get; set; }
     public string Address { get; set; } = null!;
-    public string? CoverImage { get; set; }
+    public List<string>? CoverImage { get; set; }
     public List<string>? InteriorImage { get; set; }
     public List<CoupleMoodTypeInfo>? CoupleMoodTypes { get; set; }
     public List<CouplePersonalityTypeInfo>? CouplePersonalityTypes { get; set; }
