@@ -20,22 +20,22 @@ public class CollectionController : BaseController
         _unitOfWork = unitOfWork;
     }
 
-    private async Task<int> GetCurrentMemberIdAsync()
+    private async Task<int?> GetCurrentMemberIdAsync()
     {
-        // Get UserId from JWT token
-        var userIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value 
+        var userIdClaim = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
                          ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        
+
+        // Guest → return null
         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
         {
-            throw new UnauthorizedAccessException("Không tìm thấy ID người dùng trong token");
+            return null;
         }
 
-        // Query MemberId from database using UserId
         var memberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(userId);
+
         if (memberProfile == null)
         {
-            throw new UnauthorizedAccessException("Không tìm thấy hồ sơ thành viên của người dùng này");
+            return null;
         }
 
         return memberProfile.Id;
@@ -48,7 +48,12 @@ public class CollectionController : BaseController
     public async Task<IActionResult> CreateCollection([FromBody] CreateCollectionRequest request)
     {
         var memberId = await GetCurrentMemberIdAsync();
-        var collection = await _collectionService.CreateCollectionAsync(memberId, request);
+        if (memberId == null)
+        {
+            return UnauthorizedResponse("Bạn cần đăng nhập để thực hiện hành động này");
+        }
+
+        var collection = await _collectionService.CreateCollectionAsync(memberId.Value, request);
         return CreatedResponse(collection, "Tạo bộ sưu tập thành công");
     }
 
@@ -58,7 +63,11 @@ public class CollectionController : BaseController
     [HttpGet("{id}")]
     public async Task<IActionResult> GetCollectionById(int id)
     {
-        var collection = await _collectionService.GetCollectionByIdAsync(id);
+        var memberId = await GetCurrentMemberIdAsync();
+        if (memberId == null)
+            return UnauthorizedResponse("Bạn cần đăng nhập để thực hiện hành động này");
+
+        var collection = await _collectionService.GetCollectionByIdAsync(memberId.Value, id);
         if (collection == null)
             return NotFoundResponse("Không tìm thấy bộ sưu tập");
 
@@ -72,7 +81,9 @@ public class CollectionController : BaseController
     public async Task<IActionResult> GetCurrentCollection()
     {
         var memberId = await GetCurrentMemberIdAsync();
-        var collection = await _collectionService.GetCurrentCollectionAsync(memberId);
+        if (memberId == null)
+            return UnauthorizedResponse("Bạn cần đăng nhập để thực hiện hành động này");
+        var collection = await _collectionService.GetCurrentCollectionAsync(memberId.Value);
         return OkResponse(collection);
     }
 
@@ -83,7 +94,9 @@ public class CollectionController : BaseController
     public async Task<IActionResult> GetMyCollections([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         var memberId = await GetCurrentMemberIdAsync();
-        var collections = await _collectionService.GetCollectionsByMemberAsync(memberId, page, pageSize);
+        if (memberId == null)
+            return UnauthorizedResponse("Bạn cần đăng nhập để thực hiện hành động này");
+        var collections = await _collectionService.GetCollectionsByMemberAsync(memberId.Value, page, pageSize);
         return OkResponse(collections);
     }
 
@@ -94,7 +107,9 @@ public class CollectionController : BaseController
     public async Task<IActionResult> GetCollectionSummaries()
     {
         var memberId = await GetCurrentMemberIdAsync();
-        var summaries = await _collectionService.GetCollectionSummariesByMemberAsync(memberId);
+        if (memberId == null)
+            return UnauthorizedResponse("Bạn cần đăng nhập để thực hiện hành động này");
+        var summaries = await _collectionService.GetCollectionSummariesByMemberAsync(memberId.Value);
         return OkResponse(summaries);
     }
 
@@ -105,7 +120,9 @@ public class CollectionController : BaseController
     public async Task<IActionResult> UpdateCollection(int id, [FromBody] UpdateCollectionRequest request)
     {
         var memberId = await GetCurrentMemberIdAsync();
-        var collection = await _collectionService.UpdateCollectionAsync(id, memberId, request);
+        if (memberId == null)
+            return UnauthorizedResponse("Bạn cần đăng nhập để thực hiện hành động này");
+        var collection = await _collectionService.UpdateCollectionAsync(id, memberId.Value, request);
         if (collection == null)
             return NotFoundResponse("Không tìm thấy bộ sưu tập hoặc bạn không có quyền cập nhật");
 
@@ -119,7 +136,9 @@ public class CollectionController : BaseController
     public async Task<IActionResult> UpdateCollectionStatus(int id, [FromBody] UpdateCollectionStatusRequest request)
     {
         var memberId = await GetCurrentMemberIdAsync();
-        var collection = await _collectionService.UpdateCollectionStatusAsync(id, memberId, request);
+        if (memberId == null)
+            return UnauthorizedResponse("Bạn cần đăng nhập để thực hiện hành động này");
+        var collection = await _collectionService.UpdateCollectionStatusAsync(id, memberId.Value, request);
         if (collection == null)
             return NotFoundResponse("Không tìm thấy bộ sưu tập hoặc bạn không có quyền cập nhật");
 
@@ -133,7 +152,9 @@ public class CollectionController : BaseController
     public async Task<IActionResult> DeleteCollection(int id)
     {
         var memberId = await GetCurrentMemberIdAsync();
-        var result = await _collectionService.DeleteCollectionAsync(id, memberId);
+        if (memberId == null)
+            return UnauthorizedResponse("Bạn cần đăng nhập để thực hiện hành động này");
+        var result = await _collectionService.DeleteCollectionAsync(id, memberId.Value);
         if (!result)
             return NotFoundResponse("Không tìm thấy bộ sưu tập hoặc bạn không có quyền xóa");
 
@@ -147,7 +168,9 @@ public class CollectionController : BaseController
     public async Task<IActionResult> AddVenueToCollection(int id, int venueId)
     {
         var memberId = await GetCurrentMemberIdAsync();
-        var collection = await _collectionService.AddVenueToCollectionAsync(id, memberId, venueId);
+        if (memberId == null)
+            return UnauthorizedResponse("Bạn cần đăng nhập để thực hiện hành động này");
+        var collection = await _collectionService.AddVenueToCollectionAsync(id, memberId.Value, venueId);
         if (collection == null)
             return NotFoundResponse("Không tìm thấy bộ sưu tập hoặc địa điểm, hoặc bạn không có quyền chỉnh sửa");
 
@@ -161,7 +184,9 @@ public class CollectionController : BaseController
     public async Task<IActionResult> AddVenuesToCollection(int id, [FromBody] PatchCollectionRequest request)
     {
         var memberId = await GetCurrentMemberIdAsync();
-        var collection = await _collectionService.AddVenuesToCollectionAsync(id, memberId, request);
+        if (memberId == null)
+            return UnauthorizedResponse("Bạn cần đăng nhập để thực hiện hành động này");
+        var collection = await _collectionService.AddVenuesToCollectionAsync(id, memberId.Value, request);
         if (collection == null)
             return NotFoundResponse("Không tìm thấy bộ sưu tập hoặc bạn không có quyền chỉnh sửa");
 
@@ -175,7 +200,9 @@ public class CollectionController : BaseController
     public async Task<IActionResult> RemoveVenuesFromCollection(int id, [FromBody] PatchCollectionRequest request)
     {
         var memberId = await GetCurrentMemberIdAsync();
-        var collection = await _collectionService.RemoveVenuesFromCollectionAsync(id, memberId, request);
+        if (memberId == null)
+            return UnauthorizedResponse("Bạn cần đăng nhập để thực hiện hành động này");
+        var collection = await _collectionService.RemoveVenuesFromCollectionAsync(id, memberId.Value, request);
         if (collection == null)
             return NotFoundResponse("Không tìm thấy bộ sưu tập hoặc bạn không có quyền chỉnh sửa");
 
@@ -209,7 +236,8 @@ public class CollectionController : BaseController
     {
         try
         {
-            var result = await _collectionService.GetCollectionByShareLinkAsync(shareCode);
+            var memberId = await GetCurrentMemberIdAsync();
+            var result = await _collectionService.GetCollectionByShareLinkAsync(memberId, shareCode);
             if (result == null)
                 return NotFoundResponse("Collection không tồn tại hoặc đã bị ẩn");
             return OkResponse(result);
