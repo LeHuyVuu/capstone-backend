@@ -43,6 +43,12 @@ public class CoupleInvitationService : ICoupleInvitationService
             return (false, "Không tìm thấy thông tin của bạn", null);
         }
 
+        // Check if sender is already in a relationship
+        if (sender.RelationshipStatus == "IN_RELATIONSHIP")
+        {
+            return (false, "Bạn đang trong mối quan hệ, không thể gửi lời mời ghép đôi", null);
+        }
+
         // Check if receiver exists
         var receiver = await _unitOfWork.MembersProfile.GetByIdAsync(request.ReceiverMemberId);
         if (receiver == null)
