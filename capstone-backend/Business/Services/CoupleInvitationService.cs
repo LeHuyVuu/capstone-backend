@@ -282,10 +282,21 @@ public class CoupleInvitationService : ICoupleInvitationService
             var smallerId = Math.Min(invitation.SenderMemberId, invitation.ReceiverMemberId);
             var largerId = Math.Max(invitation.SenderMemberId, invitation.ReceiverMemberId);
             
+            var defaultCoupleName = $"{invitation.SenderMember.FullName} ❤️ {invitation.ReceiverMember.FullName}";
+
+            // Ensure unique couple name
+            var nameExists = await _unitOfWork.Context.Set<CoupleProfile>()
+                .AnyAsync(c => c.CoupleName == defaultCoupleName && c.IsDeleted != true);
+            if (nameExists)
+            {
+                defaultCoupleName = $"{defaultCoupleName} {DateTime.UtcNow:MMdd}";
+            }
+
             coupleProfile = new CoupleProfile
             {
                 MemberId1 = smallerId,
                 MemberId2 = largerId,
+                CoupleName = defaultCoupleName,
                 Status = CoupleProfileStatus.ACTIVE.ToString(),
                 StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
                 CreatedAt = DateTime.UtcNow,
