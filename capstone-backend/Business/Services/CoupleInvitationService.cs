@@ -50,6 +50,12 @@ public class CoupleInvitationService : ICoupleInvitationService
             return (false, "Không tìm thấy member này", null);
         }
 
+        // Check if receiver is already in a relationship
+        if (receiver.RelationshipStatus == "IN_RELATIONSHIP")
+        {
+            return (false, "Người dùng này đang trong mối quan hệ, không thể gửi lời mời ghép đôi", null);
+        }
+
         // Gender validation - only opposite genders can send invitations
         if (string.IsNullOrWhiteSpace(sender.Gender) || string.IsNullOrWhiteSpace(receiver.Gender))
         {
