@@ -84,7 +84,7 @@ namespace capstone_backend.Business.Jobs.MemberAccessory
                     MemberId = m.Id,
                     AccessoryId = accessoryId,
                     AcquiredAt = now,
-                    ExpiredAt = top1Couple.PeriodEnd,
+                    ExpiredAt = now.AddMonths(1).AddDays(-1),
                     IsEquipped = false
                 });
             }
