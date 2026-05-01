@@ -12,6 +12,7 @@ public class UpdateAdvertisementRequest
     [Required]
     public string BannerUrl { get; set; } = null!;
     
+    [Url(ErrorMessage = "Đường dẫn khi bấm phải là URL hợp lệ")]
     public string? TargetUrl { get; set; }
     
     public string? PlacementType { get; set; }

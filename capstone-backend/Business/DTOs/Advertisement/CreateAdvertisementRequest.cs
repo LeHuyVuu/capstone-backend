@@ -14,7 +14,7 @@ public class CreateAdvertisementRequest
     [Required(ErrorMessage = "BannerUrl là bắt buộc")]
     public string BannerUrl { get; set; } = null!;
 
-    [Url(ErrorMessage = "TargetUrl phải là URL hợp lệ")]
+    [Url(ErrorMessage = "Đường dẫn khi bấm phải là URL hợp lệ")]
     public string? TargetUrl { get; set; }
 
     [StringLength(50, ErrorMessage = "PlacementType không được vượt quá 50 ký tự")]
