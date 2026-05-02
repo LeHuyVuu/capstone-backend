@@ -190,10 +190,10 @@ public class CoupleProfileService : ICoupleProfileService
         // StartDate validation
      
 
-       if (request.AniversaryDate.HasValue && request.AniversaryDate.Value < DateOnly.FromDateTime(DateTime.UtcNow))
+       if (request.AniversaryDate.HasValue && request.AniversaryDate.Value > DateOnly.FromDateTime(DateTime.UtcNow))
 {
     throw new BadRequestException(
-        "Ngày kỷ niệm lớn hơn ngày hiện tại",
+        "Ngày kỷ niệm không được lớn hơn ngày hiện tại",
         "VALIDATION_ERROR");
 }
 
