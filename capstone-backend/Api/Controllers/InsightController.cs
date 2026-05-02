@@ -90,12 +90,10 @@ public class InsightController : BaseController
             .GroupBy(mml => new { mml.MoodTypeId, MoodName = mml.MoodType.Name })
             .Select(g => new { g.Key.MoodTypeId, g.Key.MoodName, Count = g.Count() })
             .OrderByDescending(x => x.Count)
-            .Take(10)
             .ToListAsync();
 
         var totalMoodLogs = hotMoods.Sum(x => x.Count);
         var hotMoodInsights = hotMoods
-            .Take(3)
             .Select(hm => new
             {
                 hm.MoodTypeId,
