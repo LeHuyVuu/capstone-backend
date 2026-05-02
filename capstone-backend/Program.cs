@@ -3,6 +3,7 @@ using capstone_backend.Api.Models;
 using capstone_backend.Business.Configurations;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Challenge;
+using capstone_backend.Business.Jobs.CoupleAnniversary;
 using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Business.Jobs.Leaderboard;
 using capstone_backend.Business.Jobs.Like;
@@ -332,6 +333,15 @@ using (var scope = serviceProvider.CreateScope())
             "reward-top1-monthly",
             x => x.RewardTop1MonthlyAsync(),
             "0 2 1 * *", // 02:00 day 1 of every month
+        new RecurringJobOptions
+        {
+            TimeZone = vnTz
+        });
+
+    recurringJobManager.AddOrUpdate<ICoupleAnniversaryWorker>(
+        "send-anniversary-notifications",
+        job => job.SendAnniversaryNotificationsAsync(),
+        "*/10 * * * *", // Mỗi 10 phút
         new RecurringJobOptions
         {
             TimeZone = vnTz

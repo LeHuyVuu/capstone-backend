@@ -5,6 +5,7 @@ using capstone_backend.Api.VenueRecommendation.Service;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Business.Jobs.Challenge;
 using capstone_backend.Business.Jobs.Comment;
+using capstone_backend.Business.Jobs.CoupleAnniversary;
 using capstone_backend.Business.Jobs.DatePlan;
 using capstone_backend.Business.Jobs.Leaderboard;
 using capstone_backend.Business.Jobs.Like;
@@ -259,6 +260,7 @@ public static class ServiceExtensions
         services.AddScoped<INotificationWorker, NotificationWorker>();
         services.AddScoped<IMemberSubscriptionWorker, MemberSubscriptionWorker>();
         services.AddScoped<IMemberAccessoryWorker, MemberAccessoryWorker>();
+        services.AddScoped<ICoupleAnniversaryWorker, CoupleAnniversaryWorker>();
 
         // Register Messaging Service
         services.AddScoped<IMessagingService, MessagingService>();
