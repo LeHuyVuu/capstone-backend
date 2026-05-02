@@ -129,6 +129,14 @@ public class CoupleProfileService : ICoupleProfileService
         // Update fields if provided
         if (!string.IsNullOrEmpty(request.CoupleName))
         {
+            // Check for duplicate couple name
+            var nameExists = await _unitOfWork.Context.Set<CoupleProfile>()
+                .AnyAsync(c => c.CoupleName == request.CoupleName && c.id != couple.id && c.IsDeleted != true);
+            if (nameExists)
+            {
+                return (false, "Tên cặp đôi này đã được sử dụng, vui lòng chọn tên khác", null);
+            }
+
             couple.CoupleName = request.CoupleName;
         }
 

@@ -105,6 +105,12 @@ public class UserService : IUserService
         if (await _unitOfWork.Users.EmailExistsAsync(request.Email))
             throw new InvalidOperationException($"Email '{request.Email}' đã được sử dụng");
 
+        // Kiểm tra email đã được xác thực OTP chưa
+        string verifiedKey = $"otp:registration-verified:{request.Email}";
+        var isVerified = await _redisService.GetAsync<string>(verifiedKey);
+        if (string.IsNullOrEmpty(isVerified))
+            throw new InvalidOperationException("Email chưa được xác thực OTP. Vui lòng xác thực email trước khi đăng ký");
+
         // Tạo user account với BCrypt hashing
         string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
@@ -139,6 +145,9 @@ public class UserService : IUserService
 
             await _unitOfWork.SaveChangesAsync();
             await _unitOfWork.CommitTransactionAsync();
+
+            // Xóa Redis verified key sau khi đăng ký thành công
+            await _redisService.RemoveAsync(verifiedKey);
 
             // Generate JWT tokens
             var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, "MEMBER", request.FullName, null);
@@ -232,6 +241,12 @@ public class UserService : IUserService
         if (await _unitOfWork.Users.EmailExistsAsync(request.Email))
             throw new InvalidOperationException($"Email '{request.Email}' đã được sử dụng");
 
+        // Kiểm tra email đã được xác thực OTP chưa
+        string verifiedKey = $"otp:registration-verified:{request.Email}";
+        var isVerified = await _redisService.GetAsync<string>(verifiedKey);
+        if (string.IsNullOrEmpty(isVerified))
+            throw new InvalidOperationException("Email chưa được xác thực OTP. Vui lòng xác thực email trước khi đăng ký");
+
         // Tạo user account với BCrypt hashing
         string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
@@ -262,6 +277,9 @@ public class UserService : IUserService
         var accessToken = _jwtService.GenerateAccessToken(user.Id, user.Email, "venueowner", request.BusinessName, null);
         var refreshToken = _jwtService.GenerateRefreshToken();
         var expiryMinutes = int.Parse(Environment.GetEnvironmentVariable("JWT_EXPIRY_MINUTES") ?? "60");
+
+        // Xóa Redis verified key sau khi đăng ký thành công
+        await _redisService.RemoveAsync(verifiedKey);
 
         _logger.LogInformation("✅ VenueOwner registered successfully: {Email} (UserId: {UserId})", user.Email, user.Id);
 
@@ -578,6 +596,69 @@ public class UserService : IUserService
     }
 
     /// <summary>
+    /// Gửi OTP qua email để xác thực trước khi đăng ký tài khoản
+    /// </summary>
+    public async Task<bool> SendRegistrationOtpAsync(string email)
+    {
+        // Email không được đã tồn tại trong hệ thống
+        if (await _unitOfWork.Users.EmailExistsAsync(email))
+            throw new InvalidOperationException($"Email '{email}' đã được sử dụng");
+
+        // Generate 6-digit OTP (padded to always be 6 digits)
+        var random = new Random();
+        string otpCode = random.Next(100000, 1000000).ToString();
+
+        // Store OTP in Redis with 10 minutes expiry
+        string redisKey = $"otp:registration:{email}";
+        await _redisService.SetAsync(redisKey, otpCode, TimeSpan.FromMinutes(10));
+
+        // Send OTP via email
+        var emailRequest = new DTOs.Email.SendEmailRequest
+        {
+            To = email,
+            Subject = "Mã OTP xác thực đăng ký - CoupleMood",
+            FromName = "CoupleMood",
+            HtmlBody = EmailOtpTemplate.GetRegistrationOtpEmail(otpCode, email),
+            TextBody = EmailOtpTemplate.GetRegistrationOtpPlainText(otpCode)
+        };
+
+        bool emailSent = await _emailService.SendEmailAsync(emailRequest);
+        if (!emailSent)
+        {
+            await _redisService.RemoveAsync(redisKey);
+            throw new InvalidOperationException("Không thể gửi email. Vui lòng thử lại sau");
+        }
+
+        _logger.LogInformation("Registration OTP sent to email {Email}", email);
+        return true;
+    }
+
+    /// <summary>
+    /// Verify OTP xác thực email đăng ký
+    /// </summary>
+    public async Task<bool> VerifyRegistrationOtpAsync(VerifyOtpRequest request)
+    {
+        string redisKey = $"otp:registration:{request.Email}";
+        var storedOtp = await _redisService.GetAsync<string>(redisKey);
+
+        if (string.IsNullOrEmpty(storedOtp))
+            throw new InvalidOperationException("Mã OTP không hợp lệ hoặc đã hết hạn");
+
+        if (storedOtp != request.OtpCode)
+            throw new InvalidOperationException("Mã OTP không chính xác");
+
+        // Mark email as verified for registration (15 minutes to complete registration)
+        string verifiedKey = $"otp:registration-verified:{request.Email}";
+        await _redisService.SetAsync(verifiedKey, "true", TimeSpan.FromMinutes(15));
+
+        // Remove the OTP key after successful verification
+        await _redisService.RemoveAsync(redisKey);
+
+        _logger.LogInformation("Registration OTP verified successfully for email {Email}", request.Email);
+        return true;
+    }
+
+    /// <summary>
     /// Gửi OTP qua email để reset password
     /// </summary>
     public async Task<bool> SendPasswordResetOtpAsync(ForgotPasswordRequest request)
@@ -589,9 +670,9 @@ public class UserService : IUserService
         if (user.IsActive != true)
             throw new InvalidOperationException("Tài khoản đã bị vô hiệu hóa");
 
-        // Generate 6-digit OTP
+        // Generate 6-digit OTP (padded to always be 6 digits)
         var random = new Random();
-        string otpCode = random.Next(100000, 999999).ToString();
+        string otpCode = random.Next(100000, 1000000).ToString();
 
         // Store OTP in Redis with 10 minutes expiry
         string redisKey = $"otp:password-reset:{request.Email}";

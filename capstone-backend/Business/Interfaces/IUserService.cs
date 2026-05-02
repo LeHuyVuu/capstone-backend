@@ -131,6 +131,20 @@ public interface IUserService
     Task<bool> ResetPasswordAsync(ResetPasswordRequest request);
 
     /// <summary>
+    /// Gửi OTP qua email để xác thực trước khi đăng ký tài khoản
+    /// </summary>
+    /// <param name="email">Email cần xác thực</param>
+    /// <returns>True nếu gửi thành công</returns>
+    Task<bool> SendRegistrationOtpAsync(string email);
+
+    /// <summary>
+    /// Verify OTP xác thực email đăng ký
+    /// </summary>
+    /// <param name="request">Verify OTP request</param>
+    /// <returns>True nếu OTP hợp lệ</returns>
+    Task<bool> VerifyRegistrationOtpAsync(VerifyOtpRequest request);
+
+    /// <summary>
     /// Login hoặc register bằng Google (cho Flutter mobile)
     /// </summary>
     /// <param name="request">Google login request với ID token</param>

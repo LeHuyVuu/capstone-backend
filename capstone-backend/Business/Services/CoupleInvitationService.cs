@@ -43,11 +43,23 @@ public class CoupleInvitationService : ICoupleInvitationService
             return (false, "Không tìm thấy thông tin của bạn", null);
         }
 
+        // Check if sender is already in a relationship
+        if (sender.RelationshipStatus == "IN_RELATIONSHIP")
+        {
+            return (false, "Bạn đang trong mối quan hệ, không thể gửi lời mời ghép đôi", null);
+        }
+
         // Check if receiver exists
         var receiver = await _unitOfWork.MembersProfile.GetByIdAsync(request.ReceiverMemberId);
         if (receiver == null)
         {
             return (false, "Không tìm thấy member này", null);
+        }
+
+        // Check if receiver is already in a relationship
+        if (receiver.RelationshipStatus == "IN_RELATIONSHIP")
+        {
+            return (false, "Người dùng này đang trong mối quan hệ, không thể gửi lời mời ghép đôi", null);
         }
 
         // Gender validation - only opposite genders can send invitations
@@ -270,10 +282,21 @@ public class CoupleInvitationService : ICoupleInvitationService
             var smallerId = Math.Min(invitation.SenderMemberId, invitation.ReceiverMemberId);
             var largerId = Math.Max(invitation.SenderMemberId, invitation.ReceiverMemberId);
             
+            var defaultCoupleName = $"{invitation.SenderMember.FullName} ❤️ {invitation.ReceiverMember.FullName}";
+
+            // Ensure unique couple name
+            var nameExists = await _unitOfWork.Context.Set<CoupleProfile>()
+                .AnyAsync(c => c.CoupleName == defaultCoupleName && c.IsDeleted != true);
+            if (nameExists)
+            {
+                defaultCoupleName = $"{defaultCoupleName} {DateTime.UtcNow:MMdd}";
+            }
+
             coupleProfile = new CoupleProfile
             {
                 MemberId1 = smallerId,
                 MemberId2 = largerId,
+                CoupleName = defaultCoupleName,
                 Status = CoupleProfileStatus.ACTIVE.ToString(),
                 StartDate = DateOnly.FromDateTime(DateTime.UtcNow),
                 CreatedAt = DateTime.UtcNow,
