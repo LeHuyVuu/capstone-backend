@@ -62,17 +62,29 @@ public class EmailAccountInfoTemplate
                         <table width=""100%"" cellpadding=""0"" cellspacing=""0"">
                             <tr>
                                 <td style=""padding:6px 0;color:#6b7280;font-size:14px;"">Email</td>
-                                <td style=""padding:6px 0;color:#111827;font-size:14px;text-align:right;"">
-                                    {staffEmail}
+                                <td style=""padding:6px 0;text-align:right;"">
+                                    <div style=""display:inline-flex;align-items:center;gap:8px;"">
+                                        <span style=""color:#111827;font-size:14px;"">{staffEmail}</span>
+                                        <button onclick=""navigator.clipboard.writeText('{staffEmail}').then(() => {{ this.textContent='✓'; setTimeout(() => this.textContent='Copy', 500); }})""
+                                            style=""background:#8b5cf6;color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;"">
+                                            Copy
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
 
                             <tr>
                                 <td style=""padding:6px 0;color:#6b7280;font-size:14px;"">Mật khẩu</td>
                                 <td style=""padding:6px 0;text-align:right;"">
-                                    <span style=""display:inline-block;background:#f9fafb;border:1px solid #e5e7eb;padding:6px 10px;border-radius:6px;font-family:monospace;font-size:13px;color:#111827;"">
-                                        {staffPassword}
-                                    </span>
+                                    <div style=""display:inline-flex;align-items:center;gap:8px;"">
+                                        <span style=""display:inline-block;background:#f9fafb;border:1px solid #e5e7eb;padding:6px 10px;border-radius:6px;font-family:monospace;font-size:13px;color:#111827;"">
+                                            {staffPassword}
+                                        </span>
+                                        <button onclick=""navigator.clipboard.writeText('{staffPassword}').then(() => {{ this.textContent='✓'; setTimeout(() => this.textContent='Copy', 500); }})""
+                                            style=""background:#8b5cf6;color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;"">
+                                            Copy
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
 
