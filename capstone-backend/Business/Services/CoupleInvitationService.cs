@@ -6,6 +6,7 @@ using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using capstone_backend.Data.Repositories;
 using capstone_backend.Data.Static;
+using GeoCoordinatePortable;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,6 +25,16 @@ public class CoupleInvitationService : ICoupleInvitationService
         _messagingService = messagingService;
         _challengeService = challengeService;
         _leaderboardService = leaderboardService;
+    }
+
+    // Calculate distance between two coordinates in kilometers using GeoCoordinate library
+    private double CalculateDistance(decimal lat1, decimal lon1, decimal lat2, decimal lon2)
+    {
+        var coord1 = new GeoCoordinate((double)lat1, (double)lon1);
+        var coord2 = new GeoCoordinate((double)lat2, (double)lon2);
+        
+        // GetDistanceTo returns distance in meters
+        return coord1.GetDistanceTo(coord2) / 1000; // Convert to kilometers
     }
 
     public async Task<(bool Success, string Message, CoupleInvitationResponse? Data)> SendInvitationDirectAsync(
@@ -743,7 +754,7 @@ public class CoupleInvitationService : ICoupleInvitationService
             var targetGender = currentMember.Gender == "MALE" ? "FEMALE" : 
                               currentMember.Gender == "FEMALE" ? "MALE" : null;
 
-            // Lấy personality của current member (1 query riêng nhỏ)
+            // Lấy personality của current member
             var currentPersonality = await _unitOfWork.Context.PersonalityTests
                 .Where(pt => pt.MemberId == currentMemberId && pt.IsDeleted != true && 
                            pt.Status == PersonalityTestStatus.COMPLETED.ToString() && pt.ResultCode != null)
@@ -751,31 +762,112 @@ public class CoupleInvitationService : ICoupleInvitationService
                 .Select(pt => pt.ResultCode)
                 .FirstOrDefaultAsync();
 
-            // Filter chỉ gender (bắt buộc) và area (bắt buộc phải bằng nhau)
+            // Lấy interests của current member
+            List<string> currentInterests = new List<string>();
+            if (!string.IsNullOrWhiteSpace(currentMember.Interests))
+            {
+                try
+                {
+                    currentInterests = System.Text.Json.JsonSerializer.Deserialize<List<string>>(currentMember.Interests) ?? new List<string>();
+                }
+                catch { }
+            }
+
+            // Filter chỉ gender (bắt buộc)
             var matchingMembers = await baseQuery
                 .Where(m => m.Gender == targetGender)
                 .Include(m => m.PersonalityTests.Where(pt => pt.IsDeleted != true && pt.Status == PersonalityTestStatus.COMPLETED.ToString()))
                 .ToListAsync();
 
-            // Sắp xếp theo độ ưu tiên (không loại bỏ, chỉ ưu tiên): Mood > Personality > Interests > Name
+            // Sắp xếp theo thứ tự ưu tiên:
+            // 1. Distance (gần = dễ gặp = dễ accept)
+            // 2. Interest similarity (có điểm chung)
+            // 3. Age difference
+            // 4. MBTI (phụ)
             candidates = matchingMembers
-                .OrderByDescending(m => 
+                .OrderBy(m =>
                 {
-                    // Ưu tiên 2: Cùng personality
-                    if (string.IsNullOrWhiteSpace(currentPersonality)) return false;
-                    var memberPersonality = m.PersonalityTests.OrderByDescending(pt => pt.TakenAt).FirstOrDefault()?.ResultCode;
-                    return !string.IsNullOrWhiteSpace(memberPersonality) && memberPersonality == currentPersonality;
+                    // 1. Distance - càng gần càng tốt
+                    // Nếu CẢ HAI đều có coordinates, tính khoảng cách thực
+                    if (currentMember.HomeLatitude.HasValue && currentMember.HomeLongitude.HasValue &&
+                        m.HomeLatitude.HasValue && m.HomeLongitude.HasValue)
+                    {
+                        return CalculateDistance(
+                            currentMember.HomeLatitude.Value, currentMember.HomeLongitude.Value,
+                            m.HomeLatitude.Value, m.HomeLongitude.Value);
+                    }
+                    
+                    // Fallback: Nếu KHÔNG CÓ coordinates (một hoặc cả hai), dùng city và district
+                    // Cùng district = 10, cùng city = 50, khác city = 1000
+                    // (Dùng 10 thay vì 0 để ưu tiên GPS thực tế hơn)
+                    var currentCity = currentMember.City?.Trim().ToLower() ?? "";
+                    var currentDistrict = currentMember.District?.Trim().ToLower() ?? "";
+                    var memberCity = m.City?.Trim().ToLower() ?? "";
+                    var memberDistrict = m.District?.Trim().ToLower() ?? "";
+                    
+                    if (!string.IsNullOrEmpty(currentDistrict) && !string.IsNullOrEmpty(memberDistrict))
+                    {
+                        if (currentDistrict == memberDistrict)
+                            return 10; // Cùng quận/huyện - gần (nhưng không chính xác bằng GPS)
+                    }
+                    
+                    if (!string.IsNullOrEmpty(currentCity) && !string.IsNullOrEmpty(memberCity))
+                    {
+                        if (currentCity == memberCity)
+                            return 50; // Cùng thành phố - trung bình
+                    }
+                    
+                    return 1000; // Khác thành phố hoặc không có thông tin - xa nhất
                 })
-                .ThenByDescending(m => 
+                .ThenByDescending(m =>
                 {
-                    // Ưu tiên 3: Có overlap interests
-                    if (string.IsNullOrWhiteSpace(currentMember.Interests) || string.IsNullOrWhiteSpace(m.Interests)) return false;
-                    return m.Interests.Contains(currentMember.Interests) || currentMember.Interests.Contains(m.Interests);
+                    // 2. Interest similarity - càng nhiều điểm chung càng tốt
+                    if (currentInterests.Any() && !string.IsNullOrWhiteSpace(m.Interests))
+                    {
+                        try
+                        {
+                            var memberInterests = System.Text.Json.JsonSerializer.Deserialize<List<string>>(m.Interests) ?? new List<string>();
+                            return currentInterests.Intersect(memberInterests).Count();
+                        }
+                        catch { }
+                    }
+                    return 0;
                 })
-                .ThenBy(m => m.FullName)  // Sắp xếp theo tên
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
+                .ThenBy(m =>
+                {
+                    // 3. Age difference - càng gần tuổi càng tốt
+                    if (currentMember.DateOfBirth.HasValue && m.DateOfBirth.HasValue)
+                    {
+                        var currentAge = DateTime.UtcNow.Year - currentMember.DateOfBirth.Value.Year;
+                        var memberAge = DateTime.UtcNow.Year - m.DateOfBirth.Value.Year;
+                        return Math.Abs(currentAge - memberAge);
+                    }
+                    return int.MaxValue;
+                })
+                .ThenByDescending(m =>
+                {
+                    // 4. MBTI compatibility (phụ) - có MBTI tốt hơn không có
+                    if (!string.IsNullOrWhiteSpace(currentPersonality))
+                    {
+                        var memberPersonality = m.PersonalityTests
+                            .OrderByDescending(pt => pt.TakenAt)
+                            .FirstOrDefault()?.ResultCode;
+                        
+                        if (!string.IsNullOrWhiteSpace(memberPersonality))
+                        {
+                            // Cùng MBTI > khác MBTI > không có
+                            return memberPersonality == currentPersonality ? 2 : 1;
+                        }
+                        // Có currentPersonality nhưng member không có
+                        return 0;
+                    }
+                    // Không có currentPersonality
+                    return 0;
+                })
+                .ThenBy(m => m.FullName) // Cuối cùng sắp xếp theo tên
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
         }
         else
         {
