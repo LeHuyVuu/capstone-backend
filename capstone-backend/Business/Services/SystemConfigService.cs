@@ -1,8 +1,11 @@
 ﻿using AutoMapper;
 using capstone_backend.Business.DTOs.Common;
+using capstone_backend.Business.DTOs.Email;
 using capstone_backend.Business.DTOs.SystemConfig;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Email;
 using capstone_backend.Data.Enums;
+using Hangfire;
 
 namespace capstone_backend.Business.Services
 {
@@ -10,11 +13,13 @@ namespace capstone_backend.Business.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IEmailService _emailService;
 
-        public SystemConfigService(IUnitOfWork unitOfWork, IMapper mapper)
+        public SystemConfigService(IUnitOfWork unitOfWork, IMapper mapper, IEmailService emailService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _emailService = emailService;
         }
 
         public async Task<PagedResult<SystemConfigResponse>> GetAllConfigsAsync(int pageNumber, int pageSize)
@@ -47,11 +52,18 @@ namespace capstone_backend.Business.Services
 
             ValidateConfig(key, value);
 
+            var oldConfigValue = config.ConfigValue;
+
             config.ConfigValue = value;
             config.UpdatedAt = DateTime.UtcNow;
 
             _unitOfWork.SystemConfigs.Update(config);
             await _unitOfWork.SaveChangesAsync();
+
+            if (key == SystemConfigKeys.VENUE_COMMISSION_PERCENT.ToString() && oldConfigValue != value)
+            {
+                BackgroundJob.Enqueue<IEmailWorker>(j => j.SendCommissionUpdateEmailAsync(value));
+            }
 
             var response = _mapper.Map<SystemConfigResponse>(config);
             return response;
