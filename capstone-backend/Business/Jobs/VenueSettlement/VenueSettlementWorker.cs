@@ -82,7 +82,8 @@ namespace capstone_backend.Business.Jobs.VenueSettlement
                         UserId = venueOwner.UserId,
                         PaymentMethod = PaymentMethod.SYSTEM.ToString(),
                         TransType = 5,
-                        Description = $"Thanh toán cho VenueOwnerId {venueOwner.Id}, SettlementId {settlement.Id}",
+                        //Description = $"Thanh toán cho VenueOwnerId {venueOwner.Id}, SettlementId {settlement.Id}",
+                        Description = "Thanh toán đối soát cho voucher",
                         ExternalRefCode = null,
                         Status = TransactionStatus.SUCCESS.ToString()
                     };
