@@ -1,6 +1,7 @@
 using capstone_backend.Business.DTOs.CoupleProfile;
 using capstone_backend.Business.Exceptions;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Data.Interfaces;
 using capstone_backend.Extensions;

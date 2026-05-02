@@ -565,4 +565,57 @@ public class VenueLocationController : BaseController
             return InternalServerErrorResponse("Đã xảy ra lỗi khi lấy gói đăng ký của địa điểm");
         }
     }
+
+    /// <summary>
+    /// Soft delete a DRAFTED venue location.
+    /// Only allows deletion of venues in DRAFTED status.
+    /// This is a separate endpoint that doesn't affect any existing code.
+    /// </summary>
+    /// <param name="id">Venue location ID</param>
+    /// <returns>Success or error response</returns>
+    [HttpDelete("draft/{id}")]
+    [Authorize(Roles = "VENUEOWNER")]
+    [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 401)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 403)]
+    [ProducesResponseType(typeof(ApiResponse<object>), 404)]
+    public async Task<IActionResult> SoftDeleteDraftVenue(int id)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (!currentUserId.HasValue)
+        {
+            return UnauthorizedResponse("Người dùng chưa được xác thực");
+        }
+
+        try
+        {
+            var result = await _venueLocationService.SoftDeleteDraftVenueAsync(id, currentUserId.Value);
+            
+            if (result)
+            {
+                return OkResponse(new { venueId = id }, "Xóa địa điểm nháp thành công");
+            }
+            
+            return BadRequestResponse("Không thể xóa địa điểm này");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return ForbiddenResponse(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequestResponse(ex.Message);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFoundResponse(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error soft deleting draft venue {VenueId}", id);
+            return InternalServerErrorResponse("Đã xảy ra lỗi khi xóa địa điểm nháp");
+        }
+    }
 }
+

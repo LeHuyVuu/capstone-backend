@@ -3272,4 +3272,55 @@ public class VenueLocationService : IVenueLocationService
             ReindexedInMeilisearch = reindexSuccess
         };
     }
+
+    /// <summary>
+    /// Soft delete a venue location that is in DRAFTED status.
+    /// Only the owner can delete their own draft venues.
+    /// This is a standalone method that doesn't affect existing functionality.
+    /// </summary>
+    public async Task<bool> SoftDeleteDraftVenueAsync(int venueId, int userId)
+    {
+        // Get venue
+        var venue = await _unitOfWork.VenueLocations.GetByIdAsync(venueId);
+        
+        if (venue == null)
+        {
+            throw new KeyNotFoundException($"Không tìm thấy địa điểm có ID {venueId}");
+        }
+
+        // Check if venue is already deleted
+        if (venue.IsDeleted == true)
+        {
+            throw new InvalidOperationException("Địa điểm này đã bị xóa");
+        }
+
+        // Check if venue is in DRAFTED status
+        if (venue.Status != VenueLocationStatus.DRAFTED.ToString())
+        {
+            throw new InvalidOperationException($"Chỉ có thể xóa địa điểm ở trạng thái DRAFTED. Trạng thái hiện tại: {venue.Status}");
+        }
+
+        // Find venue owner profile for the user
+        var venueOwnerProfile = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(userId);
+        
+        if (venueOwnerProfile == null)
+        {
+            throw new UnauthorizedAccessException("Bạn không có quyền xóa địa điểm này");
+        }
+
+        // Check if user is the owner of the venue
+        if (venue.VenueOwnerId != venueOwnerProfile.Id)
+        {
+            throw new UnauthorizedAccessException("Bạn không có quyền xóa địa điểm này");
+        }
+
+        // Perform soft delete
+        venue.IsDeleted = true;
+        venue.UpdatedAt = DateTime.UtcNow;
+
+        _unitOfWork.VenueLocations.Update(venue);
+        await _unitOfWork.SaveChangesAsync();
+
+        return true;
+    }
 }

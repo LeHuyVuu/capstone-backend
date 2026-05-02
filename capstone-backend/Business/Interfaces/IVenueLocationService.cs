@@ -175,4 +175,14 @@ public interface IVenueLocationService
     /// <param name="reason">Reason for status change</param>
     /// <returns>Status change result</returns>
     Task<VenueStatusChangeByAdminResponse> AdminChangeVenueStatusAsync(int venueId, int adminUserId, string newStatus, string? reason);
+
+    /// <summary>
+    /// Soft delete a venue location that is in DRAFTED status.
+    /// Only the owner can delete their own draft venues.
+    /// This method doesn't affect any existing functionality.
+    /// </summary>
+    /// <param name="venueId">Venue location ID</param>
+    /// <param name="userId">User ID (must be the owner)</param>
+    /// <returns>True if deleted successfully, false otherwise</returns>
+    Task<bool> SoftDeleteDraftVenueAsync(int venueId, int userId);
 }
