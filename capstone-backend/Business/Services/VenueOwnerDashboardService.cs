@@ -484,13 +484,10 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
     /// </summary>
     public async Task<VenueOwnerSubscriptionInfoResponse> GetSubscriptionInfoAsync(int userId)
     {
-        _logger.LogInformation("Getting subscription info for user ID: {UserId}", userId);
-
         // 1. Find VenueOwnerProfile by userId
         var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetByUserIdAsync(userId);
         if (venueOwner == null)
         {
-            _logger.LogWarning("Venue owner profile not found for user ID: {UserId}", userId);
             throw new UnauthorizedAccessException("Không tìm thấy hồ sơ chủ địa điểm");
         }
 
@@ -532,7 +529,6 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
 
         if (!allActiveSubs.Any())
         {
-            _logger.LogInformation("No active subscriptions found for venue owner ID: {OwnerId}", venueOwner.Id);
             return response;
         }
 
@@ -571,7 +567,7 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
             });
         }
 
-        // 5. Tính toán thông tin VENUE_INSIGHT access với logic cộng dồn
+        // 5. Tính toán thông tin VENUE_INSIGHT access - lấy ngày hết hạn xa nhất
         var insightSubs = allActiveSubs
             .Where(sub => sub.Package?.FeatureFlags != null && HasFeatureInPackage(sub.Package.FeatureFlags, "VENUE_INSIGHT"))
             .OrderBy(sub => sub.StartDate)
@@ -579,48 +575,23 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
 
         if (insightSubs.Any())
         {
-            // Cộng dồn thời gian từ tất cả các gói
-            DateTime cumulativeEndDate = now;
-            
-            foreach (var sub in insightSubs)
-            {
-                if (!sub.StartDate.HasValue || !sub.EndDate.HasValue)
-                    continue;
+            // Tìm ngày hết hạn xa nhất trong tất cả các gói có VENUE_INSIGHT
+            var latestEndDate = insightSubs
+                .Where(sub => sub.EndDate.HasValue)
+                .Max(sub => sub.EndDate!.Value);
 
-                // Tính số ngày của subscription này
-                var subscriptionDays = (sub.EndDate.Value - sub.StartDate.Value).TotalDays;
-                
-                // Cộng dồn vào cumulative end date
-                cumulativeEndDate = cumulativeEndDate.AddDays(subscriptionDays);
-                
-                _logger.LogInformation(
-                    "Adding subscription #{SubId} ({Package}): {Days} days, cumulative end: {CumulativeEnd}",
-                    sub.Id,
-                    sub.Package?.PackageName,
-                    subscriptionDays,
-                    cumulativeEndDate);
-            }
-
-            var daysRemaining = (int)Math.Ceiling((cumulativeEndDate - now).TotalDays);
+            var daysRemaining = (int)Math.Ceiling((latestEndDate - now).TotalDays);
 
             response.VenueInsightAccess = new FeatureAccessInfo
             {
-                HasAccess = true,
-                ExpiryDate = cumulativeEndDate,
+                HasAccess = daysRemaining > 0,
+                ExpiryDate = latestEndDate,
                 DaysRemaining = daysRemaining > 0 ? daysRemaining : 0,
                 ProvidingPackages = insightSubs
                     .Select(sub => sub.Package?.PackageName ?? "Unknown")
                     .Distinct()
                     .ToList()
             };
-
-            _logger.LogInformation(
-                "VENUE_INSIGHT access calculated for venue owner ID: {OwnerId}, Total subscriptions: {Count}, Cumulative ExpiryDate: {ExpiryDate}, DaysRemaining: {Days}, Packages: {Packages}",
-                venueOwner.Id,
-                insightSubs.Count,
-                cumulativeEndDate,
-                daysRemaining,
-                string.Join(", ", response.VenueInsightAccess.ProvidingPackages));
         }
         else
         {

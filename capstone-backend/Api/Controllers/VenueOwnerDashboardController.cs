@@ -191,14 +191,15 @@ public class VenueOwnerDashboardController : BaseController
     /// 
     /// **VENUE_INSIGHT Access:**
     /// - Trạng thái truy cập tính năng VENUE_INSIGHT
-    /// - Ngày hết hạn xa nhất (cộng dồn từ tất cả các gói có tính năng này)
-    /// - Số ngày còn lại
+    /// - Ngày hết hạn xa nhất từ tất cả các gói có tính năng này
+    /// - Số ngày còn lại (tính từ ngày hiện tại đến ngày hết hạn)
     /// - Danh sách các gói đang cung cấp tính năng này
     /// 
-    /// **Logic cộng thời gian:**
-    /// - Nếu venue owner mua nhiều gói có cùng tính năng (VD: DeepInsight + Venue Pro đều có VENUE_INSIGHT)
+    /// **Logic tính thời gian:**
+    /// - Nếu venue owner có nhiều gói có cùng tính năng (VD: DeepInsight + Venue Pro đều có VENUE_INSIGHT)
     /// - Hệ thống sẽ lấy ngày hết hạn xa nhất làm thời hạn sử dụng tính năng
     /// - Ví dụ: Gói A hết hạn 01/05, Gói B hết hạn 15/05 → VENUE_INSIGHT có thể dùng đến 15/05
+    /// - Số ngày còn lại sẽ giảm dần theo thời gian thực
     /// </remarks>
     /// <response code="200">Trả về thông tin subscription</response>
     /// <response code="401">Chưa đăng nhập hoặc không phải venue owner</response>
