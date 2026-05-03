@@ -26,6 +26,7 @@ namespace capstone_backend.Business.Mappings
                 3 => "MEMBER_SUBSCRIPTION",
                 4 => "WALLET_TOPUP",
                 6 => "MONEY_TO_POINT",
+                7 => "REFUND",
                 _ => "UNKNOWN"
             };
         }
