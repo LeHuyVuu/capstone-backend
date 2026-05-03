@@ -255,12 +255,20 @@ public class VenueLocationService : IVenueLocationService
                 var openTime = todayOpeningHour.OpenTime;
                 var closeTime = todayOpeningHour.CloseTime;
                 
-                // Check nếu đang trong giờ mở cửa
-                bool isOpen = closeTime < openTime 
-                    ? (currentTime >= openTime || currentTime < closeTime)  // Qua đêm (VD: 23:00-02:00)
-                    : (currentTime >= openTime && currentTime < closeTime); // Bình thường (VD: 08:00-22:00)
-                
-                response.TodayOpeningHour.Status = isOpen ? "Đang mở cửa" : "Đã đóng cửa";
+                // Trường hợp đặc biệt: 00:00 -> 00:00 với IsClosed = false → Mở cửa cả ngày
+                if (openTime == TimeSpan.Zero && closeTime == TimeSpan.Zero)
+                {
+                    response.TodayOpeningHour.Status = "Đang mở cửa";
+                }
+                else
+                {
+                    // Check nếu đang trong giờ mở cửa
+                    bool isOpen = closeTime < openTime 
+                        ? (currentTime >= openTime || currentTime < closeTime)  // Qua đêm (VD: 23:00-02:00)
+                        : (currentTime >= openTime && currentTime < closeTime); // Bình thường (VD: 08:00-22:00)
+                    
+                    response.TodayOpeningHour.Status = isOpen ? "Đang mở cửa" : "Đã đóng cửa";
+                }
             }
         }
 
@@ -2833,11 +2841,19 @@ public class VenueLocationService : IVenueLocationService
                 var openTime = todayOpeningHour.OpenTime;
                 var closeTime = todayOpeningHour.CloseTime;
 
-                bool isOpen = closeTime < openTime
-                    ? (currentTime >= openTime || currentTime < closeTime)
-                    : (currentTime >= openTime && currentTime < closeTime);
+                // Trường hợp đặc biệt: 00:00 -> 00:00 với IsClosed = false → Mở cửa cả ngày
+                if (openTime == TimeSpan.Zero && closeTime == TimeSpan.Zero)
+                {
+                    venueDetail.TodayOpeningHour.Status = "Đang mở cửa";
+                }
+                else
+                {
+                    bool isOpen = closeTime < openTime
+                        ? (currentTime >= openTime || currentTime < closeTime)
+                        : (currentTime >= openTime && currentTime < closeTime);
 
-                venueDetail.TodayOpeningHour.Status = isOpen ? "Đang mở cửa" : "Đã đóng cửa";
+                    venueDetail.TodayOpeningHour.Status = isOpen ? "Đang mở cửa" : "Đã đóng cửa";
+                }
             }
         }
 
@@ -3062,6 +3078,13 @@ public class VenueLocationService : IVenueLocationService
         // Add new opening hours
         foreach (var hourDto in request.OpeningHours)
         {
+            // Log warning nếu phát hiện 00:00 -> 00:00 với IsClosed = false
+            if (!hourDto.IsClosed && hourDto.OpenTime == "00:00" && hourDto.CloseTime == "00:00")
+            {
+                _logger.LogWarning("Venue {VenueId} has opening hours 00:00-00:00 on day {Day} with IsClosed=false. This will be interpreted as 24/7 open.", 
+                    request.VenueLocationId, hourDto.Day);
+            }
+
             var openingHour = new VenueOpeningHour
             {
                 VenueLocationId = request.VenueLocationId,

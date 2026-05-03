@@ -194,11 +194,19 @@ public partial class MeilisearchService
         if (todayHour.IsClosed == true)
             return (false, null, null);
 
+        // Trường hợp đặc biệt: 00:00 -> 00:00 với IsClosed = false → Mở cửa 24/7
+        if (todayHour.OpenTime == TimeSpan.Zero && todayHour.CloseTime == TimeSpan.Zero)
+            return (true, "00:00", "23:59");
+
         var now = DateTime.UtcNow.AddHours(7).TimeOfDay;
-        var isOpen = now >= todayHour.OpenTime && now <= todayHour.CloseTime;
+        
+        // Xử lý trường hợp qua đêm (VD: 23:00 - 02:00)
+        bool isOpen = todayHour.CloseTime < todayHour.OpenTime
+            ? (now >= todayHour.OpenTime || now < todayHour.CloseTime)
+            : (now >= todayHour.OpenTime && now < todayHour.CloseTime);
 
         return (isOpen,
-            todayHour.OpenTime.ToString(@"hh\:mm"),
-            todayHour.CloseTime.ToString(@"hh\:mm"));
+            todayHour.OpenTime.ToString(@"HH\:mm"),
+            todayHour.CloseTime.ToString(@"HH\:mm"));
     }
 }
