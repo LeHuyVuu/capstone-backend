@@ -42,26 +42,45 @@ namespace capstone_backend.Business.Jobs.Leaderboard
 
             var newCouples = couples.Where(c => !existingInCurrentMonth.Contains(c.id)).ToList();
 
-            // Tạo leaderboard tháng mới
-            foreach (var couple in newCouples)
+            await _unitOfWork.BeginTransactionAsync();
+            try
             {
-                var leaderboard = new Data.Entities.Leaderboard
+                // Tạo leaderboard tháng mới
+                foreach (var couple in newCouples)
                 {
-                    CoupleId = couple.id,
-                    PeriodType = "monthly",
-                    PeriodStart = periodStart,
-                    PeriodEnd = periodEnd,
-                    SeasonKey = currentSeasonKey,
-                    TotalPoints = couple.RankingPoints ?? 0,
-                    RankPosition = 0,
-                    Status = LeaderboardStatus.ACTIVE.ToString(),
-                    UpdatedAt = now
-                };
+                    var leaderboard = new Data.Entities.Leaderboard
+                    {
+                        CoupleId = couple.id,
+                        PeriodType = "monthly",
+                        PeriodStart = periodStart,
+                        PeriodEnd = periodEnd,
+                        SeasonKey = currentSeasonKey,
+                        TotalPoints = 0,
+                        RankPosition = 0,
+                        Status = LeaderboardStatus.ACTIVE.ToString(),
+                        UpdatedAt = now
+                    };
 
-                await _unitOfWork.Context.Leaderboards.AddAsync(leaderboard);
+                    await _unitOfWork.Context.Leaderboards.AddAsync(leaderboard);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                // Reset ranking points couple profile
+                foreach (var couple in newCouples)
+                {
+                    couple.RankingPoints = 0;
+                    couple.UpdatedAt = now;
+                }
+                await _unitOfWork.SaveChangesAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
             }
-
-            await _unitOfWork.SaveChangesAsync();
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw new Exception(ex.Message);
+            }
 
             await RecalculateMonthlyUniqueRankPositionAsync(currentSeasonKey, now);
 

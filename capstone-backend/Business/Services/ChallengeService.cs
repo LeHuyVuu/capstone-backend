@@ -500,7 +500,7 @@ namespace capstone_backend.Business.Services
 
             bool isModifyingRules = request.RuleData != null || request.TargetGoal != challenge.TargetGoal || request.TriggerEvent != challenge.TriggerEvent;
             if (challenge.Status == ChallengeStatus.ACTIVE.ToString() && isModifyingRules)
-                throw new Exception("Không thể thay đổi luật, mục tiêu hoặc loại sự kiện khi Thử thách đang diễn ra (ACTIVE). Chỉ có thể sửa tên và mô tả");
+                throw new Exception("Không thể thay đổi luật, mục tiêu hoặc loại sự kiện khi Thử thách đang diễn ra");
 
             _mapper.Map(request, challenge);
 
