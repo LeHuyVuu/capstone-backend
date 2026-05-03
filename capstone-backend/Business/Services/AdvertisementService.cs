@@ -1768,6 +1768,7 @@ public class AdvertisementService : IAdvertisementService
     {
         _logger.LogInformation("Getting public advertisement detail for ID {AdId}", advertisementId);
 
+        // Lấy tất cả venues (kể cả inactive) để kiểm tra ads có tồn tại
         var venueLocationAds = await _unitOfWork.Context.Set<VenueLocationAdvertisement>()
             .Include(vla => vla.Advertisement)
             .Include(vla => vla.Venue)
@@ -1775,8 +1776,7 @@ public class AdvertisementService : IAdvertisementService
                 && vla.Status == VenueLocationAdvertisementStatus.ACTIVE.ToString()
                 && vla.Advertisement.IsDeleted != true
                 && vla.Advertisement.Status == AdvertisementStatus.APPROVED.ToString()
-                && vla.Venue.IsDeleted != true
-                && vla.Venue.Status == VenueLocationStatus.ACTIVE.ToString())
+                && vla.Venue.IsDeleted != true)
             .ToListAsync();
 
         if (venueLocationAds == null || !venueLocationAds.Any())
@@ -1787,25 +1787,28 @@ public class AdvertisementService : IAdvertisementService
         var firstAd = venueLocationAds.First();
         var ad = firstAd.Advertisement;
 
-        var venues = venueLocationAds.Select(vla => new VenueDetailInfo
-        {
-            VenueId = vla.Venue.Id,
-            VenueName = vla.Venue.Name ?? string.Empty,
-            VenueDescription = vla.Venue.Description,
-            VenueAddress = vla.Venue.Address ?? string.Empty,
-            VenuePhoneNumber = vla.Venue.PhoneNumber,
-            VenueEmail = vla.Venue.Email,
-            VenueWebsiteUrl = vla.Venue.WebsiteUrl,
-            VenuePriceMin = vla.Venue.PriceMin,
-            VenuePriceMax = vla.Venue.PriceMax,
-            VenueLatitude = vla.Venue.Latitude,
-            VenueLongitude = vla.Venue.Longitude,
-            VenueAverageRating = vla.Venue.AverageRating,
-            VenueReviewCount = vla.Venue.ReviewCount,
-            VenueCoverImage = ParseImageField(vla.Venue.CoverImage),
-            VenueInteriorImage = ParseImageField(vla.Venue.InteriorImage),
-            VenueCategory = ParseCategoryField(vla.Venue.Category)
-        }).ToList();
+        // Chỉ trả về những venue ACTIVE trong response
+        var venues = venueLocationAds
+            .Where(vla => vla.Venue.Status == VenueLocationStatus.ACTIVE.ToString())
+            .Select(vla => new VenueDetailInfo
+            {
+                VenueId = vla.Venue.Id,
+                VenueName = vla.Venue.Name ?? string.Empty,
+                VenueDescription = vla.Venue.Description,
+                VenueAddress = vla.Venue.Address ?? string.Empty,
+                VenuePhoneNumber = vla.Venue.PhoneNumber,
+                VenueEmail = vla.Venue.Email,
+                VenueWebsiteUrl = vla.Venue.WebsiteUrl,
+                VenuePriceMin = vla.Venue.PriceMin,
+                VenuePriceMax = vla.Venue.PriceMax,
+                VenueLatitude = vla.Venue.Latitude,
+                VenueLongitude = vla.Venue.Longitude,
+                VenueAverageRating = vla.Venue.AverageRating,
+                VenueReviewCount = vla.Venue.ReviewCount,
+                VenueCoverImage = ParseImageField(vla.Venue.CoverImage),
+                VenueInteriorImage = ParseImageField(vla.Venue.InteriorImage),
+                VenueCategory = ParseCategoryField(vla.Venue.Category)
+            }).ToList();
 
         var response = new PublicAdvertisementDetailResponse
         {
