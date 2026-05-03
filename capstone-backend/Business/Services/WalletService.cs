@@ -513,6 +513,11 @@ public class WalletService
                 item.Direction = "OUT";
                 item.BalanceChange = -item.Amount;
             }
+            else if (item.PaymentMethod == TransactionType.REFUND.ToString())
+            {
+                item.Direction = "IN";
+                item.BalanceChange = item.Amount;
+            }
             else
             {
                 item.Direction = "IN";

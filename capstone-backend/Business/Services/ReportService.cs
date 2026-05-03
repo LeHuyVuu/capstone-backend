@@ -124,13 +124,71 @@ public class ReportService : IReportService
                                 s.VoucherItemId == targetId &&
                                 s.IsDeleted != true);
 
+                        if (settlement == null)
+                            return false;
+
+                        if (settlement.Status == VenueSettlementStatus.CANCELLED.ToString())
+                            return true;
+
                         if (settlement != null &&
                             string.Equals(settlement.Status, VenueSettlementStatus.DISPUTED.ToString(), StringComparison.OrdinalIgnoreCase))
                         {
-                            settlement.Status = VenueSettlementStatus.CANCELLED.ToString();
-                            settlement.UpdatedAt = DateTime.UtcNow;
+                            await _unitOfWork.BeginTransactionAsync();
+                            try
+                            {
+                                settlement.Status = VenueSettlementStatus.CANCELLED.ToString();
+                                settlement.UpdatedAt = DateTime.UtcNow;
 
-                            _unitOfWork.VenueSettlements.Update(settlement);
+                                _unitOfWork.VenueSettlements.Update(settlement);
+                                await _unitOfWork.SaveChangesAsync();
+
+                                var voucherItem = await _unitOfWork.VoucherItems
+                                    .GetFirstAsync(
+                                        v => v.Id == targetId && v.IsDeleted != true,
+                                        include: v => v.Include(x => x.VoucherItemMember!)
+                                                       .ThenInclude(vim => vim.Member!)
+                                    );
+
+                                if (voucherItem?.VoucherItemMember?.Member != null && voucherItem.VoucherItemMember.TotalPointsUsed > 0)
+                                {
+                                    var userId = voucherItem.VoucherItemMember.Member.UserId;
+                                    var pointsToRefund = voucherItem.VoucherItemMember.TotalPointsUsed.Value;
+
+                                    var wallet = await _unitOfWork.Wallets.GetByUserIdAsync(userId);
+                                    if (wallet != null)
+                                    {
+                                        wallet.Points = (wallet.Points ?? 0) + pointsToRefund;
+                                        wallet.UpdatedAt = DateTime.UtcNow;
+                                        _unitOfWork.Wallets.Update(wallet);
+
+                                        // Add refund transaction log
+                                        var refundTransaction = new Transaction
+                                        {
+                                            Amount = pointsToRefund,
+                                            Currency = "POINTS",
+                                            UserId = userId,
+                                            PaymentMethod = PaymentMethod.SYSTEM.ToString(),
+                                            Description = $"Hoàn điểm khiếu nại voucher",
+                                            DocNo = targetId,
+                                            TransType = (int)TransactionType.REFUND,
+                                            Status = TransactionStatus.SUCCESS.ToString(),
+                                            CreatedAt = DateTime.UtcNow,
+                                            UpdatedAt = DateTime.UtcNow
+                                        };
+
+                                        await _unitOfWork.Transactions.AddAsync(refundTransaction);
+                                    }
+                                }
+
+                                await _unitOfWork.SaveChangesAsync();
+                                await _unitOfWork.CommitTransactionAsync();
+                            }
+                            catch (Exception ex)
+                            {
+                                await _unitOfWork.RollbackTransactionAsync();
+                                // Log the exception (ex) as needed
+                                throw;
+                            }
                         }
                     }
                     break;
