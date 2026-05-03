@@ -1,7 +1,9 @@
 using capstone_backend.Business.DTOs.Report;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Notification;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -177,6 +179,26 @@ public class ReportService : IReportService
                                         };
 
                                         await _unitOfWork.Transactions.AddAsync(refundTransaction);
+
+                                        if (refundTransaction != null)
+                                        {
+                                            var notification = new Notification
+                                            {
+                                                UserId = userId,
+                                                Title = "Khiếu nại voucher đã được chấp thuận",
+                                                Message = $"Khiếu nại của bạn về voucher '{voucherItem?.Voucher?.Title}' đã được chấp thuận. Điểm đã sử dụng sẽ được hoàn lại.",
+                                                Type = NotificationType.VOUCHER_ITEM.ToString(),
+                                                ReferenceId = voucherItem?.Id,
+                                                ReferenceType = ReferenceType.VOUCHER_ITEM.ToString(),
+                                                IsRead = false,
+                                                CreatedAt = DateTime.UtcNow,
+                                            };
+
+                                            await _unitOfWork.Notifications.AddAsync(notification);
+
+                                            await _unitOfWork.SaveChangesAsync();
+                                            BackgroundJob.Enqueue<INotificationWorker>(x => x.SendPushNotificationAsync(notification.Id));
+                                        }
                                     }
                                 }
 

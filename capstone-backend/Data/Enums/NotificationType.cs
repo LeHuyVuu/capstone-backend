@@ -12,6 +12,7 @@
         MAP,
         TRANSACTION,
         MODERATION,
-        DATE_PLAN
+        DATE_PLAN,
+        VOUCHER_ITEM
     }
 }
