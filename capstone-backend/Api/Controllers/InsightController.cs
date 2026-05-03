@@ -44,7 +44,7 @@ public class InsightController : BaseController
             var cachedResult = await _redisService.GetOrSetAsync(
                 cacheKey,
                 async () => await GenerateInsightsAsync(timeframe),
-                TimeSpan.FromMinutes(30)
+                TimeSpan.FromSeconds(5)
             );
 
             if (cachedResult != null)
