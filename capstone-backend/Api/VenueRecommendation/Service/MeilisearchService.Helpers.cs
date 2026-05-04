@@ -194,19 +194,48 @@ public partial class MeilisearchService
         if (todayHour.IsClosed == true)
             return (false, null, null);
 
-        // Trường hợp đặc biệt: 00:00 -> 00:00 với IsClosed = false → Mở cửa 24/7
-        if (todayHour.OpenTime == TimeSpan.Zero && todayHour.CloseTime == TimeSpan.Zero)
-            return (true, "00:00", "23:59");
+        try
+        {
+            // Validate TimeSpan values are within valid range (0-24 hours)
+            if (todayHour.OpenTime < TimeSpan.Zero || todayHour.OpenTime >= TimeSpan.FromHours(24))
+            {
+                _logger.LogWarning("[OPENING HOURS] Invalid OpenTime value: {OpenTime} for day {Day}", 
+                    todayHour.OpenTime, todayDay);
+                return (null, null, null);
+            }
 
-        var now = DateTime.UtcNow.AddHours(7).TimeOfDay;
-        
-        // Xử lý trường hợp qua đêm (VD: 23:00 - 02:00)
-        bool isOpen = todayHour.CloseTime < todayHour.OpenTime
-            ? (now >= todayHour.OpenTime || now < todayHour.CloseTime)
-            : (now >= todayHour.OpenTime && now < todayHour.CloseTime);
+            if (todayHour.CloseTime < TimeSpan.Zero || todayHour.CloseTime >= TimeSpan.FromHours(24))
+            {
+                _logger.LogWarning("[OPENING HOURS] Invalid CloseTime value: {CloseTime} for day {Day}", 
+                    todayHour.CloseTime, todayDay);
+                return (null, null, null);
+            }
 
-        return (isOpen,
-            todayHour.OpenTime.ToString(@"HH\:mm"),
-            todayHour.CloseTime.ToString(@"HH\:mm"));
+            // Trường hợp đặc biệt: 00:00 -> 00:00 với IsClosed = false → Mở cửa 24/7
+            if (todayHour.OpenTime == TimeSpan.Zero && todayHour.CloseTime == TimeSpan.Zero)
+                return (true, "00:00", "23:59");
+
+            var now = DateTime.UtcNow.AddHours(7).TimeOfDay;
+            
+            // Xử lý trường hợp qua đêm (VD: 23:00 - 02:00)
+            bool isOpen = todayHour.CloseTime < todayHour.OpenTime
+                ? (now >= todayHour.OpenTime || now < todayHour.CloseTime)
+                : (now >= todayHour.OpenTime && now < todayHour.CloseTime);
+
+            return (isOpen,
+                todayHour.OpenTime.ToString(@"hh\:mm"),
+                todayHour.CloseTime.ToString(@"hh\:mm"));
+        }
+        catch (FormatException ex)
+        {
+            _logger.LogError(ex, "[OPENING HOURS] Format error for venue opening hours. OpenTime: {OpenTime}, CloseTime: {CloseTime}, Day: {Day}", 
+                todayHour.OpenTime, todayHour.CloseTime, todayDay);
+            return (null, null, null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[OPENING HOURS] Unexpected error processing opening hours for day {Day}", todayDay);
+            return (null, null, null);
+        }
     }
 }
