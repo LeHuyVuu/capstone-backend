@@ -190,7 +190,7 @@ namespace capstone_backend.Business.Services
                 .GetOwnerAsync(member.Id, partnerId, new List<int> { accessoryId });
 
             if (ownedAccessories.Any())
-                throw new Exception("Phụ kiện này đã được sở hữu trong couple");
+                throw new Exception("Phụ kiện này đang được sở hữu và chưa hết hạn");
 
             if (couple.TotalPoints < accessory.PricePoint)
                 throw new Exception("Bạn không đủ Couple Point để mua phụ kiện này");
