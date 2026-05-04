@@ -1,3 +1,4 @@
+using capstone_backend.Business.Common.Helpers;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Interfaces;
@@ -9,13 +10,16 @@ namespace capstone_backend.Business.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<InteractionTrackingService> _logger;
+        private readonly IRedisService _redisService;
 
         public InteractionTrackingService(
             IUnitOfWork unitOfWork,
-            ILogger<InteractionTrackingService> logger)
+            ILogger<InteractionTrackingService> logger,
+            IRedisService redisService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _redisService = redisService;
         }
 
         public async Task TrackInteractionAsync(
@@ -60,6 +64,8 @@ namespace capstone_backend.Business.Services
                 _logger.LogInformation(
                     "[SERVICE] ✅ SAVED to DB: Member {MemberId} {InteractionType} {TargetType} {TargetId}, Category: {Category}",
                     memberId, interactionType, targetType, targetId, categoryInteraction ?? "(null)");
+                
+                await InsightCacheHelper.ClearAllInsightCachesAsync(_redisService, _logger);
             }
             catch (Exception ex)
             {
@@ -104,6 +110,8 @@ namespace capstone_backend.Business.Services
                 _logger.LogInformation(
                     "Tracked {Count} batch interactions: Member {MemberId} {InteractionType} {TargetType}",
                     targetIds.Count, memberId, interactionType, targetType);
+                
+                await InsightCacheHelper.ClearAllInsightCachesAsync(_redisService, _logger);
             }
             catch (Exception ex)
             {

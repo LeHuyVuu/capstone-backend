@@ -1,4 +1,5 @@
 using capstone_backend.Api.Models;
+using capstone_backend.Business.Common.Helpers;
 using capstone_backend.Business.DTOs.Emotion;
 using capstone_backend.Business.Services;
 using capstone_backend.Business.Interfaces;
@@ -18,13 +19,15 @@ public class EmotionController : BaseController
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMoodMappingService _moodMappingService;
     private readonly IChallengeService _challengeService;
+    private readonly IRedisService _redisService;
 
-    public EmotionController(FaceEmotionService emotionService, IUnitOfWork unitOfWork, IMoodMappingService moodMappingService, IChallengeService challengeService)
+    public EmotionController(FaceEmotionService emotionService, IUnitOfWork unitOfWork, IMoodMappingService moodMappingService, IChallengeService challengeService, IRedisService redisService)
     {
         _emotionService = emotionService;
         _unitOfWork = unitOfWork;
         _moodMappingService = moodMappingService;
         _challengeService = challengeService;
+        _redisService = redisService;
     }
 
     [HttpPost("analyze")]
@@ -111,6 +114,7 @@ public class EmotionController : BaseController
                                 await _challengeService.HandleCheckinChallengeProgressAsync(userId.Value);
                                 await _unitOfWork.SaveChangesAsync();
 
+                                await InsightCacheHelper.ClearAllInsightCachesAsync(_redisService);
                                 await UpdateCoupleMoodIfNeeded(memberProfile.Id, moodType.Id);
                             }
                         }
@@ -173,6 +177,7 @@ public class EmotionController : BaseController
 
             await _unitOfWork.Context.CoupleMoodLogs.AddAsync(coupleMoodLog);
             await _unitOfWork.SaveChangesAsync();
+            await InsightCacheHelper.ClearAllInsightCachesAsync(_redisService);
         }
         catch
         {

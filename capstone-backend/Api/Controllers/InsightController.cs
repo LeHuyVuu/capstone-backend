@@ -40,16 +40,21 @@ public class InsightController : BaseController
         {
             var cacheKey = $"insights:venue:{timeframe ?? "all"}";
             
+            _logger.LogInformation("[INSIGHT API] Requesting insights with timeframe: {Timeframe}, cache key: {CacheKey}", timeframe ?? "all", cacheKey);
+            
             // Try to get from Redis cache
             var cachedResult = await _redisService.GetOrSetAsync(
                 cacheKey,
-                async () => await GenerateInsightsAsync(timeframe),
-                TimeSpan.FromSeconds(5)
+                async () => {
+                    _logger.LogInformation("[INSIGHT API] Cache MISS - Generating new insights from database");
+                    return await GenerateInsightsAsync(timeframe);
+                },
+                TimeSpan.FromHours(5)
             );
 
             if (cachedResult != null)
             {
-                _logger.LogInformation("Insights retrieved from cache for timeframe: {Timeframe}", timeframe ?? "all");
+                _logger.LogInformation("[INSIGHT API] Cache HIT - Insights retrieved from cache for timeframe: {Timeframe}", timeframe ?? "all");
                 return OkResponse(cachedResult, "Lấy dữ liệu thống kê thành công (từ bộ nhớ đệm)");
             }
 

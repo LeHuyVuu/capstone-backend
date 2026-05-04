@@ -1,6 +1,7 @@
 ﻿using Amazon.S3.Model.Internal.MarshallTransformations;
 using AutoMapper;
 using capstone_backend.Business.Common;
+using capstone_backend.Business.Common.Helpers;
 using capstone_backend.Business.DTOs.Accessory;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.CoupleMoodType;
@@ -31,8 +32,10 @@ namespace capstone_backend.Business.Services
         private readonly IModerationService _moderationService;
         private readonly IAccessoryService _accessoryService;
         private readonly ISystemConfigService _systemConfigService;
+        private readonly IRedisService _redisService;
+        private readonly ILogger<ReviewService> _logger;
 
-        public ReviewService(IUnitOfWork unitOfWork, IMapper mapper, S3StorageService s3Service, IModerationService moderationService, IAccessoryService accessoryService, ISystemConfigService systemConfigService)
+        public ReviewService(IUnitOfWork unitOfWork, IMapper mapper, S3StorageService s3Service, IModerationService moderationService, IAccessoryService accessoryService, ISystemConfigService systemConfigService, IRedisService redisService, ILogger<ReviewService> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
@@ -40,6 +43,8 @@ namespace capstone_backend.Business.Services
             _moderationService = moderationService;
             _accessoryService = accessoryService;
             _systemConfigService = systemConfigService;
+            _redisService = redisService;
+            _logger = logger;
         }
 
         public async Task<int> CheckinAsync(int userId, CheckinRequest request)
@@ -146,6 +151,8 @@ namespace capstone_backend.Business.Services
 
             await _unitOfWork.CheckInHistories.AddAsync(checkIn);
             await _unitOfWork.SaveChangesAsync();
+
+            await InsightCacheHelper.ClearAllInsightCachesAsync(_redisService, _logger);
 
             // Notify after delaySeconds to validate check-in
             BackgroundJob.Schedule<IReviewWorker>(
@@ -710,6 +717,9 @@ namespace capstone_backend.Business.Services
 
             _unitOfWork.CheckInHistories.Update(checkIn);
             await _unitOfWork.SaveChangesAsync();
+            
+            await InsightCacheHelper.ClearAllInsightCachesAsync(_redisService, _logger);
+            
             return checkInId;
         }
 

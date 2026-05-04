@@ -1,5 +1,6 @@
 using System.Text.Json;
 using capstone_backend.Business.Common;
+using capstone_backend.Business.Common.Helpers;
 using capstone_backend.Business.DTOs.Emotion;
 using capstone_backend.Business.DTOs.MoodType;
 using capstone_backend.Business.DTOs.Notification;
@@ -19,6 +20,7 @@ public class MoodTypeService : IMoodTypeService
     private readonly IChallengeService _challengeService;
     private readonly IFcmService? _fcmService;
     private readonly IConversationRepository _conversationRepository;
+    private readonly IRedisService _redisService;
 
     public MoodTypeService(
         IUnitOfWork unitOfWork, 
@@ -26,7 +28,8 @@ public class MoodTypeService : IMoodTypeService
         IMoodMappingService moodMappingService, 
         IChallengeService challengeService,
         IFcmService? fcmService,
-        IConversationRepository conversationRepository)
+        IConversationRepository conversationRepository,
+        IRedisService redisService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -34,6 +37,7 @@ public class MoodTypeService : IMoodTypeService
         _challengeService = challengeService;
         _fcmService = fcmService;
         _conversationRepository = conversationRepository;
+        _redisService = redisService;
     }
 
     public async Task<List<MoodTypeResponse>> GetAllMoodTypesAsync(string? gender, CancellationToken cancellationToken = default)
@@ -128,6 +132,8 @@ public class MoodTypeService : IMoodTypeService
         await _challengeService.HandleCheckinChallengeProgressAsync(userId);
 
         await _unitOfWork.SaveChangesAsync();
+
+        await InsightCacheHelper.ClearAllInsightCachesAsync(_redisService, _logger);
 
         // TODO: handle challenge progress update
 
@@ -336,6 +342,8 @@ public class MoodTypeService : IMoodTypeService
 
             await _unitOfWork.Context.CoupleMoodLogs.AddAsync(coupleMoodLog, cancellationToken);
             await _unitOfWork.SaveChangesAsync();
+
+            await InsightCacheHelper.ClearAllInsightCachesAsync(_redisService, _logger);
 
             _logger.LogInformation($"💑 Đã cập nhật couple mood '{coupleMoodName}' (ID: {coupleMoodType.Id}) cho CoupleId={coupleProfile.id}");
 

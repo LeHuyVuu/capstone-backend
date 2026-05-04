@@ -1,3 +1,4 @@
+using capstone_backend.Business.Common.Helpers;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.SearchHistory;
 using capstone_backend.Business.Interfaces;
@@ -12,11 +13,13 @@ public class SearchHistoryService : ISearchHistoryService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<SearchHistoryService> _logger;
+    private readonly IRedisService _redisService;
 
-    public SearchHistoryService(IUnitOfWork unitOfWork, ILogger<SearchHistoryService> logger)
+    public SearchHistoryService(IUnitOfWork unitOfWork, ILogger<SearchHistoryService> logger, IRedisService redisService)
     {
         _unitOfWork = unitOfWork;
         _logger = logger;
+        _redisService = redisService;
     }
 
     public async Task<PagedResult<SearchHistoryResponse>> GetSearchHistoriesByMemberAsync(int userId, int page, int pageSize, CancellationToken cancellationToken = default)
@@ -106,6 +109,7 @@ public class SearchHistoryService : ISearchHistoryService
         _logger.LogInformation("Created search history {HistoryId} for member {MemberId} - keyword: {Keyword}", 
             searchHistory.Id, memberId, keyword);
 
+        await InsightCacheHelper.ClearAllInsightCachesAsync(_redisService, _logger);
         return MapToResponse(searchHistory);
     }
 
@@ -124,6 +128,7 @@ public class SearchHistoryService : ISearchHistoryService
 
         _logger.LogInformation("Deleted search history {HistoryId}", id);
 
+        await InsightCacheHelper.ClearAllInsightCachesAsync(_redisService, _logger);
         return true;
     }
 
@@ -142,6 +147,7 @@ public class SearchHistoryService : ISearchHistoryService
 
         _logger.LogInformation("Cleared {Count} search histories for member {MemberId}", histories.Count, memberId);
 
+        await InsightCacheHelper.ClearAllInsightCachesAsync(_redisService, _logger);
         return true;
     }
 
