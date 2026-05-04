@@ -37,7 +37,7 @@ namespace capstone_backend.Data.Repositories
         public async Task<IEnumerable<MemberAccessory>> GetOwnerAsync(int memberId, int partnerId, List<int> accessoryIds)
         {
             return await _dbSet
-                .Where(ma => accessoryIds.Contains(ma.AccessoryId.Value) && (ma.MemberId == memberId || ma.MemberId == partnerId))
+                .Where(ma => accessoryIds.Contains(ma.AccessoryId.Value) && (ma.MemberId == memberId || ma.MemberId == partnerId) && (ma.ExpiredAt == null || ma.ExpiredAt > DateTime.UtcNow))
                 .ToListAsync();
         }
 
