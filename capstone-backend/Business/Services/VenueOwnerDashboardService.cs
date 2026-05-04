@@ -129,14 +129,17 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
             .GroupBy(c => c.MemberId)
             .Count(g => g.Count() > 1);
 
-        // Advertisement metrics
+        // Advertisement metrics - Query ALL ads (including DRAFT) but exclude deleted ones
         var allAdvertisements = await _unitOfWork.Context.Set<Data.Entities.Advertisement>()
             .Include(a => a.VenueLocationAdvertisements)
-            .Where(a => a.VenueOwnerId == venueOwner.Id && a.IsDeleted != true && a.Status != AdvertisementStatus.DRAFT.ToString())
+            .Where(a => a.VenueOwnerId == venueOwner.Id && a.IsDeleted != true)
             .OrderByDescending(a => a.CreatedAt)
             .ToListAsync();
 
+        // Recent ads should exclude DRAFT and DRAFTED status
         var recentAds = allAdvertisements
+            .Where(a => a.Status != AdvertisementStatus.DRAFT.ToString() 
+                     && a.Status != AdvertisementStatus.DRAFTED.ToString())
             .Take(5)
             .Select(a => new AdvertisementSummary
             {
@@ -252,8 +255,9 @@ public class VenueOwnerDashboardService : IVenueOwnerDashboardService
                 status == AdvertisementStatus.PENDING.ToString()),
             RejectedAdvertisements = normalizedAdvertisementStatuses.Count(status =>
                 status == AdvertisementStatus.REJECTED.ToString()),
+            // Count both DRAFT and DRAFTED as draft advertisements
             DraftAdvertisements = normalizedAdvertisementStatuses.Count(status =>
-                status == AdvertisementStatus.DRAFT.ToString()),
+                status == AdvertisementStatus.DRAFT.ToString() || status == AdvertisementStatus.DRAFTED.ToString()),
             RecentAdvertisements = recentAds,
 
             // Top venue
