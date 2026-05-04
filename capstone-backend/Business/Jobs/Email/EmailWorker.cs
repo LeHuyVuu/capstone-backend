@@ -311,5 +311,4 @@ namespace capstone_backend.Business.Jobs.Email
             }
         }
     }
-    }
 }
