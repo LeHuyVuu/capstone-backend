@@ -252,6 +252,33 @@ public class ReportService : IReportService
                 settlement.Status = VenueSettlementStatus.PENDING.ToString();
                 settlement.UpdatedAt = DateTime.UtcNow;
             }
+
+            // Send notification to user about rejection
+            var voucherItem = await _unitOfWork.VoucherItems
+                .GetFirstAsync(
+                    v => v.Id == report.TargetId.Value && v.IsDeleted != true,
+                    include: v => v.Include(x => x.VoucherItemMember!)
+                                   .ThenInclude(vim => vim.Member!)
+                );
+
+            if (voucherItem?.VoucherItemMember?.Member != null)
+            {
+                var userId = voucherItem.VoucherItemMember.Member.UserId;
+                var notification = new Notification
+                {
+                    UserId = userId,
+                    Title = "Khiếu nại voucher đã bị từ chối",
+                    Message = $"Khiếu nại của bạn về voucher '{voucherItem?.Voucher?.Title}' đã bị từ chối. Vui lòng liên hệ bộ phận hỗ trợ nếu bạn cần thêm thông tin.",
+                    Type = NotificationType.VOUCHER_ITEM.ToString(),
+                    ReferenceId = voucherItem?.Id,
+                    ReferenceType = ReferenceType.VOUCHER_ITEM.ToString(),
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow,
+                };
+                await _unitOfWork.Notifications.AddAsync(notification);
+                await _unitOfWork.SaveChangesAsync();
+                BackgroundJob.Enqueue<INotificationWorker>(x => x.SendPushNotificationAsync(notification.Id));
+            }
         }
 
 
