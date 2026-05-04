@@ -955,7 +955,7 @@ public class AdvertisementService : IAdvertisementService
                 PaymentMethod = paymentMethod,
                 TransType = (int)TransactionType.ADS_ORDER,
                 DocNo = adsOrder.Id,
-                Description = $"Thanh toán quảng cáo {package.Name} cho {finalQuantity} địa điểm: {venueNames}",
+                Description = $"Thanh toán {finalQuantity} gói quảng cáo {package.Name} - Địa điểm: {venueNames}",
                 Status = "PENDING",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
