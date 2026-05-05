@@ -426,27 +426,43 @@ namespace capstone_backend.Business.Services
             if (couple == null)
                 return null;
 
-            var values = new List<string>();
+            if (coupleMoodTypeIds == null || !coupleMoodTypeIds.Any())
+                return null;
 
-            //if (!string.IsNullOrWhiteSpace(couple.CouplePersonalityType?.Name))
-            //    values.Add(couple.CouplePersonalityType.Name.Trim());
+            var selectedIds = coupleMoodTypeIds.ToHashSet();
 
-            string? moodName = null;
+            // 1. Unmatched: Venue Moods KHÔNG nằm trong request của member
+            var venueMoods = venue.VenueLocationTags
+                .Where(vlt => vlt.LocationTag?.CoupleMoodType != null)
+                .Select(vlt => vlt.LocationTag!.CoupleMoodType!)
+                .ToList();
 
-            if (coupleMoodTypeIds != null && coupleMoodTypeIds.Any())
-            {
-                var selectedIds = coupleMoodTypeIds.ToHashSet();
+            var unmatchedValues = venueMoods
+                .Where(m => !selectedIds.Contains(m.Id))
+                .Select(m => m.Name.Trim())
+                .Distinct()
+                .ToList();
 
-                var venueMoods = venue.VenueLocationTags
-                    .Where(vlt => vlt.LocationTag?.CoupleMoodType != null)
-                    .Select(vlt => vlt.LocationTag!.CoupleMoodType!)
-                    .Where(m => !selectedIds.Contains(m.Id))
-                    .Select(m => m.Name.Trim())
-                    .Distinct()
-                    .ToList();
+            // Nếu có giá trị thì nối chuỗi (cách nhau bởi ", "), nếu không thì gán chữ "null"
+            string unmatchedStr = unmatchedValues.Any() ? string.Join(", ", unmatchedValues) : "null";
 
-                values.AddRange(venueMoods);
-            }
+            // 2. Matched: Lấy tên các Mood từ DB dựa theo request của member
+            var requestedMoodNames = await _unitOfWork.Context.CoupleMoodTypes
+                .AsNoTracking()
+                .Where(m => m.IsDeleted != true && selectedIds.Contains(m.Id))
+                .Select(m => m.Name.Trim())
+                .Distinct()
+                .ToListAsync();
+
+            // Nếu có giá trị thì nối chuỗi, nếu không thì gán chữ "null"
+            string matchedStr = requestedMoodNames.Any() ? string.Join(", ", requestedMoodNames) : "null";
+
+            // Nếu cả 2 đều là chữ "null" (tức là không có bất kì dữ liệu nào) thì trả về giá trị null thực sự cho DB
+            if (unmatchedStr == "null" && matchedStr == "null")
+                return null;
+
+            // Trả về đúng format: <unmatched> | <matched>
+            return $"{unmatchedStr} | {matchedStr}";
             //else
             //{
             //    moodName = couple.CoupleMoodType?.Name;
@@ -467,7 +483,7 @@ namespace capstone_backend.Business.Services
             //if (!string.IsNullOrWhiteSpace(couple.CoupleMoodType?.Name))
             //    values.Add(couple.CoupleMoodType.Name.Trim());
 
-            return values.Any() ? string.Join(",", values) : null;
+            //return values.Any() ? string.Join(",", values) : null;
         }
 
         private bool CalculateIsMatched(CoupleProfile? couple, VenueLocation venue)
