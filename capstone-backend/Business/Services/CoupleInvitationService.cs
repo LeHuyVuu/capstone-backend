@@ -646,7 +646,7 @@ public class CoupleInvitationService : ICoupleInvitationService
         IQueryable<MemberProfile> baseQuery = _unitOfWork.Context.MemberProfiles
             .Include(m => m.User)
             .Where(m => m.IsDeleted != true && m.Id != currentMemberId && m.FullName != null &&
-                       m.User != null && m.User.IsDeleted != true && m.User.Role == "MEMBER" && m.RelationshipStatus == RelationshipStatus.Single.ToString());
+                       m.User != null && m.User.IsDeleted != true && m.User.Role == "MEMBER" && m.RelationshipStatus == RelationshipStatus.SINGLE.ToString());
 
         var hasAdvancedFilters = ageFrom.HasValue || ageTo.HasValue ||
                                  !string.IsNullOrWhiteSpace(city) || !string.IsNullOrWhiteSpace(district) ||
