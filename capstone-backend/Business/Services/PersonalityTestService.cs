@@ -11,6 +11,7 @@ using capstone_backend.Data.Static;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Globalization;
 using System.Runtime.InteropServices.JavaScript;
@@ -42,7 +43,7 @@ namespace capstone_backend.Business.Services
                 if (member == null)
                     throw new Exception("Không tìm thấy hồ sơ thành viên");
 
-                var (tests, count) = await _unitOfWork.PersonalityTests.GetPagedAsync(pageNumber, pageSize, filter: (pt => pt.MemberId == member.Id && pt.IsDeleted == false), orderBy: (pt => pt.OrderByDescending(pt => pt.TakenAt ?? pt.CreatedAt)));
+                var (tests, count) = await _unitOfWork.PersonalityTests.GetPagedAsync(pageNumber, pageSize, filter: (pt => pt.MemberId == member.Id && pt.IsDeleted == false), orderBy: (pt => pt.OrderByDescending(pt => pt.TakenAt ?? pt.CreatedAt)), pt => pt.Include(pt => pt.TestType));
 
                 var toMap = tests.ToList();
 

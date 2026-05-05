@@ -9,7 +9,8 @@ namespace capstone_backend.Business.Mappings
     {
         public PersonalityTestProfile()
         {
-            CreateMap<PersonalityTest, PersonalityTestResponse>();
+            CreateMap<PersonalityTest, PersonalityTestResponse>()
+                .ForMember(dest => dest.TestTypeName, opt => opt.MapFrom(src => src.TestType.Name));
             CreateMap<PersonalityTest, PersonalityTestDetailResponse>();
         }
     }
