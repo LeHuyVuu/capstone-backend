@@ -107,7 +107,10 @@
                     else
                     {
                         // break streak if no checkin
-                        currentStreak = 0;
+                        if (currentDate != today)
+                        {
+                            currentStreak = 0;
+                        }
                     }
 
                     lastProcessedDate = currentDate;
