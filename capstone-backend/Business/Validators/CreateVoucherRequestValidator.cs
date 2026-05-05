@@ -16,7 +16,7 @@ namespace capstone_backend.Business.Validators
                 .NotEmpty().WithMessage("Mô tả là bắt buộc");
 
             RuleFor(x => x.VoucherPrice)
-                .GreaterThan(0).WithMessage("Giá voucher phải lớn hơn 0");
+                .GreaterThan(1000).WithMessage("Giá voucher phải lớn hơn 1000đ");
 
             // Check DiscountType
             RuleFor(x => x.DiscountType)
