@@ -974,7 +974,9 @@ public class CoupleInvitationService : ICoupleInvitationService
                 PhoneNumber = member.User?.PhoneNumber,
                 DateOfBirth = member.DateOfBirth,
                 Gender = member.Gender,
-                PersonalityResultCode = personalityResultCode,
+                PersonalityResultCode = !string.IsNullOrWhiteSpace(personalityResultCode) 
+                    ? MbtiContentStore.GetProfile(personalityResultCode)?.Description?.FirstOrDefault() 
+                    : null,
                 PersonalityDescription = personalityDescription,
                 Bio = member.Bio,
                 RelationshipStatus = member.RelationshipStatus ?? RelationshipStatus.SINGLE.ToString(),
