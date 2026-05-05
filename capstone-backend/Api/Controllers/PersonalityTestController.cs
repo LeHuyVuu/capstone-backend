@@ -1,9 +1,11 @@
 ﻿using capstone_backend.Business.DTOs.PersonalityTest;
 using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Enums;
+using DotNetEnv;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace capstone_backend.Api.Controllers
 {
@@ -15,12 +17,47 @@ namespace capstone_backend.Api.Controllers
         private readonly IQuestionService _questionService;
         private readonly ITestTypeService _testTypeService;
         private readonly IPersonalityTestService _personalityTestService;
+        private readonly IWebHostEnvironment _env;
 
-        public PersonalityTestController(IQuestionService questionService, ITestTypeService testTypeService, IPersonalityTestService personalityTestService)
+        public PersonalityTestController(IQuestionService questionService, ITestTypeService testTypeService, IPersonalityTestService personalityTestService, IWebHostEnvironment env)
         {
             _questionService = questionService;
             _testTypeService = testTypeService;
             _personalityTestService = personalityTestService;
+            _env = env;
+        }
+
+        /// <summary>
+        /// Get Mbti list from json file
+        /// </summary>
+        [HttpGet("mbti-types")]
+        public IActionResult GetMbtiTypes()
+        {
+            try
+            {
+                // File mbti.json nằm ở đường dẫn gốc project -> Resources\Mbti\mbti.json
+                var filePath = Path.Combine(_env.ContentRootPath, "Resources", "Mbti", "mbti_def.json");
+
+                if (!System.IO.File.Exists(filePath))
+                {
+                    return NotFoundResponse("Không tìm thấy tệp cấu hình MBTI.");
+                }
+
+                // Đọc file json
+                var jsonData = System.IO.File.ReadAllText(filePath);
+
+                // Parse ra List Object 
+                var result = JsonSerializer.Deserialize<List<MbtiInfoResponse>>(jsonData, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                return OkResponse(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
         }
 
         /// <summary>

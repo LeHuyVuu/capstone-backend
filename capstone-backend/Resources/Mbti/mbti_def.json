@@ -1,0 +1,98 @@
+﻿[
+  {
+    "code": "ISTJ",
+    "name": "Người Trách Nhiệm (The Logistician)",
+    "definition": "Chiếm 13% dân số, sống với phương châm 'Chỉ có sự thật'. Nổi bật với tính trung thành, trách nhiệm cao, tỉ mỉ và luôn hành động dựa trên thực tế, logic. Thích làm việc độc lập, tuân thủ nghiêm ngặt các nguyên tắc, quy định và truyền thống. Bề ngoài có thể lạnh lùng nhưng là tuýp người cực kỳ đáng tin cậy.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/istj.png"
+  },
+  {
+    "code": "ISFJ",
+    "name": "Người Nuôi Dưỡng (The Defender)",
+    "definition": "Chiếm 9-14% dân số. Tận tụy, ấm áp và khiêm tốn. Đề cao truyền thống, sự ổn định và lòng trung thành. Thường đặt nhu cầu của người khác lên trên bản thân, làm việc chăm chỉ thầm lặng để đảm bảo sự hòa hợp và an toàn cho những người thân yêu.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/isfj.png"
+  },
+  {
+    "code": "INFJ",
+    "name": "Người Che Chở (The Advocate)",
+    "definition": "Nhóm tính cách hiếm nhất (chưa tới 1% dân số). Có trực giác sâu sắc, lý tưởng hóa và định hướng mục tiêu rõ ràng. Không chuộng sự hời hợt, luôn tìm kiếm ý nghĩa sâu xa và sự kết nối chân thật. Sẵn sàng đấu tranh không mệt mỏi cho những gì họ tin là đúng đắn.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/infj.png"
+  },
+  {
+    "code": "INTJ",
+    "name": "Nhà Kiến Trúc Sư (The Architect)",
+    "definition": "Chiếm 2% dân số. Tư duy chiến lược, độc lập và hoài nghi. Thích phân tích, luôn tìm cách cải tiến hệ thống và quy trình. Đề cao năng lực, sự logic và kiến thức, ít bị chi phối bởi cảm xúc. Là những người giải quyết vấn đề xuất sắc với tầm nhìn xa.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/intj.png"
+  },
+  {
+    "code": "ISTP",
+    "name": "Thợ Thủ Công (The Virtuoso)",
+    "definition": "Chiếm 5% dân số. Thực tế, linh hoạt và tò mò. Thích tìm hiểu cách thức hoạt động của mọi thứ thông qua việc tự tay trải nghiệm. Giải quyết vấn đề bằng tư duy logic nhưng lại rất linh động, không thích sự ràng buộc hay nguyên tắc cứng nhắc.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/istp.png"
+  },
+  {
+    "code": "ISFP",
+    "name": "Người Nghệ Sĩ (The Adventurer)",
+    "definition": "Nhạy cảm, thân thiện và sống trọn vẹn cho hiện tại. Yêu thích sự tự do, trân trọng cái đẹp và thường thể hiện bản thân qua hành động thực tế hoặc nghệ thuật thay vì lời nói. Ghét xung đột và luôn tìm kiếm sự hòa hợp trong môi trường xung quanh.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/isfp.png"
+  },
+  {
+    "code": "INFP",
+    "name": "Người Hòa Giải (The Mediator)",
+    "definition": "Chiếm 4-5% dân số. Sống nội tâm, lý tưởng hóa và bị dẫn dắt bởi hệ giá trị cốt lõi cá nhân. Luôn nhìn thấy điểm tốt ở người khác và khao khát làm cho thế giới tốt đẹp hơn. Bề ngoài cởi mở, linh hoạt nhưng sẽ cực kỳ kiên quyết nếu giá trị cốt lõi bị xâm phạm.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/infp.png"
+  },
+  {
+    "code": "INTP",
+    "name": "Nhà Tư Duy (The Logician)",
+    "definition": "Chiếm 3% dân số. Nổi tiếng với khả năng tư duy đột phá và trí tuệ logic. Thích phân tích lý thuyết, giải mã các nguyên lý phức tạp hơn là tương tác xã hội thông thường. Sống độc lập, tò mò và luôn khao khát hiểu biết tận gốc rễ của vấn đề.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/intp.png"
+  },
+  {
+    "code": "ESTP",
+    "name": "Người Thực Thi (The Entrepreneur)",
+    "definition": "Năng động, nhạy bén và đam mê hành động. Thường là tâm điểm của sự chú ý. Bài xích các lý thuyết sáo rỗng, học hỏi tốt nhất qua quá trình làm việc thực tế. Thích mạo hiểm, linh hoạt giải quyết vấn đề ngay tại chỗ và sống hết mình cho khoảnh khắc hiện tại.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/estp.png"
+  },
+  {
+    "code": "ESFP",
+    "name": "Người Trình Diễn (The Entertainer)",
+    "definition": "Yêu đời, nhiệt huyết và cực kỳ hòa đồng. Luôn muốn trải nghiệm những điều mới mẻ và mang lại niềm vui cho mọi người. Rất thực tế nhưng hiếm khi lên kế hoạch dài hạn, thích tận hưởng cuộc sống một cách tự nhiên và rực rỡ nhất.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/esfp.png"
+  },
+  {
+    "code": "ENFP",
+    "name": "Người Truyền Cảm Hứng (The Campaigner)",
+    "definition": "Chiếm 7% dân số. Tự do, năng nổ và giàu lòng trắc ẩn. Coi cuộc sống là một mạng lưới các sự kết nối và luôn tò mò về ý nghĩa ẩn sâu. Rất giỏi giao tiếp, dễ dàng truyền năng lượng tích cực và cảm hứng cho người khác bằng sự nhiệt thành của mình.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/enfp.png"
+  },
+  {
+    "code": "ENTP",
+    "name": "Người Tranh Biện (The Debater)",
+    "definition": "Sắc bén, sáng tạo và nghiện thử thách tư duy. Tranh luận không phải để gây sự mà để khám phá vấn đề từ nhiều góc độ. Giỏi nắm bắt ý tưởng mới nhưng hay cả thèm chóng chán, thường vạch ra chiến lược rồi để lại việc thực thi chi tiết cho người khác.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/entp.png"
+  },
+  {
+    "code": "ESTJ",
+    "name": "Người Điều Hành (The Executive)",
+    "definition": "Chiếm 11% dân số. Đại diện cho trật tự và truyền thống. Sống nguyên tắc, trung thực và có tinh thần trách nhiệm cực cao. Là những nhà quản lý xuất sắc, biết cách tổ chức con người và quy trình để đạt được mục tiêu một cách mượt mà, hiệu quả nhất.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/estj.png"
+  },
+  {
+    "code": "ESFJ",
+    "name": "Người Quan Tâm (The Consul)",
+    "definition": "Chiếm 12% dân số. Hướng ngoại, tận tâm và cực kỳ phổ biến. Thích giúp đỡ người khác và tạo ra sự hòa hợp trong tập thể. Coi trọng trách nhiệm, truyền thống và luôn nỗ lực hết mình để chăm sóc gia đình, cộng đồng xung quanh.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/esfj.png"
+  },
+  {
+    "code": "ENFJ",
+    "name": "Người Chỉ Dẫn (The Protagonist)",
+    "definition": "Có sức hút tự nhiên và tố chất lãnh đạo bẩm sinh. Vô cùng đồng cảm, luôn nhìn thấy tiềm năng của người khác và muốn giúp họ phát triển. Thường đứng ra nhận trách nhiệm dẫn dắt tập thể, giao tiếp xuất sắc và dễ dàng truyền cảm hứng hướng tới mục tiêu chung.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/enfj.png"
+  },
+  {
+    "code": "ENTJ",
+    "name": "Người Chỉ Huy (The Commander)",
+    "definition": "Chiếm 3% dân số. Sinh ra để làm lãnh đạo. Vô cùng quyết đoán, lý trí và có tầm nhìn chiến lược. Không ngại đương đầu với thử thách, sẵn sàng gạt bỏ những cảm xúc lặt vặt để đạt được mục tiêu đã đề ra một cách lạnh lùng và hiệu suất nhất.",
+    "imageUrl": "https://couplemood-store.s3.ap-southeast-2.amazonaws.com/mbti/entj.png"
+  }
+]
