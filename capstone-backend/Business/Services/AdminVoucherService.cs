@@ -3,12 +3,14 @@ using capstone_backend.Business.Configurations;
 using capstone_backend.Business.DTOs.Common;
 using capstone_backend.Business.DTOs.Voucher;
 using capstone_backend.Business.Interfaces;
+using capstone_backend.Business.Jobs.Email;
 using capstone_backend.Business.Jobs.Voucher;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Data;
 
 namespace capstone_backend.Business.Services
 {
@@ -310,41 +312,64 @@ namespace capstone_backend.Business.Services
 
             if (!allowedStatuses.Contains(voucher.Status))
                 throw new Exception("Trạng thái voucher không hỗ trợ disable");
-            
-            voucher.Status = VoucherStatus.DISABLED.ToString();
-            voucher.UpdatedAt = DateTime.UtcNow;
 
-            voucher.RejectReason = request.Reason;
-
-            // End all active voucher items
-            var availableVoucherItems = await _unitOfWork.VoucherItems.GetAsync(vi =>
-                vi.VoucherId == voucherId &&
-                vi.Status == VoucherItemStatus.AVAILABLE.ToString() &&
-                vi.IsDeleted == false
-            );
-
-            foreach (var item in availableVoucherItems)
+            await _unitOfWork.BeginTransactionAsync();
+            try
             {
-                item.Status = VoucherItemStatus.ENDED.ToString();
-                item.UpdatedAt = DateTime.UtcNow;
+                voucher.Status = VoucherStatus.DISABLED.ToString();
+                voucher.UpdatedAt = DateTime.UtcNow;
+
+                voucher.RejectReason = request.Reason;
+
+                _unitOfWork.Vouchers.Update(voucher);
+                await _unitOfWork.SaveChangesAsync();
+
+                // End all active voucher items
+                var availableVoucherItems = await _unitOfWork.VoucherItems.GetAsync(vi =>
+                    vi.VoucherId == voucherId &&
+                    vi.Status == VoucherItemStatus.AVAILABLE.ToString() &&
+                    vi.IsDeleted == false
+                );
+
+                foreach (var item in availableVoucherItems)
+                {
+                    item.Status = VoucherItemStatus.ENDED.ToString();
+                    item.UpdatedAt = DateTime.UtcNow;
+                }
+
+                _unitOfWork.VoucherItems.UpdateRange(availableVoucherItems);
+                await _unitOfWork.SaveChangesAsync();
+
+                // End jobs
+                var jobs = await _unitOfWork.VoucherJobs.GetAsync(
+                    x => x.VoucherId == voucherId
+                );
+
+                foreach (var job in jobs)
+                {
+                    if (!string.IsNullOrEmpty(job.JobId))
+                        BackgroundJob.Delete(job.JobId);
+                }
+
+                _unitOfWork.VoucherJobs.DeleteRange(jobs);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Send mail to venue owner
+                var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetFirstAsync(vo => vo.Id == voucher.VenueOwnerId && vo.IsDeleted == false, vo => vo.Include(vo => vo.User));
+
+                if (venueOwner != null && !string.IsNullOrWhiteSpace(venueOwner.User.Email))
+                {
+                    var email = venueOwner.User.Email;
+                    var voucherName = voucher.Title ?? voucher.Code ?? "Voucher";
+                    BackgroundJob.Enqueue<IEmailWorker>(worker => worker.SendVoucherDisabledEmailAsync(email, voucherName, request.Reason));
+                }
+            }
+            catch (Exception)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
             }
 
-            _unitOfWork.VoucherItems.UpdateRange(availableVoucherItems);
-
-            // End jobs
-            var jobs = await _unitOfWork.VoucherJobs.GetAsync(
-                x => x.VoucherId == voucherId
-            );
-
-            foreach (var job in jobs)
-            {
-                if (!string.IsNullOrEmpty(job.JobId))
-                    BackgroundJob.Delete(job.JobId);
-            }
-
-            _unitOfWork.VoucherJobs.DeleteRange(jobs);
-
-            await _unitOfWork.SaveChangesAsync();
             return voucherId;
         }
     }
