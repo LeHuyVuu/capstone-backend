@@ -353,6 +353,7 @@ namespace capstone_backend.Business.Services
 
                 _unitOfWork.VoucherJobs.DeleteRange(jobs);
                 await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
 
                 // Send mail to venue owner
                 var venueOwner = await _unitOfWork.VenueOwnerProfiles.GetFirstAsync(vo => vo.Id == voucher.VenueOwnerId && vo.IsDeleted == false, vo => vo.Include(vo => vo.User));
