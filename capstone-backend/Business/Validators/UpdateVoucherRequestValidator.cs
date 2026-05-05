@@ -52,6 +52,7 @@ namespace capstone_backend.Business.Validators
 
             RuleFor(x => x.Quantity)
                 .GreaterThan(0).WithMessage("Số lượng phải ít nhất là 1")
+                .LessThanOrEqualTo(200).WithMessage("Số lượng không được vượt quá 200")
                 .When(x => x.Quantity.HasValue);
 
             RuleFor(x => x.UsageLimitPerMember)
@@ -59,7 +60,7 @@ namespace capstone_backend.Business.Validators
                 .When(x => x.UsageLimitPerMember.HasValue);
 
             RuleFor(x => x.UsageValidDays)
-                .InclusiveBetween(1, 365).WithMessage("UsageValidDays phải từ 1 đến 365 ngày")
+                .InclusiveBetween(1, 14).WithMessage("UsageValidDays phải từ 1 đến 14 ngày")
                 .When(x => x.UsageValidDays.HasValue);
 
             RuleFor(x => x.StartDate)

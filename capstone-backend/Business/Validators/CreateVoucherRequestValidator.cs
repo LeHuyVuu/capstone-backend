@@ -46,7 +46,8 @@ namespace capstone_backend.Business.Validators
                 .When(x => x.DiscountType == VoucherDiscountType.PERCENTAGE.ToString());
 
             RuleFor(x => x.Quantity)
-                .GreaterThan(0).WithMessage("Số lượng phải ít nhất là 1");
+                .GreaterThan(0).WithMessage("Số lượng phải ít nhất là 1")
+                .LessThanOrEqualTo(200).WithMessage("Số lượng không được vượt quá 200");
 
             RuleFor(x => x.UsageLimitPerMember)
                 .GreaterThan(0).WithMessage("Giới hạn sử dụng mỗi thành viên phải lớn hơn 0")
@@ -74,7 +75,7 @@ namespace capstone_backend.Business.Validators
 
             RuleFor(x => x.UsageValidDays)
                 .NotNull().WithMessage("UsageValidDays không được null.")
-                .InclusiveBetween(1, 365).WithMessage("UsageValidDays phải từ 1 đến 365 ngày");
+                .InclusiveBetween(1, 14).WithMessage("UsageValidDays phải từ 1 đến 14 ngày");
 
             RuleFor(x => x)
                 .Custom((request, context) =>
