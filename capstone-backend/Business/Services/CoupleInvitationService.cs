@@ -646,7 +646,7 @@ public class CoupleInvitationService : ICoupleInvitationService
         IQueryable<MemberProfile> baseQuery = _unitOfWork.Context.MemberProfiles
             .Include(m => m.User)
             .Where(m => m.IsDeleted != true && m.Id != currentMemberId && m.FullName != null &&
-                       m.User != null && m.User.IsDeleted != true && m.User.Role == "MEMBER");
+                       m.User != null && m.User.IsDeleted != true && m.User.Role == "MEMBER" && m.RelationshipStatus == RelationshipStatus.Single.ToString());
 
         var hasAdvancedFilters = ageFrom.HasValue || ageTo.HasValue ||
                                  !string.IsNullOrWhiteSpace(city) || !string.IsNullOrWhiteSpace(district) ||
@@ -776,7 +776,6 @@ public class CoupleInvitationService : ICoupleInvitationService
             // Filter chỉ gender (bắt buộc)
             var matchingMembers = await baseQuery
                 .Where(m => m.Gender == targetGender)
-                .Include(m => m.PersonalityTests.Where(pt => pt.IsDeleted != true && pt.Status == PersonalityTestStatus.COMPLETED.ToString()))
                 .ToListAsync();
 
             // Sắp xếp theo thứ tự ưu tiên:
