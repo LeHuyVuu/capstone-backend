@@ -625,7 +625,7 @@ namespace capstone_backend.Business.Services
                 throw new Exception("Không tìm thấy đánh giá hợp lệ");
 
             _mapper.Map(request, review);
-            review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id, request.CoupleMoodTypeIds, venue);
+            //review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id, request.CoupleMoodTypeIds, venue);
 
             if (request.DeletedImageUrls != null && request.DeletedImageUrls.Any())
             {
