@@ -65,6 +65,15 @@ namespace capstone_backend.Business.Jobs.MemberAccessory
                 return;
             }
 
+            var expiredAccessories = await _unitOfWork.MemberAccessories.GetAsync(ma =>  (ma.AccessoryId == TOP_1_KING_ACCESSORY_ID || ma.AccessoryId == TOP_1_QUEEN_ACCESSORY_ID) && memberIds.Contains(ma.MemberId.Value) && ma.ExpiredAt < DateTime.UtcNow);
+
+            if (expiredAccessories.Any())
+            {
+                // TODO: remove old reward if exist
+                _unitOfWork.MemberAccessories.DeleteRange(expiredAccessories);
+                await _unitOfWork.SaveChangesAsync();
+            }
+
             var members = await _unitOfWork.MembersProfile.GetByIdsAsync(memberIds);
 
             var newItems = new List<Data.Entities.MemberAccessory>();
