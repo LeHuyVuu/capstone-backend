@@ -7,10 +7,21 @@ public class VenueTagAnalysisResponse
 {
     public int VenueId { get; set; }
     public string VenueName { get; set; } = string.Empty;
-    public decimal OverallMatchRate { get; set; }
     public int TotalReviews { get; set; }
     public List<TagAccuracyDetail> TagAnalysis { get; set; } = new();
     public TagAnalysisSummary Summary { get; set; } = new();
+    public SuggestedTag? MostPopularTag { get; set; } // Tag được khách hàng đánh giá nhiều nhất
+}
+
+/// <summary>
+/// Tag được đề xuất dựa trên phản hồi của khách hàng
+/// </summary>
+public class SuggestedTag
+{
+    public string TagName { get; set; } = string.Empty;
+    public int Count { get; set; } // Số lần xuất hiện
+    public decimal MatchRate { get; set; } // % khách hàng đánh giá có tag này
+    public string Message { get; set; } = string.Empty;
 }
 
 /// <summary>
