@@ -227,7 +227,7 @@ public class ReportService : IReportService
                     var memberProfile = await _unitOfWork.MembersProfile.GetByUserIdAsync(targetId);
                     if (memberProfile != null && memberProfile.IsDeleted != true)
                     {
-                        memberProfile.IsDeleted = true;
+                        memberProfile.IsDeleted = false;
                         memberProfile.UpdatedAt = DateTime.UtcNow;
                         _unitOfWork.MembersProfile.Update(memberProfile);
                     }
