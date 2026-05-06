@@ -214,12 +214,31 @@ public class ReportService : IReportService
                         }
                     }
                     break;
+
+                case ReportTargetType.USER:
+                    var memberProfile = await _unitOfWork.MembersProfile.GetByIdAsync(targetId);
+                    if (memberProfile != null && memberProfile.IsDeleted != true)
+                    {
+                        memberProfile.IsDeleted = true;
+                        memberProfile.UpdatedAt = DateTime.UtcNow;
+                        _unitOfWork.MembersProfile.Update(memberProfile);
+
+                        var userAccount = await _unitOfWork.Users.GetByIdAsync(memberProfile.UserId);
+                        if (userAccount != null && userAccount.IsDeleted != true)
+                        {
+                            userAccount.IsActive = false;
+                            userAccount.UpdatedAt = DateTime.UtcNow;
+                            _unitOfWork.Users.Update(userAccount);
+                        }
+                    }
+
+                    break;
             }
         }
 
         report.Status = ReportStatus.APPROVED.ToString();
         report.UpdatedAt = DateTime.UtcNow;
-
+    
         _unitOfWork.Reports.Update(report);
         await _unitOfWork.SaveChangesAsync();
         return true;
