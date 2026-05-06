@@ -624,7 +624,23 @@ namespace capstone_backend.Business.Services
             if (review == null)
                 throw new Exception("Không tìm thấy đánh giá hợp lệ");
 
+            var toCheck = new List<string>();
+            if (!string.IsNullOrWhiteSpace(request.Content))
+                toCheck.Add(request.Content);
+
+            if (request.NewImages != null && request.NewImages.Any())
+                toCheck.AddRange(request.NewImages);
+
+            var moderationResults = toCheck.Any()
+                    ? await _moderationService.CheckContentByAIService(toCheck)
+                    : new List<ModerationResultDto>();
+
+            if (moderationResults.Any(r => r.Action == ModerationAction.BLOCK))
+                throw new Exception("Nội dung cập nhật của bạn đã bị hệ thống chặn vì vi phạm tiêu chuẩn cộng đồng");
+
             _mapper.Map(request, review);
+
+            review.Status = ReviewStatus.PENDING.ToString();
             //review.CoupleMoodSnapshot = await BuildCoupleMoodSnapshotAsync(member.Id, request.CoupleMoodTypeIds, venue);
 
             if (request.DeletedImageUrls != null && request.DeletedImageUrls.Any())
@@ -644,6 +660,8 @@ namespace capstone_backend.Business.Services
             if (currentImageCount + newImageCount > 3)
                 throw new Exception("Bạn chỉ có thể tải lên tối đa 3 hình ảnh cho mỗi đánh giá");
 
+            bool hasImage = (currentImageCount + newImageCount) > 0;
+
             if (request.NewImages != null && request.NewImages.Any())
             {
                 var mediaList = await _unitOfWork.Media.GetByUrlsAsync(request.NewImages);
@@ -660,6 +678,7 @@ namespace capstone_backend.Business.Services
             _unitOfWork.Reviews.Update(review);
             var affected = await _unitOfWork.SaveChangesAsync();
 
+            BackgroundJob.Enqueue<IModerationWorker>(j => j.ProcessReviewModerationAndChallengeAsync(review.Id, moderationResults, userId, review.VenueId, hasImage));
             BackgroundJob.Enqueue<IReviewWorker>(j => j.EvaluateReviewRelevanceAsync(review.Id));
             BackgroundJob.Enqueue<IReviewWorker>(j => j.RecountReviewAsync(review.VenueId));
 
