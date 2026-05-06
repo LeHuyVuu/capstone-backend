@@ -211,5 +211,28 @@ namespace capstone_backend.Api.Controllers
                 return BadRequestResponse(ex.Message);
             }
         }
+
+        /// <summary>
+        /// Deactivate Test Type (Admin only)
+        /// </summary>
+        [HttpPost("{id:int}/deactivate")]
+        public async Task<IActionResult> DeactivateTestType(int id)
+        {
+            try
+            {
+                var isAdmin = IsCurrentUserInRole("ADMIN");
+                if (!isAdmin)
+                    return ForbiddenResponse("Bạn không có quyền truy cập tài nguyên này");
+                var response = await _testTypeService.DeactivateTestTypeAsync(id);
+                if (response > 0)
+                    return OkResponse("Vô hiệu hóa loại bài test thành công");
+                else
+                    return BadRequestResponse("Vô hiệu hóa loại bài test thất bại");
+            }
+            catch (Exception ex)
+            {
+                return BadRequestResponse(ex.Message);
+            }
+        }
     }
 }

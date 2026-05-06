@@ -147,5 +147,24 @@ namespace capstone_backend.Business.Services
 
             return $"TT_{type.ToUpper()}_{totalQuestions}_{unix}";
         }
+
+        public async Task<int> DeactivateTestTypeAsync(int id)
+        {
+            try
+            {
+                var exist = await _unitOfWork.TestTypes.GetByIdAsync(id);
+                if (exist == null || exist.IsDeleted == true || exist.IsActive == false)
+                    throw new Exception("Không tìm thấy loại bài test");
+
+                exist.IsActive = false;
+
+                _unitOfWork.TestTypes.Update(exist);
+                return await _unitOfWork.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
     }
 }

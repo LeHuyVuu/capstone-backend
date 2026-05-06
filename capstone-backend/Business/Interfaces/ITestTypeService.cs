@@ -8,8 +8,10 @@ namespace capstone_backend.Business.Interfaces
         Task<List<TestTypeResponse>> GetAllTestTypeAsync();
         Task<List<TestTypeResponse>> GetAllActiveAsync();
         Task<TestTypeDetailDto?> GetByIdAsync(int id);
+        
         Task<int> CreateTestTypeAsync(CreateTestTypeResquest request);
         Task<int> UpdateTestTypeAsync(int id, UpdateTestTypeRequest request);
         Task<int> DeleteTestTypeAsync(int id);
+        Task<int> DeactivateTestTypeAsync(int id);
     }
 }
