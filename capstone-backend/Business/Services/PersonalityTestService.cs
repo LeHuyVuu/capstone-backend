@@ -8,6 +8,7 @@ using capstone_backend.Business.Interfaces;
 using capstone_backend.Data.Entities;
 using capstone_backend.Data.Enums;
 using capstone_backend.Data.Static;
+using capstone_backend.Extensions.Common;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -27,12 +28,14 @@ namespace capstone_backend.Business.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IMbtiContentService _mbtiContentService;
+        private readonly IWebHostEnvironment _env;
 
-        public PersonalityTestService(IUnitOfWork unitOfWork, IMapper mapper, IMbtiContentService mbtiContentService)
+        public PersonalityTestService(IUnitOfWork unitOfWork, IMapper mapper, IMbtiContentService mbtiContentService, IWebHostEnvironment env)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _mbtiContentService = mbtiContentService;
+            _env = env;
         }
 
         public async Task<PagedResult<PersonalityTestResponse>> GetHistoryTests(int pageNumber, int pageSize, int userId)
@@ -174,6 +177,24 @@ namespace capstone_backend.Business.Services
                     throw new Exception("Member has not completed any personality test yet");
 
                 var result = _mapper.Map<PersonalityTestResponse>(test);
+
+                // Get image url
+                var filePath = Path.Combine(_env.ContentRootPath, "Resources", "Mbti", "mbti.json");
+
+                if (!System.IO.File.Exists(filePath))
+                    throw new Exception("Không tìm thấy tệp cấu hình MBTI.");
+
+                var json = File.ReadAllText(filePath);
+
+                var mbti = JsonConverterUtil.DeserializeOrDefault<Dictionary<string, MbtiDetail>>(json);
+
+                var stringCode = result.ResultCode;
+                if (!string.IsNullOrEmpty(stringCode))
+                    if (mbti != null && mbti.TryGetValue(stringCode, out var mbtiDetail))
+                    {
+                        result.ImageUrl = mbtiDetail.ImageUrl;
+                    }
+
                 return result;
             }
             catch (Exception ex)

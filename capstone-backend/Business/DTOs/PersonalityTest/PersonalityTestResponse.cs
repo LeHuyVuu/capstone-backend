@@ -8,6 +8,7 @@ namespace capstone_backend.Business.DTOs.PersonalityTest
         public int TestTypeId { get; set; }
         public string TestTypeName { get; set; }
         public string? ResultCode { get; set; }
+        public string? ImageUrl { get; set; }
         public string? Status { get; set; }
         public DateTime? TakenAt { get; set; }
         public DateTime? CreatedAt { get; set; }

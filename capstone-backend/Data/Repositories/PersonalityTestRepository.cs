@@ -39,6 +39,7 @@ namespace capstone_backend.Data.Repositories
                 .AsNoTracking()
                 .Where(pt => pt.MemberId == memberId && pt.IsDeleted == false && pt.Status == PersonalityTestStatus.COMPLETED.ToString())
                 .OrderByDescending(pt => pt.TakenAt ?? pt.CreatedAt)
+                .Include(pt => pt.TestType)
                 .FirstOrDefaultAsync();
         }
 
