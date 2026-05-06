@@ -173,7 +173,7 @@ namespace capstone_backend.Business.Services
                                   ((dp.PlannedEndAt.HasValue && dp.PlannedEndAt >= now) ||
                                     (dp.PlannedEndAt == null && dp.PlannedStartAt.HasValue && dp.PlannedStartAt >= now)
                                   ),
-                            dp => dp.OrderByDescending(dp => dp.CreatedAt)
+                            dp => dp.OrderByDescending(dp => dp.UpdatedAt)
                         );
                     break;
 
@@ -187,7 +187,7 @@ namespace capstone_backend.Business.Services
                                   ((dp.PlannedEndAt.HasValue && dp.PlannedEndAt < now) ||
                                     (dp.PlannedEndAt == null && dp.PlannedStartAt.HasValue && dp.PlannedStartAt < now)
                                   ),
-                            dp => dp.OrderByDescending(dp => dp.CreatedAt)
+                            dp => dp.OrderByDescending(dp => dp.UpdatedAt)
                         );
                     break;
 
@@ -199,7 +199,7 @@ namespace capstone_backend.Business.Services
                                   dp.OrganizerMemberId == member.Id &&
                                   dp.IsDeleted == false &&
                                   dp.Status == DatePlanStatus.DRAFTED.ToString(),
-                            dp => dp.OrderByDescending(dp => dp.CreatedAt)
+                            dp => dp.OrderByDescending(dp => dp.UpdatedAt)
                         );
                     break;
 
@@ -210,7 +210,7 @@ namespace capstone_backend.Business.Services
                             dp => dp.CoupleId == couple.id &&
                                   dp.IsDeleted == false &&
                                   dp.Status == DatePlanStatus.PENDING.ToString(),
-                            dp => dp.OrderByDescending(dp => dp.CreatedAt)
+                            dp => dp.OrderByDescending(dp => dp.UpdatedAt)
                         );
                     break;
 
@@ -221,7 +221,7 @@ namespace capstone_backend.Business.Services
                         dp => dp.CoupleId == couple.id &&
                               dp.IsDeleted == false &&
                               dp.Status == DatePlanStatus.CANCELLED.ToString(),
-                        dp => dp.OrderByDescending(dp => dp.CreatedAt)
+                        dp => dp.OrderByDescending(dp => dp.UpdatedAt)
                     );
                     break;
 
@@ -232,7 +232,7 @@ namespace capstone_backend.Business.Services
                         dp => dp.CoupleId == couple.id &&
                               dp.IsDeleted == false &&
                               dp.Status == DatePlanStatus.IN_PROGRESS.ToString(),
-                        dp => dp.OrderByDescending(dp => dp.CreatedAt)
+                        dp => dp.OrderByDescending(dp => dp.UpdatedAt)
                     );
                     break;
 
@@ -246,7 +246,7 @@ namespace capstone_backend.Business.Services
                                   dp.Status != DatePlanStatus.DRAFTED.ToString() ||
                                   dp.OrganizerMemberId == member.Id
                               ),
-                        dp => dp.OrderByDescending(dp => dp.CreatedAt)
+                        dp => dp.OrderByDescending(dp => dp.UpdatedAt)
                     );
                     break;
 
