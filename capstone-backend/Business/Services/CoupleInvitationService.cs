@@ -870,11 +870,15 @@ public class CoupleInvitationService : ICoupleInvitationService
         }
         else
         {
-            // Query có search text - filter ngay trong SQL
-            // TODO: Cần tạo computed column hoặc function để search Vietnamese normalized
+            // Query có search text - normalize filter in-memory to avoid EF translation issues.
+            baseQuery = _unitOfWork.Context.MemberProfiles
+                .Include(m => m.User)
+                .Where(m => m.IsDeleted != true && m.Id != currentMemberId && m.FullName != null &&
+                           m.User != null && m.User.IsDeleted != true && m.User.Role == "MEMBER");
+
             candidates = await baseQuery
                 .OrderBy(m => m.FullName)
-                .ToListAsync(); // Load tất cả để filter normalized name trong memory
+                .ToListAsync();
             
             candidates = candidates
                 .Where(m => Helpers.VietnameseTextHelper.NormalizeForSearch(m.FullName ?? "").Contains(normalizedQuery))
