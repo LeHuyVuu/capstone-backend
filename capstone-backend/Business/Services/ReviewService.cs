@@ -462,7 +462,7 @@ namespace capstone_backend.Business.Services
                 return null;
 
             // Trả về đúng format: <unmatched> | <matched>
-            return $"{unmatchedStr} - {matchedStr}";
+            return $"{unmatchedStr} | {matchedStr}";
             //else
             //{
             //    moodName = couple.CoupleMoodType?.Name;

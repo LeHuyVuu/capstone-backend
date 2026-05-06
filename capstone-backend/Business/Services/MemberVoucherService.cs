@@ -52,10 +52,6 @@ namespace capstone_backend.Business.Services
             if (member == null)
                 throw new Exception("Không tìm thấy thông tin thành viên");
 
-            var couple = await _unitOfWork.CoupleProfiles.GetActiveCoupleByMemberIdAsync(member.Id);
-            if (couple == null)
-                throw new Exception("Không tìm thấy thông tin cặp đôi");
-
             var wallet = await _unitOfWork.Wallets.GetByUserIdAsync(userId);
             if (wallet == null)
                 await _unitOfWork.Wallets.AddAsync(new Wallet
@@ -269,7 +265,7 @@ namespace capstone_backend.Business.Services
                 MemberId = member.Id,
                 TotalQuantityExchanged = totalQuantity,
                 TotalPointsUsed = totalPointsRequired,
-                RemainingPoints = couple.TotalPoints ?? 0,
+                RemainingPoints = wallet.Points ?? 0,
                 CreatedAt = voucherItemMember.CreatedAt ?? DateTime.UtcNow,
                 VoucherItems = _mapper.Map<List<ExchangeVoucherItemResult>>(exchangedVoucherItems)
             };
