@@ -653,7 +653,7 @@ public class ReportService : IReportService
 
     private async Task<object?> BuildUserSnapshotAsync(int targetId)
     {
-        var user = await _unitOfWork.MembersProfile.GetByIdAsync(targetId);
+        var user = await _unitOfWork.MembersProfile.GetByUserIdAsync(targetId);
         if (user == null || user.IsDeleted == true)
             return null;
 
